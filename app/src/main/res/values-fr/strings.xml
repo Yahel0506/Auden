@@ -1462,4 +1462,26 @@
     <string name="library_folder_none">Choisissez Music/Auden pour enregistrer .lrc et cover.jpg à côté de chaque titre</string>
     <string name="library_folder_set">Enregistrement dans %1$s</string>
     <string name="library_folder_forget">Ne plus utiliser ce dossier</string>
+    <string name="lyrics_saved_title">Paroles</string>
+    <string name="lyrics_use">Utiliser</string>
+    <string name="lyrics_in_use">Utilisées</string>
+    <string name="lyrics_add_provider">Obtenir les paroles d’un autre fournisseur</string>
+    <string name="lyrics_fetching">Recherche…</string>
+    <string name="lyrics_not_found">Introuvable</string>
+    <string name="lyrics_fmt_word">Mot par mot</string>
+    <string name="lyrics_fmt_line">Ligne par ligne</string>
+    <string name="lyrics_fmt_plain">Non synchronisées</string>
+    <string name="lyrics_lines_count">%1$d lignes</string>
+    <string name="lyrics_song_offset">Décalage de ce titre : %1$s</string>
+    <string name="lyrics_none_saved">Aucune parole enregistrée pour ce titre</string>
+    <string name="lyrics_remove_offset">Réinitialiser</string>
+    <string name="download_lyrics_extras">Paroles supplémentaires à garder</string>
+    <string name="download_lyrics_extras_hint">La meilleure version est toujours enregistrée. Cochez des fournisseurs pour garder aussi leurs versions et changer plus tard.</string>
+    <string name="download_lyrics_extras_count">%1$d en plus</string>
+    <string name="download_lyrics_extras_none">La meilleure seulement</string>
+    <string name="lyrics_batch_title">Recherche des paroles de « %1$s »</string>
+    <string name="lyrics_batch_nothing">Tout a déjà des paroles</string>
+    <string name="lyrics_batch_done_title">Paroles de « %1$s » enregistrées</string>
+    <string name="lyrics_batch_done_text">%1$d trouvées · %2$d sans paroles</string>
+    <string name="find_lyrics_for_all">Chercher les paroles</string>
 </resources>

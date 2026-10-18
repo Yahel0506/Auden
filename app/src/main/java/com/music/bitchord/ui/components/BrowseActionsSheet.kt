@@ -191,6 +191,8 @@ fun BrowseActionsSheet(
     onExport: ((dev.auden.library.io.PlaylistFormat) -> Unit)? = null,
     /** Playlists kept on this device: makes a copy to change without touching the original. */
     onDuplicate: (() -> Unit)? = null,
+    /** Looks up and keeps lyrics for every track of the release, in the background. */
+    onFetchLyrics: (() -> Unit)? = null,
     /** A cloud playlist or album: copies it to (or drops it from) the device library. */
     onToggleDevice: (() -> Unit)? = null,
     savedOnDevice: Boolean = false,
@@ -321,6 +323,9 @@ fun BrowseActionsSheet(
             }
             onDuplicate?.let {
                 ActionRow(Icons.Rounded.ContentCopy, stringResource(R.string.duplicate_playlist), onClick = it)
+            }
+            onFetchLyrics?.let {
+                ActionRow(BitChordIcons.Lyrics, stringResource(R.string.find_lyrics_for_all), onClick = it)
             }
             onExport?.let { export ->
                 if (exporting) {

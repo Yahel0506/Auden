@@ -1433,4 +1433,26 @@
     <string name="library_folder_none">Elige Music/Auden para guardar .lrc y cover.jpg junto a cada canción</string>
     <string name="library_folder_set">Guardando en %1$s</string>
     <string name="library_folder_forget">Dejar de usar esta carpeta</string>
+    <string name="lyrics_saved_title">Letras</string>
+    <string name="lyrics_use">Usar</string>
+    <string name="lyrics_in_use">En uso</string>
+    <string name="lyrics_add_provider">Obtener letras de otro proveedor</string>
+    <string name="lyrics_fetching">Buscando…</string>
+    <string name="lyrics_not_found">No encontrada</string>
+    <string name="lyrics_fmt_word">Palabra por palabra</string>
+    <string name="lyrics_fmt_line">Línea por línea</string>
+    <string name="lyrics_fmt_plain">Sin sincronizar</string>
+    <string name="lyrics_lines_count">%1$d líneas</string>
+    <string name="lyrics_song_offset">Desfase de esta canción: %1$s</string>
+    <string name="lyrics_none_saved">Aún no hay letras guardadas para esta canción</string>
+    <string name="lyrics_remove_offset">Restablecer</string>
+    <string name="download_lyrics_extras">Letras adicionales a guardar</string>
+    <string name="download_lyrics_extras_hint">Siempre se guarda la mejor. Marca proveedores para conservar también sus versiones y cambiar después.</string>
+    <string name="download_lyrics_extras_count">%1$d adicionales</string>
+    <string name="download_lyrics_extras_none">Solo la mejor</string>
+    <string name="lyrics_batch_title">Buscando letras de «%1$s»</string>
+    <string name="lyrics_batch_nothing">Todo ya tiene letras</string>
+    <string name="lyrics_batch_done_title">Letras de «%1$s» guardadas</string>
+    <string name="lyrics_batch_done_text">%1$d encontradas · %2$d sin letra</string>
+    <string name="find_lyrics_for_all">Buscar letras</string>
 </resources>

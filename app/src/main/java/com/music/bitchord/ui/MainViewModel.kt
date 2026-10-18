@@ -319,6 +319,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val lyricsChecked: StateFlow<Boolean> = _lyricsChecked.asStateFlow()
 
     private var lyricsJob: Job? = null
+
+    init {
+        // The lyrics of the song on screen were changed from elsewhere (the options sheet): look again.
+        viewModelScope.launch {
+            dev.auden.library.lyrics.LyricsStore.changes.collect { key ->
+                if (currentLyricsRequest?.videoId == key) {
+                    val chosen = dev.auden.library.lyrics.LyricsStore.active(getApplication(), key)
+                    if (chosen != null) {
+                        selectedLyricsSource = chosen.provider
+                        showLyricsResult(chosen.result)
+                    } else {
+                        // The choice was cleared: go back to whatever would have been found.
+                        lyricsFor = null
+                    }
+                }
+            }
+        }
+    }
     private val manualLyricsJobs = mutableMapOf<LyricsSource, Job>()
 
     private val _lyricsProviderStates = MutableStateFlow(
@@ -387,6 +405,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // pausing is when the duration is most likely to arrive a frame late.
         if (localUri == null && durationMs <= 0L) return
         lyricsFor = key
+        // Its own timing, if the listener gave it one.
+        dev.auden.library.lyrics.SongLyricsOffset.onSongChanged(videoId)
         lyricsGeneration += 1
         val generation = lyricsGeneration
         currentLyricsRequest = LyricsRequest(videoId, title, artist, durationMs, album)
@@ -408,6 +428,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         _lyricsChecked.value = false
         lyricsJob = viewModelScope.launch {
+            // 0. The variant the listener chose for this song, kept on the device: no network, and
+            // it wins over everything below because it was picked on purpose.
+            dev.auden.library.lyrics.LyricsStore.active(getApplication(), videoId)?.let { chosen ->
+                selectedLyricsSource = chosen.provider
+                showLyricsResult(chosen.result)
+                return@launch
+            }
+
             // 1. Check for local sidecar lyrics (.lrc / .ttml)
             if (!localLyricsUri.isNullOrBlank() && !localLyricsFormat.isNullOrBlank()) {
                 val localSidecar = withContext(Dispatchers.IO) {
@@ -477,10 +505,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun selectLyricsProvider(source: LyricsSource) {
         val request = currentLyricsRequest ?: return
+        // Picking one is a decision about this song, and it is kept — see [rememberChoice].
+        rememberChoice(request.videoId, source)
         when (_lyricsProviderStates.value[source]) {
             LyricsProviderState.FOUND -> {
                 selectedLyricsSource = source
-                lyricsProviderResults[source]?.let(::showLyricsResult)
+                lyricsProviderResults[source]?.let { result ->
+                    showLyricsResult(result)
+                    // Already found by the race, but picking it by hand is what makes it worth keeping.
+                    result.artifact?.let { artifact ->
+                        viewModelScope.launch {
+                            dev.auden.library.lyrics.LyricsStore.save(getApplication(), request.videoId, artifact, makeActive = true)
+                        }
+                    }
+                }
             }
             LyricsProviderState.FETCHING -> {
                 // Apply it as soon as the already-running automatic attempt completes.
@@ -524,6 +562,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _lyricsProviderStates.update { it + (source to LyricsProviderState.FETCHING) }
     }
 
+    /**
+     * Keeps [source] as the lyrics for [videoId] from now on. Its text is saved once it arrives (see
+     * [providerFinished]), so the choice also works with no connection.
+     */
+    private fun rememberChoice(videoId: String, source: LyricsSource) {
+        viewModelScope.launch { dev.auden.library.lyrics.LyricsStore.setActive(getApplication(), videoId, source) }
+    }
+
     private fun providerFinished(
         generation: Long,
         source: LyricsSource,
@@ -536,7 +582,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         lyricsProviderResults[source] = result
         _lyricsProviderStates.update { it + (source to LyricsProviderState.FOUND) }
-        if (selectedLyricsSource == source) showLyricsResult(result)
+        if (selectedLyricsSource == source) {
+            showLyricsResult(result)
+            // Chosen by hand, so it is worth keeping for offline.
+            val request = currentLyricsRequest
+            val artifact = result.artifact
+            if (request != null && artifact != null) {
+                viewModelScope.launch {
+                    dev.auden.library.lyrics.LyricsStore.save(getApplication(), request.videoId, artifact, makeActive = true)
+                }
+            }
+        }
     }
 
     private fun providerCancelled(generation: Long, source: LyricsSource) {

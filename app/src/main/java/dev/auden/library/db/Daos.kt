@@ -124,3 +124,33 @@ interface PlaylistWriteDao {
     @Query("UPDATE playlist SET title = :title, updatedAt = :now WHERE id = :id")
     suspend fun rename(id: String, title: String, now: Long)
 }
+
+@Dao
+interface LyricsDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(variant: LyricsVariantEntity)
+
+    @Query("SELECT * FROM lyrics_variant WHERE songKey = :songKey ORDER BY fetchedAt")
+    suspend fun variantsOf(songKey: String): List<LyricsVariantEntity>
+
+    @Query("SELECT * FROM lyrics_variant WHERE songKey = :songKey ORDER BY fetchedAt")
+    fun observeVariants(songKey: String): Flow<List<LyricsVariantEntity>>
+
+    @Query("SELECT * FROM lyrics_variant WHERE songKey = :songKey AND provider = :provider")
+    suspend fun variant(songKey: String, provider: String): LyricsVariantEntity?
+
+    @Query("DELETE FROM lyrics_variant WHERE songKey = :songKey AND provider = :provider")
+    suspend fun deleteVariant(songKey: String, provider: String)
+
+    @Query("SELECT songKey FROM lyrics_variant GROUP BY songKey")
+    suspend fun songsWithVariants(): List<String>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertPref(pref: SongLyricsPrefEntity)
+
+    @Query("SELECT * FROM song_lyrics_pref WHERE songKey = :songKey")
+    suspend fun pref(songKey: String): SongLyricsPrefEntity?
+
+    @Query("SELECT * FROM song_lyrics_pref WHERE songKey = :songKey")
+    fun observePref(songKey: String): Flow<SongLyricsPrefEntity?>
+}

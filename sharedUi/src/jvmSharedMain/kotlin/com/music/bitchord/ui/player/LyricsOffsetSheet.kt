@@ -79,6 +79,7 @@ internal fun LyricsOffsetSheet(
     modifier: Modifier = Modifier,
 ) {
     val offsetMs by PlayerSettings.lyricsOffsetMs.collectAsStateWithLifecycle()
+    val perSong by PlayerSettings.lyricsOffsetPerSong.collectAsStateWithLifecycle()
     val haptics = rememberHaptics()
     var drag by remember { mutableFloatStateOf(0f) }
     var height by remember { mutableIntStateOf(0) }
@@ -179,6 +180,21 @@ internal fun LyricsOffsetSheet(
                         .padding(start = 4.dp, top = 3.dp, bottom = 14.dp),
                 )
 
+                // Whose offset this is: the song's alone, or the one every song shares.
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    ScopePill(stringResource(Res.string.lyrics_offset_this_song), perSong, Modifier.weight(1f)) {
+                        haptics.play(Haptic.Select)
+                        PlayerSettings.setLyricsOffsetPerSong(true)
+                    }
+                    ScopePill(stringResource(Res.string.lyrics_offset_all_songs), !perSong, Modifier.weight(1f)) {
+                        haptics.play(Haptic.Select)
+                        PlayerSettings.setLyricsOffsetPerSong(false)
+                    }
+                }
+
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -241,6 +257,24 @@ internal fun LyricsOffsetSheet(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ScopePill(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier = modifier
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = if (selected) 0.22f else 0.06f))
+            .clickable(onClick = onClick)
+            .padding(vertical = 9.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = Color.White.copy(alpha = if (selected) 1f else 0.6f),
+        )
     }
 }
 

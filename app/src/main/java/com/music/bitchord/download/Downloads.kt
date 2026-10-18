@@ -18,6 +18,8 @@ import com.music.bitchord.data.lyrics.toLrc
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.durationMillis
 import com.music.bitchord.data.lyrics.LyricsArtifactFormat
+import dev.auden.library.lyrics.LyricsFetcher
+import dev.auden.library.lyrics.LyricsStore
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.DownloadQuality
 import com.music.bitchord.data.sources.SourceResolver
@@ -1129,6 +1131,7 @@ object Downloads {
                 if (alreadyThere != null) {
                     Log.d(TAG, "$name is already in Music; adopting it")
                     val artifact = lyricsArtifact?.await()
+                    storeLyricsVariants(context, song, track, artifact)
                     val lyricsResult = saveLyricsSidecar(context, name, artifact)
                     remember(song, track, alreadyThere, route.downloadFormat, lyricsResult)
                     DownloadSession.done(id)
@@ -1165,6 +1168,7 @@ object Downloads {
                         )
                     }
                     val artifact = lyricsArtifact?.await()
+                    storeLyricsVariants(context, song, track, artifact)
                     val lyricsResult = saveLyricsSidecar(context, name, artifact)
                     remember(song, track, savedUri, route.downloadFormat, lyricsResult)
                     DownloadSession.done(id)
@@ -1185,6 +1189,7 @@ object Downloads {
                 val words = lyrics?.await()
                 val cover = artwork?.await()
                 val artifact = lyricsArtifact?.await()
+                storeLyricsVariants(context, song, track, artifact)
                 val lyricsResult = saveLyricsSidecar(context, name, artifact)
 
                 // Publish only after metadata is part of the file. This keeps
@@ -1241,6 +1246,26 @@ object Downloads {
         )
     }
 
+    /**
+     * Writes [artifact] into what is on disk for an app download: the `.lrc` beside it and the tags inside it.
+     * Called when the listener switches which stored variant a song uses, so other players show the same
+     * lyrics Auden does. Files that are not the app's own downloads are left exactly as they are.
+     */
+    suspend fun applyLyricsToFiles(context: Context, song: Song, artifact: LyricsArtifact) = withContext(Dispatchers.IO) {
+        val audioUri = savedUri(context, song.videoId) ?: return@withContext
+        val name = DownloadStore.relativeName(context, audioUri) ?: return@withContext
+        val extension = name.substringAfterLast('.', "m4a")
+        val result = saveLyricsSidecar(context, name, artifact)
+        runCatching {
+            val embeddable = LyricsTag.Embeddable(
+                plain = artifact.lines.toLrc(),
+                enhanced = artifact.lines.toEnhancedLrc().takeIf { it.isNotBlank() },
+            )
+            MediaTagger.embed(context, audioUri, song, extension, embeddable)
+        }.onFailure { Log.w(TAG, "could not embed lyrics tag in $name: ${it.message}") }
+        if (result?.state == LyricsDownloadState.SAVED) updateLyricsMetadata(song.videoId, result)
+    }
+
     private suspend fun runLyricsOnly(context: Context, song: Song) = withContext(Dispatchers.IO) {
         val id = song.videoId
         _lyricsActive.update { it + id }
@@ -1286,6 +1311,30 @@ object Downloads {
             updateLyricsState(id, LyricsDownloadState.FAILED)
         } finally {
             _lyricsActive.update { it - id }
+        }
+    }
+
+    private val lyricsScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    /**
+     * Keeps the lyrics that came with a download as a stored variant, so they can be managed and switched
+     * later, and fetches the extra providers the listener asked to keep. The first lyrics for a song become
+     * the chosen ones; later downloads never override a choice already made.
+     */
+    private suspend fun storeLyricsVariants(context: Context, asked: Song, fetched: Song, artifact: LyricsArtifact?) {
+        artifact ?: return
+        val keys = setOf(asked.videoId, fetched.videoId)
+        for (key in keys) {
+            val chosen = LyricsStore.activeProvider(context, key)
+            LyricsStore.save(context, key, artifact, makeActive = chosen == null)
+        }
+        val extras = AppSettings.lyricsDownloadExtras.value - artifact.source
+        if (extras.isEmpty()) return
+        // After the download, not during it: a slow provider must never hold a track back.
+        lyricsScope.launch {
+            extras.forEach { provider ->
+                LyricsFetcher.fetch(fetched, provider)?.let { extra -> keys.forEach { LyricsStore.save(context, it, extra) } }
+            }
         }
     }
 

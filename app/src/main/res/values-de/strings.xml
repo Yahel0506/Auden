@@ -1461,4 +1461,26 @@
     <string name="library_folder_none">Wähle Music/Auden, um .lrc und cover.jpg neben jedem Titel zu speichern</string>
     <string name="library_folder_set">Speichert in %1$s</string>
     <string name="library_folder_forget">Diesen Ordner nicht mehr verwenden</string>
+    <string name="lyrics_saved_title">Texte</string>
+    <string name="lyrics_use">Verwenden</string>
+    <string name="lyrics_in_use">In Verwendung</string>
+    <string name="lyrics_add_provider">Texte von anderem Anbieter holen</string>
+    <string name="lyrics_fetching">Suche…</string>
+    <string name="lyrics_not_found">Nicht gefunden</string>
+    <string name="lyrics_fmt_word">Wort für Wort</string>
+    <string name="lyrics_fmt_line">Zeile für Zeile</string>
+    <string name="lyrics_fmt_plain">Nicht synchron</string>
+    <string name="lyrics_lines_count">%1$d Zeilen</string>
+    <string name="lyrics_song_offset">Versatz für diesen Titel: %1$s</string>
+    <string name="lyrics_none_saved">Noch keine Texte für diesen Titel gespeichert</string>
+    <string name="lyrics_remove_offset">Zurücksetzen</string>
+    <string name="download_lyrics_extras">Zusätzliche Texte speichern</string>
+    <string name="download_lyrics_extras_hint">Der beste Treffer wird immer gespeichert. Markiere Anbieter, um auch deren Versionen zu behalten.</string>
+    <string name="download_lyrics_extras_count">%1$d zusätzlich</string>
+    <string name="download_lyrics_extras_none">Nur der beste Treffer</string>
+    <string name="lyrics_batch_title">Texte für „%1$s“ werden gesucht</string>
+    <string name="lyrics_batch_nothing">Alles hat schon Texte</string>
+    <string name="lyrics_batch_done_title">Texte für „%1$s“ gespeichert</string>
+    <string name="lyrics_batch_done_text">%1$d gefunden · %2$d ohne Text</string>
+    <string name="find_lyrics_for_all">Texte suchen</string>
 </resources>

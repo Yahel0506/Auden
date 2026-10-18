@@ -53,6 +53,7 @@ import dev.auden.library.links.LocalCopy
  */
 @Composable
 internal fun ManageDownloadRow(
+    song: com.music.bitchord.data.model.Song,
     copies: List<LocalCopy>,
     playingUri: String?,
     palette: ArtworkPalette,
@@ -85,6 +86,7 @@ internal fun ManageDownloadRow(
                     onDelete = onDeleteOwn.takeIf { copy.downloadedByApp },
                 )
             }
+            ManageLyricsSection(song, palette)
             Spacer(Modifier.height(6.dp))
         }
     }

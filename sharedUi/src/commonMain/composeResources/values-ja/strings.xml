@@ -203,4 +203,6 @@
     <string name="import_playlist_file">Import file</string>
     <string name="import_playlist_file_subtitle">M3U, XSPF or Auden</string>
     <string name="new_playlist_subtitle">Account or this device</string>
+    <string name="lyrics_offset_this_song">This song</string>
+    <string name="lyrics_offset_all_songs">All songs</string>
 </resources>

@@ -62,7 +62,8 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val lastPlayerScreen get() = AppSettings.lastPlayerScreen
         override val legacyMeshGradient get() = AppSettings.legacyMeshGradient
         override val lyricsBlur get() = AppSettings.lyricsBlur
-        override val lyricsOffsetMs get() = AppSettings.lyricsOffsetMs
+        override val lyricsOffsetMs get() = dev.auden.library.lyrics.SongLyricsOffset.effective
+        override val lyricsOffsetPerSong get() = dev.auden.library.lyrics.SongLyricsOffset.perSong
         override val lyricsSourceOrder get() = AppSettings.lyricsSourceOrder
         override val meteredConnection get() = AppSettings.meteredConnection
         override val preferUsbDac get() = AppSettings.preferUsbDac
@@ -81,7 +82,8 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val versionAlignmentInProgress get() = AppSettings.versionAlignmentInProgress
 
         override fun setLastPlayerScreen(value: LastPlayerScreen) = AppSettings.setLastPlayerScreen(value)
-        override fun setLyricsOffsetMs(value: Int) = AppSettings.setLyricsOffsetMs(value)
+        override fun setLyricsOffsetMs(value: Int) = dev.auden.library.lyrics.SongLyricsOffset.set(value)
+        override fun setLyricsOffsetPerSong(enabled: Boolean) = dev.auden.library.lyrics.SongLyricsOffset.setPerSong(enabled)
     }
 
     override fun cachedCanvas(song: Song): CanvasArtwork? = CanvasRepository.cached(song)

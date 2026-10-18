@@ -513,6 +513,9 @@ object AppSettings {
     /** The databases [syncedLyrics] may ask. Empty is the same as off. */
     val lyricsSources = MutableStateFlow(LyricsSource.offered.toSet())
 
+    /** Providers whose lyrics are also kept, as extra choices, whenever a song is downloaded. */
+    val lyricsDownloadExtras = MutableStateFlow<Set<LyricsSource>>(emptySet())
+
     /**
      * The order [lyricsSources] are asked in — see [LyricsRepository][com.music.bitchord.data.lyrics.LyricsRepository]:
      * every enabled source is asked at once, but a higher-priority one still
@@ -903,6 +906,8 @@ object AppSettings {
         }.getOrDefault(LastPlayerScreen.MAIN)
         syncedLyrics.value = prefs.getBoolean(KEY_SYNCED_LYRICS, true)
         lyricsSources.value = readLyricsSources()
+        lyricsDownloadExtras.value = (prefs.getString(KEY_LYRICS_DOWNLOAD_EXTRAS, null) ?: "")
+            .split(',').mapNotNull { name -> LyricsSource.entries.firstOrNull { it.name == name } }.toSet()
         lyricsSourceOrder.value = readLyricsSourceOrder()
         prioritizeSyllableSync.value = prefs.getBoolean(KEY_PRIORITIZE_SYLLABLE_SYNC, false)
         paxSenixApiKey.value = prefs.getString(KEY_PAXSENIX_API_KEY, "").orEmpty()
@@ -1337,6 +1342,11 @@ object AppSettings {
     fun setSyncedLyrics(value: Boolean) {
         syncedLyrics.value = value
         prefs.edit().putBoolean(KEY_SYNCED_LYRICS, value).apply()
+    }
+
+    fun setLyricsDownloadExtras(value: Set<LyricsSource>) {
+        lyricsDownloadExtras.value = value
+        prefs.edit().putString(KEY_LYRICS_DOWNLOAD_EXTRAS, value.joinToString(",") { it.name }).apply()
     }
 
     fun setLyricsSources(value: Set<LyricsSource>) {
@@ -2014,6 +2024,7 @@ object AppSettings {
     private const val KEY_WIFI_ONLY_DOWNLOADS = "wifi_only_downloads"
     private const val KEY_EXPORT_DOWNLOADS = "export_downloads"
     private const val KEY_DOWNLOAD_TEMPLATE = "download_template"
+    private const val KEY_LYRICS_DOWNLOAD_EXTRAS = "lyrics_download_extras"
     private const val KEY_DOWNLOAD_CONCURRENCY = "download_concurrency"
     private const val KEY_LOSSLESS = "lossless_audio"
     private const val KEY_CROSSFADE = "crossfade_seconds"

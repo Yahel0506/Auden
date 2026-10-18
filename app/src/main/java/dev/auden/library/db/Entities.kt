@@ -118,22 +118,34 @@ data class PlaylistEntryEntity(
     val position: Int,
 )
 
-/** A lyrics response kept for one track; several providers may coexist. */
-@Entity(
-    tableName = "lyrics_variant",
-    foreignKeys = [ForeignKey(TrackEntity::class, parentColumns = ["id"], childColumns = ["trackId"], onDelete = ForeignKey.CASCADE)],
-    indices = [Index("trackId", "provider", unique = true)],
-)
+/**
+ * A lyrics response kept for a song; several providers may coexist, one per provider.
+ *
+ * Keyed by [songKey] (the song's video id, or its file uri for a file with no id) rather than by a row of
+ * `track`, so a song that was never added to the library — streamed, in a playlist — can still keep
+ * the lyrics the listener chose to download.
+ */
+@Entity(tableName = "lyrics_variant", primaryKeys = ["songKey", "provider"])
 data class LyricsVariantEntity(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val trackId: Long,
+    val songKey: String,
+    /** A [com.music.bitchord.data.lyrics.LyricsSource] name. */
     val provider: String,
+    /** A [com.music.bitchord.data.lyrics.LyricsArtifactFormat] name. */
     val format: String,
     val content: String,
     val fetchedAt: Long = System.currentTimeMillis(),
-    val isActive: Boolean = false,
-    /** Added on top of the global lyrics offset. */
-    val offsetMs: Int = 0,
+)
+
+/**
+ * What the listener decided about one song's lyrics: which stored variant is the one to show, and how
+ * far its timing is off. Either may be unset.
+ */
+@Entity(tableName = "song_lyrics_pref")
+data class SongLyricsPrefEntity(
+    @PrimaryKey val songKey: String,
+    val activeProvider: String? = null,
+    /** Replaces the global lyrics offset for this song when set. */
+    val offsetMs: Int? = null,
 )
 
 /** One listen, the table the stats screens will read from. */

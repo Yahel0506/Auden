@@ -174,6 +174,8 @@ interface PlayerSettingsSource {
     val legacyMeshGradient: StateFlow<Boolean>
     val lyricsBlur: StateFlow<Boolean>
     val lyricsOffsetMs: StateFlow<Int>
+    /** Whether the lyrics offset being edited belongs to the current song alone. */
+    val lyricsOffsetPerSong: StateFlow<Boolean>
     val lyricsSourceOrder: StateFlow<List<LyricsSource>>
     val meteredConnection: StateFlow<Boolean?>
     val preferUsbDac: StateFlow<Boolean>
@@ -195,6 +197,7 @@ interface PlayerSettingsSource {
 
     fun setLastPlayerScreen(value: LastPlayerScreen)
     fun setLyricsOffsetMs(value: Int)
+    fun setLyricsOffsetPerSong(enabled: Boolean)
 }
 
 /** The player's name for the installed host's settings, read where AppSettings used to be. */

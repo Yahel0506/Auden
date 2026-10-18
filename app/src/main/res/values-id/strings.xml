@@ -1438,4 +1438,26 @@
     <string name="library_folder_none">Pick Music/Auden to save .lrc and cover.jpg beside each song</string>
     <string name="library_folder_set">Saving to %1$s</string>
     <string name="library_folder_forget">Stop using this folder</string>
+    <string name="lyrics_saved_title">Lyrics</string>
+    <string name="lyrics_use">Use</string>
+    <string name="lyrics_in_use">In use</string>
+    <string name="lyrics_add_provider">Get lyrics from another provider</string>
+    <string name="lyrics_fetching">Searching…</string>
+    <string name="lyrics_not_found">Not found</string>
+    <string name="lyrics_fmt_word">Word by word</string>
+    <string name="lyrics_fmt_line">Line by line</string>
+    <string name="lyrics_fmt_plain">Not synced</string>
+    <string name="lyrics_lines_count">%1$d lines</string>
+    <string name="lyrics_song_offset">Timing for this song: %1$s</string>
+    <string name="lyrics_none_saved">No lyrics saved for this song yet</string>
+    <string name="lyrics_remove_offset">Reset</string>
+    <string name="download_lyrics_extras">Extra lyrics to keep</string>
+    <string name="download_lyrics_extras_hint">The best match is always saved. Tick providers to also keep their versions, so you can switch later.</string>
+    <string name="download_lyrics_extras_count">%1$d extra</string>
+    <string name="download_lyrics_extras_none">Best match only</string>
+    <string name="lyrics_batch_title">Finding lyrics for “%1$s”</string>
+    <string name="lyrics_batch_nothing">Everything already has lyrics</string>
+    <string name="lyrics_batch_done_title">Lyrics for “%1$s” saved</string>
+    <string name="lyrics_batch_done_text">%1$d found · %2$d without lyrics</string>
+    <string name="find_lyrics_for_all">Find lyrics</string>
 </resources>

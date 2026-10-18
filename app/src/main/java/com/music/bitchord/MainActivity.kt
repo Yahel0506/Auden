@@ -4795,6 +4795,8 @@ private fun BitChordApp(
                     },
                 savedOnDevice = target.browseId?.let { id -> localPlaylists.any { it.sourceId == id.removePrefix("VL") } } == true,
                 savingOnDevice = target.browseId?.removePrefix("VL") in savingToDevice,
+                onFetchLyrics = act { songs -> dev.auden.library.lyrics.LyricsBatch.start(context, songs, target.title) }
+                    .takeIf { target.type == BrowseType.PLAYLIST || target.type == BrowseType.ALBUM },
                 onDuplicate = playlist?.takeIf { it.isOnDevice }?.let { p ->
                     {
                         browseActions = null

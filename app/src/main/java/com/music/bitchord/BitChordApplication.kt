@@ -116,6 +116,7 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
             CoroutineScope(Dispatchers.IO).launch { Innertube.ensureSessionScope() }
         }
         AppSettings.init(this, authStore)
+        dev.auden.library.lyrics.SongLyricsOffset.init(this)
         // Off the main thread; a one-time copy of pre-Auden data into AudenDb.
         CoroutineScope(Dispatchers.IO).launch {
             dev.auden.library.LegacyMigration.run(this@BitChordApplication)

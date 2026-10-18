@@ -238,6 +238,7 @@ fun SettingsScreen(
     val downloadQuality by AppSettings.downloadQuality.collectAsStateWithLifecycle()
     val downloadTemplate by AppSettings.downloadTemplate.collectAsStateWithLifecycle()
     val downloadConcurrency by AppSettings.downloadConcurrency.collectAsStateWithLifecycle()
+    val lyricsExtras by AppSettings.lyricsDownloadExtras.collectAsStateWithLifecycle()
     val wifiOnlyDownloads by AppSettings.wifiOnlyDownloads.collectAsStateWithLifecycle()
     val exportDownloads by AppSettings.exportDownloads.collectAsStateWithLifecycle()
     val stopOnTaskRemoved by AppSettings.stopOnTaskRemoved.collectAsStateWithLifecycle()
@@ -293,6 +294,7 @@ fun SettingsScreen(
     var pickingDownloadQuality by remember { mutableStateOf(false) }
     var pickingDownloadLayout by remember { mutableStateOf(false) }
     var managingDownloads by remember { mutableStateOf(false) }
+    var pickingLyricsExtras by remember { mutableStateOf(false) }
     // The folder the listener opened for lyrics and covers; re-read after the picker or "stop using".
     var libraryFolderRevision by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     val libraryFolderPicker = androidx.activity.compose.rememberLauncherForActivityResult(
@@ -578,6 +580,20 @@ fun SettingsScreen(
                     title = downloadLayoutTitle,
                     subtitle = com.music.bitchord.download.DownloadLayout.preview(downloadTemplate),
                     onClick = { pickingDownloadLayout = true },
+                )
+            }
+            val lyricsExtrasTitle = stringResource(R.string.download_lyrics_extras)
+            row(lyricsExtrasTitle, "lyrics", "providers", "versions", "download") {
+                SettingsRow(
+                    icon = Icons.Rounded.Download,
+                    title = lyricsExtrasTitle,
+                    subtitle = stringResource(R.string.download_lyrics_extras_hint),
+                    value = if (lyricsExtras.isEmpty()) {
+                        stringResource(R.string.download_lyrics_extras_none)
+                    } else {
+                        stringResource(R.string.download_lyrics_extras_count, lyricsExtras.size)
+                    },
+                    onClick = { pickingLyricsExtras = true },
                 )
             }
             val libraryFolderTitle = stringResource(R.string.library_folder_title)
@@ -1705,6 +1721,44 @@ fun SettingsScreen(
                     pickingDownloadQuality = false
                 },
             )
+        }
+    }
+
+    if (pickingLyricsExtras) {
+        ModalBottomSheet(
+            onDismissRequest = { pickingLyricsExtras = false },
+            containerColor = MaterialTheme.colorScheme.background,
+        ) {
+            Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+                Text(
+                    stringResource(R.string.download_lyrics_extras),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(horizontal = 22.dp),
+                )
+                Text(
+                    stringResource(R.string.download_lyrics_extras_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 22.dp, end = 22.dp, bottom = 12.dp),
+                )
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+                com.music.bitchord.data.lyrics.LyricsSource.offered.forEach { provider ->
+                    val on = provider in lyricsExtras
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                AppSettings.setLyricsDownloadExtras(if (on) lyricsExtras - provider else lyricsExtras + provider)
+                            }
+                            .padding(horizontal = 22.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(provider.label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground, modifier = Modifier.weight(1f))
+                        if (on) Icon(Icons.Rounded.Check, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                    }
+                }
+            }
         }
     }
 

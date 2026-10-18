@@ -612,6 +612,7 @@ private fun DownloadRow(song: Song, palette: ArtworkPalette, isOffline: Boolean,
         null -> if (copies.isNotEmpty() || file != null) {
             // The app's own download, and any other file that is this same song.
             ManageDownloadRow(
+                song = song,
                 copies = copies,
                 playingUri = playingUri,
                 palette = palette,

@@ -19,22 +19,24 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         PlaylistEntity::class,
         PlaylistEntryEntity::class,
         LyricsVariantEntity::class,
+        SongLyricsPrefEntity::class,
         PlayEventEntity::class,
     ],
-    version = 5,
+    version = 6,
     exportSchema = true,
 )
 abstract class AudenDb : RoomDatabase() {
     abstract fun tracks(): TrackDao
     abstract fun playlists(): PlaylistDao
     abstract fun playlistWrites(): PlaylistWriteDao
+    abstract fun lyrics(): LyricsDao
 
     companion object {
         @Volatile private var instance: AudenDb? = null
 
         fun get(context: Context): AudenDb = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, AudenDb::class.java, "auden.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build()
                 .also { instance = it }
         }
@@ -71,6 +73,16 @@ abstract class AudenDb : RoomDatabase() {
                     "identStatus TEXT", "identSource TEXT", "suggestedVideoId TEXT",
                     "suggestedTitle TEXT", "suggestedArtist TEXT", "identifiedAt INTEGER",
                 ).forEach { db.execSQL("ALTER TABLE track ADD COLUMN $it") }
+            }
+        }
+
+        /** Lyrics variants keyed by song instead of by library row, and per-song lyrics choices. */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // The earlier table was never written to.
+                db.execSQL("DROP TABLE IF EXISTS lyrics_variant")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `lyrics_variant` (`songKey` TEXT NOT NULL, `provider` TEXT NOT NULL, `format` TEXT NOT NULL, `content` TEXT NOT NULL, `fetchedAt` INTEGER NOT NULL, PRIMARY KEY(`songKey`, `provider`))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `song_lyrics_pref` (`songKey` TEXT NOT NULL, `activeProvider` TEXT, `offsetMs` INTEGER, PRIMARY KEY(`songKey`))")
             }
         }
     }
