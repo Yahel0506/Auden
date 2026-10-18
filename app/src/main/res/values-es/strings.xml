@@ -339,7 +339,7 @@
     <string name="downloads_finished">Descargas · finalizadas</string>
     <string name="downloading_progress">Descargando · %1$d%%</string>
     <string name="starting">Iniciando</string>
-    <string name="saved_to_bitchord_folder">Guardada en Music/BitChord</string>
+    <string name="saved_to_bitchord_folder">Guardada en Music/Auden</string>
     <string name="nothing_downloading">No hay descargas activas</string>
     <string name="nothing_to_explore">No hay nada para explorar ahora</string>
     <string name="no_youtube_music_results">No hay resultados de YouTube Music</string>
@@ -1424,4 +1424,9 @@
     <string name="duplicates_subtitle">%1$d canciones descargadas más de una vez</string>
     <string name="duplicates_keep_best">Conservar la más grande</string>
     <string name="storage_row_subtitle">Carpetas, duplicados y sobrantes</string>
+    <string name="downloads_paused">Descargas en pausa</string>
+    <string name="downloads_paused_waiting">%1$d en espera</string>
+    <string name="resume_downloads">Reanudar</string>
+    <string name="download_concurrency">Descargas simultáneas</string>
+    <string name="download_concurrency_subtitle">Menos es más suave con tu conexión; más es más rápido en colas largas</string>
 </resources>

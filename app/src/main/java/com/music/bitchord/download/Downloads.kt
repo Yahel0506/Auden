@@ -27,6 +27,8 @@ import com.music.bitchord.playback.AudioCache
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -70,6 +72,8 @@ data class PendingDownload(
     val song: Song,
     val lyricsOnly: Boolean = false,
     val from: String? = null,
+    /** Retries already spent on it; see [Downloads.scheduleRetry]. */
+    val attempt: Int = 0,
 )
 
 /**
@@ -83,6 +87,7 @@ object Downloads {
 
     private const val TAG = "BitChord"
     private const val KEY_SAVED = "downloaded_tracks"
+    private const val KEY_PAUSED = "downloads_paused"
     private const val KEY_SAVED_METADATA = "downloaded_tracks_metadata"
     private const val KEY_SAVED_COLLECTIONS = "downloaded_collections"
 
@@ -137,6 +142,15 @@ object Downloads {
 
     private val lock = Any()
 
+    /** Tracks whose last try failed for a reason worth another, waiting out their back-off. Guarded by [lock]. */
+    private val retrying = HashSet<String>()
+    private val retryScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    private val _paused = MutableStateFlow(false)
+
+    /** Whether the queue has been told to stop starting new tracks. Tracks already running finish. */
+    val paused: StateFlow<Boolean> = _paused.asStateFlow()
+
     /**
      * The tracks taken off the queue and not yet finished, to the job fetching
      * each — null in the gap between a worker claiming a track and its job
@@ -152,6 +166,8 @@ object Downloads {
 
     fun init(context: Context) {
         prefs = context.getSharedPreferences("bitchord_settings", Context.MODE_PRIVATE)
+        _paused.value = prefs.getBoolean(KEY_PAUSED, false)
+        QueueStore.init(context)
         _saved.value = runCatching {
             json.decodeFromString(serializer, prefs.getString(KEY_SAVED, null) ?: "{}")
         }.getOrDefault(emptyMap())
@@ -185,9 +201,39 @@ object Downloads {
             if (id in pending || id in running) return
             pending[id] = PendingDownload(song, lyricsOnly = false, from = from)
         }
+        QueueStore.put(song, from)
         _active.update { it + (id to DownloadState.Queued) }
         DownloadSession.queued(song, from)
         startService(context, id)
+    }
+
+    /**
+     * Puts back what was waiting when the process last died. Called once at start-up; a queue that was
+     * paused stays paused.
+     */
+    fun restoreQueue(context: Context) {
+        val jobs = QueueStore.all()
+        if (jobs.isEmpty() || !AppSettings.downloadsAllowedNow) return
+        jobs.forEach { job ->
+            val song = job.toSong()
+            synchronized(lock) {
+                if (song.videoId in pending || song.videoId in running) return@forEach
+                pending[song.videoId] = PendingDownload(song, lyricsOnly = false, from = job.from, attempt = job.attempt)
+            }
+            _active.update { it + (song.videoId to DownloadState.Queued) }
+            DownloadSession.queued(song, job.from)
+        }
+        startService(context, jobs.first().videoId)
+    }
+
+    /** Stops starting new tracks, or starts again. Tracks already running are left to finish. */
+    fun setPaused(context: Context, value: Boolean) {
+        _paused.value = value
+        if (::prefs.isInitialized) prefs.edit().putBoolean(KEY_PAUSED, value).apply()
+        if (!value) {
+            val any = synchronized(lock) { pending.keys.firstOrNull() }
+            if (any != null) startService(context, any)
+        }
     }
 
     fun enqueueLyrics(context: Context, song: Song) {
@@ -252,8 +298,10 @@ object Downloads {
      * told to run is no longer wanted, and stops it on arrival.
      */
     fun cancel(videoId: String) {
+        QueueStore.remove(videoId)
         val job = synchronized(lock) {
             pending.remove(videoId)
+            retrying.remove(videoId)
             if (videoId !in running) return@synchronized null
             running.remove(videoId)
         }
@@ -821,6 +869,8 @@ object Downloads {
     // ---- Driven by DownloadService -----------------------------------------
 
     internal fun takeNext(): PendingDownload? = synchronized(lock) {
+        // Paused, or as many running as the listener allows: nothing new starts.
+        if (_paused.value || running.size >= AppSettings.downloadConcurrency.value) return null
         val entry = pending.entries.firstOrNull() ?: return null
         pending.remove(entry.key)
         running[entry.key] = null
@@ -842,7 +892,7 @@ object Downloads {
     }
 
     /** Whether anything is still queued or in flight — see [DownloadService]'s workers. */
-    internal fun busy(): Boolean = synchronized(lock) { pending.isNotEmpty() || running.isNotEmpty() }
+    internal fun busy(): Boolean = synchronized(lock) { pending.isNotEmpty() || running.isNotEmpty() || retrying.isNotEmpty() }
 
     /**
      * The service is gone, so nothing is running any more.
@@ -883,6 +933,7 @@ object Downloads {
             // the notification and with the Downloads page afterwards.
             DownloadSession.retitle(id, plan.track)
             transfer(context, song, plan, from)
+            QueueStore.remove(id)
             // A release asked for whole gets its playlist file once its last track has landed.
             from?.let { CollectionPlaylists.updateWhenSettled(context, it) }
         } catch (e: CancellationException) {
@@ -890,7 +941,44 @@ object Downloads {
             throw e
         } catch (e: Exception) {
             Log.w(TAG, "download failed for $id: ${e.message}", e)
-            fail(id, e.friendly())
+            if (e.isWorthRetrying() && task.attempt < MAX_RETRIES) {
+                scheduleRetry(task)
+            } else {
+                QueueStore.remove(id)
+                fail(id, e.friendly())
+            }
+        }
+    }
+
+    /**
+     * A failure that another try might not repeat: the connection dropped, a server hiccuped. Not the
+     * ones that carry their own explanation (the device won't store that format) or a refusal.
+     */
+    private fun Exception.isWorthRetrying() =
+        this !is IllegalStateException && this !is IllegalArgumentException && this !is SecurityException
+
+    /**
+     * Puts [task] back on the queue after a wait that grows with each failure — 5, 15, then 45 seconds —
+     * so a connection that has gone for a moment is not hammered, and one that is back is used.
+     */
+    private fun scheduleRetry(task: PendingDownload) {
+        val id = task.song.videoId
+        val next = task.attempt + 1
+        var wait = RETRY_BASE_MS
+        repeat(task.attempt) { wait *= 3 }
+        synchronized(lock) { retrying += id }
+        QueueStore.put(task.song, task.from, next)
+        // Shown as waiting, not failed: it is going to try again by itself.
+        _active.update { it + (id to DownloadState.Queued) }
+        DownloadSession.queued(task.song, task.from)
+        Log.d(TAG, "$id will be tried again in ${wait / 1000}s (attempt $next of $MAX_RETRIES)")
+        retryScope.launch {
+            delay(wait)
+            synchronized(lock) {
+                // Cancelled while it waited.
+                if (!retrying.remove(id)) return@launch
+                pending[id] = task.copy(attempt = next)
+            }
         }
     }
 
@@ -1543,6 +1631,9 @@ object Downloads {
      * looking for a network problem that isn't there. Shared with the callers
      * that show it as a toast so the two cannot drift apart.
      */
+    private const val MAX_RETRIES = 3
+    private const val RETRY_BASE_MS = 5_000L
+
     internal const val WIFI_ONLY_REFUSAL = "Downloads are set to Wi-Fi only"
 
     /** Dropped when the sheet is reopened; a failure is worth showing once. */

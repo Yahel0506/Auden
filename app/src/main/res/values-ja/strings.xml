@@ -321,7 +321,7 @@
     <string name="downloads_finished">ダウンロード · 完了</string>
     <string name="downloading_progress">ダウンロード中 · %1$d%%</string>
     <string name="starting">開始しています</string>
-    <string name="saved_to_bitchord_folder">Music/BitChordに保存済み</string>
+    <string name="saved_to_bitchord_folder">Music/Audenに保存済み</string>
     <string name="nothing_downloading">ダウンロード中の項目はありません</string>
     <string name="nothing_to_explore">現在探索できるものはありません</string>
     <string name="no_youtube_music_results">YouTube Musicからの結果はありません</string>
@@ -1430,4 +1430,9 @@
     <string name="duplicates_subtitle">%1$d songs downloaded more than once</string>
     <string name="duplicates_keep_best">Keep the largest</string>
     <string name="storage_row_subtitle">Folders, duplicates and leftovers</string>
+    <string name="downloads_paused">Downloads paused</string>
+    <string name="downloads_paused_waiting">%1$d waiting</string>
+    <string name="resume_downloads">Resume</string>
+    <string name="download_concurrency">Simultaneous downloads</string>
+    <string name="download_concurrency_subtitle">Fewer is gentler on your connection; more is faster for long queues</string>
 </resources>

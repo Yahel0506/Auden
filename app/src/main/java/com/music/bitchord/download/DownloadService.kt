@@ -60,6 +60,8 @@ class DownloadService : Service() {
         // with it.
         promote()
 
+        if (intent?.action == ACTION_RESUME) Downloads.setPaused(this, false)
+
         if (intent?.action == ACTION_CANCEL_ALL) {
             Downloads.active.value.keys.toList().forEach(Downloads::cancel)
             shutdown(stopWork = true)
@@ -196,6 +198,26 @@ class DownloadService : Service() {
             ?.times(100)?.toInt()
             ?: 0
 
+        if (Downloads.paused.value) {
+            val resume = PendingIntent.getService(
+                this,
+                1,
+                Intent(this, DownloadService::class.java).setAction(ACTION_RESUME),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+            return NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_notification_logo)
+                .setContentTitle(getString(R.string.downloads_paused))
+                .setContentText(getString(R.string.downloads_paused_waiting, waiting + runningStates.size))
+                .setOngoing(true)
+                .setSilent(true)
+                .setOnlyAlertOnce(true)
+                .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .addAction(0, getString(R.string.resume_downloads), resume)
+                .build()
+        }
+
         val song = current
         val title = when {
             runningStates.size > 1 -> "Downloading ${runningStates.size} songs"
@@ -254,6 +276,7 @@ class DownloadService : Service() {
         const val NOTIFICATION_ID = 0x8175
 
         const val ACTION_CANCEL_ALL = "com.music.bitchord.download.CANCEL_ALL"
+        const val ACTION_RESUME = "com.music.bitchord.download.RESUME"
 
         /** Four updates a second is smooth; the shade coalesces anything faster anyway. */
         const val PROGRESS_REFRESH_MS = 250L

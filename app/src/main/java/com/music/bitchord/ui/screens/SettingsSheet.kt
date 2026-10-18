@@ -237,6 +237,7 @@ fun SettingsScreen(
     val showCacheFolder by AppSettings.showCacheFolder.collectAsStateWithLifecycle()
     val downloadQuality by AppSettings.downloadQuality.collectAsStateWithLifecycle()
     val downloadTemplate by AppSettings.downloadTemplate.collectAsStateWithLifecycle()
+    val downloadConcurrency by AppSettings.downloadConcurrency.collectAsStateWithLifecycle()
     val wifiOnlyDownloads by AppSettings.wifiOnlyDownloads.collectAsStateWithLifecycle()
     val exportDownloads by AppSettings.exportDownloads.collectAsStateWithLifecycle()
     val stopOnTaskRemoved by AppSettings.stopOnTaskRemoved.collectAsStateWithLifecycle()
@@ -544,6 +545,20 @@ fun SettingsScreen(
                     checked = wifiOnlyDownloads,
                     onCheckedChange = AppSettings::setWifiOnlyDownloads,
                     badge = stringResource(R.string.blocking).takeIf { wifiOnlyDownloads && metered == true },
+                )
+            }
+            val concurrencyTitle = stringResource(R.string.download_concurrency)
+            row(concurrencyTitle, "parallel", "simultaneous", "speed", "queue") {
+                SettingsRow(
+                    icon = Icons.Rounded.Download,
+                    title = concurrencyTitle,
+                    subtitle = stringResource(R.string.download_concurrency_subtitle),
+                )
+                SegmentedControl(
+                    options = listOf("1", "2", "3", "4"),
+                    selectedIndex = downloadConcurrency - 1,
+                    onSelect = { AppSettings.setDownloadConcurrency(it + 1) },
+                    modifier = Modifier.padding(start = TEXT_INSET, end = ROW_INSET, bottom = 14.dp),
                 )
             }
             val downloadLayoutTitle = stringResource(R.string.download_folder_structure)

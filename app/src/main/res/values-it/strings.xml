@@ -1391,4 +1391,9 @@
     <string name="duplicates_subtitle">%1$d brani scaricati più volte</string>
     <string name="duplicates_keep_best">Mantieni la più grande</string>
     <string name="storage_row_subtitle">Cartelle, duplicati e avanzi</string>
+    <string name="downloads_paused">Download in pausa</string>
+    <string name="downloads_paused_waiting">%1$d in attesa</string>
+    <string name="resume_downloads">Riprendi</string>
+    <string name="download_concurrency">Download simultanei</string>
+    <string name="download_concurrency_subtitle">Meno è più leggero per la connessione; di più accelera le code lunghe</string>
 </resources>

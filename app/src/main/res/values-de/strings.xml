@@ -326,7 +326,7 @@
     <string name="downloads_finished">Downloads · fertig</string>
     <string name="downloading_progress">Wird heruntergeladen · %1$d%%</string>
     <string name="starting">Wird gestartet</string>
-    <string name="saved_to_bitchord_folder">In Music/BitChord gespeichert</string>
+    <string name="saved_to_bitchord_folder">In Music/Auden gespeichert</string>
     <string name="nothing_downloading">Nichts wird heruntergeladen</string>
     <string name="nothing_to_explore">Gerade nichts zu entdecken</string>
     <string name="no_youtube_music_results">Keine Ergebnisse von YouTube Music</string>
@@ -1452,4 +1452,9 @@
     <string name="duplicates_subtitle">%1$d Titel mehrfach geladen</string>
     <string name="duplicates_keep_best">Die größte behalten</string>
     <string name="storage_row_subtitle">Ordner, Duplikate und Reste</string>
+    <string name="downloads_paused">Downloads pausiert</string>
+    <string name="downloads_paused_waiting">%1$d wartend</string>
+    <string name="resume_downloads">Fortsetzen</string>
+    <string name="download_concurrency">Gleichzeitige Downloads</string>
+    <string name="download_concurrency_subtitle">Weniger schont die Verbindung; mehr beschleunigt lange Warteschlangen</string>
 </resources>

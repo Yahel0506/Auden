@@ -194,6 +194,7 @@ fun TopBarDownloadButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
 fun DownloadManagerSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val session by DownloadSession.state.collectAsStateWithLifecycle()
+    val paused by Downloads.paused.collectAsStateWithLifecycle()
     // Newest ask last, the order the queue will actually reach them in.
     val items = remember(session.items) { session.items.sortedBy { it.sequence } }
 
@@ -221,6 +222,10 @@ fun DownloadManagerSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier) {
                 )
             }
             if (session.busy) {
+                // Stops new tracks from starting; the ones running finish.
+                TextButton(onClick = { Downloads.setPaused(context, !paused) }) {
+                    Text(stringResource(if (paused) R.string.resume_downloads else R.string.pause))
+                }
                 TextButton(
                     onClick = {
                         // Only what is still going. Cancelling a finished row

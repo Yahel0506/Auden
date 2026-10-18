@@ -362,7 +362,7 @@
     <string name="starting">Đang bắt đầu</string>
     <string name="start_radio">Phát radio</string>
     <string name="radio_started">Đã bắt đầu radio %1$s</string>
-    <string name="saved_to_bitchord_folder">Đã lưu vào Music/BitChord</string>
+    <string name="saved_to_bitchord_folder">Đã lưu vào Music/Auden</string>
     <string name="nothing_downloading">Không có nội dung đang tải</string>
     <string name="nothing_to_explore">Hiện không có gì để khám phá</string>
     <string name="no_youtube_music_results">Không có kết quả nào từ YouTube Music</string>
@@ -1370,4 +1370,9 @@
     <string name="duplicates_subtitle">%1$d songs downloaded more than once</string>
     <string name="duplicates_keep_best">Keep the largest</string>
     <string name="storage_row_subtitle">Folders, duplicates and leftovers</string>
+    <string name="downloads_paused">Downloads paused</string>
+    <string name="downloads_paused_waiting">%1$d waiting</string>
+    <string name="resume_downloads">Resume</string>
+    <string name="download_concurrency">Simultaneous downloads</string>
+    <string name="download_concurrency_subtitle">Fewer is gentler on your connection; more is faster for long queues</string>
 </resources>

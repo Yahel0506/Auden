@@ -209,6 +209,9 @@ object AppSettings {
      */
     val exportDownloads = MutableStateFlow(false)
 
+    /** How many tracks may download at once, 1 to 4. */
+    val downloadConcurrency = MutableStateFlow(4)
+
     /** Where a downloaded track goes below the download folder; see [com.music.bitchord.download.DownloadLayout]. */
     val downloadTemplate = MutableStateFlow(com.music.bitchord.download.DownloadLayout.DEFAULT_TEMPLATE)
 
@@ -819,6 +822,7 @@ object AppSettings {
         downloadQuality.value = readDownloadQuality()
         wifiOnlyDownloads.value = prefs.getBoolean(KEY_WIFI_ONLY_DOWNLOADS, true)
         exportDownloads.value = prefs.getBoolean(KEY_EXPORT_DOWNLOADS, false)
+        downloadConcurrency.value = prefs.getInt(KEY_DOWNLOAD_CONCURRENCY, 4).coerceIn(1, 4)
         downloadTemplate.value = prefs.getString(KEY_DOWNLOAD_TEMPLATE, null)
             ?.takeIf(com.music.bitchord.download.DownloadLayout::valid)
             ?: com.music.bitchord.download.DownloadLayout.DEFAULT_TEMPLATE
@@ -1577,6 +1581,11 @@ object AppSettings {
         prefs.edit().putString(KEY_DOWNLOAD_TEMPLATE, value).apply()
     }
 
+    fun setDownloadConcurrency(value: Int) {
+        downloadConcurrency.value = value.coerceIn(1, 4)
+        prefs.edit().putInt(KEY_DOWNLOAD_CONCURRENCY, downloadConcurrency.value).apply()
+    }
+
     fun setExportDownloads(value: Boolean) {
         exportDownloads.value = value
         prefs.edit().putBoolean(KEY_EXPORT_DOWNLOADS, value).apply()
@@ -2005,6 +2014,7 @@ object AppSettings {
     private const val KEY_WIFI_ONLY_DOWNLOADS = "wifi_only_downloads"
     private const val KEY_EXPORT_DOWNLOADS = "export_downloads"
     private const val KEY_DOWNLOAD_TEMPLATE = "download_template"
+    private const val KEY_DOWNLOAD_CONCURRENCY = "download_concurrency"
     private const val KEY_LOSSLESS = "lossless_audio"
     private const val KEY_CROSSFADE = "crossfade_seconds"
     private const val KEY_SMART_FADE = "smart_fade_enabled"

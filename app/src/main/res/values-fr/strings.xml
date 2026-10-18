@@ -1453,4 +1453,9 @@
     <string name="duplicates_subtitle">%1$d titres téléchargés plusieurs fois</string>
     <string name="duplicates_keep_best">Garder la plus grande</string>
     <string name="storage_row_subtitle">Dossiers, doublons et restes</string>
+    <string name="downloads_paused">Téléchargements en pause</string>
+    <string name="downloads_paused_waiting">%1$d en attente</string>
+    <string name="resume_downloads">Reprendre</string>
+    <string name="download_concurrency">Téléchargements simultanés</string>
+    <string name="download_concurrency_subtitle">Moins ménage votre connexion ; plus accélère les longues files</string>
 </resources>

@@ -326,7 +326,7 @@
     <string name="downloads_finished">डाउनलोड · पूरे हुए</string>
     <string name="downloading_progress">डाउनलोड हो रहा है · %1$d%%</string>
     <string name="starting">शुरू हो रहा है</string>
-    <string name="saved_to_bitchord_folder">Music/BitChord में सेव किया गया</string>
+    <string name="saved_to_bitchord_folder">Music/Auden में सेव किया गया</string>
     <string name="nothing_downloading">कुछ भी डाउनलोड नहीं हो रहा</string>
     <string name="nothing_to_explore">अभी एक्सप्लोर करने के लिए कुछ नहीं है</string>
     <string name="no_youtube_music_results">YouTube Music से कोई नतीजे नहीं मिले</string>
@@ -1452,4 +1452,9 @@
     <string name="duplicates_subtitle">%1$d songs downloaded more than once</string>
     <string name="duplicates_keep_best">Keep the largest</string>
     <string name="storage_row_subtitle">Folders, duplicates and leftovers</string>
+    <string name="downloads_paused">Downloads paused</string>
+    <string name="downloads_paused_waiting">%1$d waiting</string>
+    <string name="resume_downloads">Resume</string>
+    <string name="download_concurrency">Simultaneous downloads</string>
+    <string name="download_concurrency_subtitle">Fewer is gentler on your connection; more is faster for long queues</string>
 </resources>

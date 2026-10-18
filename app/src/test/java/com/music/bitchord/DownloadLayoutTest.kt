@@ -62,3 +62,21 @@ class DownloadLayoutTest {
         assertEquals("", DownloadLayout.folderOf("Song.flac"))
     }
 }
+
+class QueuedJobTest {
+    @Test
+    fun aQueuedJobComesBackAsTheSameSong() {
+        val song = com.music.bitchord.data.model.Song(
+            videoId = "abc", title = "T", artist = "A", thumbnailUrl = "u", durationText = "3:21",
+            albumName = "Al", artistId = "UC1", albumId = "MP1", isVideo = true, isExplicit = true,
+        )
+        val job = com.music.bitchord.download.QueuedJob.of(song, from = "MPREb_x", attempt = 2)
+        val back = job.toSong()
+        assertEquals(song.videoId, back.videoId)
+        assertEquals(song.title, back.title)
+        assertEquals(song.albumName, back.albumName)
+        assertEquals(song.isVideo, back.isVideo)
+        assertEquals("MPREb_x", job.from)
+        assertEquals(2, job.attempt)
+    }
+}

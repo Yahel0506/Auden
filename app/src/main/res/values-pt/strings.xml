@@ -1457,4 +1457,9 @@
     <string name="duplicates_subtitle">%1$d músicas transferidas mais de uma vez</string>
     <string name="duplicates_keep_best">Manter a maior</string>
     <string name="storage_row_subtitle">Pastas, duplicados e restos</string>
+    <string name="downloads_paused">Transferências em pausa</string>
+    <string name="downloads_paused_waiting">%1$d em espera</string>
+    <string name="resume_downloads">Retomar</string>
+    <string name="download_concurrency">Transferências simultâneas</string>
+    <string name="download_concurrency_subtitle">Menos poupa a ligação; mais acelera filas longas</string>
 </resources>
