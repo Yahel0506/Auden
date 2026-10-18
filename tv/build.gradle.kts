@@ -6,6 +6,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("com.google.devtools.ksp")
 }
 
 /**
@@ -69,6 +70,10 @@ val listenTogetherServer: String = (
  */
 val betaSuffix = ""
 
+ksp {
+    arg("room.schemaLocation", "${rootProject.projectDir}/app/schemas")
+}
+
 android {
     namespace = "com.music.bitchord"
     // InnerTubeX's AAR requires compiling against 37; targetSdk (runtime behaviour) stays 36.
@@ -77,7 +82,7 @@ android {
     defaultConfig {
         // Its own id, so the TV app is a separate install from the phone app
         // rather than an upgrade over it (or under it).
-        applicationId = "com.music.bitchord.tv"
+        applicationId = "dev.auden.app.tv"
         // 26 keeps reach wide; real-time blur (RenderEffect) kicks in on API 31+,
         // Haze falls back to a translucent scrim below that.
         minSdk = 26
@@ -147,7 +152,7 @@ android {
     productFlavors {
         create("dev") {
             dimension = "env"
-            applicationId = "com.dev.bitchord.tv"
+            applicationId = "dev.auden.app.dev.tv"
             resValue("string", "app_name", "BitChord TV")
         }
         create("prod") {
@@ -290,6 +295,9 @@ val newPipeExtractorStripped = tasks.register<org.gradle.api.tasks.bundling.Jar>
 
 dependencies {
     implementation(project(":shared"))
+    implementation("androidx.room:room-runtime:2.8.5")
+    implementation("androidx.room:room-ktx:2.8.5")
+    ksp("androidx.room:room-compiler:2.8.5")
     implementation(project(":sharedUi"))
 
     // ---- Compose (Material 3) ----
@@ -473,7 +481,7 @@ val verifyDevInstall = tasks.register("verifyDevInstall") {
             logger.lifecycle("verifyDevInstall: compiling com.dev.bitchord on $serial")
             ProcessBuilder(
                 adbPath, "-s", serial, "shell", "cmd", "package", "compile",
-                "-m", "verify", "-f", "com.dev.bitchord",
+                "-m", "verify", "-f", "dev.auden.app.dev",
             ).inheritIO().start().waitFor()
         }
     }
