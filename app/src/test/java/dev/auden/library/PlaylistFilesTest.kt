@@ -120,3 +120,32 @@ class SongIdentityTest {
         )
     }
 }
+
+class LocalMatchIndexTest {
+    private fun file(id: Long, title: String, artist: String, ms: Long = 200_000, uri: String? = "content://$id") =
+        dev.auden.library.db.TrackEntity(id = id, localUri = uri, path = "/m/$id.mp3", title = title, artist = artist, durationMs = ms)
+
+    private fun streamed(title: String, artist: String, length: String? = null) =
+        com.music.bitchord.data.model.Song(videoId = "yt", title = title, artist = artist, thumbnailUrl = null, durationText = length)
+
+    @Test
+    fun findsEveryFileThatIsTheSong() {
+        val index = dev.auden.library.links.LocalMatchIndex(
+            listOf(file(1, "Café (Remastered)", "Band"), file(2, "Cafe", "Band"), file(3, "Other", "Band")),
+        )
+        assertEquals(listOf(1L, 2L), index.matches(streamed("Cafe", "The Band")).map { it.id })
+    }
+
+    @Test
+    fun aSongThatIsAlreadyAFileHasNoOtherCopies() {
+        val index = dev.auden.library.links.LocalMatchIndex(listOf(file(1, "A", "B")))
+        val song = streamed("A", "B").copy(localUri = "content://1")
+        assertTrue(index.matches(song).isEmpty())
+    }
+
+    @Test
+    fun lengthKeepsALiveTakeOut() {
+        val index = dev.auden.library.links.LocalMatchIndex(listOf(file(1, "A", "B", ms = 600_000)))
+        assertTrue(index.matches(streamed("A", "B", "3:20")).isEmpty())
+    }
+}

@@ -677,6 +677,9 @@ fun Song.toMediaItem(): MediaItem {
     // that has become stale since it was created. Checking only the lookup
     // leaves that path unguarded.
     val offlineUri = localUri?.takeUnless(Downloads::isMissingLocalFile)
+        // Any file on the device that is this song, by id or by metadata; one of
+        // them at random when there are several. See [dev.auden.library.links.LocalLinks].
+        ?: dev.auden.library.links.LocalLinks.pickUri(this)
         ?: Downloads.verifiedSavedUri(videoId)
     val uriString = offlineUri ?: when {
         videoId.startsWith("content://") || videoId.startsWith("file://") -> videoId

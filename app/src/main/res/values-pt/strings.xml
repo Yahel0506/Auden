@@ -1410,4 +1410,10 @@
     <string name="save_failed_title">Não foi possível guardar «%1$s»</string>
     <string name="save_failed_text">Verifica a ligação e tenta novamente</string>
     <string name="saving_ellipsis">A guardar…</string>
+    <string name="manage_download">Gerir transferência</string>
+    <string name="download_copies_count">%1$d cópias</string>
+    <string name="copy_now_playing">A reproduzir</string>
+    <string name="copy_in_app_storage">Armazenamento da app</string>
+    <string name="copy_found_on_device">Encontrada neste dispositivo</string>
+    <string name="copy_downloaded_by_app">Transferida pelo Auden</string>
 </resources>

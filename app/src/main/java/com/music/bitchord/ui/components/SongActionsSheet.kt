@@ -201,6 +201,8 @@ fun SongActionsSheet(
      * held row itself above them.
      */
     presentation: SongActionsPresentation = SongActionsPresentation.Sheet,
+    /** The file the player is reading for this song right now, to outline it among its copies. */
+    playingUri: String? = null,
 ) {
     var showingSongInfo by remember(song.videoId) { mutableStateOf(false) }
     var pickingSleepTimer by remember { mutableStateOf(false) }
@@ -306,7 +308,7 @@ fun SongActionsSheet(
         }
         GroupSeparator(palette)
 
-        DownloadRow(song, palette, isOffline, onDownload)
+        DownloadRow(song, palette, isOffline, onDownload, playingUri)
         onRemoveFromCache?.let {
             ActionRow(
                 icon = Icons.Rounded.DeleteSweep,
@@ -550,7 +552,7 @@ private val SHEET_SHAPE = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
  * arrangement the sleep timer row already uses.
  */
 @Composable
-private fun DownloadRow(song: Song, palette: ArtworkPalette, isOffline: Boolean, onDownload: () -> Unit) {
+private fun DownloadRow(song: Song, palette: ArtworkPalette, isOffline: Boolean, onDownload: () -> Unit, playingUri: String?) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val active by Downloads.active.collectAsStateWithLifecycle()
@@ -566,6 +568,8 @@ private fun DownloadRow(song: Song, palette: ArtworkPalette, isOffline: Boolean,
     // record in the same breath, and starting pessimistic would show "Download"
     // again for as long as the check off the main thread takes.
     val recorded = saved[song.videoId]
+    val revision by dev.auden.library.links.LocalLinks.revision.collectAsStateWithLifecycle()
+    val copies = remember(song.videoId, recorded, revision) { dev.auden.library.links.LocalLinks.copiesOf(song) }
     val file by produceState(recorded?.let(Uri::parse), song.videoId, recorded) {
         value = Downloads.savedUri(context, song.videoId)
     }
@@ -605,15 +609,16 @@ private fun DownloadRow(song: Song, palette: ArtworkPalette, isOffline: Boolean,
             onClick = onDownload,
         )
 
-        null -> if (file != null) {
-            ActionRow(
-                icon = Icons.Rounded.DownloadDone,
-                label = stringResource(R.string.saved_to_downloads),
-                value = stringResource(R.string.delete),
-                tint = palette.accent,
-                accent = palette.accent,
-            ) { scope.launch { Downloads.delete(context, song.videoId) } }
-            if (!isOffline && !Downloads.hasLyrics(song.videoId)) {
+        null -> if (copies.isNotEmpty() || file != null) {
+            // The app's own download, and any other file that is this same song.
+            ManageDownloadRow(
+                copies = copies,
+                playingUri = playingUri,
+                palette = palette,
+                onDeleteOwn = { scope.launch { Downloads.delete(context, song.videoId) } },
+            )
+            // Only the app's own download has lyrics to fetch into; a file found on the device is left as it is.
+            if (file != null && !isOffline && !Downloads.hasLyrics(song.videoId)) {
                 val lyricsActive by Downloads.lyricsActive.collectAsStateWithLifecycle()
                 val isDownloadingLyrics = song.videoId in lyricsActive
                 ActionRow(

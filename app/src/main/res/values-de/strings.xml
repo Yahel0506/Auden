@@ -1405,4 +1405,10 @@
     <string name="save_failed_title">„%1$s“ konnte nicht gespeichert werden</string>
     <string name="save_failed_text">Prüfe deine Verbindung und versuche es erneut</string>
     <string name="saving_ellipsis">Wird gespeichert…</string>
+    <string name="manage_download">Download verwalten</string>
+    <string name="download_copies_count">%1$d Kopien</string>
+    <string name="copy_now_playing">Wird abgespielt</string>
+    <string name="copy_in_app_storage">App-Speicher</string>
+    <string name="copy_found_on_device">Auf diesem Gerät gefunden</string>
+    <string name="copy_downloaded_by_app">Von Auden geladen</string>
 </resources>

@@ -31,6 +31,10 @@ interface AppUiHost {
     /** Video ids of the tracks already downloaded, for the mark on their rows. */
     @Composable
     fun downloadedIds(): Set<String>
+
+    /** Whether [song] is on this device, by id or because a file already is it. */
+    @Composable
+    fun isDownloaded(song: com.music.bitchord.data.model.Song): Boolean = song.videoId in downloadedIds()
 }
 
 object AppUi {

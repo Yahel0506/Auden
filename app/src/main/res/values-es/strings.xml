@@ -1377,4 +1377,10 @@
     <string name="save_failed_title">No se pudo guardar «%1$s»</string>
     <string name="save_failed_text">Revisa tu conexión e inténtalo de nuevo</string>
     <string name="saving_ellipsis">Guardando…</string>
+    <string name="manage_download">Administrar descarga</string>
+    <string name="download_copies_count">%1$d copias</string>
+    <string name="copy_now_playing">Reproduciendo</string>
+    <string name="copy_in_app_storage">Almacenamiento de la app</string>
+    <string name="copy_found_on_device">Encontrada en este dispositivo</string>
+    <string name="copy_downloaded_by_app">Descargada por Auden</string>
 </resources>

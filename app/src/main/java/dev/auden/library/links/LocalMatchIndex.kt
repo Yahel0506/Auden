@@ -1,0 +1,41 @@
+package dev.auden.library.links
+
+import com.music.bitchord.data.model.Song
+import dev.auden.library.SongIdentity
+import dev.auden.library.db.TrackEntity
+import dev.auden.library.io.PlaylistMatcher
+
+/**
+ * The tracks on this device, looked up by what they are rather than where they
+ * are: the same question [SongIdentity] answers for two rows, asked of every
+ * file at once.
+ *
+ * Keyed by normalised title so a lookup only compares the handful of files
+ * that share one, instead of every file in the library.
+ */
+class LocalMatchIndex(tracks: List<TrackEntity>) {
+    private val byTitle: Map<String, List<TrackEntity>> = tracks
+        .filter { it.localUri != null }
+        .groupBy { PlaylistMatcher.normalize(it.title) }
+        .filterKeys { it.isNotEmpty() }
+
+    val size: Int = byTitle.values.sumOf { it.size }
+
+    /** Every file that is [song], oldest-indexed first. A song that is itself a file has no other copies. */
+    fun matches(song: Song): List<TrackEntity> {
+        if (song.localUri != null) return emptyList()
+        val candidates = byTitle[PlaylistMatcher.normalize(song.title)] ?: return emptyList()
+        return candidates.filter { track ->
+            SongIdentity.same(song, track.asSong())
+        }
+    }
+
+    private fun TrackEntity.asSong() = Song(
+        videoId = videoId ?: localUri.orEmpty(),
+        title = title,
+        artist = artist,
+        thumbnailUrl = null,
+        durationText = durationText ?: durationMs?.let { "%d:%02d".format(it / 60000, it / 1000 % 60) },
+        albumName = album,
+    )
+}

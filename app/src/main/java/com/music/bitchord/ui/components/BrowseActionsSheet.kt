@@ -270,7 +270,8 @@ fun BrowseActionsSheet(
                 // not from any record of the release itself. Empty for a card whose
                 // page was never opened, which is not an answer either way.
                 val ids = remember(target.songs) { target.songs.mapTo(HashSet()) { it.videoId } }
-                val downloaded = !waiting && ids.isNotEmpty() && ids.all { it in saved }
+                val downloaded = !waiting && ids.isNotEmpty() &&
+                    target.songs.all { it.videoId in saved || dev.auden.library.links.LocalLinks.has(it) }
                 ActionRow(
                     icon = when {
                         waiting -> BitChordIcons.Clock

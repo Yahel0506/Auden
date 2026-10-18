@@ -96,6 +96,7 @@ object LibraryIndexer {
                 streamable.chunked(500).forEach { db.tracks().detachFiles(it) }
                 vanished.chunked(500).forEach { db.tracks().delete(it) }
             }
+            dev.auden.library.links.LocalLinks.rebuild(context)
             State.Done(added, changed, gone.size).also {
                 _state.value = it
                 Log.i(TAG, "indexed: +$added ~$changed -${gone.size}")

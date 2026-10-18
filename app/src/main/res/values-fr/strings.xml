@@ -1406,4 +1406,10 @@
     <string name="save_failed_title">Impossible d’enregistrer « %1$s »</string>
     <string name="save_failed_text">Vérifiez votre connexion et réessayez</string>
     <string name="saving_ellipsis">Enregistrement…</string>
+    <string name="manage_download">Gérer le téléchargement</string>
+    <string name="download_copies_count">%1$d copies</string>
+    <string name="copy_now_playing">En lecture</string>
+    <string name="copy_in_app_storage">Stockage de l’app</string>
+    <string name="copy_found_on_device">Trouvé sur cet appareil</string>
+    <string name="copy_downloaded_by_app">Téléchargé par Auden</string>
 </resources>

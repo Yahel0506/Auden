@@ -2105,7 +2105,11 @@ private fun BitChordApp(
         // than replacing it.
         val songs = requested
             // Files already on the device and unmatched Spotify rows have nothing to fetch.
-            .filter { it.videoId !in saved && it.localUri == null && !it.isMatchPending && !it.isMatchMissing }
+            .filter {
+                it.videoId !in saved && it.localUri == null && !it.isMatchPending && !it.isMatchMissing &&
+                    // A file on the device already is this song.
+                    !dev.auden.library.links.LocalLinks.has(it)
+            }
             .map { song ->
                 val cover = from?.thumbnailUrl
                 if (song.thumbnailUrl.isNullOrBlank() && !cover.isNullOrBlank()) {
@@ -4252,6 +4256,7 @@ private fun BitChordApp(
                     withContext(Dispatchers.IO) { AudioCache.holds(song.videoId) }
             }
             SongActionsSheet(
+                playingUri = player.song?.takeIf { it.videoId == song.videoId }?.localUri,
                 song = song,
                 presentation = presentation,
                 signedIn = signedIn,

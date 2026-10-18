@@ -1410,4 +1410,10 @@
     <string name="save_failed_title">Couldn’t save “%1$s”</string>
     <string name="save_failed_text">Check your connection and try again</string>
     <string name="saving_ellipsis">Saving…</string>
+    <string name="manage_download">Manage download</string>
+    <string name="download_copies_count">%1$d copies</string>
+    <string name="copy_now_playing">Playing</string>
+    <string name="copy_in_app_storage">App storage</string>
+    <string name="copy_found_on_device">Found on this device</string>
+    <string name="copy_downloaded_by_app">Downloaded by Auden</string>
 </resources>

@@ -1,10 +1,12 @@
 package com.music.bitchord.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.LibraryViewType
+import com.music.bitchord.data.model.Song
 import com.music.bitchord.download.Downloads
 
 /** The shared pages' settings and downloads, answered from the phone's own stores. */
@@ -19,5 +21,13 @@ object AndroidAppUiHost : AppUiHost {
     override fun downloadedIds(): Set<String> {
         val saved by Downloads.saved.collectAsStateWithLifecycle()
         return saved.keys
+    }
+
+    @Composable
+    override fun isDownloaded(song: Song): Boolean {
+        val saved by Downloads.saved.collectAsStateWithLifecycle()
+        // Re-asked when the library index is rebuilt: a file may have appeared that is this song.
+        val revision by dev.auden.library.links.LocalLinks.revision.collectAsStateWithLifecycle()
+        return song.videoId in saved || remember(song.videoId, revision) { dev.auden.library.links.LocalLinks.has(song) }
     }
 }

@@ -2023,7 +2023,7 @@ private fun CompactSongRow(
             )
         }
         if (downloadedTint != null) {
-            DownloadedBadge(song.videoId, downloadedTint)
+            DownloadedBadge(song, downloadedTint)
         }
         RowMoreButton(onClick = onLongPress, tint = palette.onBackgroundVariant)
     }
@@ -2083,7 +2083,7 @@ private fun SuggestedSongRow(
             )
         }
         if (downloadedTint != null) {
-            DownloadedBadge(song.videoId, downloadedTint)
+            DownloadedBadge(song, downloadedTint)
         }
         Spacer(Modifier.width(8.dp))
         Box(
