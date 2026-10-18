@@ -252,6 +252,13 @@ internal fun LazyListScope.localFolderItems(
             add(LocalFolderTab.FOLDERS)
         }
     }
+    if (folder.libraryTabs) {
+        item(key = "folder-identify") {
+            com.music.bitchord.ui.components.IdentifyBanner(
+                Modifier.padding(start = PAGE_GUTTER, end = PAGE_GUTTER, bottom = 14.dp),
+            )
+        }
+    }
     item(key = "folder-tabs") {
         SegmentedControl(
             options = tabs.map {

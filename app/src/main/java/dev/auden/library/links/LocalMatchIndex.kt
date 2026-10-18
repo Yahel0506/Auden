@@ -19,14 +19,20 @@ class LocalMatchIndex(tracks: List<TrackEntity>) {
         .groupBy { PlaylistMatcher.normalize(it.title) }
         .filterKeys { it.isNotEmpty() }
 
+    private val byVideoId: Map<String, List<TrackEntity>> = tracks
+        .filter { it.localUri != null && !it.videoId.isNullOrBlank() }
+        .groupBy { it.videoId!! }
+
     val size: Int = byTitle.values.sumOf { it.size }
 
     /** Every file that is [song], itself included when [song] is a file in the index. */
     fun matches(song: Song): List<TrackEntity> {
-        val candidates = byTitle[PlaylistMatcher.normalize(song.title)] ?: return emptyList()
-        return candidates.filter { track ->
+        // Files already identified as this song, whatever their own title says.
+        val identified = byVideoId[song.videoId].orEmpty()
+        val byMetadata = byTitle[PlaylistMatcher.normalize(song.title)].orEmpty().filter { track ->
             SongIdentity.same(song, track.asSong())
         }
+        return (identified + byMetadata).distinctBy { it.id }
     }
 
     private fun TrackEntity.asSong() = Song(

@@ -873,11 +873,14 @@ private fun BitChordApp(
     // Playlists imported without (or instead of) a YouTube Music account live
     // in the app's own store, and sit on the same shelf as the downloaded ones.
     val localPlaylists by com.music.bitchord.data.spotify.LocalPlaylistStore.playlists.collectAsStateWithLifecycle()
+    val coverRevision by dev.auden.library.PlaylistCovers.revision.collectAsStateWithLifecycle()
     val localPlaylistItems = localPlaylists.map { playlist ->
+        coverRevision
         ShelfItem(
             title = playlist.title,
             subtitle = stringResource(R.string.local_playlist_subtitle, playlist.songs.size),
-            thumbnailUrl = playlist.songs.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl,
+            thumbnailUrl = dev.auden.library.PlaylistCovers.coverFor(context, playlist)
+                ?: playlist.songs.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl,
             videoId = null,
             browseId = playlist.browseId,
         )
@@ -4792,6 +4795,15 @@ private fun BitChordApp(
                     },
                 savedOnDevice = target.browseId?.let { id -> localPlaylists.any { it.sourceId == id.removePrefix("VL") } } == true,
                 savingOnDevice = target.browseId?.removePrefix("VL") in savingToDevice,
+                onDuplicate = playlist?.takeIf { it.isOnDevice }?.let { p ->
+                    {
+                        browseActions = null
+                        dev.auden.library.LocalPlaylists.duplicate(
+                            p.playlistId,
+                            context.getString(R.string.playlist_copy_suffix, p.title),
+                        )
+                    }
+                },
                 onExport = playlist?.takeIf { it.isOnDevice }?.let { p ->
                     { format: dev.auden.library.io.PlaylistFormat ->
                         browseActions = null

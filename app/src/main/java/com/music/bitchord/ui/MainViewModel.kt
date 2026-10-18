@@ -2815,7 +2815,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             if (localPlaylist != null) {
                 name = localPlaylist.title
                 credit = getApplication<Application>().getString(R.string.local_playlist_subtitle, localPlaylist.songs.size)
-                artwork = localPlaylist.songs.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl
+                artwork = dev.auden.library.PlaylistCovers.coverFor(getApplication(), localPlaylist)
+                    ?: localPlaylist.songs.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl
             }
             val local = localPageState(browseId)
             val state = when {

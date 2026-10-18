@@ -101,7 +101,7 @@ object LocalGroups {
             ALBUM -> folderSongs.filter { it.albumName == group.name }.sortedForAlbum()
             GENRE -> folderSongs.filter { it.localGenre == group.name }.sortedByTitle()
             FOLDER -> folderSongs.filter { it.directory() == group.name }.sortedByTitle()
-            else -> folderSongs.filter { it.artist == group.name }.sortedByTitle()
+            else -> folderSongs.filter { group.name in ArtistSplitter.split(it.artist) }.sortedByTitle()
         }
     }
 
@@ -172,7 +172,9 @@ object LocalGroups {
      * a picture of whoever made it, so the page opens on a placeholder.
      */
     fun artistsOf(folderId: String, songs: List<Song>): List<LocalGroup> =
-        songs.groupBy { it.artist }
+        // A collaboration is listed under every artist on it, not as an artist of its own.
+        songs.flatMap { song -> ArtistSplitter.split(song.artist).ifEmpty { listOf(song.artist) }.map { it to song } }
+            .groupBy({ it.first }, { it.second })
             .map { (name, group) ->
                 LocalGroup(
                     browseId = artistPageId(folderId, name),

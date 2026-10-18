@@ -1412,4 +1412,19 @@
     <string name="copy_in_app_storage">Stockage de l’app</string>
     <string name="copy_found_on_device">Trouvé sur cet appareil</string>
     <string name="copy_downloaded_by_app">Téléchargé par Auden</string>
+    <string name="identifying_title">Identification de la musique</string>
+    <string name="identifying_starting">Recherche de vos titres…</string>
+    <string name="identifying_progress">%1$d sur %2$d</string>
+    <string name="identifying_done_title">Musique identifiée</string>
+    <string name="identifying_done_text">%1$d identifiés · %2$d à vérifier · %3$d introuvables</string>
+    <string name="identify_songs">Identifier les titres</string>
+    <string name="identify_unidentified_count">%1$d non identifiés</string>
+    <string name="identify_review">Vérifier les suggestions · %1$d</string>
+    <string name="review_matches_title">Correspondances suggérées</string>
+    <string name="accept_all">Tout accepter</string>
+    <string name="suggestion_label">YouTube Music: %1$s</string>
+    <string name="accept_match">Accepter</string>
+    <string name="reject_match">Refuser</string>
+    <string name="duplicate_playlist">Dupliquer</string>
+    <string name="playlist_copy_suffix">%1$s (copie)</string>
 </resources>

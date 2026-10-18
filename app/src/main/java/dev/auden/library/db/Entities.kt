@@ -60,7 +60,32 @@ data class TrackEntity(
     val isVideo: Boolean = false,
     val origin: String = TrackOrigin.YTM,
     val addedAt: Long = System.currentTimeMillis(),
+    /** Null until identification has looked at this file; see [IdentStatus]. */
+    val identStatus: String? = null,
+    /** How [videoId] was found: the file name, a search, or the listener. */
+    val identSource: String? = null,
+    /** A probable match awaiting the listener's yes or no. */
+    val suggestedVideoId: String? = null,
+    val suggestedTitle: String? = null,
+    val suggestedArtist: String? = null,
+    val identifiedAt: Long? = null,
 )
+
+/** Where identification left a local file. */
+object IdentStatus {
+    const val MATCHED = "MATCHED"
+    /** A candidate was found but is not certain enough to apply unasked. */
+    const val REVIEW = "REVIEW"
+    const val NOT_FOUND = "NOT_FOUND"
+    /** The listener said the suggestion was wrong; it is not offered again. */
+    const val REJECTED = "REJECTED"
+}
+
+object IdentSource {
+    const val FILE_NAME = "FILE_NAME"
+    const val SEARCH = "SEARCH"
+    const val MANUAL = "MANUAL"
+}
 
 @Entity(tableName = "playlist")
 data class PlaylistEntity(

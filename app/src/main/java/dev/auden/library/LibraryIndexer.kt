@@ -85,7 +85,15 @@ object LibraryIndexer {
                         }
                         existing.modifiedAt != entity.modifiedAt || existing.sizeBytes != entity.sizeBytes || existing.path == null -> {
                             db.tracks().byId(existing.id)?.let { old ->
-                                db.tracks().update(entity.copy(id = old.id, addedAt = old.addedAt, videoId = old.videoId ?: entity.videoId, spotifyId = old.spotifyId, isrc = old.isrc))
+                                db.tracks().update(
+                                    entity.copy(
+                                        id = old.id, addedAt = old.addedAt, videoId = old.videoId ?: entity.videoId,
+                                        spotifyId = old.spotifyId, isrc = old.isrc,
+                                        identStatus = old.identStatus, identSource = old.identSource,
+                                        suggestedVideoId = old.suggestedVideoId, suggestedTitle = old.suggestedTitle,
+                                        suggestedArtist = old.suggestedArtist, identifiedAt = old.identifiedAt,
+                                    ),
+                                )
                             }
                             changed++
                         }

@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteForever
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.PhoneIphone
@@ -188,6 +189,8 @@ fun BrowseActionsSheet(
     startRenaming: Boolean = false,
     /** Playlists kept on this device: writes the playlist to a file in the chosen format. */
     onExport: ((dev.auden.library.io.PlaylistFormat) -> Unit)? = null,
+    /** Playlists kept on this device: makes a copy to change without touching the original. */
+    onDuplicate: (() -> Unit)? = null,
     /** A cloud playlist or album: copies it to (or drops it from) the device library. */
     onToggleDevice: (() -> Unit)? = null,
     savedOnDevice: Boolean = false,
@@ -315,6 +318,9 @@ fun BrowseActionsSheet(
             }
             onReorder?.let {
                 ActionRow(Icons.Rounded.SwapVert, stringResource(R.string.reorder_songs), onClick = it)
+            }
+            onDuplicate?.let {
+                ActionRow(Icons.Rounded.ContentCopy, stringResource(R.string.duplicate_playlist), onClick = it)
             }
             onExport?.let { export ->
                 if (exporting) {

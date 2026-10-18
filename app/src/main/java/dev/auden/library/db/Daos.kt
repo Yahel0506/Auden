@@ -53,6 +53,23 @@ interface TrackDao {
     @Query("SELECT * FROM track WHERE path IS NOT NULL")
     suspend fun withPath(): List<TrackEntity>
 
+    /** Local files nobody has tried to identify yet. */
+    @Query("SELECT * FROM track WHERE localUri IS NOT NULL AND videoId IS NULL AND identStatus IS NULL")
+    suspend fun unidentified(): List<TrackEntity>
+
+    @Query("SELECT COUNT(*) FROM track WHERE localUri IS NOT NULL AND videoId IS NULL AND identStatus IS NULL")
+    fun observeUnidentifiedCount(): Flow<Int>
+
+    @Query("SELECT * FROM track WHERE identStatus = 'REVIEW'")
+    suspend fun reviewNow(): List<TrackEntity>
+
+    @Query("SELECT * FROM track WHERE identStatus = 'REVIEW' ORDER BY title COLLATE NOCASE")
+    fun observeReview(): Flow<List<TrackEntity>>
+
+    /** Forgets earlier "not found" and "rejected" verdicts so those files are looked at again. */
+    @Query("UPDATE track SET identStatus = NULL, identSource = NULL, suggestedVideoId = NULL, suggestedTitle = NULL, suggestedArtist = NULL WHERE videoId IS NULL AND identStatus IN ('NOT_FOUND', 'REJECTED')")
+    suspend fun resetVerdicts()
+
     @Query("SELECT * FROM track WHERE id = :id")
     suspend fun byId(id: Long): TrackEntity?
 

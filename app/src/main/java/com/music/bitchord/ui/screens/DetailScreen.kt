@@ -1619,7 +1619,8 @@ private fun ActionPill(
                 haptics.play(Haptic.Resume)
                 onClick()
             }
-            .padding(horizontal = 24.dp),
+            // 24dp left "Reproducir" clipped to "Reproduci" beside a second pill on a phone.
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {

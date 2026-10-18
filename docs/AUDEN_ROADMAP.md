@@ -91,6 +91,13 @@ Después: test instrumentado del flujo `login → token → playlists`.
 
 ## Fase 2 — Biblioteca local de primera clase (estilo Namida)
 
+> **Estado:** implementada en `feat/auden-library`.
+> - 2.1 Indexador incremental (nuevos/cambiados/borrados), pestañas Canciones, Artistas (separados por `&`, `,`, `;`…, con lista de nombres que no se parten), Álbumes, Géneros y Carpetas.
+> - 2.2 Identificación: id de YouTube en el nombre del archivo, búsqueda en YouTube Music con `TrackMatcher`, sugerencias dudosas en una hoja de revisión, progreso en notificación. Los archivos identificados enlazan con sus canciones de streaming (marca de descargada, reproducción local, “Administrar descarga”).
+> - 2.3 Playlists locales sin sesión sobre `AudenDb`: añadir, quitar, reordenar, duplicar, portada en mosaico, guardar playlists y álbumes de YouTube Music y Spotify con sincronización.
+> - 2.4 Importar/exportar M3U8, XSPF y Auden JSON.
+> - Pendiente: huella acústica (Chromaprint/AcoustID), importar CSV, ajustes de filtros de indexado (duración y tamaño mínimos, carpetas excluidas).
+
 ### 2.1 Indexador
 - `LibraryIndexer` (WorkManager): recorre MediaStore y las carpetas SAF elegidas,
   lee tags con el parser que ya existe (`EmbeddedLyrics`/`MediaTagger`) y guarda en
