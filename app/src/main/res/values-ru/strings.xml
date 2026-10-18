@@ -1468,4 +1468,20 @@
     <string name="layout_example">Example: %1$s</string>
     <string name="layout_applies_to_new">Applies to songs downloaded from now on. Existing files stay where they are.</string>
     <string name="layout_invalid">That template can’t be used</string>
+    <string name="storage_title">Download storage</string>
+    <string name="storage_summary">%1$d downloads · %2$s</string>
+    <string name="storage_scanning">Looking through your downloads…</string>
+    <string name="reorganize_title">Reorganize folders</string>
+    <string name="reorganize_pending">%1$d files aren’t where your layout puts them</string>
+    <string name="reorganize_ok">Everything is where it should be</string>
+    <string name="reorganize_action">Move</string>
+    <string name="reorganize_progress">Moving %1$d of %2$d</string>
+    <string name="reorganize_done">Moved %1$d · %2$d couldn’t be moved</string>
+    <string name="reorganize_undo">Undo last move</string>
+    <string name="orphans_title">Files with no record</string>
+    <string name="orphans_subtitle">%1$d files · %2$s</string>
+    <string name="duplicates_title">Duplicate downloads</string>
+    <string name="duplicates_subtitle">%1$d songs downloaded more than once</string>
+    <string name="duplicates_keep_best">Keep the largest</string>
+    <string name="storage_row_subtitle">Folders, duplicates and leftovers</string>
 </resources>

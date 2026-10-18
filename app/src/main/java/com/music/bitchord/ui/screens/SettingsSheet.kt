@@ -291,6 +291,7 @@ fun SettingsScreen(
     var picking by remember { mutableStateOf<QualityTarget?>(null) }
     var pickingDownloadQuality by remember { mutableStateOf(false) }
     var pickingDownloadLayout by remember { mutableStateOf(false) }
+    var managingDownloads by remember { mutableStateOf(false) }
     var pickingAutomixPerformance by remember { mutableStateOf(false) }
     // What the last export or import did, shown on the row that did it rather
     // than as a toast: a backup is the one action here whose outcome nobody can
@@ -552,6 +553,15 @@ fun SettingsScreen(
                     title = downloadLayoutTitle,
                     subtitle = com.music.bitchord.download.DownloadLayout.preview(downloadTemplate),
                     onClick = { pickingDownloadLayout = true },
+                )
+            }
+            val downloadStorageTitle = stringResource(R.string.storage_title)
+            row(downloadStorageTitle, "duplicates", "orphans", "reorganize", "size", "cleanup") {
+                SettingsRow(
+                    icon = Icons.Rounded.Storage,
+                    title = downloadStorageTitle,
+                    subtitle = stringResource(R.string.storage_row_subtitle),
+                    onClick = { managingDownloads = true },
                 )
             }
             val exportDownloadsTitle = stringResource(R.string.export_compatible_downloads)
@@ -1648,6 +1658,15 @@ fun SettingsScreen(
                     pickingDownloadQuality = false
                 },
             )
+        }
+    }
+
+    if (managingDownloads) {
+        ModalBottomSheet(
+            onDismissRequest = { managingDownloads = false },
+            containerColor = MaterialTheme.colorScheme.background,
+        ) {
+            com.music.bitchord.ui.components.DownloadStorageSheet()
         }
     }
 

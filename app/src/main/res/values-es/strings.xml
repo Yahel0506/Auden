@@ -1408,4 +1408,20 @@
     <string name="layout_example">Ejemplo: %1$s</string>
     <string name="layout_applies_to_new">Se aplica a las canciones que descargues desde ahora. Los archivos existentes no se mueven.</string>
     <string name="layout_invalid">Esa plantilla no se puede usar</string>
+    <string name="storage_title">Almacenamiento de descargas</string>
+    <string name="storage_summary">%1$d descargas · %2$s</string>
+    <string name="storage_scanning">Revisando tus descargas…</string>
+    <string name="reorganize_title">Reorganizar carpetas</string>
+    <string name="reorganize_pending">%1$d archivos no están donde los pone tu estructura</string>
+    <string name="reorganize_ok">Todo está donde debe</string>
+    <string name="reorganize_action">Mover</string>
+    <string name="reorganize_progress">Moviendo %1$d de %2$d</string>
+    <string name="reorganize_done">Movidos %1$d · %2$d no se pudieron mover</string>
+    <string name="reorganize_undo">Deshacer el último movimiento</string>
+    <string name="orphans_title">Archivos sin registro</string>
+    <string name="orphans_subtitle">%1$d archivos · %2$s</string>
+    <string name="duplicates_title">Descargas duplicadas</string>
+    <string name="duplicates_subtitle">%1$d canciones descargadas más de una vez</string>
+    <string name="duplicates_keep_best">Conservar la más grande</string>
+    <string name="storage_row_subtitle">Carpetas, duplicados y sobrantes</string>
 </resources>

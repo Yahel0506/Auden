@@ -333,6 +333,31 @@ object Downloads {
         deleted
     }
 
+    /**
+     * Points every record of the file at [oldUri] to [newUri] after it has been moved, and its
+     * lyrics sidecar to [newLyricsUri] when that moved too.
+     */
+    internal fun relocate(oldUri: String, newUri: String, newLyricsUri: String? = null) {
+        record(
+            saved = { map -> map.mapValues { (_, uri) -> if (uri == oldUri) newUri else uri } },
+            meta = { map ->
+                map.mapValues { (_, m) ->
+                    if (m.uri != oldUri) m else m.copy(uri = newUri, lyricsUri = newLyricsUri ?: m.lyricsUri)
+                }
+            },
+        )
+    }
+
+    /** Where a track already on disk belongs under the current layout, extension included. */
+    internal fun expectedName(meta: SavedSongMetadata, extension: String): String {
+        val song = Song(
+            videoId = meta.videoId, title = meta.title, artist = meta.artist,
+            thumbnailUrl = meta.thumbnailUrl, durationText = meta.durationText, albumName = meta.albumName,
+        )
+        val release = _collections.value.values.firstOrNull { !it.playlist && meta.videoId in it.videoIds }
+        return nameFor(song, extension, release?.id)
+    }
+
     private fun forget(videoId: String) {
         record(saved = { it - videoId }, meta = { it - videoId })
     }

@@ -1436,4 +1436,20 @@
     <string name="layout_example">Beispiel: %1$s</string>
     <string name="layout_applies_to_new">Gilt für ab jetzt geladene Titel. Vorhandene Dateien bleiben, wo sie sind.</string>
     <string name="layout_invalid">Diese Vorlage ist nicht nutzbar</string>
+    <string name="storage_title">Download-Speicher</string>
+    <string name="storage_summary">%1$d Downloads · %2$s</string>
+    <string name="storage_scanning">Downloads werden geprüft…</string>
+    <string name="reorganize_title">Ordner neu organisieren</string>
+    <string name="reorganize_pending">%1$d Dateien liegen nicht an ihrem Platz</string>
+    <string name="reorganize_ok">Alles liegt am richtigen Platz</string>
+    <string name="reorganize_action">Verschieben</string>
+    <string name="reorganize_progress">Verschiebe %1$d von %2$d</string>
+    <string name="reorganize_done">%1$d verschoben · %2$d nicht möglich</string>
+    <string name="reorganize_undo">Letztes Verschieben rückgängig</string>
+    <string name="orphans_title">Dateien ohne Eintrag</string>
+    <string name="orphans_subtitle">%1$d Dateien · %2$s</string>
+    <string name="duplicates_title">Doppelte Downloads</string>
+    <string name="duplicates_subtitle">%1$d Titel mehrfach geladen</string>
+    <string name="duplicates_keep_best">Die größte behalten</string>
+    <string name="storage_row_subtitle">Ordner, Duplikate und Reste</string>
 </resources>

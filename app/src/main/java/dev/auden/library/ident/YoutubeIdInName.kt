@@ -13,7 +13,7 @@ package dev.auden.library.ident
  */
 object YoutubeIdInName {
     private val idChars = Regex("^[A-Za-z0-9_-]{11}$")
-    private val bracketed = Regex("\\[([A-Za-z0-9_-]{11})]\\.[A-Za-z0-9]{2,5}$")
+    private val bracketed = Regex("\\[([A-Za-z0-9_-]{11})\\]\\.[A-Za-z0-9]{2,5}$")
     private val urlForm = Regex("(?:v=|youtu\\.be/)([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])")
 
     /** An 11-character id encodes 66 bits in 64, so its last character carries only four of its six. */

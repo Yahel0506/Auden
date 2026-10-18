@@ -103,7 +103,7 @@ object DownloadLayout {
     private fun tidy(text: String): String =
         text.trim().trimStart(' ', '-', '_', '.', ',').trimEnd(' ', '-', '_', '.', ',').trim()
 
-    private val TOKEN = Regex("\\{(\\w+)}")
+    private val TOKEN = Regex("\\{(\\w+)\\}")
     private val TOKENS = setOf("title", "artist", "albumArtist", "album", "year", "track", "disc", "videoId")
     private val ILLEGAL = Regex("""[\\:*?"<>|\x00-\x1F]""")
     private val WHITESPACE = Regex("""\s+""")

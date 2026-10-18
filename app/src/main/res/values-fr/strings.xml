@@ -1437,4 +1437,20 @@
     <string name="layout_example">Exemple : %1$s</string>
     <string name="layout_applies_to_new">S’applique aux titres téléchargés à partir de maintenant. Les fichiers existants ne bougent pas.</string>
     <string name="layout_invalid">Ce modèle est inutilisable</string>
+    <string name="storage_title">Stockage des téléchargements</string>
+    <string name="storage_summary">%1$d téléchargements · %2$s</string>
+    <string name="storage_scanning">Analyse de vos téléchargements…</string>
+    <string name="reorganize_title">Réorganiser les dossiers</string>
+    <string name="reorganize_pending">%1$d fichiers ne sont pas à leur place</string>
+    <string name="reorganize_ok">Tout est à sa place</string>
+    <string name="reorganize_action">Déplacer</string>
+    <string name="reorganize_progress">Déplacement %1$d sur %2$d</string>
+    <string name="reorganize_done">%1$d déplacés · %2$d impossibles à déplacer</string>
+    <string name="reorganize_undo">Annuler le dernier déplacement</string>
+    <string name="orphans_title">Fichiers sans enregistrement</string>
+    <string name="orphans_subtitle">%1$d fichiers · %2$s</string>
+    <string name="duplicates_title">Téléchargements en double</string>
+    <string name="duplicates_subtitle">%1$d titres téléchargés plusieurs fois</string>
+    <string name="duplicates_keep_best">Garder la plus grande</string>
+    <string name="storage_row_subtitle">Dossiers, doublons et restes</string>
 </resources>

@@ -1375,4 +1375,20 @@
     <string name="layout_example">Esempio: %1$s</string>
     <string name="layout_applies_to_new">Vale per i brani scaricati da ora. I file esistenti restano dove sono.</string>
     <string name="layout_invalid">Questo modello non è utilizzabile</string>
+    <string name="storage_title">Archivio dei download</string>
+    <string name="storage_summary">%1$d download · %2$s</string>
+    <string name="storage_scanning">Analisi dei download…</string>
+    <string name="reorganize_title">Riorganizza cartelle</string>
+    <string name="reorganize_pending">%1$d file non sono al loro posto</string>
+    <string name="reorganize_ok">Tutto è al suo posto</string>
+    <string name="reorganize_action">Sposta</string>
+    <string name="reorganize_progress">Spostamento %1$d di %2$d</string>
+    <string name="reorganize_done">%1$d spostati · %2$d non spostabili</string>
+    <string name="reorganize_undo">Annulla l’ultimo spostamento</string>
+    <string name="orphans_title">File senza registro</string>
+    <string name="orphans_subtitle">%1$d file · %2$s</string>
+    <string name="duplicates_title">Download duplicati</string>
+    <string name="duplicates_subtitle">%1$d brani scaricati più volte</string>
+    <string name="duplicates_keep_best">Mantieni la più grande</string>
+    <string name="storage_row_subtitle">Cartelle, duplicati e avanzi</string>
 </resources>

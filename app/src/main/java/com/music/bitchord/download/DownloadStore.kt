@@ -259,6 +259,52 @@ object DownloadStore {
         }.onFailure { Log.w(TAG, "could not read the relative name for $uri: ${it.message}") }.getOrNull()
     }
 
+    /** Size in bytes of the file at [uri], or 0 when it can't be read. */
+    fun sizeOf(context: Context, uri: Uri): Long = runCatching {
+        if (uri.scheme == "file") return uri.path?.let { File(it).length() } ?: 0L
+        context.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.SIZE), null, null, null)
+            ?.use { if (it.moveToFirst()) it.getLong(0) else 0L } ?: 0L
+    }.getOrDefault(0L)
+
+    /** An audio file somewhere in the download folder, tracked or not. */
+    class AudioFile(val uri: Uri, val name: String, val sizeBytes: Long)
+
+    /** Every audio file in the download folder, including ones nothing has a record of. */
+    fun listAudio(context: Context): List<AudioFile> {
+        val out = mutableListOf<AudioFile>()
+        val extensions = setOf("m4a", "flac", "webm", "wav", "mp3", "opus", "ogg")
+        val privateRoot = File(context.filesDir, "downloads")
+        if (privateRoot.exists()) {
+            privateRoot.walkTopDown()
+                // An offline HLS/DASH package is a folder of segments, not a loose file.
+                .onEnter { it.name != "offline-hls" && it.name != "offline-dash" }
+                .filter { it.isFile && !it.name.startsWith(".") && it.extension.lowercase() in extensions }
+                .forEach { out += AudioFile(Uri.fromFile(it), it.relativeTo(privateRoot).path, it.length()) }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            runCatching {
+                context.contentResolver.query(
+                    MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+                    arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.RELATIVE_PATH, MediaStore.MediaColumns.SIZE),
+                    "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ? OR ${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?",
+                    arrayOf("${Environment.DIRECTORY_MUSIC}/$FOLDER/%", "${Environment.DIRECTORY_MUSIC}/$LEGACY_FOLDER/%"),
+                    null,
+                )?.use { c ->
+                    while (c.moveToNext()) {
+                        val name = c.getString(1) ?: continue
+                        if (name.substringAfterLast('.').lowercase() !in extensions) continue
+                        out += AudioFile(
+                            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI.buildUpon().appendPath(c.getLong(0).toString()).build(),
+                            (c.getString(2).orEmpty().substringAfter("/").substringAfter("/")) + name,
+                            c.getLong(3),
+                        )
+                    }
+                }
+            }.onFailure { Log.w(TAG, "could not list the download folder: ${it.message}") }
+        }
+        return out
+    }
+
     fun delete(context: Context, uri: Uri): Boolean = runCatching {
         if (uri.scheme == "file") {
             uri.path?.let { path ->

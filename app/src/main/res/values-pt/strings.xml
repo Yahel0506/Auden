@@ -1441,4 +1441,20 @@
     <string name="layout_example">Exemplo: %1$s</string>
     <string name="layout_applies_to_new">Aplica-se às músicas transferidas a partir de agora. Os ficheiros existentes não são movidos.</string>
     <string name="layout_invalid">Esse modelo não pode ser usado</string>
+    <string name="storage_title">Armazenamento de transferências</string>
+    <string name="storage_summary">%1$d transferências · %2$s</string>
+    <string name="storage_scanning">A analisar as transferências…</string>
+    <string name="reorganize_title">Reorganizar pastas</string>
+    <string name="reorganize_pending">%1$d ficheiros não estão no sítio certo</string>
+    <string name="reorganize_ok">Tudo está no sítio certo</string>
+    <string name="reorganize_action">Mover</string>
+    <string name="reorganize_progress">A mover %1$d de %2$d</string>
+    <string name="reorganize_done">%1$d movidos · %2$d não foi possível mover</string>
+    <string name="reorganize_undo">Anular o último movimento</string>
+    <string name="orphans_title">Ficheiros sem registo</string>
+    <string name="orphans_subtitle">%1$d ficheiros · %2$s</string>
+    <string name="duplicates_title">Transferências duplicadas</string>
+    <string name="duplicates_subtitle">%1$d músicas transferidas mais de uma vez</string>
+    <string name="duplicates_keep_best">Manter a maior</string>
+    <string name="storage_row_subtitle">Pastas, duplicados e restos</string>
 </resources>

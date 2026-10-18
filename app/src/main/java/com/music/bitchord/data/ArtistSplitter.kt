@@ -35,12 +35,12 @@ object ArtistSplitter {
             val at = work.indexOf(name, ignoreCase = true)
             if (at >= 0) {
                 held += work.substring(at, at + name.length)
-                work = work.replaceRange(at, at + name.length, "\u0000${held.lastIndex}\u0000")
+                work = work.replaceRange(at, at + name.length, "\uE000${held.lastIndex}\uE001")
             }
         }
         val pattern = Regex(separators.sortedByDescending { it.length }.joinToString("|") { Regex.escape(it) }, RegexOption.IGNORE_CASE)
         return work.split(pattern)
-            .map { part -> Regex("\u0000(\\d+)\u0000").replace(part) { held[it.groupValues[1].toInt()] }.trim() }
+            .map { part -> Regex("\uE000(\\d+)\uE001").replace(part) { held[it.groupValues[1].toInt()] }.trim() }
             .filter { it.isNotEmpty() }
             .distinctBy { it.lowercase(Locale.ROOT) }
     }
