@@ -205,4 +205,7 @@
     <string name="new_playlist_subtitle">Na conta ou neste dispositivo</string>
     <string name="lyrics_offset_this_song">Esta música</string>
     <string name="lyrics_offset_all_songs">Todas</string>
+    <string name="lyrics_provider_downloaded">Transferidas</string>
+    <string name="lyrics_provider_download">Transferir esta letra</string>
+    <string name="lyrics_provider_remove">Remover transferência</string>
 </resources>

@@ -205,4 +205,7 @@
     <string name="new_playlist_subtitle">Compte ou cet appareil</string>
     <string name="lyrics_offset_this_song">Ce titre</string>
     <string name="lyrics_offset_all_songs">Tous</string>
+    <string name="lyrics_provider_downloaded">Téléchargées</string>
+    <string name="lyrics_provider_download">Télécharger ces paroles</string>
+    <string name="lyrics_provider_remove">Retirer le téléchargement</string>
 </resources>

@@ -321,10 +321,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private var lyricsJob: Job? = null
 
     init {
+        dev.auden.library.lyrics.CurrentLyrics.onDownload = ::downloadLyricsProvider
+        dev.auden.library.lyrics.CurrentLyrics.onRemove = ::removeStoredLyrics
         // The lyrics of the song on screen were changed from elsewhere (the options sheet): look again.
         viewModelScope.launch {
             dev.auden.library.lyrics.LyricsStore.changes.collect { key ->
                 if (currentLyricsRequest?.videoId == key) {
+                    refreshStoredProviders(key)
                     val chosen = dev.auden.library.lyrics.LyricsStore.active(getApplication(), key)
                     if (chosen != null) {
                         selectedLyricsSource = chosen.provider
@@ -407,6 +410,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         lyricsFor = key
         // Its own timing, if the listener gave it one.
         dev.auden.library.lyrics.SongLyricsOffset.onSongChanged(videoId)
+        refreshStoredProviders(videoId)
         lyricsGeneration += 1
         val generation = lyricsGeneration
         currentLyricsRequest = LyricsRequest(videoId, title, artist, durationMs, album)
@@ -566,6 +570,54 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * Keeps [source] as the lyrics for [videoId] from now on. Its text is saved once it arrives (see
      * [providerFinished]), so the choice also works with no connection.
      */
+    /** Tells the provider sheet which providers have downloaded lyrics for the song on screen. */
+    private fun refreshStoredProviders(videoId: String) {
+        viewModelScope.launch {
+            val stored = dev.auden.library.lyrics.LyricsStore.variants(getApplication(), videoId).map { it.provider }.toSet()
+            if (currentLyricsRequest?.videoId == videoId) dev.auden.library.lyrics.CurrentLyrics.setStored(stored)
+        }
+    }
+
+    /** Downloads [source]'s lyrics for the song on screen, without switching to them. */
+    private fun downloadLyricsProvider(source: LyricsSource) {
+        val request = currentLyricsRequest ?: return
+        val current = dev.auden.library.lyrics.CurrentLyrics
+        if (source in current.downloading.value) return
+        current.setDownloading(source, true)
+        viewModelScope.launch {
+            try {
+                // Already fetched while browsing providers: no second request.
+                val artifact = lyricsProviderResults[source]?.artifact ?: dev.auden.library.lyrics.LyricsFetcher.fetch(
+                    Song(
+                        videoId = request.videoId, title = request.title, artist = request.artist, thumbnailUrl = null,
+                        durationText = request.durationMs.takeIf { it > 0 }?.let { "%d:%02d".format(it / 60000, it / 1000 % 60) },
+                        albumName = request.album,
+                    ),
+                    source,
+                )
+                if (artifact != null) {
+                    dev.auden.library.lyrics.LyricsStore.save(getApplication(), request.videoId, artifact)
+                    // Showing it is a separate choice; a download only keeps it.
+                    if (dev.auden.library.lyrics.LyricsStore.activeProvider(getApplication(), request.videoId) == source) {
+                        com.music.bitchord.download.Downloads.applyLyricsToFiles(
+                            getApplication(),
+                            Song(request.videoId, request.title, request.artist, null),
+                            artifact,
+                        )
+                    }
+                }
+            } finally {
+                current.setDownloading(source, false)
+            }
+        }
+    }
+
+    /** Throws away the downloaded lyrics of [source] for the song on screen. */
+    private fun removeStoredLyrics(source: LyricsSource) {
+        val request = currentLyricsRequest ?: return
+        viewModelScope.launch { dev.auden.library.lyrics.LyricsStore.delete(getApplication(), request.videoId, source) }
+    }
+
     private fun rememberChoice(videoId: String, source: LyricsSource) {
         viewModelScope.launch { dev.auden.library.lyrics.LyricsStore.setActive(getApplication(), videoId, source) }
     }

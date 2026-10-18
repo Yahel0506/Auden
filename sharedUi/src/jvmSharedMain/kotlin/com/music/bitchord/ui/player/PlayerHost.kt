@@ -176,6 +176,10 @@ interface PlayerSettingsSource {
     val lyricsOffsetMs: StateFlow<Int>
     /** Whether the lyrics offset being edited belongs to the current song alone. */
     val lyricsOffsetPerSong: StateFlow<Boolean>
+    /** Providers whose lyrics for the playing song are downloaded. */
+    val storedLyricsProviders: StateFlow<Set<LyricsSource>>
+    /** Providers whose lyrics are being downloaded for the playing song. */
+    val downloadingLyricsProviders: StateFlow<Set<LyricsSource>>
     val lyricsSourceOrder: StateFlow<List<LyricsSource>>
     val meteredConnection: StateFlow<Boolean?>
     val preferUsbDac: StateFlow<Boolean>
@@ -198,6 +202,8 @@ interface PlayerSettingsSource {
     fun setLastPlayerScreen(value: LastPlayerScreen)
     fun setLyricsOffsetMs(value: Int)
     fun setLyricsOffsetPerSong(enabled: Boolean)
+    fun downloadLyricsProvider(source: LyricsSource)
+    fun removeStoredLyrics(source: LyricsSource)
 }
 
 /** The player's name for the installed host's settings, read where AppSettings used to be. */

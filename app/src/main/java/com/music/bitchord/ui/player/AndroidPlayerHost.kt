@@ -19,6 +19,7 @@ import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsTranslation
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.LastPlayerScreen
 import com.music.bitchord.playback.AudioOutputStatus
@@ -64,6 +65,8 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val lyricsBlur get() = AppSettings.lyricsBlur
         override val lyricsOffsetMs get() = dev.auden.library.lyrics.SongLyricsOffset.effective
         override val lyricsOffsetPerSong get() = dev.auden.library.lyrics.SongLyricsOffset.perSong
+        override val storedLyricsProviders get() = dev.auden.library.lyrics.CurrentLyrics.stored
+        override val downloadingLyricsProviders get() = dev.auden.library.lyrics.CurrentLyrics.downloading
         override val lyricsSourceOrder get() = AppSettings.lyricsSourceOrder
         override val meteredConnection get() = AppSettings.meteredConnection
         override val preferUsbDac get() = AppSettings.preferUsbDac
@@ -84,6 +87,8 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override fun setLastPlayerScreen(value: LastPlayerScreen) = AppSettings.setLastPlayerScreen(value)
         override fun setLyricsOffsetMs(value: Int) = dev.auden.library.lyrics.SongLyricsOffset.set(value)
         override fun setLyricsOffsetPerSong(enabled: Boolean) = dev.auden.library.lyrics.SongLyricsOffset.setPerSong(enabled)
+        override fun downloadLyricsProvider(source: LyricsSource) = dev.auden.library.lyrics.CurrentLyrics.onDownload(source)
+        override fun removeStoredLyrics(source: LyricsSource) = dev.auden.library.lyrics.CurrentLyrics.onRemove(source)
     }
 
     override fun cachedCanvas(song: Song): CanvasArtwork? = CanvasRepository.cached(song)

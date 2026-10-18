@@ -16,6 +16,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -62,6 +64,8 @@ internal fun LyricsProviderSheet(
 ) {
     val savedOrder by PlayerSettings.lyricsSourceOrder.collectAsStateWithLifecycle()
     val sources = remember(savedOrder) { LyricsSource.ordered(savedOrder) }
+    val stored by PlayerSettings.storedLyricsProviders.collectAsStateWithLifecycle()
+    val downloading by PlayerSettings.downloadingLyricsProviders.collectAsStateWithLifecycle()
     var requestedSource by remember { mutableStateOf<LyricsSource?>(null) }
     LaunchedEffect(currentSource, requestedSource) {
         if (requestedSource != null && currentSource == requestedSource) onDismiss()
@@ -82,6 +86,10 @@ internal fun LyricsProviderSheet(
                     source = source,
                     state = states[source] ?: LyricsProviderState.NOT_FETCHED,
                     current = source == currentSource,
+                    stored = source in stored,
+                    downloading = source in downloading,
+                    onDownload = { PlayerSettings.downloadLyricsProvider(source) },
+                    onRemove = { PlayerSettings.removeStoredLyrics(source) },
                     onClick = {
                         val wasFound = states[source] == LyricsProviderState.FOUND
                         requestedSource = source
@@ -99,6 +107,10 @@ private fun LyricsProviderRow(
     source: LyricsSource,
     state: LyricsProviderState,
     current: Boolean,
+    stored: Boolean,
+    downloading: Boolean,
+    onDownload: () -> Unit,
+    onRemove: () -> Unit,
     onClick: () -> Unit,
 ) {
     val haptics = rememberHaptics()
@@ -106,7 +118,9 @@ private fun LyricsProviderRow(
     // requested source and applied when that same in-flight call completes.
     val enabled = !current && state != LyricsProviderState.NOT_FOUND
     val status = when {
+        current && stored -> stringResource(Res.string.lyrics_provider_current) + " · " + stringResource(Res.string.lyrics_provider_downloaded)
         current -> stringResource(Res.string.lyrics_provider_current)
+        stored -> stringResource(Res.string.lyrics_provider_downloaded)
         state == LyricsProviderState.FOUND -> stringResource(Res.string.lyrics_provider_found)
         state == LyricsProviderState.NOT_FOUND -> stringResource(Res.string.lyrics_provider_not_found)
         state == LyricsProviderState.FETCHING -> stringResource(Res.string.lyrics_provider_fetching)
@@ -180,6 +194,46 @@ private fun LyricsProviderRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
+        // Keeping a provider's lyrics for this song, without having to use them.
+        val canDownload = !stored && !downloading && state != LyricsProviderState.NOT_FOUND
+        if (stored || downloading || canDownload) {
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.08f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        enabled = !downloading,
+                    ) {
+                        haptics.play(Haptic.Tap)
+                        if (stored) onRemove() else onDownload()
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                when {
+                    downloading -> CircularProgressIndicator(
+                        color = Color.White.copy(alpha = 0.8f),
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    stored -> Icon(
+                        imageVector = Icons.Rounded.DownloadDone,
+                        contentDescription = stringResource(Res.string.lyrics_provider_remove),
+                        tint = Color.White.copy(alpha = 0.9f),
+                        modifier = Modifier.size(19.dp),
+                    )
+                    else -> Icon(
+                        imageVector = Icons.Rounded.Download,
+                        contentDescription = stringResource(Res.string.lyrics_provider_download),
+                        tint = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.size(19.dp),
+                    )
+                }
+            }
         }
     }
 }
