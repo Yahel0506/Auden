@@ -100,8 +100,11 @@ fun IdentifyBanner(modifier: Modifier = Modifier) {
                 }
             }
             if (state.running && state.total > 0) {
+                // Taken once, here: the run resets to 0 of 0 the instant it ends, a frame before
+                // this bar leaves, and 0f / 0 is NaN, which the progress bar refuses with a crash.
+                val fraction = (state.done.toFloat() / state.total).coerceIn(0f, 1f)
                 LinearProgressIndicator(
-                    progress = { state.done.toFloat() / state.total },
+                    progress = { fraction },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 12.dp),
                 )
             }
