@@ -21,9 +21,8 @@ class LocalMatchIndex(tracks: List<TrackEntity>) {
 
     val size: Int = byTitle.values.sumOf { it.size }
 
-    /** Every file that is [song], oldest-indexed first. A song that is itself a file has no other copies. */
+    /** Every file that is [song], itself included when [song] is a file in the index. */
     fun matches(song: Song): List<TrackEntity> {
-        if (song.localUri != null) return emptyList()
         val candidates = byTitle[PlaylistMatcher.normalize(song.title)] ?: return emptyList()
         return candidates.filter { track ->
             SongIdentity.same(song, track.asSong())

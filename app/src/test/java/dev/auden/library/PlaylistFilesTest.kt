@@ -137,10 +137,10 @@ class LocalMatchIndexTest {
     }
 
     @Test
-    fun aSongThatIsAlreadyAFileHasNoOtherCopies() {
-        val index = dev.auden.library.links.LocalMatchIndex(listOf(file(1, "A", "B")))
+    fun aSongThatIsAFileIsOneOfItsOwnCopies() {
+        val index = dev.auden.library.links.LocalMatchIndex(listOf(file(1, "A", "B"), file(2, "A", "B")))
         val song = streamed("A", "B").copy(localUri = "content://1")
-        assertTrue(index.matches(song).isEmpty())
+        assertEquals(listOf(1L, 2L), index.matches(song).map { it.id })
     }
 
     @Test

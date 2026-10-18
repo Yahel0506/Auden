@@ -61,7 +61,7 @@ object LocalLinks {
 
     /** Every copy on the device of [song], the app's own download included. */
     fun copiesOf(song: Song): List<LocalCopy> {
-        if (song.localUri != null || song.videoId.isBlank()) return emptyList()
+        if (song.videoId.isBlank() && song.localUri == null) return emptyList()
         val own = ownDownload(song)
         val found = cache.getOrPut(song.videoId) {
             index?.matches(song).orEmpty().map { track ->
@@ -81,7 +81,24 @@ object LocalLinks {
         // The indexer also sees files the app downloaded into shared storage; those are `own`, not a second copy.
         val ownUri = own?.uri
         val others = found.filter { it.uri != ownUri && !(own != null && it.path != null && it.path == own.path) }
-        return listOfNotNull(own) + others
+        val all = listOfNotNull(own) + others
+        // A song that is itself a file on the device is one of its own copies, even
+        // if the index has not met it yet — this is what is playing, or listed, or held.
+        val self = song.localUri?.takeIf { (it.startsWith("content:") || it.startsWith("file:")) && all.none { c -> c.uri == it } }
+            ?.let { uri ->
+                LocalCopy(
+                    uri = uri,
+                    path = song.localPath,
+                    title = song.title,
+                    artist = song.artist,
+                    album = song.albumName,
+                    durationText = song.durationText,
+                    sizeBytes = null,
+                    inAppStorage = uri.startsWith("file:") && listOf("/Android/data/", "/data/user/", "/data/data/").any(uri::contains),
+                    downloadedByApp = false,
+                )
+            }
+        return all + listOfNotNull(self)
     }
 
     fun has(song: Song): Boolean = copiesOf(song).isNotEmpty()
