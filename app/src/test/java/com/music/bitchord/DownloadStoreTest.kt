@@ -117,8 +117,19 @@ class DownloadStoreTest {
 
     // ---- What the file is called -------------------------------------------
 
+    /** Runs [block] with the flat `Artist - Title` template, the naming these tests were written for. */
+    private fun <T> flat(block: () -> T): T {
+        val before = AppSettings.downloadTemplate.value
+        AppSettings.downloadTemplate.value = com.music.bitchord.download.DownloadLayout.FLAT_TEMPLATE
+        try {
+            return block()
+        } finally {
+            AppSettings.downloadTemplate.value = before
+        }
+    }
+
     @Test
-    fun `the name is artist then title, and carries the extension asked for`() {
+    fun `the name is artist then title, and carries the extension asked for`() = flat {
         assertEquals(
             "Arijit Singh - Kesariya.flac",
             DownloadStore.fileNameFor(song("Kesariya", "Arijit Singh"), "flac"),
@@ -126,14 +137,28 @@ class DownloadStoreTest {
     }
 
     @Test
-    fun `characters a volume or a shell would object to are replaced`() {
+    fun `characters a volume or a shell would object to are replaced`() = flat {
         val name = DownloadStore.fileNameFor(song("A/B: C?", "D|E"), "m4a")
         assertEquals("D E - A B C.m4a", name)
     }
 
     @Test
-    fun `a row with nothing to name it falls back to the video id`() {
-        assertEquals("xyz789.m4a", DownloadStore.fileNameFor(song("", "", "xyz789"), "m4a"))
+    fun `a row with nothing to name it falls back to the video id`() = flat {
+        // Nothing but the id to go on: the artist is "Unknown Artist" and the title is its id.
+        assertEquals("Unknown Artist - xyz789.m4a", DownloadStore.fileNameFor(song("", "", "xyz789"), "m4a"))
+    }
+
+    @Test
+    fun `the default layout files a single under its artist`() {
+        assertEquals(
+            "Arijit Singh/Singles/Kesariya.flac",
+            DownloadStore.fileNameFor(song("Kesariya", "Arijit Singh"), "flac"),
+        )
+    }
+
+    @Test
+    fun `a row with no title in the default layout is named by its video id`() {
+        assertEquals("Unknown Artist/Singles/xyz789.m4a", DownloadStore.fileNameFor(song("", "", "xyz789"), "m4a"))
     }
 
     // ---- What quality is kept ----------------------------------------------

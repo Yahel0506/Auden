@@ -62,7 +62,8 @@ object DownloadLayout {
         val artist = info.artist.ifBlank { UNKNOWN_ARTIST }
         // A name is one path segment whatever it contains: "AC/DC" must not become two folders.
         val values = mapOf(
-            "title" to info.title,
+            // A track with no title still needs a name nobody else has: its id.
+            "title" to info.title.ifBlank { info.videoId },
             "artist" to artist,
             "albumArtist" to (info.albumArtist?.takeIf { it.isNotBlank() } ?: artist),
             "album" to (info.album?.takeIf { it.isNotBlank() } ?: SINGLES),
@@ -71,13 +72,12 @@ object DownloadLayout {
             "disc" to pad(info.disc),
             "videoId" to info.videoId,
         ).mapValues { (_, v) -> v.replace('/', ' ') }
-        val segments = use.split('/').mapNotNull { segment ->
-            val filled = TOKEN.replace(segment) { values[it.groupValues[1]].orEmpty() }
-            tidy(safe(filled)).take(MAX_SEGMENT).trim().ifEmpty { null }
-        }
-        // The last segment is the file; everything before it is a folder.
-        val stem = segments.lastOrNull() ?: info.videoId.ifEmpty { "track" }
-        val folders = segments.dropLast(1)
+        fun fill(segment: String) =
+            tidy(safe(TOKEN.replace(segment) { values[it.groupValues[1]].orEmpty() })).take(MAX_SEGMENT).trim()
+        val parts = use.split('/')
+        // Folders that come out empty are dropped; the file part never is, since a track must have a name.
+        val folders = parts.dropLast(1).map(::fill).filter { it.isNotEmpty() }
+        val stem = fill(parts.last()).ifEmpty { info.videoId.ifEmpty { "track" } }
         val name = (folders + "$stem.$extension").joinToString("/")
         return if (name.length <= MAX_NAME) name else (folders.take(2) + "${stem.take(MAX_SEGMENT)}.$extension").joinToString("/")
     }
