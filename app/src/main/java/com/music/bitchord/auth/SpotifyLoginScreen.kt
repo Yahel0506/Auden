@@ -127,14 +127,26 @@ fun SpotifyLoginScreen(
                         // Hide before handing over, so the web player this
                         // landed on doesn't flash up as the overlay tears down.
                         view.visibility = View.GONE
-                        onConnected(token)
+                        view.stopLoading()
+                        // Not from inside this callback: onConnected closes the
+                        // overlay, which releases and destroys this very WebView,
+                        // and destroying a WebView from its own client callback
+                        // takes Chromium down on some devices.
+                        view.post { onConnected(token) }
                     }
                 }
                 webView = this
                 loadUrl(LOGIN_URL)
             }
         },
-        onRelease = { it.destroy() },
+        onRelease = { view ->
+            // Detach now, destroy on the next loop turn: the release can land
+            // while the WebView is still in the middle of a callback or draw.
+            view.stopLoading()
+            view.webViewClient = WebViewClient()
+            (view.parent as? ViewGroup)?.removeView(view)
+            view.post { runCatching { view.destroy() } }
+        },
     )
 
     BackHandler(enabled = canGoBack) {
