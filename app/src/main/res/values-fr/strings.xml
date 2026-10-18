@@ -1458,4 +1458,8 @@
     <string name="resume_downloads">Reprendre</string>
     <string name="download_concurrency">Téléchargements simultanés</string>
     <string name="download_concurrency_subtitle">Moins ménage votre connexion ; plus accélère les longues files</string>
+    <string name="library_folder_title">Dossier des paroles et pochettes</string>
+    <string name="library_folder_none">Choisissez Music/Auden pour enregistrer .lrc et cover.jpg à côté de chaque titre</string>
+    <string name="library_folder_set">Enregistrement dans %1$s</string>
+    <string name="library_folder_forget">Ne plus utiliser ce dossier</string>
 </resources>

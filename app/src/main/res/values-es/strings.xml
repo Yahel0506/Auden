@@ -1429,4 +1429,8 @@
     <string name="resume_downloads">Reanudar</string>
     <string name="download_concurrency">Descargas simultáneas</string>
     <string name="download_concurrency_subtitle">Menos es más suave con tu conexión; más es más rápido en colas largas</string>
+    <string name="library_folder_title">Carpeta de letras y portadas</string>
+    <string name="library_folder_none">Elige Music/Auden para guardar .lrc y cover.jpg junto a cada canción</string>
+    <string name="library_folder_set">Guardando en %1$s</string>
+    <string name="library_folder_forget">Dejar de usar esta carpeta</string>
 </resources>

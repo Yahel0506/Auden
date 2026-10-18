@@ -1457,4 +1457,8 @@
     <string name="resume_downloads">Fortsetzen</string>
     <string name="download_concurrency">Gleichzeitige Downloads</string>
     <string name="download_concurrency_subtitle">Weniger schont die Verbindung; mehr beschleunigt lange Warteschlangen</string>
+    <string name="library_folder_title">Ordner für Texte und Cover</string>
+    <string name="library_folder_none">Wähle Music/Auden, um .lrc und cover.jpg neben jedem Titel zu speichern</string>
+    <string name="library_folder_set">Speichert in %1$s</string>
+    <string name="library_folder_forget">Diesen Ordner nicht mehr verwenden</string>
 </resources>

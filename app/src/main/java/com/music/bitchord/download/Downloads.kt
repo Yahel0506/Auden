@@ -17,6 +17,7 @@ import com.music.bitchord.data.lyrics.toEnhancedLrc
 import com.music.bitchord.data.lyrics.toLrc
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.durationMillis
+import com.music.bitchord.data.lyrics.LyricsArtifactFormat
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.DownloadQuality
 import com.music.bitchord.data.sources.SourceResolver
@@ -1192,6 +1193,7 @@ object Downloads {
                 val artworkUri = MediaTagger.persistArtwork(context, track.thumbnailUrl, cover)
                 val savedUri = destination.commit()
                 pending = null
+                writeFolderCover(context, name, cover)
                 remember(song, track, savedUri, route.downloadFormat, lyricsResult, artworkUri)
                 DownloadSession.done(id)
                 clear(id)
@@ -1330,6 +1332,15 @@ object Downloads {
         return artifact
     }
 
+    /** `cover.jpg` in the track's folder, once per folder, for players that read it instead of the tags. */
+    private fun writeFolderCover(context: Context, audioName: String, cover: MediaTagger.Artwork?) {
+        if (cover == null || cover.bytes.isEmpty() || !AppSettings.exportDownloads.value) return
+        val folder = DownloadLayout.folderOf(audioName)
+        // A flat layout has no album folder to hold a cover; one cover for everything would be wrong.
+        if (folder.isEmpty()) return
+        LibraryFolder.write(context, "$folder/cover.jpg", cover.mime, cover.bytes, replace = false)
+    }
+
     private fun saveLyricsSidecar(
         context: Context,
         audioName: String,
@@ -1342,6 +1353,16 @@ object Downloads {
         }.onFailure {
             Log.w(TAG, "could not write lyrics sidecar $sidecarName: ${it.message}")
         }.getOrNull() ?: return LyricsResult(LyricsDownloadState.FAILED)
+
+        // And beside the audio, in the folder the listener opened for it, where other players look.
+        if (AppSettings.exportDownloads.value) {
+            LibraryFolder.write(
+                context,
+                sidecarName,
+                if (artifact.format == LyricsArtifactFormat.TTML) "application/ttml+xml" else "application/octet-stream",
+                artifact.content.toByteArray(Charsets.UTF_8),
+            )
+        }
 
         return LyricsResult(
             state = LyricsDownloadState.SAVED,

@@ -1440,4 +1440,8 @@
     <string name="resume_downloads">Resume</string>
     <string name="download_concurrency">Simultaneous downloads</string>
     <string name="download_concurrency_subtitle">Fewer is gentler on your connection; more is faster for long queues</string>
+    <string name="library_folder_title">Lyrics and covers folder</string>
+    <string name="library_folder_none">Pick Music/Auden to save .lrc and cover.jpg beside each song</string>
+    <string name="library_folder_set">Saving to %1$s</string>
+    <string name="library_folder_forget">Stop using this folder</string>
 </resources>

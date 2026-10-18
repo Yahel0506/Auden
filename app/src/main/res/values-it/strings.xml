@@ -1396,4 +1396,8 @@
     <string name="resume_downloads">Riprendi</string>
     <string name="download_concurrency">Download simultanei</string>
     <string name="download_concurrency_subtitle">Meno è più leggero per la connessione; di più accelera le code lunghe</string>
+    <string name="library_folder_title">Cartella di testi e copertine</string>
+    <string name="library_folder_none">Scegli Music/Auden per salvare .lrc e cover.jpg accanto a ogni brano</string>
+    <string name="library_folder_set">Salvataggio in %1$s</string>
+    <string name="library_folder_forget">Smetti di usare questa cartella</string>
 </resources>

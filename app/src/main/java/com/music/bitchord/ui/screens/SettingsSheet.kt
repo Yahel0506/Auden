@@ -293,6 +293,16 @@ fun SettingsScreen(
     var pickingDownloadQuality by remember { mutableStateOf(false) }
     var pickingDownloadLayout by remember { mutableStateOf(false) }
     var managingDownloads by remember { mutableStateOf(false) }
+    // The folder the listener opened for lyrics and covers; re-read after the picker or "stop using".
+    var libraryFolderRevision by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val libraryFolderPicker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree(),
+    ) { tree ->
+        if (tree != null) {
+            runCatching { com.music.bitchord.download.LibraryFolder.grant(context, tree) }
+            libraryFolderRevision++
+        }
+    }
     var pickingAutomixPerformance by remember { mutableStateOf(false) }
     // What the last export or import did, shown on the row that did it rather
     // than as a toast: a backup is the one action here whose outcome nobody can
@@ -569,6 +579,28 @@ fun SettingsScreen(
                     subtitle = com.music.bitchord.download.DownloadLayout.preview(downloadTemplate),
                     onClick = { pickingDownloadLayout = true },
                 )
+            }
+            val libraryFolderTitle = stringResource(R.string.library_folder_title)
+            val libraryFolderLabel = remember(libraryFolderRevision) {
+                com.music.bitchord.download.LibraryFolder.takeIf { it.hasAccess(context) }?.label(context)
+            }
+            row(libraryFolderTitle, "lrc", "lyrics", "cover", "folder", "saf") {
+                SettingsRow(
+                    icon = Icons.Rounded.Folder,
+                    title = libraryFolderTitle,
+                    subtitle = libraryFolderLabel?.let { stringResource(R.string.library_folder_set, it) }
+                        ?: stringResource(R.string.library_folder_none),
+                    onClick = { libraryFolderPicker.launch(null) },
+                )
+            }
+            if (libraryFolderLabel != null) {
+                val forgetTitle = stringResource(R.string.library_folder_forget)
+                row(forgetTitle, "lrc", "folder", divided = false) {
+                    DestructiveRow(label = forgetTitle, onClick = {
+                        com.music.bitchord.download.LibraryFolder.revoke(context)
+                        libraryFolderRevision++
+                    })
+                }
             }
             val downloadStorageTitle = stringResource(R.string.storage_title)
             row(downloadStorageTitle, "duplicates", "orphans", "reorganize", "size", "cleanup") {
