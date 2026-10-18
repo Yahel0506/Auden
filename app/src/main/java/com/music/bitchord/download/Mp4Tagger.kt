@@ -54,6 +54,7 @@ object Mp4Tagger {
         coverIsPng: Boolean,
         /** The A2 form, kept beside [lyrics] rather than instead of it — see [freeformItem]. */
         wordLyrics: String? = null,
+        extras: TagExtras? = null,
     ): ByteArray {
         val items = mutableListOf<ByteArray>()
         // © is iTunes's own "copyright" prefix for the four text atoms
@@ -61,6 +62,13 @@ object Mp4Tagger {
         if (title.isNotBlank()) items += textItem("©nam", title)
         if (artist.isNotBlank()) items += textItem("©ART", artist)
         if (!album.isNullOrBlank()) items += textItem("©alb", album)
+        extras?.let { e ->
+            if (!e.albumArtist.isNullOrBlank()) items += textItem("aART", e.albumArtist)
+            e.track?.takeIf { it > 0 }?.let { items += positionItem("trkn", it, e.trackTotal) }
+            e.disc?.takeIf { it > 0 }?.let { items += positionItem("disk", it, null) }
+            e.year?.let { items += textItem("©day", it.toString()) }
+            if (!e.comment.isNullOrBlank()) items += textItem("©cmt", e.comment)
+        }
         // `©lyr` is a UTF-8 text atom like the three above, with no length limit
         // and no objection to newlines, so LRC goes in as-is. There is a
         // separate `Sync Lyrics`/`sylt`-style representation in some tools;
@@ -203,6 +211,20 @@ object Mp4Tagger {
         writeU32(body, 0, typeIndicator.toLong())
         payload.copyInto(body, 8)
         return box("data", body)
+    }
+
+    /**
+     * `trkn` / `disk`: a position and a total as two big-endian 16-bit numbers
+     * inside a binary (type 0) data atom, padded the way iTunes writes it.
+     */
+    private fun positionItem(fourCc: String, number: Int, total: Int?): ByteArray {
+        val payload = ByteArray(8)
+        payload[2] = (number shr 8).toByte()
+        payload[3] = number.toByte()
+        val t = total ?: 0
+        payload[4] = (t shr 8).toByte()
+        payload[5] = t.toByte()
+        return box(fourCc, dataAtom(0, payload))
     }
 
     /** Type indicator 1 = UTF-8 text. */

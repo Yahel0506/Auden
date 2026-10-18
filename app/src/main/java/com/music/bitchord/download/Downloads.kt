@@ -1075,7 +1075,7 @@ object Downloads {
 
                 // Publish only after metadata is part of the file. This keeps
                 // concurrent album workers from exposing untagged tracks.
-                MediaTagger.embed(context, destination.tagUri, track, route.extension, words, cover)
+                MediaTagger.embed(context, destination.tagUri, track, route.extension, words, cover, tagExtrasFor(track, from))
                 val artworkUri = MediaTagger.persistArtwork(context, track.thumbnailUrl, cover)
                 val savedUri = destination.commit()
                 pending = null
@@ -1102,14 +1102,28 @@ object Downloads {
      * file in the album's folder under its number. A playlist does not — its
      * tracks come from many albums, so each keeps its own.
      */
-    internal fun nameFor(song: Song, extension: String, from: String?): String {
+    internal fun nameFor(song: Song, extension: String, from: String?): String =
+        DownloadStore.fileNameFor(song, extension, layoutInfo(song, from))
+
+    private fun layoutInfo(song: Song, from: String?): DownloadLayout.Info {
         val base = DownloadStore.infoOf(song)
         val record = from?.let { _collections.value[it] }?.takeUnless { it.playlist }
-        val info = if (record == null) base else base.copy(
+        return if (record == null) base else base.copy(
             album = record.title.ifBlank { base.album },
             track = record.videoIds.indexOf(song.videoId).takeIf { it >= 0 }?.plus(1) ?: base.track,
         )
-        return DownloadStore.fileNameFor(song, extension, info)
+    }
+
+    /** What goes into the file's own tags beyond title, artist and album, so it reads right in any player. */
+    private fun tagExtrasFor(song: Song, from: String?): TagExtras {
+        val info = layoutInfo(song, from)
+        val record = from?.let { _collections.value[it] }?.takeUnless { it.playlist }
+        return TagExtras(
+            albumArtist = info.albumArtist,
+            track = info.track,
+            trackTotal = record?.videoIds?.size,
+            comment = "https://music.youtube.com/watch?v=${song.videoId}".takeIf { !song.videoId.startsWith("content:") },
+        )
     }
 
     private suspend fun runLyricsOnly(context: Context, song: Song) = withContext(Dispatchers.IO) {

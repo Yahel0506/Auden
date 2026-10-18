@@ -194,9 +194,10 @@ object MediaTagger {
         extension: String,
         lyrics: LyricsTag.Embeddable? = null,
         artwork: Artwork? = null,
+        extras: TagExtras? = null,
     ) {
         if (!carriesTags(extension)) return
-        taggingLock.withLock { embedNow(context, uri, track, extension, lyrics, artwork) }
+        taggingLock.withLock { embedNow(context, uri, track, extension, lyrics, artwork, extras) }
     }
 
     private fun embedNow(
@@ -206,6 +207,7 @@ object MediaTagger {
         extension: String,
         lyrics: LyricsTag.Embeddable?,
         artwork: Artwork?,
+        extras: TagExtras?,
     ) {
         // The portable field and this app's own. Split here rather than inside
         // each tagger so all three agree on which string goes where.
@@ -215,7 +217,7 @@ object MediaTagger {
         // FLAC is the format worth not doing in memory, and the only one that
         // can be done any other way — see [tagFlacStreaming].
         if (extension == "flac" &&
-            tagFlacStreaming(context, uri, track, plain, words, artwork)
+            tagFlacStreaming(context, uri, track, plain, words, artwork, extras)
         ) {
             return
         }
@@ -235,6 +237,7 @@ object MediaTagger {
                     artwork?.bytes,
                     coverIsPng = false,
                     wordLyrics = words,
+                    extras = extras,
                 )
                 "flac" -> FlacTagger.tag(
                     original,
@@ -245,6 +248,7 @@ object MediaTagger {
                     artwork?.bytes,
                     artwork?.mime ?: "image/jpeg",
                     wordLyrics = words,
+                    extras = extras,
                 )
                 else -> WebmTagger.tag(
                     original,
@@ -255,6 +259,7 @@ object MediaTagger {
                     artwork?.bytes,
                     artwork?.mime ?: "image/jpeg",
                     wordLyrics = words,
+                    extras = extras,
                 )
             }
         }.onFailure {
@@ -308,6 +313,7 @@ object MediaTagger {
         lyrics: String?,
         wordLyrics: String?,
         artwork: Artwork?,
+        extras: TagExtras?,
     ): Boolean {
         val head = readPrefix(context, uri, FLAC_HEAD_BYTES) ?: return false
         // Short of the cap means the read hit the end of the file, so this *is*
@@ -323,6 +329,7 @@ object MediaTagger {
             artwork?.bytes,
             artwork?.mime ?: "image/jpeg",
             wordLyrics = wordLyrics,
+            extras = extras,
         ) ?: return wholeFile
 
         val temp = File(context.cacheDir, "tagging-${track.videoId.hashCode()}-${System.nanoTime()}.flac")

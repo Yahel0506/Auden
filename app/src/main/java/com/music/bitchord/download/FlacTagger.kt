@@ -43,8 +43,9 @@ object FlacTagger {
         coverMime: String,
         /** The A2 form, under a name of this app's own — see [WORD_LYRICS_FIELD]. */
         wordLyrics: String? = null,
+        extras: TagExtras? = null,
     ): ByteArray = runCatching {
-        val done = header(bytes, title, artist, album, lyrics, cover, coverMime, wordLyrics)
+        val done = header(bytes, title, artist, album, lyrics, cover, coverMime, wordLyrics, extras)
             ?: return@runCatching bytes
         val out = ByteArrayOutputStream(done.metadata.size + (bytes.size - done.audioStart))
         out.write(done.metadata)
@@ -82,6 +83,7 @@ object FlacTagger {
         cover: ByteArray?,
         coverMime: String,
         wordLyrics: String? = null,
+        extras: TagExtras? = null,
     ): Rewrite? {
         if (!head.regionMatches(0, MAGIC)) return null
 
@@ -107,7 +109,7 @@ object FlacTagger {
         if (blocks.firstOrNull()?.type != TYPE_STREAMINFO) return null
 
         val additions = listOfNotNull(
-            vorbisComment(title, artist, album, lyrics, wordLyrics)?.let { TYPE_VORBIS_COMMENT to it },
+            vorbisComment(title, artist, album, lyrics, wordLyrics, extras)?.let { TYPE_VORBIS_COMMENT to it },
             cover?.takeIf { it.isNotEmpty() }?.let { TYPE_PICTURE to picture(it, coverMime) },
         )
             // A payload past what three bytes of length can describe costs that
@@ -157,11 +159,20 @@ object FlacTagger {
         album: String?,
         lyrics: String?,
         wordLyrics: String?,
+        extras: TagExtras? = null,
     ): ByteArray? {
         val fields = buildList {
             if (title.isNotBlank()) add("TITLE=$title")
             if (artist.isNotBlank()) add("ARTIST=$artist")
             if (!album.isNullOrBlank()) add("ALBUM=$album")
+            extras?.let { e ->
+                if (!e.albumArtist.isNullOrBlank()) add("ALBUMARTIST=${e.albumArtist}")
+                e.track?.takeIf { it > 0 }?.let { add("TRACKNUMBER=$it") }
+                e.trackTotal?.takeIf { it > 0 }?.let { add("TRACKTOTAL=$it") }
+                e.disc?.takeIf { it > 0 }?.let { add("DISCNUMBER=$it") }
+                e.year?.let { add("DATE=$it") }
+                if (!e.comment.isNullOrBlank()) add("COMMENT=${e.comment}")
+            }
             if (!lyrics.isNullOrBlank()) add("LYRICS=$lyrics")
             // Beside `LYRICS`, never instead of it: an unknown name is skipped
             // by every reader, so the portable field stays exactly as it was.

@@ -55,8 +55,9 @@ object WebmTagger {
         coverMime: String,
         /** The A2 form, under a name of this app's own — see [WORD_LYRICS_FIELD]. */
         wordLyrics: String? = null,
+        extras: TagExtras? = null,
     ): ByteArray = runCatching {
-        insert(bytes, buildTail(title, artist, album, lyrics, cover, coverMime, wordLyrics))
+        insert(bytes, buildTail(title, artist, album, lyrics, cover, coverMime, wordLyrics, extras))
     }.getOrDefault(bytes)
 
     private fun insert(bytes: ByteArray, tail: ByteArray): ByteArray {
@@ -100,6 +101,7 @@ object WebmTagger {
         cover: ByteArray?,
         coverMime: String,
         wordLyrics: String?,
+        extras: TagExtras? = null,
     ): ByteArray {
         var out = ByteArray(0)
 
@@ -107,6 +109,13 @@ object WebmTagger {
         if (title.isNotBlank()) simple += simpleTag("TITLE", title)
         if (artist.isNotBlank()) simple += simpleTag("ARTIST", artist)
         if (!album.isNullOrBlank()) simple += simpleTag("ALBUM", album)
+        extras?.let { e ->
+            if (!e.albumArtist.isNullOrBlank()) simple += simpleTag("ALBUMARTIST", e.albumArtist)
+            e.trackText()?.let { simple += simpleTag("TRACKNUMBER", it) }
+            e.disc?.takeIf { it > 0 }?.let { simple += simpleTag("DISCNUMBER", it.toString()) }
+            e.year?.let { simple += simpleTag("DATE_RELEASED", it.toString()) }
+            if (!e.comment.isNullOrBlank()) simple += simpleTag("COMMENT", e.comment)
+        }
         // `LYRICS` is Matroska's own name for the field, and `TagString` is a
         // UTF-8 element with an explicit length — so the LRC's newlines need no
         // escaping and there is no ceiling worth worrying about here.
