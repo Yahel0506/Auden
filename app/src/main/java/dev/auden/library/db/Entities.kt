@@ -27,6 +27,7 @@ object TrackOrigin {
         Index("spotifyId"),
         Index("isrc"),
         Index("localUri", unique = true),
+        Index("path"),
     ],
 )
 data class TrackEntity(
@@ -35,6 +36,8 @@ data class TrackEntity(
     val spotifyId: String? = null,
     val isrc: String? = null,
     val localUri: String? = null,
+    /** Absolute path of the file, for matching imported playlists. */
+    val path: String? = null,
     val title: String,
     val artist: String,
     val artistId: String? = null,

@@ -145,6 +145,7 @@ import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.isUnresolvedSpotify
 import com.music.bitchord.data.model.UiState
 import com.music.bitchord.data.model.UserPlaylist
+import com.music.bitchord.data.spotify.LocalPlaylist
 import com.music.bitchord.data.model.EntityType
 import com.music.bitchord.data.model.SearchHistoryEntity
 import kotlinx.coroutines.Dispatchers
@@ -1167,6 +1168,33 @@ private fun BitChordApp(
     }
 
     val scope = rememberCoroutineScope()
+    // Playlist files: the system file dialog does the picking, so Auden never
+    // needs storage access of its own for them.
+    var pendingExport by remember { mutableStateOf<Pair<LocalPlaylist, dev.auden.library.io.PlaylistFormat>?>(null) }
+    val exportLauncher = rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.CreateDocument("*/*"),
+    ) { uri ->
+        val (playlist, format) = pendingExport ?: return@rememberLauncherForActivityResult
+        pendingExport = null
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val ok = dev.auden.library.io.PlaylistTransfer.export(context, playlist, format, uri).isSuccess
+            showQueueNotice(context.getString(if (ok) R.string.playlist_exported else R.string.playlist_export_failed))
+        }
+    }
+    val importLauncher = rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            dev.auden.library.io.PlaylistTransfer.import(context, uri, searchOnline = true).fold(
+                onSuccess = {
+                    showQueueNotice(context.getString(R.string.playlist_imported, it.name, it.local + it.online, it.total))
+                },
+                onFailure = { showQueueNotice(context.getString(R.string.playlist_import_failed)) },
+            )
+        }
+    }
 
     // Copies tracks to the WebDAV server, leaving the local files alone.
     // A clash suspends the batch on WebDavUploads.conflict until the dialog
@@ -3323,6 +3351,7 @@ private fun BitChordApp(
                                 onShelfItemLongPress = onBrowseLongPress,
                                 onNewPlaylist = { creatingPlaylist = true },
                                 onImportSpotifyPlaylist = { showSpotifyImportDialog = true },
+                                onImportPlaylistFile = { importLauncher.launch(arrayOf("*/*")) },
                                 onShowAll = { shelf -> navigator.push(AppRoute.LibraryShowAll(shelf)) },
                                 replay = {
                                     LibraryReplayEntry(
@@ -4693,6 +4722,15 @@ private fun BitChordApp(
                     {
                         browseActions = null
                         viewModel.deletePlaylist(p)
+                    }
+                },
+                onExport = playlist?.takeIf { it.isOnDevice }?.let { p ->
+                    { format: dev.auden.library.io.PlaylistFormat ->
+                        browseActions = null
+                        dev.auden.library.LocalPlaylists.get(p.playlistId)?.let { local ->
+                            pendingExport = local to format
+                            exportLauncher.launch(dev.auden.library.io.PlaylistTransfer.fileNameFor(local, format))
+                        }
                     }
                 },
                 onDeleteDownload = target.downloadId?.let { id ->

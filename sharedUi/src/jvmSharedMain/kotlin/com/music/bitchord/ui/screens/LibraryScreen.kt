@@ -85,6 +85,7 @@ fun LibraryScreen(
     onShelfItemLongPress: (ShelfItem) -> Unit,
     onNewPlaylist: () -> Unit,
     onImportSpotifyPlaylist: (() -> Unit)? = null,
+    onImportPlaylistFile: (() -> Unit)? = null,
     /**
      * A shelf's "Show all" — every shelf's row here stops at five cards (see
      * [LibraryGridShelf]), so this is the only way to reach whatever didn't
@@ -164,6 +165,7 @@ fun LibraryScreen(
                         onItemLongPress = onShelfItemLongPress,
                         onNewPlaylist = onNewPlaylist,
                         onImportSpotifyPlaylist = onImportSpotifyPlaylist,
+                        onImportPlaylistFile = onImportPlaylistFile,
                         onShowAll = { onShowAll(emptyPlaylists) },
                     )
                 }
@@ -196,6 +198,7 @@ fun LibraryScreen(
                                 onItemLongPress = onShelfItemLongPress,
                                 onNewPlaylist = onNewPlaylist,
                                 onImportSpotifyPlaylist = onImportSpotifyPlaylist,
+                        onImportPlaylistFile = onImportPlaylistFile,
                                 onShowAll = { onShowAll(emptyPlaylists) },
                             )
                         }
@@ -210,6 +213,7 @@ fun LibraryScreen(
                                     onItemLongPress = onShelfItemLongPress,
                                     onNewPlaylist = onNewPlaylist,
                                     onImportSpotifyPlaylist = onImportSpotifyPlaylist,
+                        onImportPlaylistFile = onImportPlaylistFile,
                                     onShowAll = { onShowAll(pinnedFirst) },
                                     pinnedPlaylists = pinnedPlaylists,
                                 )
@@ -309,6 +313,7 @@ private fun PlaylistShelf(
     onItemLongPress: (ShelfItem) -> Unit,
     onNewPlaylist: () -> Unit,
     onImportSpotifyPlaylist: (() -> Unit)? = null,
+    onImportPlaylistFile: (() -> Unit)? = null,
     onShowAll: () -> Unit,
     pinnedPlaylists: List<String> = emptyList(),
 ) {
@@ -323,7 +328,7 @@ private fun PlaylistShelf(
                 NewShelfCard(
                     icon = BitChordIcons.Plus,
                     label = stringResource(Res.string.new_playlist),
-                    subtitle = stringResource(Res.string.saved_to_youtube_music),
+                    subtitle = stringResource(Res.string.new_playlist_subtitle),
                     onClick = onNewPlaylist,
                 )
                 if (onImportSpotifyPlaylist != null) {
@@ -333,6 +338,14 @@ private fun PlaylistShelf(
                         subtitle = stringResource(Res.string.import_spotify_subtitle),
                         onClick = onImportSpotifyPlaylist,
                         logo = Res.drawable.spotify_logo,
+                    )
+                }
+                if (onImportPlaylistFile != null) {
+                    NewShelfCard(
+                        icon = BitChordIcons.Download,
+                        label = stringResource(Res.string.import_playlist_file),
+                        subtitle = stringResource(Res.string.import_playlist_file_subtitle),
+                        onClick = onImportPlaylistFile,
                     )
                 }
             }
@@ -426,7 +439,7 @@ fun LibraryGridPage(
                     NewShelfCard(
                         icon = BitChordIcons.Plus,
                         label = stringResource(Res.string.new_playlist),
-                        subtitle = stringResource(Res.string.saved_to_youtube_music),
+                        subtitle = stringResource(Res.string.new_playlist_subtitle),
                         onClick = onNewPlaylist,
                         modifier = Modifier.fillMaxWidth(),
                     )

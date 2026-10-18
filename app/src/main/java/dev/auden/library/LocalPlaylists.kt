@@ -159,4 +159,7 @@ internal fun TrackEntity.toSong() = Song(
     albumName = album,
     isVideo = isVideo,
     localUri = localUri,
+    localPath = path,
+    localGenre = genre,
+    trackNumber = trackNumber,
 )

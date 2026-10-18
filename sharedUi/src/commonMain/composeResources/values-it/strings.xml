@@ -200,4 +200,7 @@
     <string name="search_library_empty">Cerca i brani nella cartella Musica locale.</string>
     <string name="search_library_hint">Brani, artisti e album</string>
     <string name="search_library_no_results">Nulla in Musica locale corrisponde a «%1$s».</string>
+    <string name="import_playlist_file">Importa file</string>
+    <string name="import_playlist_file_subtitle">M3U, XSPF o Auden</string>
+    <string name="new_playlist_subtitle">Account o questo dispositivo</string>
 </resources>

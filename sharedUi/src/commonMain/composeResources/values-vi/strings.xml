@@ -200,4 +200,7 @@
     <string name="search_library_empty">Tìm các bài hát trong thư mục Nhạc cục bộ của bạn.</string>
     <string name="search_library_hint">Bài hát, nghệ sĩ và album</string>
     <string name="search_library_no_results">Không có gì trong Nhạc cục bộ khớp với “%1$s”.</string>
+    <string name="import_playlist_file">Import file</string>
+    <string name="import_playlist_file_subtitle">M3U, XSPF or Auden</string>
+    <string name="new_playlist_subtitle">Account or this device</string>
 </resources>

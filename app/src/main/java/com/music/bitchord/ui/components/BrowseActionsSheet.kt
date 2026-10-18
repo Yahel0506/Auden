@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SwapVert
@@ -184,10 +185,13 @@ fun BrowseActionsSheet(
      */
     onRenameInSheet: (() -> Unit)? = null,
     startRenaming: Boolean = false,
+    /** Playlists kept on this device: writes the playlist to a file in the chosen format. */
+    onExport: ((dev.auden.library.io.PlaylistFormat) -> Unit)? = null,
 ) {
     val menu = presentation == SongActionsPresentation.Menu
     var renaming by remember { mutableStateOf(startRenaming) }
     var confirmingDelete by remember { mutableStateOf(false) }
+    var exporting by remember { mutableStateOf(false) }
     var confirmingDeleteDownload by remember { mutableStateOf(false) }
 
     val playlist = target.playlist
@@ -293,6 +297,15 @@ fun BrowseActionsSheet(
             }
             onReorder?.let {
                 ActionRow(Icons.Rounded.SwapVert, stringResource(R.string.reorder_songs), onClick = it)
+            }
+            onExport?.let { export ->
+                if (exporting) {
+                    ActionRow(Icons.Rounded.FileUpload, stringResource(R.string.export_as_m3u8), onClick = { export(dev.auden.library.io.PlaylistFormat.M3U8) })
+                    ActionRow(Icons.Rounded.FileUpload, stringResource(R.string.export_as_xspf), onClick = { export(dev.auden.library.io.PlaylistFormat.XSPF) })
+                    ActionRow(Icons.Rounded.FileUpload, stringResource(R.string.export_as_auden), onClick = { export(dev.auden.library.io.PlaylistFormat.AUDEN) })
+                } else {
+                    ActionRow(Icons.Rounded.FileUpload, stringResource(R.string.export_playlist)) { exporting = true }
+                }
             }
             if (onDelete != null) {
                 if (confirmingDelete) {

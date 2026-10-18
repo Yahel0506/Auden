@@ -1381,4 +1381,12 @@
     <string name="genres">Géneros</string>
     <string name="folder">Pasta</string>
     <string name="folders">Pastas</string>
+    <string name="export_playlist">Exportar lista…</string>
+    <string name="export_as_m3u8">M3U8 (outros leitores)</string>
+    <string name="export_as_xspf">XSPF</string>
+    <string name="export_as_auden">Auden (mantém músicas em streaming)</string>
+    <string name="playlist_exported">Lista exportada</string>
+    <string name="playlist_export_failed">Não foi possível exportar</string>
+    <string name="playlist_import_failed">Não foi possível importar</string>
+    <string name="playlist_imported">Importada «%1$s»: %2$d de %3$d músicas</string>
 </resources>

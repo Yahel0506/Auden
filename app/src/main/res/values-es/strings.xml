@@ -1348,4 +1348,12 @@
     <string name="genres">Géneros</string>
     <string name="folder">Carpeta</string>
     <string name="folders">Carpetas</string>
+    <string name="export_playlist">Exportar playlist…</string>
+    <string name="export_as_m3u8">M3U8 (otros reproductores)</string>
+    <string name="export_as_xspf">XSPF</string>
+    <string name="export_as_auden">Auden (conserva canciones en streaming)</string>
+    <string name="playlist_exported">Playlist exportada</string>
+    <string name="playlist_export_failed">No se pudo exportar la playlist</string>
+    <string name="playlist_import_failed">No se pudo importar el archivo</string>
+    <string name="playlist_imported">Importada «%1$s»: %2$d de %3$d canciones</string>
 </resources>

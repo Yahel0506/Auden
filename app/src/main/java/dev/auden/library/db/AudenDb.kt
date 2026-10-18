@@ -21,7 +21,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         LyricsVariantEntity::class,
         PlayEventEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class AudenDb : RoomDatabase() {
@@ -34,7 +34,7 @@ abstract class AudenDb : RoomDatabase() {
 
         fun get(context: Context): AudenDb = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, AudenDb::class.java, "auden.db")
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
                 .also { instance = it }
         }
@@ -46,6 +46,14 @@ abstract class AudenDb : RoomDatabase() {
                     "durationText TEXT", "discNumber INTEGER", "albumArtist TEXT", "genre TEXT",
                     "year INTEGER", "folder TEXT", "sizeBytes INTEGER", "modifiedAt INTEGER",
                 ).forEach { db.execSQL("ALTER TABLE track ADD COLUMN $it") }
+            }
+        }
+
+        /** Remembers each file's path so playlist files can be matched against the library. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE track ADD COLUMN path TEXT")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_track_path ON track(path)")
             }
         }
     }

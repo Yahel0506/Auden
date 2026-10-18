@@ -200,4 +200,7 @@
     <string name="search_library_empty">Cari lagu di folder Musik Lokal Anda.</string>
     <string name="search_library_hint">Lagu, Artis, dan Album</string>
     <string name="search_library_no_results">Tidak ada di Musik Lokal yang cocok dengan “%1$s”.</string>
+    <string name="import_playlist_file">Import file</string>
+    <string name="import_playlist_file_subtitle">M3U, XSPF or Auden</string>
+    <string name="new_playlist_subtitle">Account or this device</string>
 </resources>

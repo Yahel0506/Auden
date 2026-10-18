@@ -1376,4 +1376,12 @@
     <string name="genres">Genres</string>
     <string name="folder">Ordner</string>
     <string name="folders">Ordner</string>
+    <string name="export_playlist">Playlist exportieren…</string>
+    <string name="export_as_m3u8">M3U8 (andere Player)</string>
+    <string name="export_as_xspf">XSPF</string>
+    <string name="export_as_auden">Auden (behält Streaming-Titel)</string>
+    <string name="playlist_exported">Playlist exportiert</string>
+    <string name="playlist_export_failed">Export fehlgeschlagen</string>
+    <string name="playlist_import_failed">Import fehlgeschlagen</string>
+    <string name="playlist_imported">„%1$s“ importiert: %2$d von %3$d Titeln</string>
 </resources>

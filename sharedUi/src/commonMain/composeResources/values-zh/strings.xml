@@ -200,4 +200,7 @@
     <string name="search_library_empty">搜索本地音乐文件夹中的歌曲。</string>
     <string name="search_library_hint">歌曲、艺人和专辑</string>
     <string name="search_library_no_results">本地音乐中没有与「%1$s」匹配的内容。</string>
+    <string name="import_playlist_file">Import file</string>
+    <string name="import_playlist_file_subtitle">M3U, XSPF or Auden</string>
+    <string name="new_playlist_subtitle">Account or this device</string>
 </resources>

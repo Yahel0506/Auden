@@ -50,6 +50,7 @@ object LegacyMigration {
 internal fun Song.toTrack() = TrackEntity(
     videoId = videoId.takeIf { it.isNotBlank() },
     localUri = localUri,
+    path = localPath,
     title = title,
     artist = artist,
     artistId = artistId,

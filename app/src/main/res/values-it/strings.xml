@@ -1315,4 +1315,12 @@
     <string name="genres">Generi</string>
     <string name="folder">Cartella</string>
     <string name="folders">Cartelle</string>
+    <string name="export_playlist">Esporta playlist…</string>
+    <string name="export_as_m3u8">M3U8 (altri lettori)</string>
+    <string name="export_as_xspf">XSPF</string>
+    <string name="export_as_auden">Auden (mantiene i brani in streaming)</string>
+    <string name="playlist_exported">Playlist esportata</string>
+    <string name="playlist_export_failed">Esportazione non riuscita</string>
+    <string name="playlist_import_failed">Importazione non riuscita</string>
+    <string name="playlist_imported">Importata «%1$s»: %2$d di %3$d brani</string>
 </resources>

@@ -200,4 +200,7 @@
     <string name="search_library_empty">Durchsuche die Songs in deinem Ordner für lokale Musik.</string>
     <string name="search_library_hint">Songs, Künstler und Alben</string>
     <string name="search_library_no_results">Nichts in der lokalen Musik passt zu „%1$s“.</string>
+    <string name="import_playlist_file">Datei importieren</string>
+    <string name="import_playlist_file_subtitle">M3U, XSPF oder Auden</string>
+    <string name="new_playlist_subtitle">Konto oder dieses Gerät</string>
 </resources>

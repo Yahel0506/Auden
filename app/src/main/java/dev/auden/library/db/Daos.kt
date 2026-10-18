@@ -13,6 +13,7 @@ data class LocalRef(
     val modifiedAt: Long?,
     val sizeBytes: Long?,
     val videoId: String?,
+    val path: String?,
 )
 
 @Dao
@@ -30,7 +31,7 @@ interface TrackDao {
     suspend fun count(): Int
 
     /** What the indexer needs to tell new, changed and vanished files apart. */
-    @Query("SELECT id, localUri, modifiedAt, sizeBytes, videoId FROM track WHERE localUri IS NOT NULL")
+    @Query("SELECT id, localUri, modifiedAt, sizeBytes, videoId, path FROM track WHERE localUri IS NOT NULL")
     suspend fun localRefs(): List<LocalRef>
 
     @androidx.room.Update
@@ -45,6 +46,12 @@ interface TrackDao {
 
     @Query("SELECT * FROM track WHERE localUri IS NOT NULL")
     fun observeLocal(): Flow<List<TrackEntity>>
+
+    @Query("SELECT * FROM track")
+    suspend fun all(): List<TrackEntity>
+
+    @Query("SELECT * FROM track WHERE path IS NOT NULL")
+    suspend fun withPath(): List<TrackEntity>
 
     @Query("SELECT * FROM track WHERE id = :id")
     suspend fun byId(id: Long): TrackEntity?

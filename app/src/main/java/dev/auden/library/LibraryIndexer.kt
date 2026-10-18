@@ -83,7 +83,7 @@ object LibraryIndexer {
                             }
                             added++
                         }
-                        existing.modifiedAt != entity.modifiedAt || existing.sizeBytes != entity.sizeBytes -> {
+                        existing.modifiedAt != entity.modifiedAt || existing.sizeBytes != entity.sizeBytes || existing.path == null -> {
                             db.tracks().byId(existing.id)?.let { old ->
                                 db.tracks().update(entity.copy(id = old.id, addedAt = old.addedAt, videoId = old.videoId ?: entity.videoId, spotifyId = old.spotifyId, isrc = old.isrc))
                             }
@@ -151,6 +151,7 @@ object LibraryIndexer {
     private fun Song.toIndexedTrack(extra: Extra?) = TrackEntity(
         videoId = videoId.takeIf { !it.startsWith("content:") },
         localUri = localUri,
+        path = localPath,
         title = title,
         artist = artist,
         album = albumName,

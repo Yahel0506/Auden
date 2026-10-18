@@ -200,4 +200,7 @@
     <string name="search_library_empty">Szukaj utworów w folderze muzyki lokalnej.</string>
     <string name="search_library_hint">Utwory, wykonawcy i albumy</string>
     <string name="search_library_no_results">NIC w muzyce lokalnej nie pasuje do „%1$s”.</string>
+    <string name="import_playlist_file">Import file</string>
+    <string name="import_playlist_file_subtitle">M3U, XSPF or Auden</string>
+    <string name="new_playlist_subtitle">Account or this device</string>
 </resources>
