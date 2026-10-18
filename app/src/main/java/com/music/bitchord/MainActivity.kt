@@ -1176,23 +1176,13 @@ private fun BitChordApp(
     // A copy that exists is only removed after asking: it may hold the
     // listener's own changes, which the original can't give back.
     var removingDeviceCopyOf by remember { mutableStateOf<String?>(null) }
+    val savingToDevice by viewModel.savingToDevice.collectAsStateWithLifecycle()
     val toggleDeviceCopy: (String, String, String?) -> Unit = { browseId, title, thumbnail ->
         if (viewModel.deviceCopyOf(browseId) != null) {
             removingDeviceCopyOf = browseId
         } else {
-            showQueueNotice(context.getString(R.string.saving_to_device_notice))
-            viewModel.saveToDevice(browseId, title, thumbnail) { result ->
-                showQueueNotice(
-                    when (result) {
-                        is MainViewModel.DeviceSave.Failed -> context.getString(R.string.save_to_device_failed)
-                        is MainViewModel.DeviceSave.Saved -> when {
-                            result.unmatched > 0 -> context.getString(R.string.device_saved_unmatched_notice, result.unmatched)
-                            result.created -> context.getString(R.string.saved_to_device_notice)
-                            else -> context.getString(R.string.device_synced_notice, result.added)
-                        }
-                    },
-                )
-            }
+            // Progress and the outcome are on a notification and on the button itself.
+            viewModel.saveToDevice(browseId, title, thumbnail)
         }
     }
     // Playlist files: the system file dialog does the picking, so Auden never
@@ -3075,6 +3065,7 @@ private fun BitChordApp(
                                     null
                                 },
                                 savedOnDevice = localPlaylists.any { it.sourceId == page.browseId.removePrefix("VL") },
+                                savingOnDevice = page.browseId.removePrefix("VL") in savingToDevice,
                                 // Same rule for the artist page's subscribe circle:
                                 // a channel subscription is the account's, so a
                                 // guest is never shown the button.
@@ -4250,7 +4241,7 @@ private fun BitChordApp(
             // page the account can actually edit, and only for a row that
             // carries the per-entry id a removal is expressed in.
             val editable = viewModel.editablePlaylist(detail?.browseId)
-                ?.takeIf { !fromPlayer && song.setVideoId != null }
+                ?.takeIf { !fromPlayer && (it.isOnDevice || song.setVideoId != null) }
             // Asked of the cache's index off the main thread as the menu opens,
             // so "Remove from cache" is only offered for a track it holds.
             // Re-asked when the cache changes, which is what drops the row
@@ -4516,30 +4507,38 @@ private fun BitChordApp(
                         thumbnailUrl = it.songs.firstOrNull { s -> !s.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl,
                     )
                 }
+                val pickerRows = deviceRows + playlists
+                // Which of these already hold the song, read as the sheet opens
+                // and again if the account's list arrives after it.
+                val membership by viewModel.membership.collectAsStateWithLifecycle()
+                LaunchedEffect(target?.videoId, pickerRows.map { it.playlistId }) {
+                    if (target != null) viewModel.loadMembership(target, pickerRows)
+                }
+                DisposableEffect(Unit) { onDispose { viewModel.clearMembership() } }
                 PlaylistPickerSheet(
-                    playlists = deviceRows + playlists,
+                    playlists = pickerRows,
                     signedIn = signedIn,
                     loading = playlistsLoading,
                     song = target,
                     startCreating = target == null,
-                    onAdd = { picked ->
+                    present = membership.filterValues { it is MainViewModel.Member.Has && it.present }.keys,
+                    checking = membership.filterValues { it is MainViewModel.Member.Checking }.keys,
+                    onApply = { add, remove ->
                         target?.let { song ->
-                            viewModel.addToPlaylists(picked, song) { added, alreadyThere, failed ->
-                                // One line for the whole batch, saying the
-                                // outcome that matters most: what went in, else
-                                // that it was all there already, else that it
-                                // didn't work.
-                                showQueueNotice(
+                            viewModel.applyPlaylistChanges(song, add, remove) { added, removed, failed ->
+                                // One line for the whole batch, saying what changed.
+                                (
                                     when {
+                                        added > 0 && removed > 0 -> context.getString(R.string.playlists_updated_notice)
                                         added > 1 -> context.resources.getQuantityString(
                                             R.plurals.added_to_playlists_notice, added, added,
                                         )
                                         added == 1 -> context.getString(R.string.song_added_to_playlist)
-                                        alreadyThere > 0 && failed == 0 ->
-                                            context.getString(R.string.song_already_in_playlist)
-                                        else -> context.getString(R.string.failed)
-                                    },
-                                )
+                                        removed > 0 -> context.getString(R.string.song_removed_from_playlist)
+                                        failed > 0 -> context.getString(R.string.failed)
+                                        else -> null
+                                    }
+                                    )?.let(showQueueNotice)
                             }
                         }
                         dismiss()
@@ -4562,7 +4561,6 @@ private fun BitChordApp(
                 onConfirm = {
                     viewModel.removeFromDevice(id)
                     removingDeviceCopyOf = null
-                    showQueueNotice(context.getString(R.string.removed_from_device_notice))
                 },
                 onDismiss = { removingDeviceCopyOf = null },
             )
@@ -4788,6 +4786,7 @@ private fun BitChordApp(
                         }
                     },
                 savedOnDevice = target.browseId?.let { id -> localPlaylists.any { it.sourceId == id.removePrefix("VL") } } == true,
+                savingOnDevice = target.browseId?.removePrefix("VL") in savingToDevice,
                 onExport = playlist?.takeIf { it.isOnDevice }?.let { p ->
                     { format: dev.auden.library.io.PlaylistFormat ->
                         browseActions = null

@@ -191,6 +191,7 @@ fun BrowseActionsSheet(
     /** A cloud playlist or album: copies it to (or drops it from) the device library. */
     onToggleDevice: (() -> Unit)? = null,
     savedOnDevice: Boolean = false,
+    savingOnDevice: Boolean = false,
 ) {
     val menu = presentation == SongActionsPresentation.Menu
     var renaming by remember { mutableStateOf(startRenaming) }
@@ -234,8 +235,13 @@ fun BrowseActionsSheet(
             )
             onToggleDevice?.let {
                 ActionRow(
-                    icon = if (savedOnDevice) BitChordIcons.Check else Icons.Rounded.PhoneIphone,
+                    icon = when {
+                        savingOnDevice -> BitChordIcons.Clock
+                        savedOnDevice -> BitChordIcons.Check
+                        else -> Icons.Rounded.PhoneIphone
+                    },
                     label = stringResource(if (savedOnDevice) R.string.remove_from_device else R.string.save_to_device),
+                    value = if (savingOnDevice) stringResource(R.string.saving_ellipsis) else null,
                     onClick = it,
                 )
             }

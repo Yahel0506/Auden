@@ -96,6 +96,15 @@ object LocalPlaylists {
         replace(playlist.copy(songs = playlist.songs.filterNot { it.videoId == videoId }))
     }
 
+    /** Takes out every entry that is [song], by id or by metadata; returns how many went. */
+    fun removeMatching(id: String, song: Song): Int {
+        val playlist = get(id) ?: return 0
+        val kept = playlist.songs.filterNot { SongIdentity.same(it, song) }
+        val removed = playlist.songs.size - kept.size
+        if (removed > 0) replace(playlist.copy(songs = kept))
+        return removed
+    }
+
     fun move(id: String, from: Int, to: Int) {
         val playlist = get(id) ?: return
         if (from !in playlist.songs.indices || to !in playlist.songs.indices || from == to) return

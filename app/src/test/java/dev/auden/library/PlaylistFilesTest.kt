@@ -88,3 +88,35 @@ class PlaylistFilesTest {
         assertNull(matcher.match(PlaylistEntry(title = "Intro", artist = "Band", durationSec = 300.0)))
     }
 }
+
+class SongIdentityTest {
+    private fun song(id: String, title: String, artist: String, length: String? = null, uri: String? = null) =
+        com.music.bitchord.data.model.Song(videoId = id, title = title, artist = artist, thumbnailUrl = null, durationText = length, localUri = uri)
+
+    @Test
+    fun sameId_isTheSameSong() {
+        org.junit.Assert.assertTrue(dev.auden.library.SongIdentity.same(song("a", "x", "y"), song("a", "other", "z")))
+    }
+
+    @Test
+    fun differentIdsButSameMetadata_match() {
+        val album = song("1", "Café Déjà Vu (Remastered 2011)", "The Band", "3:45")
+        val video = song("2", "cafe deja vu", "The Band, Guest", "3:46")
+        org.junit.Assert.assertTrue(dev.auden.library.SongIdentity.same(album, video))
+    }
+
+    @Test
+    fun aLiveTakeOrCoverIsNotTheOriginal() {
+        val studio = song("1", "Song", "Band", "3:45")
+        org.junit.Assert.assertFalse(dev.auden.library.SongIdentity.same(studio, song("2", "Song", "Band", "7:10")))
+        org.junit.Assert.assertFalse(dev.auden.library.SongIdentity.same(studio, song("3", "Song", "Someone Else", "3:45")))
+        org.junit.Assert.assertFalse(dev.auden.library.SongIdentity.same(studio, song("4", "Different", "Band", "3:45")))
+    }
+
+    @Test
+    fun aFileAndItsOwnUri_match() {
+        org.junit.Assert.assertTrue(
+            dev.auden.library.SongIdentity.same(song("c1", "A", "B", uri = "content://1"), song("c2", "Z", "Y", uri = "content://1")),
+        )
+    }
+}

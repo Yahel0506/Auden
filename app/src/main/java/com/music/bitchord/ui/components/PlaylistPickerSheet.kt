@@ -88,18 +88,26 @@ import java.util.Locale
 fun PlaylistPickerSheet(
     playlists: List<UserPlaylist>,
     loading: Boolean,
-    onAdd: (List<UserPlaylist>) -> Unit,
+    /** What the listener left ticked beyond what was already there, and what they unticked. */
+    onApply: (add: List<UserPlaylist>, remove: List<UserPlaylist>) -> Unit,
     onCreate: (String, PlaylistPrivacy) -> Unit,
     modifier: Modifier = Modifier,
     song: Song? = null,
     startCreating: Boolean = false,
     /** Signed out, a playlist can only live on this device. */
     signedIn: Boolean = true,
+    /** Ids of the playlists that already hold [song]; they start ticked. */
+    present: Set<String> = emptySet(),
+    /** Ids of the playlists still being read, whose row can't be answered yet. */
+    checking: Set<String> = emptySet(),
 ) {
     var creating by remember { mutableStateOf(startCreating) }
     // By id rather than by value: the list is re-fetched under an open sheet,
     // and a refreshed row must stay ticked.
-    var selected by remember { mutableStateOf(emptySet<String>()) }
+    var choices by remember(song?.videoId) { mutableStateOf(emptyMap<String, Boolean>()) }
+    val ticked: (UserPlaylist) -> Boolean = { choices[it.playlistId] ?: (it.playlistId in present) }
+    val toAdd = playlists.filter { ticked(it) && it.playlistId !in present }
+    val toRemove = playlists.filter { !ticked(it) && it.playlistId in present }
 
     if (creating) {
         NewPlaylistForm(
@@ -161,29 +169,32 @@ fun PlaylistPickerSheet(
                 // it scrolls inside the sheet instead.
                 LazyColumn(Modifier.heightIn(max = 320.dp)) {
                     items(playlists, key = { it.playlistId }) { playlist ->
-                        val ticked = playlist.playlistId in selected
+                        val busy = playlist.playlistId in checking
                         PlaylistRow(
                             playlist = playlist,
-                            selected = ticked,
+                            selected = ticked(playlist),
+                            busy = busy,
                             onClick = {
-                                selected = if (ticked) selected - playlist.playlistId else selected + playlist.playlistId
+                                if (!busy) choices = choices + (playlist.playlistId to !ticked(playlist))
                             },
                         )
                     }
                 }
                 Spacer(Modifier.height(12.dp))
                 Button(
-                    onClick = { onAdd(playlists.filter { it.playlistId in selected }) },
-                    enabled = selected.isNotEmpty(),
+                    onClick = { onApply(toAdd, toRemove) },
+                    enabled = song == null || playlists.isNotEmpty(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 22.dp),
                 ) {
                     Text(
-                        if (selected.isEmpty()) {
-                            stringResource(R.string.add_to_playlist)
-                        } else {
-                            pluralStringResource(R.plurals.add_to_playlists_count, selected.size, selected.size)
+                        when {
+                            toAdd.isNotEmpty() && toRemove.isNotEmpty() -> stringResource(R.string.update_playlists)
+                            toAdd.isNotEmpty() ->
+                                pluralStringResource(R.plurals.add_to_playlists_count, toAdd.size, toAdd.size)
+                            toRemove.isNotEmpty() -> stringResource(R.string.remove_from_playlists_count, toRemove.size)
+                            else -> stringResource(R.string.done)
                         },
                     )
                 }
@@ -194,7 +205,7 @@ fun PlaylistPickerSheet(
 }
 
 @Composable
-private fun PlaylistRow(playlist: UserPlaylist, selected: Boolean, onClick: () -> Unit) {
+private fun PlaylistRow(playlist: UserPlaylist, selected: Boolean, busy: Boolean, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -231,12 +242,17 @@ private fun PlaylistRow(playlist: UserPlaylist, selected: Boolean, onClick: () -
             }
         }
         Spacer(Modifier.width(12.dp))
-        Icon(
-            imageVector = if (selected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
-            contentDescription = null,
-            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(24.dp),
-        )
+        if (busy) {
+            // Still reading what is in this playlist: the tick can't be trusted yet.
+            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
+        } else {
+            Icon(
+                imageVector = if (selected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                contentDescription = null,
+                tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
 }
 

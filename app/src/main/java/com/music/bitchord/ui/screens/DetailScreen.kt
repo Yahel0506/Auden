@@ -60,6 +60,7 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -317,6 +318,7 @@ fun DetailScreen(
     /** Saves this cloud release into the device library (works signed out); null where it makes no sense. */
     onToggleDevice: (() -> Unit)? = null,
     savedOnDevice: Boolean = false,
+    savingOnDevice: Boolean = false,
     /**
      * Subscribes to this artist's channel, or unsubscribes —
      * [DetailPage.subscription] says which way round. The artist page's answer
@@ -575,6 +577,7 @@ fun DetailScreen(
                         onToggleLibrary = onToggleLibrary,
                         onToggleDevice = onToggleDevice,
                         savedOnDevice = savedOnDevice,
+                        savingOnDevice = savingOnDevice,
                         onDownloadAll = folder?.onDownload?.let { download -> { download(songs) } },
                     )
                 }
@@ -899,6 +902,7 @@ private fun ReleaseHeader(
     onToggleLibrary: (() -> Unit)?,
     onToggleDevice: (() -> Unit)?,
     savedOnDevice: Boolean,
+    savingOnDevice: Boolean,
     /** The Cached songs folder's: saves every track on it to Downloads. Null hides it. */
     onDownloadAll: (() -> Unit)? = null,
 ) {
@@ -1081,15 +1085,26 @@ private fun ReleaseHeader(
                 } else if (onToggleDevice != null) {
                     // No account to save to: the release goes to this device's
                     // own library instead, which needs none.
-                    CircleIconButton(
-                        icon = if (savedOnDevice) BitChordIcons.Check else BitChordIcons.Plus,
-                        contentDescription = stringResource(
-                            if (savedOnDevice) R.string.remove_from_device else R.string.save_to_device,
-                        ),
-                        onClick = onToggleDevice,
-                        haptic = if (savedOnDevice) Haptic.ToggleOff else Haptic.ToggleOn,
-                        size = RELEASE_SIDE_BUTTON,
-                    )
+                    if (savingOnDevice) {
+                        // Being copied: the circle holds its place and shows it is working.
+                        Box(Modifier.size(RELEASE_SIDE_BUTTON), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(
+                                strokeWidth = 2.5.dp,
+                                color = palette.onBackground,
+                                modifier = Modifier.size(22.dp),
+                            )
+                        }
+                    } else {
+                        CircleIconButton(
+                            icon = if (savedOnDevice) BitChordIcons.Check else BitChordIcons.Plus,
+                            contentDescription = stringResource(
+                                if (savedOnDevice) R.string.remove_from_device else R.string.save_to_device,
+                            ),
+                            onClick = onToggleDevice,
+                            haptic = if (savedOnDevice) Haptic.ToggleOff else Haptic.ToggleOn,
+                            size = RELEASE_SIDE_BUTTON,
+                        )
+                    }
                 } else {
                     // Shown but greyed out where nothing can take it, rather than leaving a hole beside Play.
                     CircleIconButton(
