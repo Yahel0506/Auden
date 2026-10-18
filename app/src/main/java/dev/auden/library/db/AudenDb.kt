@@ -21,7 +21,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         LyricsVariantEntity::class,
         PlayEventEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class AudenDb : RoomDatabase() {
@@ -34,7 +34,7 @@ abstract class AudenDb : RoomDatabase() {
 
         fun get(context: Context): AudenDb = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, AudenDb::class.java, "auden.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
                 .also { instance = it }
         }
@@ -54,6 +54,13 @@ abstract class AudenDb : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE track ADD COLUMN path TEXT")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_track_path ON track(path)")
+            }
+        }
+
+        /** Playlists remember the cloud page they were saved from. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE playlist ADD COLUMN sourceId TEXT")
             }
         }
     }

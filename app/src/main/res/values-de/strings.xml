@@ -1384,4 +1384,14 @@
     <string name="playlist_export_failed">Export fehlgeschlagen</string>
     <string name="playlist_import_failed">Import fehlgeschlagen</string>
     <string name="playlist_imported">„%1$s“ importiert: %2$d von %3$d Titeln</string>
+    <string name="save_to_device">Auf diesem Gerät speichern</string>
+    <string name="remove_from_device">Von diesem Gerät entfernen</string>
+    <string name="saved_to_device_notice">Auf diesem Gerät gespeichert</string>
+    <string name="device_synced_notice">Aktuell · %1$d neue Titel</string>
+    <string name="device_saved_unmatched_notice">Gespeichert · %1$d Titel nicht gefunden</string>
+    <string name="save_to_device_failed">Speichern fehlgeschlagen</string>
+    <string name="removed_from_device_notice">Von diesem Gerät entfernt</string>
+    <string name="remove_device_copy_title">Von diesem Gerät entfernen?</string>
+    <string name="remove_device_copy_message">Die Kopie und deine Änderungen werden gelöscht. Das Original bleibt unverändert.</string>
+    <string name="saving_to_device_notice">Wird auf diesem Gerät gespeichert…</string>
 </resources>

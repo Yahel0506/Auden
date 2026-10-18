@@ -104,7 +104,7 @@ import java.util.Locale
  * Everything that writes to the account is hidden outright when [signedIn] is
  * false rather than shown and refused. The same goes for a track that is
  * playing from a local file or a finished download (`song.localUri != null`):
- * rating, playlists, downloading it again and sharing all assume a YouTube
+ * rating, downloading it again and sharing all assume a YouTube
  * identity the file doesn't carry, so those rows drop out regardless of
  * [signedIn].
  *
@@ -287,22 +287,24 @@ fun SongActionsSheet(
                 accent = palette.accent,
                 onClick = onToggleDislike,
             )
-            ActionRow(
-                icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
-                label = stringResource(R.string.add_to_playlist),
-                accent = palette.accent,
-                onClick = onAddToPlaylist,
-            )
-            onRemoveFromPlaylist?.let {
-                ActionRow(
-                    icon = Icons.Rounded.PlaylistRemove,
-                    label = stringResource(R.string.remove_from_playlist),
-                    accent = palette.accent,
-                    onClick = it,
-                )
-            }
-            GroupSeparator(palette)
         }
+        // Playlists can live on the device, so these rows never wait for an
+        // account — nor for a track that is itself a local file.
+        ActionRow(
+            icon = Icons.AutoMirrored.Rounded.PlaylistAdd,
+            label = stringResource(R.string.add_to_playlist),
+            accent = palette.accent,
+            onClick = onAddToPlaylist,
+        )
+        onRemoveFromPlaylist?.let {
+            ActionRow(
+                icon = Icons.Rounded.PlaylistRemove,
+                label = stringResource(R.string.remove_from_playlist),
+                accent = palette.accent,
+                onClick = it,
+            )
+        }
+        GroupSeparator(palette)
 
         DownloadRow(song, palette, isOffline, onDownload)
         onRemoveFromCache?.let {

@@ -8,6 +8,8 @@ data class LocalPlaylist(
     val id: String,
     val title: String,
     val songs: List<Song>,
+    /** The cloud page this copy was saved from, if it was. */
+    val sourceId: String? = null,
 ) {
     val browseId: String get() = "local:playlist:$id"
 }

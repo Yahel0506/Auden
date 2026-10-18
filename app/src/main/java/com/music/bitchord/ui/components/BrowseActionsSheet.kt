@@ -20,6 +20,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FileUpload
+import androidx.compose.material.icons.rounded.PhoneIphone
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SwapVert
@@ -187,6 +188,9 @@ fun BrowseActionsSheet(
     startRenaming: Boolean = false,
     /** Playlists kept on this device: writes the playlist to a file in the chosen format. */
     onExport: ((dev.auden.library.io.PlaylistFormat) -> Unit)? = null,
+    /** A cloud playlist or album: copies it to (or drops it from) the device library. */
+    onToggleDevice: (() -> Unit)? = null,
+    savedOnDevice: Boolean = false,
 ) {
     val menu = presentation == SongActionsPresentation.Menu
     var renaming by remember { mutableStateOf(startRenaming) }
@@ -228,6 +232,13 @@ fun BrowseActionsSheet(
                 stringResource(R.string.add_to_queue),
                 onClick = onAddToQueue,
             )
+            onToggleDevice?.let {
+                ActionRow(
+                    icon = if (savedOnDevice) BitChordIcons.Check else Icons.Rounded.PhoneIphone,
+                    label = stringResource(if (savedOnDevice) R.string.remove_from_device else R.string.save_to_device),
+                    onClick = it,
+                )
+            }
             onDownloadAll?.let { download ->
                 // Saying which of the three it is, rather than offering the same row
                 // whatever the state — this is where a release is asked for now that

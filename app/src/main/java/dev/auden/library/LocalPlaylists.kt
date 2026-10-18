@@ -3,6 +3,7 @@ package dev.auden.library
 import android.content.Context
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.spotify.LocalPlaylist
+import androidx.room.withTransaction
 import dev.auden.library.db.AudenDb
 import dev.auden.library.db.PlaylistEntity
 import dev.auden.library.db.PlaylistEntryEntity
@@ -46,7 +47,7 @@ object LocalPlaylists {
     suspend fun reload(database: AudenDb? = db) {
         if (database == null) return
         val rows = database.playlistWrites().all()
-        _playlists.value = rows.map { LocalPlaylist(it.id, it.title, database.playlists().tracksOf(it.id).map(TrackEntity::toSong)) }
+        _playlists.value = rows.map { LocalPlaylist(it.id, it.title, database.playlists().tracksOf(it.id).map(TrackEntity::toSong), it.sourceId) }
     }
 
     fun get(id: String): LocalPlaylist? {
@@ -54,12 +55,31 @@ object LocalPlaylists {
         return _playlists.value.firstOrNull { it.id == clean }
     }
 
-    fun create(title: String, songs: List<Song> = emptyList()): LocalPlaylist {
-        val playlist = LocalPlaylist(ID_PREFIX + System.currentTimeMillis(), title, songs.distinctBy { it.videoId })
+    fun create(title: String, songs: List<Song> = emptyList(), sourceId: String? = null): LocalPlaylist {
+        val playlist = LocalPlaylist(ID_PREFIX + System.currentTimeMillis(), title, songs.distinctBy { it.videoId }, sourceId)
         _playlists.value = listOf(playlist) + _playlists.value
         persist(playlist, insert = true)
         return playlist
     }
+
+    /** The device copy of the cloud page [sourceId], if one was saved. */
+    fun bySource(sourceId: String): LocalPlaylist? = _playlists.value.firstOrNull { it.sourceId == sourceId }
+
+    /**
+     * Saves a cloud playlist or album to the device library.
+     *
+     * Saving the same page twice does not make a second copy: the first one is
+     * brought up to date with whatever the page has gained, so this doubles as
+     * "sync". Songs the listener removed from their copy come back with a sync,
+     * which is the price of keeping it simple; their own additions stay.
+     */
+    fun saveFromSource(sourceId: String, title: String, songs: List<Song>): SaveResult {
+        val existing = bySource(sourceId)
+        if (existing == null) return SaveResult(create(title, songs, sourceId), added = songs.distinctBy { it.videoId }.size, created = true)
+        return SaveResult(existing, added = add(existing.id, songs), created = false)
+    }
+
+    data class SaveResult(val playlist: LocalPlaylist, val added: Int, val created: Boolean)
 
     /** Adds [songs] that are not already there; returns how many went in. */
     fun add(id: String, songs: List<Song>): Int {
@@ -131,18 +151,20 @@ object LocalPlaylists {
         scope.launch {
             writeLock.withLock {
                 val now = System.currentTimeMillis()
-                if (insert) database.playlists().upsert(PlaylistEntity(playlist.id, playlist.title, now, now))
+                if (insert) database.playlists().upsert(PlaylistEntity(playlist.id, playlist.title, now, now, sourceId = playlist.sourceId))
                 else database.playlists().byId(playlist.id)?.let { database.playlists().upsert(it.copy(updatedAt = now)) }
-                database.playlistWrites().clearEntries(playlist.id)
-                database.playlists().insertEntries(
-                    playlist.songs.mapIndexed { index, song ->
-                        PlaylistEntryEntity(
-                            playlistId = playlist.id,
-                            trackId = database.tracks().upsertByVideoId(song.toTrack()),
-                            position = index,
-                        )
-                    },
-                )
+                database.withTransaction {
+                    database.playlistWrites().clearEntries(playlist.id)
+                    database.playlists().insertEntries(
+                        playlist.songs.mapIndexed { index, song ->
+                            PlaylistEntryEntity(
+                                playlistId = playlist.id,
+                                trackId = database.tracks().upsertByVideoId(song.toTrack()),
+                                position = index,
+                            )
+                        },
+                    )
+                }
             }
         }
     }

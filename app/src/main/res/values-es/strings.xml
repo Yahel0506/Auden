@@ -1356,4 +1356,14 @@
     <string name="playlist_export_failed">No se pudo exportar la playlist</string>
     <string name="playlist_import_failed">No se pudo importar el archivo</string>
     <string name="playlist_imported">Importada «%1$s»: %2$d de %3$d canciones</string>
+    <string name="save_to_device">Guardar en este dispositivo</string>
+    <string name="remove_from_device">Quitar de este dispositivo</string>
+    <string name="saved_to_device_notice">Guardada en este dispositivo</string>
+    <string name="device_synced_notice">Al día · %1$d canciones nuevas</string>
+    <string name="device_saved_unmatched_notice">Guardada · %1$d canciones no se encontraron</string>
+    <string name="save_to_device_failed">No se pudo guardar en este dispositivo</string>
+    <string name="removed_from_device_notice">Quitada de este dispositivo</string>
+    <string name="remove_device_copy_title">¿Quitar de este dispositivo?</string>
+    <string name="remove_device_copy_message">Se borra la copia y los cambios que le hayas hecho. El original no se toca.</string>
+    <string name="saving_to_device_notice">Guardando en este dispositivo…</string>
 </resources>

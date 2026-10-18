@@ -314,6 +314,9 @@ fun DetailScreen(
      * wouldn't just be refused.
      */
     onToggleLibrary: (() -> Unit)? = null,
+    /** Saves this cloud release into the device library (works signed out); null where it makes no sense. */
+    onToggleDevice: (() -> Unit)? = null,
+    savedOnDevice: Boolean = false,
     /**
      * Subscribes to this artist's channel, or unsubscribes —
      * [DetailPage.subscription] says which way round. The artist page's answer
@@ -570,6 +573,8 @@ fun DetailScreen(
                         // A folder's credit says where its tracks live, not who made them.
                         onArtistClick = onArtistClick.takeIf { folder == null },
                         onToggleLibrary = onToggleLibrary,
+                        onToggleDevice = onToggleDevice,
+                        savedOnDevice = savedOnDevice,
                         onDownloadAll = folder?.onDownload?.let { download -> { download(songs) } },
                     )
                 }
@@ -892,6 +897,8 @@ private fun ReleaseHeader(
     onShuffle: () -> Unit,
     onArtistClick: ((String, String) -> Unit)?,
     onToggleLibrary: (() -> Unit)?,
+    onToggleDevice: (() -> Unit)?,
+    savedOnDevice: Boolean,
     /** The Cached songs folder's: saves every track on it to Downloads. Null hides it. */
     onDownloadAll: (() -> Unit)? = null,
 ) {
@@ -1071,9 +1078,20 @@ private fun ReleaseHeader(
                         haptic = if (library.saved) Haptic.ToggleOff else Haptic.ToggleOn,
                         size = RELEASE_SIDE_BUTTON,
                     )
+                } else if (onToggleDevice != null) {
+                    // No account to save to: the release goes to this device's
+                    // own library instead, which needs none.
+                    CircleIconButton(
+                        icon = if (savedOnDevice) BitChordIcons.Check else BitChordIcons.Plus,
+                        contentDescription = stringResource(
+                            if (savedOnDevice) R.string.remove_from_device else R.string.save_to_device,
+                        ),
+                        onClick = onToggleDevice,
+                        haptic = if (savedOnDevice) Haptic.ToggleOff else Haptic.ToggleOn,
+                        size = RELEASE_SIDE_BUTTON,
+                    )
                 } else {
-                    // Shown but greyed out for a guest, rather than leaving a
-                    // hole beside Play.
+                    // Shown but greyed out where nothing can take it, rather than leaving a hole beside Play.
                     CircleIconButton(
                         icon = BitChordIcons.Plus,
                         contentDescription = stringResource(R.string.add_to_library),

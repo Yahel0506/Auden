@@ -144,7 +144,10 @@ import com.music.bitchord.data.model.ShelfItem
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.isUnresolvedSpotify
 import com.music.bitchord.data.model.UiState
+import com.music.bitchord.data.model.PlaylistPrivacy
 import com.music.bitchord.data.model.UserPlaylist
+import com.music.bitchord.data.model.isMatchMissing
+import com.music.bitchord.data.model.isMatchPending
 import com.music.bitchord.data.spotify.LocalPlaylist
 import com.music.bitchord.data.model.EntityType
 import com.music.bitchord.data.model.SearchHistoryEntity
@@ -158,6 +161,7 @@ import com.music.bitchord.data.settings.ThemeMode
 import com.music.bitchord.ui.components.AccountProfileSelector
 import com.music.bitchord.ui.navigation.AppDestination
 import com.music.bitchord.ui.navigation.AppRoute
+import com.music.bitchord.ui.components.ConfirmAlert
 import com.music.bitchord.ui.components.SpotifyImportAlert
 import com.music.bitchord.ui.screens.WearOsScreen
 import com.music.bitchord.ui.screens.AccountAndScrobblingScreen
@@ -886,7 +890,7 @@ private fun BitChordApp(
     val downloadIdFor: (String?) -> String? = { id ->
         id?.let { Downloads.recordIdOf(it) ?: it }?.takeIf { it in savedCollections }
     }
-    LaunchedEffect(savedDownloads, savedCollections, topDetail?.browseId) {
+    LaunchedEffect(savedDownloads, savedCollections, topDetail?.browseId, localPlaylists) {
         val openPage = topDetail ?: return@LaunchedEffect
         val open = openPage.browseId
         // A downloaded playlist's page is a snapshot of the same folder and goes
@@ -1168,6 +1172,29 @@ private fun BitChordApp(
     }
 
     val scope = rememberCoroutineScope()
+    // Saving a cloud playlist or album into the device library, or dropping the copy.
+    // A copy that exists is only removed after asking: it may hold the
+    // listener's own changes, which the original can't give back.
+    var removingDeviceCopyOf by remember { mutableStateOf<String?>(null) }
+    val toggleDeviceCopy: (String, String, String?) -> Unit = { browseId, title, thumbnail ->
+        if (viewModel.deviceCopyOf(browseId) != null) {
+            removingDeviceCopyOf = browseId
+        } else {
+            showQueueNotice(context.getString(R.string.saving_to_device_notice))
+            viewModel.saveToDevice(browseId, title, thumbnail) { result ->
+                showQueueNotice(
+                    when (result) {
+                        is MainViewModel.DeviceSave.Failed -> context.getString(R.string.save_to_device_failed)
+                        is MainViewModel.DeviceSave.Saved -> when {
+                            result.unmatched > 0 -> context.getString(R.string.device_saved_unmatched_notice, result.unmatched)
+                            result.created -> context.getString(R.string.saved_to_device_notice)
+                            else -> context.getString(R.string.device_synced_notice, result.added)
+                        }
+                    },
+                )
+            }
+        }
+    }
     // Playlist files: the system file dialog does the picking, so Auden never
     // needs storage access of its own for them.
     var pendingExport by remember { mutableStateOf<Pair<LocalPlaylist, dev.auden.library.io.PlaylistFormat>?>(null) }
@@ -2087,7 +2114,8 @@ private fun BitChordApp(
         // without a cover, and re-downloading adopts the untagged copy rather
         // than replacing it.
         val songs = requested
-            .filter { it.videoId !in saved }
+            // Files already on the device and unmatched Spotify rows have nothing to fetch.
+            .filter { it.videoId !in saved && it.localUri == null && !it.isMatchPending && !it.isMatchMissing }
             .map { song ->
                 val cover = from?.thumbnailUrl
                 if (song.thumbnailUrl.isNullOrBlank() && !cover.isNullOrBlank()) {
@@ -3036,6 +3064,17 @@ private fun BitChordApp(
                                 } else {
                                     null
                                 },
+                                // Cloud playlists and albums can be kept on the device whether
+                                // or not there is an account to save them to.
+                                onToggleDevice = if (
+                                    !page.browseId.startsWith("local:") &&
+                                    (page.type == BrowseType.PLAYLIST || page.type == BrowseType.ALBUM)
+                                ) {
+                                    { toggleDeviceCopy(page.browseId, page.title, page.thumbnailUrl) }
+                                } else {
+                                    null
+                                },
+                                savedOnDevice = localPlaylists.any { it.sourceId == page.browseId.removePrefix("VL") },
                                 // Same rule for the artist page's subscribe circle:
                                 // a channel subscription is the account's, so a
                                 // guest is never shown the button.
@@ -4513,6 +4552,22 @@ private fun BitChordApp(
             }
         }
 
+        removingDeviceCopyOf?.let { id ->
+            BackHandler { removingDeviceCopyOf = null }
+            ConfirmAlert(
+                hazeState = hazeState,
+                title = stringResource(R.string.remove_device_copy_title),
+                message = stringResource(R.string.remove_device_copy_message),
+                confirmLabel = stringResource(R.string.remove),
+                onConfirm = {
+                    viewModel.removeFromDevice(id)
+                    removingDeviceCopyOf = null
+                    showQueueNotice(context.getString(R.string.removed_from_device_notice))
+                },
+                onDismiss = { removingDeviceCopyOf = null },
+            )
+        }
+
         if (showSpotifyImportDialog) {
             BackHandler { showSpotifyImportDialog = false }
             SpotifyImportAlert(
@@ -4527,7 +4582,7 @@ private fun BitChordApp(
                     ) { browseId, pTitle, savedLocally ->
                         showQueueNotice(
                             context.getString(
-                                if (savedLocally && signedIn) R.string.spotify_import_local_fallback
+                                if (savedLocally && signedIn && privacy != PlaylistPrivacy.DEVICE) R.string.spotify_import_local_fallback
                                 else R.string.spotify_import_done,
                                 pTitle,
                             ),
@@ -4724,6 +4779,15 @@ private fun BitChordApp(
                         viewModel.deletePlaylist(p)
                     }
                 },
+                onToggleDevice = target.browseId
+                    ?.takeIf { remote && (target.type == BrowseType.PLAYLIST || target.type == BrowseType.ALBUM) }
+                    ?.let { id ->
+                        {
+                            browseActions = null
+                            toggleDeviceCopy(id, target.title, target.thumbnailUrl)
+                        }
+                    },
+                savedOnDevice = target.browseId?.let { id -> localPlaylists.any { it.sourceId == id.removePrefix("VL") } } == true,
                 onExport = playlist?.takeIf { it.isOnDevice }?.let { p ->
                     { format: dev.auden.library.io.PlaylistFormat ->
                         browseActions = null

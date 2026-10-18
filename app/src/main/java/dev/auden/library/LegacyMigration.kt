@@ -48,7 +48,8 @@ object LegacyMigration {
 }
 
 internal fun Song.toTrack() = TrackEntity(
-    videoId = videoId.takeIf { it.isNotBlank() },
+    // Placeholders for files and unmatched Spotify rows are not video ids.
+    videoId = videoId.takeIf { it.isNotBlank() && !it.startsWith("content:") && !it.startsWith("sp:") && !it.startsWith("sp-miss:") },
     localUri = localUri,
     path = localPath,
     title = title,

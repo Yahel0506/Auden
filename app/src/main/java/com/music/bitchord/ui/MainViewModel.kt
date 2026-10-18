@@ -64,6 +64,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.currentCoroutineContext
@@ -1031,7 +1032,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (account.isNotEmpty() && !requireSignIn()) return
         viewModelScope.launch {
             val local = device.map {
-                if (dev.auden.library.LocalPlaylists.add(it.playlistId.removePrefix(DEVICE_PLAYLIST_PREFIX), listOf(song)) > 0) {
+                val id = it.playlistId.removePrefix(DEVICE_PLAYLIST_PREFIX)
+                if (dev.auden.library.LocalPlaylists.add(id, listOf(song)) > 0) {
+                    refreshLocalDetail("local:playlist:$id")
                     AddOutcome.ADDED
                 } else {
                     AddOutcome.ALREADY_THERE
@@ -2855,6 +2858,70 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         },
         albumName = album,
     )
+
+    /** What came of [saveToDevice]. */
+    sealed interface DeviceSave {
+        data class Saved(val name: String, val added: Int, val created: Boolean, val unmatched: Int) : DeviceSave
+        data object Failed : DeviceSave
+    }
+
+    /** Whether the cloud page [browseId] already has a copy in the device library. */
+    fun deviceCopyOf(browseId: String) = dev.auden.library.LocalPlaylists.bySource(deviceSourceId(browseId))
+
+    private fun deviceSourceId(browseId: String) = browseId.removePrefix("VL")
+
+    /**
+     * Copies a YouTube Music or Spotify playlist or album into the device
+     * library: from then on it is an ordinary local playlist that can be played,
+     * edited, downloaded and deleted without an account. Saving a page that was
+     * already saved brings its copy up to date instead of making another.
+     */
+    fun saveToDevice(
+        browseId: String,
+        title: String,
+        thumbnailUrl: String?,
+        onResult: (DeviceSave) -> Unit,
+    ) {
+        viewModelScope.launch {
+            val outcome = runCatching {
+                var unmatched = 0
+                val songs = if (browseId.startsWith(SPOTIFY_PAGE_PREFIX)) {
+                    val tracks = SpotifyLibrary.tracks(browseId.removePrefix(SPOTIFY_PAGE_PREFIX)) { }
+                    val gate = Semaphore(SPOTIFY_MATCH_PARALLELISM)
+                    val matched = coroutineScope {
+                        tracks.map { track ->
+                            async {
+                                gate.withPermit {
+                                    runCatching { SpotifyImporter.matchTrack(track) }.getOrNull()
+                                        ?.let { it.copy(thumbnailUrl = it.thumbnailUrl ?: track.imageUrl) }
+                                }
+                            }
+                        }.awaitAll()
+                    }
+                    unmatched = matched.count { it == null }
+                    matched.filterNotNull()
+                } else {
+                    YtMusicRepository.allSongs(browseId).getOrThrow()
+                        .map { if (it.albumName == null && deviceAlbumTitle(browseId)) it.copy(albumName = title) else it }
+                        .withArtwork(thumbnailUrl)
+                }
+                require(songs.isNotEmpty()) { "nothing to save" }
+                val saved = dev.auden.library.LocalPlaylists.saveFromSource(deviceSourceId(browseId), title, songs)
+                DeviceSave.Saved(saved.playlist.title, saved.added, saved.created, unmatched)
+            }.getOrElse { DeviceSave.Failed }
+            onResult(outcome)
+        }
+    }
+
+    private fun deviceAlbumTitle(browseId: String) = browseId.startsWith("MPREb") || browseId.startsWith("OLAK")
+
+    /** Drops the device copy of [browseId]; the cloud page itself is untouched. */
+    fun removeFromDevice(browseId: String) {
+        val copy = deviceCopyOf(browseId) ?: return
+        dev.auden.library.LocalPlaylists.delete(copy.id)
+        _detailStack.value = _detailStack.value.filterNot { it.browseId == copy.browseId }
+        navigator.onDetailStackShrunk(_detailStack.value.size)
+    }
 
     /**
      * Pushes one album, playlist or artist out of a device folder as a page of

@@ -804,6 +804,50 @@ private fun ChoiceRow(
     }
 }
 
+/**
+ * A yes/no question in the same UIAlertController shape as the alerts above:
+ * the title and message centred, then the confirming action over Cancel.
+ */
+@OptIn(ExperimentalHazeMaterialsApi::class)
+@Composable
+fun ConfirmAlert(
+    hazeState: HazeState,
+    title: String,
+    message: String,
+    confirmLabel: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+    /** Red for an action that throws something away. */
+    destructive: Boolean = true,
+) {
+    AlertScaffold(hazeState = hazeState, onDismiss = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 19.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, fontWeight = FontWeight.W600),
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = message,
+                modifier = Modifier.padding(top = 4.dp),
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 17.sp),
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+        }
+        AlertRule()
+        AlertAction(label = confirmLabel, emphasised = true, destructive = destructive, onClick = onConfirm)
+        AlertRule()
+        AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = onDismiss)
+    }
+}
+
 /** The scrim + frosted card frame shared by every UIAlertController-style dialog. */
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable

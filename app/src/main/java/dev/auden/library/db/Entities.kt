@@ -70,6 +70,8 @@ data class PlaylistEntity(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = createdAt,
     val pinned: Boolean = false,
+    /** The cloud page this was saved from (a browse id), so saving it again syncs instead of duplicating. */
+    val sourceId: String? = null,
 )
 
 /**

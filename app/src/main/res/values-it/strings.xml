@@ -1323,4 +1323,14 @@
     <string name="playlist_export_failed">Esportazione non riuscita</string>
     <string name="playlist_import_failed">Importazione non riuscita</string>
     <string name="playlist_imported">Importata «%1$s»: %2$d di %3$d brani</string>
+    <string name="save_to_device">Salva su questo dispositivo</string>
+    <string name="remove_from_device">Rimuovi da questo dispositivo</string>
+    <string name="saved_to_device_notice">Salvata su questo dispositivo</string>
+    <string name="device_synced_notice">Aggiornata · %1$d brani nuovi</string>
+    <string name="device_saved_unmatched_notice">Salvata · %1$d brani non trovati</string>
+    <string name="save_to_device_failed">Salvataggio non riuscito</string>
+    <string name="removed_from_device_notice">Rimossa da questo dispositivo</string>
+    <string name="remove_device_copy_title">Rimuovere da questo dispositivo?</string>
+    <string name="remove_device_copy_message">La copia e le tue modifiche verranno eliminate. L’originale non viene toccato.</string>
+    <string name="saving_to_device_notice">Salvataggio su questo dispositivo…</string>
 </resources>
