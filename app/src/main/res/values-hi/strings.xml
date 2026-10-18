@@ -1372,4 +1372,8 @@
     <string name="song_info_error">कुछ जानकारी लोड नहीं हो सकी।</string>
     <string name="song_info_retry">फिर से कोशिश करें</string>
     <string name="saved_on_this_device">Saved on this device</string>
+    <string name="genre">Genre</string>
+    <string name="genres">Genres</string>
+    <string name="folder">Folder</string>
+    <string name="folders">Folders</string>
 </resources>

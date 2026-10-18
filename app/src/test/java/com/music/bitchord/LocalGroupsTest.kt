@@ -66,4 +66,26 @@ class LocalGroupsTest {
         assertEquals("Artist", albums[0].subtitle)
         assertNull(albums[1].downloadId)
     }
+
+    private fun file(id: String, genre: String?, path: String?) =
+        Song(videoId = id, title = id, artist = "A", thumbnailUrl = null, localPath = path, localGenre = genre)
+
+    @Test
+    fun genresOf_groupsTaggedTracksAndSkipsTheRest() {
+        val tracks = listOf(file("a", "Rock", "/m/a.mp3"), file("b", "Rock", "/m/b.mp3"), file("c", null, "/m/c.mp3"))
+        val groups = LocalGroups.genresOf("local:all", tracks)
+        assertEquals(listOf("Rock"), groups.map { it.title })
+        assertEquals(listOf("a", "b"), groups.single().songs.map { it.videoId })
+    }
+
+    @Test
+    fun directoriesOf_telsTwoFoldersOfOneNameApart() {
+        val tracks = listOf(file("a", null, "/sd/Rock/Hits/a.mp3"), file("b", null, "/sd/Pop/Hits/b.mp3"), file("c", null, null))
+        val groups = LocalGroups.directoriesOf("local:all", tracks)
+        assertEquals(2, groups.size)
+        val id = LocalGroups.directoryPageId("local:all", "/sd/Pop/Hits")
+        assertTrue(LocalGroups.isDirectory(id))
+        assertEquals(listOf("b"), LocalGroups.songsOf(id, tracks).map { it.videoId })
+        assertEquals("Hits", LocalGroups.directoryName("/sd/Pop/Hits/"))
+    }
 }

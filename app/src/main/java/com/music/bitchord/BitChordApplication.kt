@@ -117,7 +117,10 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
         }
         AppSettings.init(this, authStore)
         // Off the main thread; a one-time copy of pre-Auden data into AudenDb.
-        CoroutineScope(Dispatchers.IO).launch { dev.auden.library.LegacyMigration.run(this@BitChordApplication) }
+        CoroutineScope(Dispatchers.IO).launch {
+            dev.auden.library.LegacyMigration.run(this@BitChordApplication)
+            dev.auden.library.LibraryIndexer.sync(this@BitChordApplication)
+        }
         // Before anything resolves a track: an addon with `checkValidLossless`
         // is gated on this, and the gate reads "no" until it has looked.
         com.music.bitchord.playback.audio.LosslessOutput.init(this)

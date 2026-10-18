@@ -1311,4 +1311,8 @@
     <string name="song_info_error">Impossibile caricare alcune informazioni.</string>
     <string name="song_info_retry">Riprova</string>
     <string name="saved_on_this_device">Salvata su questo dispositivo</string>
+    <string name="genre">Genere</string>
+    <string name="genres">Generi</string>
+    <string name="folder">Cartella</string>
+    <string name="folders">Cartelle</string>
 </resources>

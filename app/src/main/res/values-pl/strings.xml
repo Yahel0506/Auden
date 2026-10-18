@@ -1412,4 +1412,8 @@
     <string name="song_info_error">Nie udało się wczytać części informacji.</string>
     <string name="song_info_retry">Spróbuj ponownie</string>
     <string name="saved_on_this_device">Saved on this device</string>
+    <string name="genre">Genre</string>
+    <string name="genres">Genres</string>
+    <string name="folder">Folder</string>
+    <string name="folders">Folders</string>
 </resources>

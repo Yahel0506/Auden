@@ -1373,4 +1373,8 @@
     <string name="song_info_error">Certaines informations n’ont pas pu être chargées.</string>
     <string name="song_info_retry">Réessayer</string>
     <string name="saved_on_this_device">Enregistrée sur cet appareil</string>
+    <string name="genre">Genre</string>
+    <string name="genres">Genres</string>
+    <string name="folder">Dossier</string>
+    <string name="folders">Dossiers</string>
 </resources>

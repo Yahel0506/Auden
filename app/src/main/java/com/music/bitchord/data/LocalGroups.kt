@@ -49,10 +49,17 @@ object LocalGroups {
     const val PREFIX = "local:group:"
     private const val ALBUM = "album"
     private const val ARTIST = "artist"
+    private const val GENRE = "genre"
+    private const val FOLDER = "folder"
 
     fun albumPageId(folderId: String, name: String): String = pageId(ALBUM, folderId, name)
 
     fun artistPageId(folderId: String, name: String): String = pageId(ARTIST, folderId, name)
+
+    fun genrePageId(folderId: String, name: String): String = pageId(GENRE, folderId, name)
+
+    /** [path] is the directory's full path, which is what tells two folders of one name apart. */
+    fun directoryPageId(folderId: String, path: String): String = pageId(FOLDER, folderId, path)
 
     // `local:group:album:downloads:Some: Name` — the folder id is always
     // `local:<word>`, so only its word is stored and the name, which may hold
@@ -60,12 +67,14 @@ object LocalGroups {
     private fun pageId(kind: String, folderId: String, name: String) =
         "$PREFIX$kind:${folderId.removePrefix("local:")}:$name"
 
+    private val KINDS = setOf(ALBUM, ARTIST, GENRE, FOLDER)
+
     private class Parsed(val kind: String, val folderId: String, val name: String)
 
     private fun parse(browseId: String?): Parsed? {
         if (browseId == null || !browseId.startsWith(PREFIX)) return null
         val parts = browseId.removePrefix(PREFIX).split(':', limit = 3)
-        if (parts.size != 3 || (parts[0] != ALBUM && parts[0] != ARTIST) || parts[1].isEmpty()) return null
+        if (parts.size != 3 || (parts[0] !in KINDS) || parts[1].isEmpty()) return null
         return Parsed(parts[0], "local:" + parts[1], parts[2])
     }
 
@@ -78,13 +87,21 @@ object LocalGroups {
 
     fun isArtist(browseId: String?): Boolean = parse(browseId)?.kind == ARTIST
 
+    fun isGenre(browseId: String?): Boolean = parse(browseId)?.kind == GENRE
+
+    fun isDirectory(browseId: String?): Boolean = parse(browseId)?.kind == FOLDER
+
+    /** The name a directory page is addressed by: its last path segment. */
+    fun directoryName(path: String): String = path.trimEnd('/').substringAfterLast('/').ifEmpty { path }
+
     /** The rows of [folderSongs] the grouping [browseId] names, in the order its page lists them. */
     fun songsOf(browseId: String, folderSongs: List<Song>): List<Song> {
         val group = parse(browseId) ?: return emptyList()
-        return if (group.kind == ALBUM) {
-            folderSongs.filter { it.albumName == group.name }.sortedForAlbum()
-        } else {
-            folderSongs.filter { it.artist == group.name }.sortedByTitle()
+        return when (group.kind) {
+            ALBUM -> folderSongs.filter { it.albumName == group.name }.sortedForAlbum()
+            GENRE -> folderSongs.filter { it.localGenre == group.name }.sortedByTitle()
+            FOLDER -> folderSongs.filter { it.directory() == group.name }.sortedByTitle()
+            else -> folderSongs.filter { it.artist == group.name }.sortedByTitle()
         }
     }
 
@@ -167,7 +184,42 @@ object LocalGroups {
                 )
             }
             .sortedBy { it.title.lowercase(Locale.ROOT) }
+
+    /** The Genres tab: tracks grouped by their genre tag; untagged tracks stay out. */
+    fun genresOf(folderId: String, songs: List<Song>): List<LocalGroup> =
+        songs.filter { !it.localGenre.isNullOrBlank() }
+            .groupBy { it.localGenre!! }
+            .map { (name, group) ->
+                LocalGroup(
+                    browseId = genrePageId(folderId, name),
+                    title = name,
+                    subtitle = "",
+                    thumbnailUrl = group.firstNotNullOfOrNull { it.thumbnailUrl },
+                    type = BrowseType.OTHER,
+                    songs = group.sortedByTitle(),
+                )
+            }
+            .sortedBy { it.title.lowercase(Locale.ROOT) }
+
+    /** The Folders tab: one entry per directory that holds tracks, named by its last segment. */
+    fun directoriesOf(folderId: String, songs: List<Song>): List<LocalGroup> =
+        songs.mapNotNull { song -> song.directory()?.let { it to song } }
+            .groupBy({ it.first }, { it.second })
+            .map { (path, group) ->
+                LocalGroup(
+                    browseId = directoryPageId(folderId, path),
+                    title = directoryName(path),
+                    subtitle = path,
+                    thumbnailUrl = group.firstNotNullOfOrNull { it.thumbnailUrl },
+                    type = BrowseType.OTHER,
+                    songs = group.sortedByTitle(),
+                )
+            }
+            .sortedBy { it.title.lowercase(Locale.ROOT) }
 }
+
+/** The directory this device file sits in, or null when its path is unknown. */
+fun Song.directory(): String? = localPath?.substringBeforeLast('/', "")?.takeIf { it.isNotEmpty() }
 
 /**
  * Whether this track is a hit for a query typed into a page's filter box — or

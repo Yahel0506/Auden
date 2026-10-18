@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Category
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.FileUpload
+import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Person
@@ -120,6 +122,8 @@ class LocalFolder(
      * [onUpload] to act on, and the row's ⋮ carries the actions sheet instead.
      */
     val selectable: Boolean = false,
+    /** Local Music only: adds the Genres and Folders tabs a whole-device library has. */
+    val libraryTabs: Boolean = false,
     val onOpenGroup: (LocalGroup) -> Unit,
     /** An album or artist held — its menu, with the rows it covers in hand. */
     val onGroupLongPress: (LocalGroup) -> Unit,
@@ -136,7 +140,7 @@ class LocalFolder(
     val onRemoveFromCache: ((List<Song>) -> Unit)? = null,
 )
 
-enum class LocalFolderTab { SONGS, ARTISTS, ALBUMS }
+enum class LocalFolderTab { SONGS, ARTISTS, ALBUMS, GENRES, FOLDERS }
 
 /**
  * A folder's own state while its page is on the stack: the tab showing, and
@@ -210,6 +214,8 @@ fun rememberLocalFolderGroups(
         LocalFolderTab.SONGS -> emptyList()
         LocalFolderTab.ARTISTS -> LocalGroups.artistsOf(browseId, songs).filter { it.matches() }
         LocalFolderTab.ALBUMS -> LocalGroups.albumsOf(browseId, songs, folder.collections).filter { it.matches() }
+        LocalFolderTab.GENRES -> LocalGroups.genresOf(browseId, songs).filter { it.matches() }
+        LocalFolderTab.FOLDERS -> LocalGroups.directoriesOf(browseId, songs).filter { it.matches() }
     }
 }
 
@@ -235,15 +241,30 @@ internal fun LazyListScope.localFolderItems(
     onSongLongPress: (Song) -> Unit,
     onSongSwipe: (Song) -> Unit,
 ) {
+    // Genres only appear once something is tagged with one; the platform only
+    // reports genre tags from Android 11.
+    val tabs = buildList {
+        add(LocalFolderTab.SONGS)
+        add(LocalFolderTab.ARTISTS)
+        add(LocalFolderTab.ALBUMS)
+        if (folder.libraryTabs) {
+            if (songs.any { !it.localGenre.isNullOrBlank() } || state.tab == LocalFolderTab.GENRES) add(LocalFolderTab.GENRES)
+            add(LocalFolderTab.FOLDERS)
+        }
+    }
     item(key = "folder-tabs") {
         SegmentedControl(
-            options = listOf(
-                stringResource(R.string.songs),
-                stringResource(R.string.artists),
-                stringResource(R.string.albums),
-            ),
-            selectedIndex = state.tab.ordinal,
-            onSelect = { state.tab = LocalFolderTab.entries[it] },
+            options = tabs.map {
+                when (it) {
+                    LocalFolderTab.SONGS -> stringResource(R.string.songs)
+                    LocalFolderTab.ARTISTS -> stringResource(R.string.artists)
+                    LocalFolderTab.ALBUMS -> stringResource(R.string.albums)
+                    LocalFolderTab.GENRES -> stringResource(R.string.genres)
+                    LocalFolderTab.FOLDERS -> stringResource(R.string.folders)
+                }
+            },
+            selectedIndex = tabs.indexOf(state.tab).coerceAtLeast(0),
+            onSelect = { state.tab = tabs[it] },
             modifier = Modifier.padding(start = PAGE_GUTTER, end = PAGE_GUTTER, bottom = 14.dp),
         )
     }
@@ -330,6 +351,14 @@ internal fun LazyListScope.localFolderItems(
         } else {
             items(groups, key = { it.browseId }) { group ->
                 ArtistRow(group, palette, onClick = { groupClick(group) }, onLongPress = { groupHold(group) })
+                FolderDivider(palette)
+            }
+        }
+
+        LocalFolderTab.GENRES, LocalFolderTab.FOLDERS -> {
+            val icon = if (state.tab == LocalFolderTab.GENRES) Icons.Rounded.Category else Icons.Rounded.Folder
+            items(groups, key = { it.browseId }) { group ->
+                CollectionRow(group, icon, palette, onClick = { groupClick(group) }, onLongPress = { groupHold(group) })
                 FolderDivider(palette)
             }
         }
@@ -496,6 +525,46 @@ private fun ArtistRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ArtistAvatar(group, Modifier.size(52.dp))
+        Spacer(Modifier.width(16.dp))
+        GroupLabels(
+            title = group.title,
+            subtitle = pluralStringResource(R.plurals.song_count_plural, group.songs.size, group.songs.size),
+            palette = palette,
+            modifier = Modifier.weight(1f),
+        )
+        TrailingGlyph(selected = false, palette = palette)
+    }
+}
+
+/** A genre or a directory: a square sleeve (the first track's art, else the glyph), a name and a count. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun CollectionRow(
+    group: LocalGroup,
+    icon: ImageVector,
+    palette: ArtworkPalette,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .longPressMenuClickable(onClick = onClick, onLongClick = onLongPress)
+            .padding(horizontal = PAGE_GUTTER, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        val shape = RoundedCornerShape(8.dp)
+        Box(Modifier.size(52.dp).clip(shape).thumbnailBorder(shape)) {
+            CoverPlaceholder(icon, Modifier.fillMaxSize(), iconFraction = 0.5f)
+            group.thumbnailUrl?.let {
+                AsyncImage(
+                    model = it.artworkAt(CARD_ART_PX),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
         Spacer(Modifier.width(16.dp))
         GroupLabels(
             title = group.title,

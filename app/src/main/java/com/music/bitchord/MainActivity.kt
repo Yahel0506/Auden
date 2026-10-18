@@ -2856,6 +2856,7 @@ private fun BitChordApp(
                                     if (isDownloads) Downloads.collectionsAmong(folderSongs) else emptyList()
                                 }
                                 LocalFolder(
+                                    libraryTabs = page.browseId == "local:all",
                                     state = localFolderStates.getOrPut(page.browseId) { LocalFolderState() },
                                     sort = folderSortOf(page.browseId),
                                     viewType = folderViewTypeOf(page.browseId),

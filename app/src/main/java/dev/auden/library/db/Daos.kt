@@ -7,6 +7,14 @@ import androidx.room.Query
 import androidx.room.Transaction
 import kotlinx.coroutines.flow.Flow
 
+data class LocalRef(
+    val id: Long,
+    val localUri: String,
+    val modifiedAt: Long?,
+    val sizeBytes: Long?,
+    val videoId: String?,
+)
+
 @Dao
 interface TrackDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -20,6 +28,26 @@ interface TrackDao {
 
     @Query("SELECT COUNT(*) FROM track")
     suspend fun count(): Int
+
+    /** What the indexer needs to tell new, changed and vanished files apart. */
+    @Query("SELECT id, localUri, modifiedAt, sizeBytes, videoId FROM track WHERE localUri IS NOT NULL")
+    suspend fun localRefs(): List<LocalRef>
+
+    @androidx.room.Update
+    suspend fun update(track: TrackEntity)
+
+    @Query("DELETE FROM track WHERE id IN (:ids)")
+    suspend fun delete(ids: List<Long>)
+
+    /** A file that is gone but whose song can still be streamed stays, as a streamable row. */
+    @Query("UPDATE track SET localUri = NULL, folder = NULL, sizeBytes = NULL, modifiedAt = NULL WHERE id IN (:ids)")
+    suspend fun detachFiles(ids: List<Long>)
+
+    @Query("SELECT * FROM track WHERE localUri IS NOT NULL")
+    fun observeLocal(): Flow<List<TrackEntity>>
+
+    @Query("SELECT * FROM track WHERE id = :id")
+    suspend fun byId(id: Long): TrackEntity?
 
     /**
      * The row for this song, created from [track] on first sighting. Found by

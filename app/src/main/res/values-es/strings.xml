@@ -1344,4 +1344,8 @@
     <string name="song_info_error">No se pudo cargar parte de la información.</string>
     <string name="song_info_retry">Reintentar</string>
     <string name="saved_on_this_device">Guardada en este dispositivo</string>
+    <string name="genre">Género</string>
+    <string name="genres">Géneros</string>
+    <string name="folder">Carpeta</string>
+    <string name="folders">Carpetas</string>
 </resources>

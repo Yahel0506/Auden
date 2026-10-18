@@ -1349,4 +1349,8 @@
     <string name="song_info_error">部分資訊無法載入。</string>
     <string name="song_info_retry">重試</string>
     <string name="saved_on_this_device">Saved on this device</string>
+    <string name="genre">Genre</string>
+    <string name="genres">Genres</string>
+    <string name="folder">Folder</string>
+    <string name="folders">Folders</string>
 </resources>

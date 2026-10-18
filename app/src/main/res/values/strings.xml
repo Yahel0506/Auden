@@ -1224,4 +1224,8 @@
     <string name="wear_os_done">Done</string>
     <string name="signed_by">Signed by %1$s</string>
     <string name="saved_on_this_device">Saved on this device</string>
+    <string name="genre">Genre</string>
+    <string name="genres">Genres</string>
+    <string name="folder">Folder</string>
+    <string name="folders">Folders</string>
 </resources>

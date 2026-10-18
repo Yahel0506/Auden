@@ -1372,4 +1372,8 @@
     <string name="song_info_error">Einige Informationen konnten nicht geladen werden.</string>
     <string name="song_info_retry">Erneut versuchen</string>
     <string name="saved_on_this_device">Auf diesem Gerät gespeichert</string>
+    <string name="genre">Genre</string>
+    <string name="genres">Genres</string>
+    <string name="folder">Ordner</string>
+    <string name="folders">Ordner</string>
 </resources>

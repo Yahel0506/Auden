@@ -1377,4 +1377,8 @@
     <string name="song_info_error">Não foi possível carregar algumas informações.</string>
     <string name="song_info_retry">Tentar novamente</string>
     <string name="saved_on_this_device">Guardada neste dispositivo</string>
+    <string name="genre">Género</string>
+    <string name="genres">Géneros</string>
+    <string name="folder">Pasta</string>
+    <string name="folders">Pastas</string>
 </resources>

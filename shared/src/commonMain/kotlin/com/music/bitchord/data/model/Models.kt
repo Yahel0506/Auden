@@ -95,6 +95,8 @@ data class Song(
     /** MediaStore timestamps used only to sort device and downloaded libraries. */
     val localDateAddedSeconds: Long? = null,
     val localDateModifiedSeconds: Long? = null,
+    /** Genre tag of a device file, where the platform exposes it. */
+    val localGenre: String? = null,
     /**
      * Track number within its album, from the file's own tags (`TRACK` in
      * MediaStore, `CD_TRACK_NUMBER` via retriever). Null when the tags don't

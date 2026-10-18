@@ -121,6 +121,8 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Category
+import androidx.compose.material.icons.rounded.Folder
 import com.music.bitchord.data.LocalGroups
 import com.music.bitchord.data.matchesSearch
 import com.music.bitchord.data.sortedForLibrary
@@ -2304,7 +2306,12 @@ private fun DetailPage.headerLines(trackCount: Int, playtime: String? = null): P
     // playtime, whose "min" and "1h 25m" are units, not words.
     // An artist grouped out of a device folder is a plain track list, not an
     // artist page, but it is still billed as the artist it is.
-    val localKind = if (LocalGroups.isArtist(browseId)) stringResource(R.string.artist) else null
+    val localKind = when {
+        LocalGroups.isArtist(browseId) -> stringResource(R.string.artist)
+        LocalGroups.isGenre(browseId) -> stringResource(R.string.genre)
+        LocalGroups.isDirectory(browseId) -> stringResource(R.string.folder)
+        else -> null
+    }
     val meta = listOfNotNull(
         (kind ?: type.localizedLabel() ?: localKind)?.capitalizeWords(),
         year,
@@ -2319,6 +2326,8 @@ private fun DetailPage.headerLines(trackCount: Int, playtime: String? = null): P
 /** The glyph on a release page's placeholder sleeve: what kind of thing has no cover. */
 private fun DetailPage.placeholderIcon(): ImageVector = deviceFolderIcon(browseId) ?: when {
     LocalGroups.isArtist(browseId) -> Icons.Rounded.Person
+    LocalGroups.isGenre(browseId) -> Icons.Rounded.Category
+    LocalGroups.isDirectory(browseId) -> Icons.Rounded.Folder
     type == BrowseType.ALBUM -> Icons.Rounded.Album
     type == BrowseType.PLAYLIST -> Icons.AutoMirrored.Rounded.QueueMusic
     else -> BitChordIcons.MusicNote
