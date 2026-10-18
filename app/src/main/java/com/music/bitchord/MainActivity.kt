@@ -4439,8 +4439,17 @@ private fun BitChordApp(
                 onDismissRequest = dismiss,
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
+                val deviceRows = localPlaylists.map {
+                    UserPlaylist(
+                        playlistId = MainViewModel.DEVICE_PLAYLIST_PREFIX + it.id,
+                        title = it.title,
+                        subtitle = context.getString(R.string.local_playlist_subtitle, it.songs.size),
+                        thumbnailUrl = it.songs.firstOrNull { s -> !s.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl,
+                    )
+                }
                 PlaylistPickerSheet(
-                    playlists = playlists,
+                    playlists = deviceRows + playlists,
+                    signedIn = signedIn,
                     loading = playlistsLoading,
                     song = target,
                     startCreating = target == null,
@@ -4536,9 +4545,10 @@ private fun BitChordApp(
             // Compose. Both are read from collected state so this sheet actually
             // recomposes when the answer arrives.
             val ownedPlaylists by viewModel.playlistOwned.collectAsStateWithLifecycle()
-            val playlist = target.browseId
-                ?.takeIf { signedIn && ownedPlaylists[it] == true }
-                ?.let { id -> playlists.firstOrNull { it.browseId == id } }
+            val playlist = target.browseId?.let { viewModel.editablePlaylist(it).takeIf { _ -> it.startsWith("local:playlist:") } }
+                ?: target.browseId
+                    ?.takeIf { signedIn && ownedPlaylists[it] == true }
+                    ?.let { id -> playlists.firstOrNull { it.browseId == id } }
             val remote = target.browseId?.startsWith("local:") == false
             // Spotify playlists saved on this device ("local:playlist:sp_local_…")
             // carry real YouTube video ids, so they download like a remote

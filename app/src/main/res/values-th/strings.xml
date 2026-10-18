@@ -1354,4 +1354,5 @@
     <string name="song_info_unavailable">ไม่มีข้อมูล</string>
     <string name="song_info_error">ไม่สามารถโหลดข้อมูลบางส่วนได้</string>
     <string name="song_info_retry">ลองอีกครั้ง</string>
+    <string name="saved_on_this_device">Saved on this device</string>
 </resources>

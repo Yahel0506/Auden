@@ -42,7 +42,18 @@ data class TrackEntity(
     val albumId: String? = null,
     val thumbnailUrl: String? = null,
     val durationMs: Long? = null,
+    /** The row's own "3:45" text, kept as YouTube Music gave it. */
+    val durationText: String? = null,
     val trackNumber: Int? = null,
+    val discNumber: Int? = null,
+    val albumArtist: String? = null,
+    val genre: String? = null,
+    val year: Int? = null,
+    /** Folder the file sits in (relative path, for the Folders view). */
+    val folder: String? = null,
+    val sizeBytes: Long? = null,
+    /** File's last-modified time in ms, the indexer's change check. */
+    val modifiedAt: Long? = null,
     val isVideo: Boolean = false,
     val origin: String = TrackOrigin.YTM,
     val addedAt: Long = System.currentTimeMillis(),

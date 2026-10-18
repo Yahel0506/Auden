@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.PhoneIphone
 import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.Button
@@ -92,6 +93,8 @@ fun PlaylistPickerSheet(
     modifier: Modifier = Modifier,
     song: Song? = null,
     startCreating: Boolean = false,
+    /** Signed out, a playlist can only live on this device. */
+    signedIn: Boolean = true,
 ) {
     var creating by remember { mutableStateOf(startCreating) }
     // By id rather than by value: the list is re-fetched under an open sheet,
@@ -104,6 +107,7 @@ fun PlaylistPickerSheet(
             // form; the sheet's own dismiss is the way out.
             onBack = if (startCreating) null else ({ creating = false }),
             onCreate = onCreate,
+            signedIn = signedIn,
             modifier = modifier,
         )
         return
@@ -244,10 +248,11 @@ private fun PlaylistRow(playlist: UserPlaylist, selected: Boolean, onClick: () -
 private fun NewPlaylistForm(
     onBack: (() -> Unit)?,
     onCreate: (String, PlaylistPrivacy) -> Unit,
+    signedIn: Boolean,
     modifier: Modifier = Modifier,
 ) {
     var name by remember { mutableStateOf("") }
-    var privacy by remember { mutableStateOf(PlaylistPrivacy.PRIVATE) }
+    var privacy by remember { mutableStateOf(if (signedIn) PlaylistPrivacy.PRIVATE else PlaylistPrivacy.DEVICE) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
@@ -291,7 +296,9 @@ private fun NewPlaylistForm(
                     color = MaterialTheme.colorScheme.onBackground,
                 )
                 Text(
-                    text = stringResource(R.string.saved_to_youtube_music_account),
+                    text = stringResource(
+                        if (privacy == PlaylistPrivacy.DEVICE) R.string.saved_on_this_device else R.string.saved_to_youtube_music_account,
+                    ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -355,7 +362,7 @@ private fun NewPlaylistForm(
                 .padding(horizontal = 22.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            PlaylistPrivacy.entries.forEach { option ->
+            (if (signedIn) PlaylistPrivacy.entries else listOf(PlaylistPrivacy.DEVICE)).forEach { option ->
                 PrivacyPill(
                     icon = option.icon,
                     label = option.label,
@@ -479,6 +486,7 @@ private val PlaylistPrivacy.icon: ImageVector
         PlaylistPrivacy.PRIVATE -> Icons.Rounded.Lock
         PlaylistPrivacy.UNLISTED -> Icons.Rounded.Link
         PlaylistPrivacy.PUBLIC -> Icons.Rounded.Public
+        PlaylistPrivacy.DEVICE -> Icons.Rounded.PhoneIphone
     }
 
 /** The search filters' pill, carrying an icon ahead of its label. */

@@ -1310,4 +1310,5 @@
     <string name="song_info_unavailable">Non disponibile</string>
     <string name="song_info_error">Impossibile caricare alcune informazioni.</string>
     <string name="song_info_retry">Riprova</string>
+    <string name="saved_on_this_device">Salvata su questo dispositivo</string>
 </resources>

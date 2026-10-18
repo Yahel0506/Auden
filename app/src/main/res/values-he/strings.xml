@@ -1376,4 +1376,5 @@
     <string name="song_info_unavailable">לא זמין</string>
     <string name="song_info_error">לא ניתן לטעון חלק מהמידע.</string>
     <string name="song_info_retry">ניסיון חוזר</string>
+    <string name="saved_on_this_device">Saved on this device</string>
 </resources>

@@ -1328,4 +1328,5 @@
     <string name="wear_os_code_hint">Eşleme kodu</string>
     <string name="wear_os_done">Bitti</string>
     <string name="signed_by">%1$s tarafından imzalandı</string>
+    <string name="saved_on_this_device">Saved on this device</string>
 </resources>

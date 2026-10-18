@@ -1371,4 +1371,5 @@
     <string name="song_info_unavailable">Nicht verfügbar</string>
     <string name="song_info_error">Einige Informationen konnten nicht geladen werden.</string>
     <string name="song_info_retry">Erneut versuchen</string>
+    <string name="saved_on_this_device">Auf diesem Gerät gespeichert</string>
 </resources>

@@ -1223,4 +1223,5 @@
     <string name="wear_os_code_hint">Pairing code</string>
     <string name="wear_os_done">Done</string>
     <string name="signed_by">Signed by %1$s</string>
+    <string name="saved_on_this_device">Saved on this device</string>
 </resources>

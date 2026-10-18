@@ -30,7 +30,7 @@ object LegacyMigration {
         if (prefs.getBoolean(KEY_PLAYLISTS, false)) return@withContext
         runCatching {
             val db = AudenDb.get(context)
-            LocalPlaylistStore.playlists.value.forEach { playlist ->
+            LocalPlaylistStore.readLegacy(context).forEach { playlist ->
                 db.playlists().upsert(PlaylistEntity(id = playlist.id, title = playlist.title))
                 val entries = playlist.songs.mapIndexed { index, song ->
                     PlaylistEntryEntity(
@@ -42,6 +42,7 @@ object LegacyMigration {
                 db.playlists().insertEntries(entries)
             }
             prefs.edit().putBoolean(KEY_PLAYLISTS, true).apply()
+            LocalPlaylists.reload(db)
         }.onFailure { Log.w(TAG, "playlist migration failed; will retry next launch", it) }
     }
 }
@@ -55,6 +56,7 @@ internal fun Song.toTrack() = TrackEntity(
     album = albumName,
     albumId = albumId,
     thumbnailUrl = thumbnailUrl,
+    durationText = durationText,
     isVideo = isVideo,
     origin = if (localUri != null) TrackOrigin.LOCAL else TrackOrigin.YTM,
 )

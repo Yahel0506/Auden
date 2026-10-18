@@ -1348,4 +1348,5 @@
     <string name="song_info_unavailable">暂无信息</string>
     <string name="song_info_error">部分信息无法加载。</string>
     <string name="song_info_retry">重试</string>
+    <string name="saved_on_this_device">Saved on this device</string>
 </resources>

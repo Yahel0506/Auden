@@ -627,6 +627,8 @@ enum class PlaylistPrivacy(val label: String, val apiValue: String) {
     PRIVATE("Private", "PRIVATE"),
     UNLISTED("Unlisted", "UNLISTED"),
     PUBLIC("Public", "PUBLIC"),
+    /** Kept on this device only; never sent to YouTube Music. */
+    DEVICE("This device", "DEVICE"),
 }
 
 /**
@@ -641,8 +643,11 @@ data class UserPlaylist(
     val title: String,
     val subtitle: String,
     val thumbnailUrl: String?,
+    /** Set for a playlist kept on this device, whose page is not a YouTube `VL` id. */
+    val pageId: String? = null,
 ) {
-    val browseId: String get() = "VL$playlistId"
+    val browseId: String get() = pageId ?: "VL$playlistId"
+    val isOnDevice: Boolean get() = pageId != null
 }
 
 /**

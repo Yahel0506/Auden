@@ -983,6 +983,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * the library, the picker's list, and its own open page — header and top
      * bar both, which read [DetailPage.title].
      */
+    /** Puts an open device-playlist page back in step with its stored order. */
+    private fun refreshLocalDetail(browseId: String) {
+        val songs = dev.auden.library.LocalPlaylists.get(browseId)?.songs ?: return
+        _detailStack.value = _detailStack.value.map {
+            if (it.browseId == browseId) it.copy(songs = UiState.Success(songs)) else it
+        }
+    }
+
     private fun setPlaylistTitle(playlist: UserPlaylist, title: String) {
         _playlists.value = _playlists.value.map {
             if (it.playlistId == playlist.playlistId) it.copy(title = title) else it
@@ -1018,9 +1026,18 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         song: Song,
         onResult: (added: Int, alreadyThere: Int, failed: Int) -> Unit = { _, _, _ -> },
     ) {
-        if (!requireSignIn() || playlists.isEmpty()) return
+        if (playlists.isEmpty()) return
+        val (device, account) = playlists.partition { it.playlistId.startsWith(DEVICE_PLAYLIST_PREFIX) }
+        if (account.isNotEmpty() && !requireSignIn()) return
         viewModelScope.launch {
-            val outcomes = playlists.map { addOne(it, song) }
+            val local = device.map {
+                if (dev.auden.library.LocalPlaylists.add(it.playlistId.removePrefix(DEVICE_PLAYLIST_PREFIX), listOf(song)) > 0) {
+                    AddOutcome.ADDED
+                } else {
+                    AddOutcome.ALREADY_THERE
+                }
+            }
+            val outcomes = local + account.map { addOne(it, song) }
             onResult(
                 outcomes.count { it == AddOutcome.ADDED },
                 outcomes.count { it == AddOutcome.ALREADY_THERE },
@@ -1030,6 +1047,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private enum class AddOutcome { ADDED, ALREADY_THERE, FAILED }
+
 
     private suspend fun addOne(playlist: UserPlaylist, song: Song): AddOutcome {
         val openSongs = (_detailStack.value.firstOrNull { it.browseId == playlist.browseId }
@@ -1056,8 +1074,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * playlist the user has to add to again.
      */
     fun createPlaylist(title: String, privacy: PlaylistPrivacy, song: Song? = null) {
-        if (!requireSignIn()) return
         val name = title.trim().ifBlank { text(R.string.new_playlist) }
+        if (privacy == PlaylistPrivacy.DEVICE || !requireSignIn()) {
+            dev.auden.library.LocalPlaylists.create(name, listOfNotNull(song))
+            return
+        }
         viewModelScope.launch {
             YtMusicRepository.createPlaylist(
                 title = name,
@@ -1115,7 +1136,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     ) {
         val name = title.trim().ifBlank { text(R.string.new_playlist) }
         viewModelScope.launch {
-            if (authStore.isSignedIn) {
+            if (authStore.isSignedIn && privacy != PlaylistPrivacy.DEVICE) {
                 val initialBatch = videoIds.take(50)
                 YtMusicRepository.createPlaylist(
                     title = name,
@@ -1168,6 +1189,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * row out from under the reader rather than waiting for a re-fetch.
      */
     fun removeFromPlaylist(browseId: String, song: Song) {
+        if (browseId.startsWith("local:playlist:")) {
+            dev.auden.library.LocalPlaylists.remove(browseId.removePrefix("local:playlist:"), song.videoId)
+            refreshLocalDetail(browseId)
+            return
+        }
         val setVideoId = song.setVideoId ?: return
         if (!requireSignIn()) return
         val playlistId = browseId.removePrefix("VL")
@@ -1280,9 +1306,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * showing the old name.
      */
     fun renamePlaylist(playlist: UserPlaylist, title: String) {
-        if (!requireSignIn()) return
         val name = title.trim()
         if (name.isBlank() || name == playlist.title) return
+        if (playlist.isOnDevice) {
+            dev.auden.library.LocalPlaylists.rename(playlist.playlistId, name)
+            setPlaylistTitle(playlist, name)
+            return
+        }
+        if (!requireSignIn()) return
         viewModelScope.launch {
             YtMusicRepository.renamePlaylist(playlist.playlistId, name).fold(
                 onSuccess = {
@@ -1299,6 +1330,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * see [YtMusicRepository.playlistEntries] for why not the open page's list.
      */
     fun loadPlaylistEntries(playlist: UserPlaylist, onResult: (Result<List<Song>>) -> Unit) {
+        if (playlist.isOnDevice) {
+            return onResult(Result.success(dev.auden.library.LocalPlaylists.get(playlist.playlistId)?.songs.orEmpty()))
+        }
         if (!requireSignIn()) return onResult(Result.failure(IllegalStateException("signed out")))
         viewModelScope.launch {
             onResult(YtMusicRepository.playlistEntries(playlist.browseId))
@@ -1317,6 +1351,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         reordered: List<Song>,
         onResult: (Boolean) -> Unit = {},
     ) {
+        if (playlist.isOnDevice) {
+            dev.auden.library.LocalPlaylists.setOrder(playlist.playlistId, reordered)
+            refreshLocalDetail(playlist.browseId)
+            return onResult(true)
+        }
         if (!requireSignIn()) return onResult(false)
         viewModelScope.launch {
             YtMusicRepository.reorderPlaylist(
@@ -1341,6 +1380,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun deletePlaylist(playlist: UserPlaylist) {
+        if (playlist.isOnDevice) {
+            dev.auden.library.LocalPlaylists.delete(playlist.playlistId)
+            _detailStack.value = _detailStack.value.filterNot { it.browseId == playlist.browseId }
+            navigator.onDetailStackShrunk(_detailStack.value.size)
+            return
+        }
         if (!requireSignIn()) return
         viewModelScope.launch {
             YtMusicRepository.deletePlaylist(playlist.playlistId).fold(
@@ -1384,6 +1429,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * changes its mind about what a playlist is depending on where it is held.
      */
     fun editablePlaylist(browseId: String?): UserPlaylist? {
+        if (browseId != null && browseId.startsWith("local:playlist:")) {
+            return dev.auden.library.LocalPlaylists.asUserPlaylist(browseId.removePrefix("local:playlist:"))
+        }
         if (browseId == null || _playlistOwned.value[browseId] != true) return null
         return _playlists.value.firstOrNull { it.browseId == browseId }
     }
@@ -2431,6 +2479,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     companion object {
+        /** Marks a picker row as a playlist kept on this device rather than on the account. */
+        const val DEVICE_PLAYLIST_PREFIX = "device:"
+
         /** Per-addon budget for the Addons search tab; a slow addon is left out, not waited on. */
         private const val ADDON_SEARCH_TIMEOUT_MS = 12_000L
         private const val ADDON_SEARCH_LIMIT = 20

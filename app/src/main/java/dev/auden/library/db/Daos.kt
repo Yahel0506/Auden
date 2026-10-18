@@ -21,11 +21,16 @@ interface TrackDao {
     @Query("SELECT COUNT(*) FROM track")
     suspend fun count(): Int
 
-    /** The row for [videoId], created from [track] when this is the first sighting. */
+    /**
+     * The row for this song, created from [track] on first sighting. Found by
+     * video id, then by file, so the same song never gets two rows.
+     */
     @Transaction
     suspend fun upsertByVideoId(track: TrackEntity): Long {
-        val id = track.videoId ?: return insert(track)
-        return byVideoId(id)?.id ?: insert(track)
+        track.videoId?.let { byVideoId(it) }?.let { return it.id }
+        track.localUri?.let { byLocalUri(it) }?.let { return it.id }
+        val id = insert(track)
+        return if (id > 0) id else error("track could not be stored: ${track.title}")
     }
 }
 
@@ -54,4 +59,16 @@ interface PlaylistDao {
 
     @Query("DELETE FROM playlist WHERE id = :id")
     suspend fun delete(id: String)
+}
+
+@Dao
+interface PlaylistWriteDao {
+    @Query("SELECT * FROM playlist ORDER BY createdAt DESC")
+    suspend fun all(): List<PlaylistEntity>
+
+    @Query("DELETE FROM playlist_entry WHERE playlistId = :playlistId")
+    suspend fun clearEntries(playlistId: String)
+
+    @Query("UPDATE playlist SET title = :title, updatedAt = :now WHERE id = :id")
+    suspend fun rename(id: String, title: String, now: Long)
 }
