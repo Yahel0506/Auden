@@ -1403,4 +1403,14 @@
     <string name="reject_match">Reject</string>
     <string name="duplicate_playlist">Duplicate</string>
     <string name="playlist_copy_suffix">%1$s (copy)</string>
+    <string name="download_folder_structure">Folder structure</string>
+    <string name="download_folder_structure_subtitle">How downloaded songs are filed</string>
+    <string name="layout_preset_artist_album">Artist / Album / Track</string>
+    <string name="layout_preset_album">Album / Track</string>
+    <string name="layout_preset_flat">One folder: Artist - Title</string>
+    <string name="layout_custom">Custom template</string>
+    <string name="layout_custom_hint">Tokens: {title} {artist} {albumArtist} {album} {year} {track} {disc}. Use / for folders.</string>
+    <string name="layout_example">Example: %1$s</string>
+    <string name="layout_applies_to_new">Applies to songs downloaded from now on. Existing files stay where they are.</string>
+    <string name="layout_invalid">That template can’t be used</string>
 </resources>

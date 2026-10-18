@@ -93,9 +93,9 @@ object LyricsSidecarStore {
 
     /** Writes a complete sidecar atomically or removes its destination on failure. */
     fun write(context: Context, name: String, artifact: LyricsArtifact): Uri {
-        val folder = storageDir(context)
-        val target = File(folder, name)
-        val part = File(folder, "$name.part")
+        val target = File(storageDir(context), name)
+        target.parentFile?.mkdirs()
+        val part = File(target.parentFile, "${target.name}.part")
         part.delete()
         return try {
             part.outputStream().bufferedWriter().use { it.write(artifact.content) }

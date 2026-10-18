@@ -1398,4 +1398,14 @@
     <string name="reject_match">Rechazar</string>
     <string name="duplicate_playlist">Duplicar</string>
     <string name="playlist_copy_suffix">%1$s (copia)</string>
+    <string name="download_folder_structure">Estructura de carpetas</string>
+    <string name="download_folder_structure_subtitle">Cómo se ordenan las canciones descargadas</string>
+    <string name="layout_preset_artist_album">Artista / Álbum / Pista</string>
+    <string name="layout_preset_album">Álbum / Pista</string>
+    <string name="layout_preset_flat">Una carpeta: Artista - Título</string>
+    <string name="layout_custom">Plantilla personalizada</string>
+    <string name="layout_custom_hint">Campos: {title} {artist} {albumArtist} {album} {year} {track} {disc}. Usa / para carpetas.</string>
+    <string name="layout_example">Ejemplo: %1$s</string>
+    <string name="layout_applies_to_new">Se aplica a las canciones que descargues desde ahora. Los archivos existentes no se mueven.</string>
+    <string name="layout_invalid">Esa plantilla no se puede usar</string>
 </resources>

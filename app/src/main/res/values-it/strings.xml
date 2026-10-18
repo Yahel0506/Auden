@@ -1365,4 +1365,14 @@
     <string name="reject_match">Rifiuta</string>
     <string name="duplicate_playlist">Duplica</string>
     <string name="playlist_copy_suffix">%1$s (copia)</string>
+    <string name="download_folder_structure">Struttura delle cartelle</string>
+    <string name="download_folder_structure_subtitle">Come vengono archiviati i brani scaricati</string>
+    <string name="layout_preset_artist_album">Artista / Album / Traccia</string>
+    <string name="layout_preset_album">Album / Traccia</string>
+    <string name="layout_preset_flat">Una cartella: Artista - Titolo</string>
+    <string name="layout_custom">Modello personalizzato</string>
+    <string name="layout_custom_hint">Campi: {title} {artist} {albumArtist} {album} {year} {track} {disc}. Usa / per le cartelle.</string>
+    <string name="layout_example">Esempio: %1$s</string>
+    <string name="layout_applies_to_new">Vale per i brani scaricati da ora. I file esistenti restano dove sono.</string>
+    <string name="layout_invalid">Questo modello non è utilizzabile</string>
 </resources>

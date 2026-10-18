@@ -56,7 +56,10 @@ object DownloadStore {
     private const val TAG = "BitChord"
 
     /** The subfolder of Music that everything lands in. */
-    const val FOLDER = "BitChord"
+    const val FOLDER = "Auden"
+
+    /** What the folder was called before the rename; files already there stay where they are. */
+    private const val LEGACY_FOLDER = "BitChord"
 
     private val relativePath = "${Environment.DIRECTORY_MUSIC}/$FOLDER"
 
@@ -84,7 +87,19 @@ object DownloadStore {
      * else — no tags to group by — so leading with the artist is the only thing
      * that puts an album back together in the listing.
      */
-    fun fileNameFor(song: Song, extension: String): String = "${fileStemFor(song)}.$extension"
+    fun fileNameFor(song: Song, extension: String, info: DownloadLayout.Info = infoOf(song)): String =
+        DownloadLayout.relativeName(AppSettings.downloadTemplate.value, info, extension)
+
+    /** What the layout knows about a track on its own, without the release it was asked for from. */
+    fun infoOf(song: Song) = DownloadLayout.Info(
+        title = song.title,
+        artist = song.artist,
+        album = song.albumName,
+        // The first credited artist, so "A" and "A & B" share one folder.
+        albumArtist = com.music.bitchord.data.ArtistSplitter.split(song.artist).firstOrNull() ?: song.artist,
+        track = song.trackNumber,
+        videoId = song.videoId,
+    )
 
     /** The stable human-readable stem shared by audio and lyrics sidecars. */
     fun fileStemFor(song: Song): String {
@@ -161,14 +176,20 @@ object DownloadStore {
             legacyFile(name).takeIf { it.exists() }?.let(Uri::fromFile)
         }
 
+    /** `Music/Auden/Artist/Album/` for a [name] of `Artist/Album/Song.flac`: what the store files it under. */
+    private fun relativePathFor(name: String): String {
+        val folder = DownloadLayout.folderOf(name)
+        return if (folder.isEmpty()) "$relativePath/" else "$relativePath/$folder/"
+    }
+
     @RequiresApi(Build.VERSION_CODES.Q)
     private fun mediaStoreEntry(context: Context, name: String): Uri? = runCatching {
         context.contentResolver.query(
             MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
             arrayOf(MediaStore.MediaColumns._ID),
             "${MediaStore.MediaColumns.DISPLAY_NAME} = ? AND " +
-                "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?",
-            arrayOf(name, "%$FOLDER%"),
+                "${MediaStore.MediaColumns.RELATIVE_PATH} = ?",
+            arrayOf(DownloadLayout.fileNameOf(name), relativePathFor(name)),
             null,
         )?.use { cursor ->
             if (!cursor.moveToFirst()) return@use null
@@ -206,6 +227,36 @@ object DownloadStore {
                 if (cursor.moveToFirst()) cursor.getString(0) else null
             }
         }.onFailure { Log.w(TAG, "could not read display name for $uri: ${it.message}") }.getOrNull()
+    }
+
+    /**
+     * Where [uri] sits below the download folder, `Artist/Album/Song.flac`, or
+     * just its file name when it is somewhere else (a file from before the
+     * folders, or one the listener moved).
+     */
+    fun relativeName(context: Context, uri: Uri): String? {
+        if (uri.scheme == "file") {
+            val path = uri.path ?: return null
+            val marker = "/downloads/"
+            val at = path.indexOf(marker)
+            return if (at >= 0) path.substring(at + marker.length) else File(path).name
+        }
+        return runCatching {
+            context.contentResolver.query(
+                uri,
+                arrayOf(MediaStore.MediaColumns.RELATIVE_PATH, MediaStore.MediaColumns.DISPLAY_NAME),
+                null,
+                null,
+                null,
+            )?.use { cursor ->
+                if (!cursor.moveToFirst()) return@use null
+                val folder = cursor.getString(0).orEmpty()
+                val name = cursor.getString(1) ?: return@use null
+                val prefix = listOf("$relativePath/", "${Environment.DIRECTORY_MUSIC}/$LEGACY_FOLDER/")
+                    .firstOrNull { folder.startsWith(it) }
+                if (prefix == null) name else folder.removePrefix(prefix) + name
+            }
+        }.onFailure { Log.w(TAG, "could not read the relative name for $uri: ${it.message}") }.getOrNull()
     }
 
     fun delete(context: Context, uri: Uri): Boolean = runCatching {
@@ -288,15 +339,15 @@ object DownloadStore {
             val target = privateFile(context, name)
             val folder = target.parentFile ?: error("No download folder")
             if (!folder.exists() && !folder.mkdirs()) error("Could not create ${folder.path}")
-            val part = File(folder, ".$name.part")
+            val part = File(folder, ".${DownloadLayout.fileNameOf(name)}.part")
             part.delete()
             return Pending(context, Uri.fromFile(target), name, part = part, target = target)
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val values = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+                put(MediaStore.MediaColumns.DISPLAY_NAME, DownloadLayout.fileNameOf(name))
                 put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-                put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+                put(MediaStore.MediaColumns.RELATIVE_PATH, relativePathFor(name).trimEnd('/'))
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
             // A MIME type the audio collection doesn't recognise is not a null
@@ -318,7 +369,7 @@ object DownloadStore {
         val target = legacyFile(name)
         val folder = target.parentFile ?: error("No Music folder on this device")
         if (!folder.exists() && !folder.mkdirs()) error("Could not create ${folder.path}")
-        val part = File(folder, "$name.part")
+        val part = File(folder, "${DownloadLayout.fileNameOf(name)}.part")
         part.delete()
         return Pending(context, Uri.fromFile(target), name, part = part, target = target)
     }

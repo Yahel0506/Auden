@@ -1427,4 +1427,14 @@
     <string name="reject_match">Refuser</string>
     <string name="duplicate_playlist">Dupliquer</string>
     <string name="playlist_copy_suffix">%1$s (copie)</string>
+    <string name="download_folder_structure">Structure des dossiers</string>
+    <string name="download_folder_structure_subtitle">Comment les titres téléchargés sont classés</string>
+    <string name="layout_preset_artist_album">Artiste / Album / Piste</string>
+    <string name="layout_preset_album">Album / Piste</string>
+    <string name="layout_preset_flat">Un dossier : Artiste - Titre</string>
+    <string name="layout_custom">Modèle personnalisé</string>
+    <string name="layout_custom_hint">Champs : {title} {artist} {albumArtist} {album} {year} {track} {disc}. Utilisez / pour les dossiers.</string>
+    <string name="layout_example">Exemple : %1$s</string>
+    <string name="layout_applies_to_new">S’applique aux titres téléchargés à partir de maintenant. Les fichiers existants ne bougent pas.</string>
+    <string name="layout_invalid">Ce modèle est inutilisable</string>
 </resources>

@@ -236,6 +236,7 @@ fun SettingsScreen(
     val cacheLimitBytes by AppSettings.audioCacheLimitBytes.collectAsStateWithLifecycle()
     val showCacheFolder by AppSettings.showCacheFolder.collectAsStateWithLifecycle()
     val downloadQuality by AppSettings.downloadQuality.collectAsStateWithLifecycle()
+    val downloadTemplate by AppSettings.downloadTemplate.collectAsStateWithLifecycle()
     val wifiOnlyDownloads by AppSettings.wifiOnlyDownloads.collectAsStateWithLifecycle()
     val exportDownloads by AppSettings.exportDownloads.collectAsStateWithLifecycle()
     val stopOnTaskRemoved by AppSettings.stopOnTaskRemoved.collectAsStateWithLifecycle()
@@ -289,6 +290,7 @@ fun SettingsScreen(
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var picking by remember { mutableStateOf<QualityTarget?>(null) }
     var pickingDownloadQuality by remember { mutableStateOf(false) }
+    var pickingDownloadLayout by remember { mutableStateOf(false) }
     var pickingAutomixPerformance by remember { mutableStateOf(false) }
     // What the last export or import did, shown on the row that did it rather
     // than as a toast: a backup is the one action here whose outcome nobody can
@@ -543,13 +545,22 @@ fun SettingsScreen(
                     badge = stringResource(R.string.blocking).takeIf { wifiOnlyDownloads && metered == true },
                 )
             }
+            val downloadLayoutTitle = stringResource(R.string.download_folder_structure)
+            row(downloadLayoutTitle, "folders", "template", "naming", "organize") {
+                SettingsRow(
+                    icon = Icons.Rounded.Folder,
+                    title = downloadLayoutTitle,
+                    subtitle = com.music.bitchord.download.DownloadLayout.preview(downloadTemplate),
+                    onClick = { pickingDownloadLayout = true },
+                )
+            }
             val exportDownloadsTitle = stringResource(R.string.export_compatible_downloads)
             row(exportDownloadsTitle, "music folder", divided = false) {
                 SettingsSubRow(
                     title = exportDownloadsTitle,
                     checked = exportDownloads,
                     onCheckedChange = AppSettings::setExportDownloads,
-                    subtitle = "Music/BitChord".takeIf { exportDownloads },
+                    subtitle = "Music/${com.music.bitchord.download.DownloadStore.FOLDER}".takeIf { exportDownloads },
                 )
             }
         }
@@ -1635,6 +1646,21 @@ fun SettingsScreen(
                 onSelect = { quality ->
                     AppSettings.setDownloadQuality(quality)
                     pickingDownloadQuality = false
+                },
+            )
+        }
+    }
+
+    if (pickingDownloadLayout) {
+        ModalBottomSheet(
+            onDismissRequest = { pickingDownloadLayout = false },
+            containerColor = MaterialTheme.colorScheme.background,
+        ) {
+            DownloadLayoutSheet(
+                selected = downloadTemplate,
+                onSelect = { template ->
+                    AppSettings.setDownloadTemplate(template)
+                    pickingDownloadLayout = false
                 },
             )
         }
@@ -2754,6 +2780,105 @@ internal fun SegmentedControl(
                     maxLines = 1,
                 )
             }
+        }
+    }
+}
+
+/**
+ * Where a downloaded song is filed: a few layouts that work with any player,
+ * and a template for everyone else, with the path it makes shown as it is typed.
+ */
+@Composable
+private fun DownloadLayoutSheet(selected: String, onSelect: (String) -> Unit) {
+    val haptics = LocalHapticFeedback.current
+    val presets = com.music.bitchord.download.DownloadLayout.PRESETS
+    val isCustom = selected !in presets
+    var custom by remember { mutableStateOf(if (isCustom) selected else "{albumArtist}/{album}/{track} - {title}") }
+    var editing by remember { mutableStateOf(isCustom) }
+    val customValid = com.music.bitchord.download.DownloadLayout.valid(custom)
+
+    @Composable
+    fun Choice(label: String, example: String, chosen: Boolean, onClick: () -> Unit) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    onClick()
+                }
+                .padding(horizontal = 22.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(label, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
+                Text(
+                    stringResource(R.string.layout_example, example),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (chosen) {
+                Spacer(Modifier.width(12.dp))
+                Icon(Icons.Rounded.Check, stringResource(R.string.selected), tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+            }
+        }
+    }
+
+    Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+        Row(
+            modifier = Modifier.padding(start = 22.dp, end = 22.dp, bottom = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Rounded.Folder, null, tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(22.dp))
+            Spacer(Modifier.width(14.dp))
+            Column {
+                Text(
+                    stringResource(R.string.download_folder_structure),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                Text(
+                    stringResource(R.string.layout_applies_to_new),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+        val labels = listOf(
+            stringResource(R.string.layout_preset_artist_album),
+            stringResource(R.string.layout_preset_album),
+            stringResource(R.string.layout_preset_flat),
+        )
+        presets.forEachIndexed { index, template ->
+            Choice(labels[index], com.music.bitchord.download.DownloadLayout.preview(template), !editing && selected == template) {
+                editing = false
+                onSelect(template)
+            }
+        }
+        Choice(
+            stringResource(R.string.layout_custom),
+            com.music.bitchord.download.DownloadLayout.preview(custom),
+            editing || isCustom,
+        ) { editing = true }
+        if (editing) {
+            androidx.compose.material3.OutlinedTextField(
+                value = custom,
+                onValueChange = { custom = it },
+                singleLine = true,
+                isError = !customValid,
+                supportingText = {
+                    Text(
+                        if (customValid) stringResource(R.string.layout_custom_hint) else stringResource(R.string.layout_invalid),
+                    )
+                },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp),
+            )
+            androidx.compose.material3.Button(
+                onClick = { onSelect(custom) },
+                enabled = customValid,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 8.dp),
+            ) { Text(stringResource(R.string.save)) }
         }
     }
 }

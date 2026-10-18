@@ -835,7 +835,9 @@ object Downloads {
      * Fetch one track or its lyrics, start to finish.
      */
     internal suspend fun run(context: Context, task: PendingDownload) = withContext(Dispatchers.IO) {
-        val (song, lyricsOnly) = task
+        val song = task.song
+        val lyricsOnly = task.lyricsOnly
+        val from = task.from
         if (lyricsOnly) {
             runLyricsOnly(context, song)
             return@withContext
@@ -849,13 +851,15 @@ object Downloads {
         DownloadSession.running(id, 0f)
 
         try {
-            val plan = prepare(context, song)
+            val plan = prepare(context, song, from)
             // The manager is showing the row that was tapped, which for a music
             // video is the wrong title and the wrong cover for the file actually
             // being written. Corrected here rather than left to disagree with
             // the notification and with the Downloads page afterwards.
             DownloadSession.retitle(id, plan.track)
-            transfer(context, song, plan)
+            transfer(context, song, plan, from)
+            // A release asked for whole gets its playlist file once its last track has landed.
+            from?.let { CollectionPlaylists.updateWhenSettled(context, it) }
         } catch (e: CancellationException) {
             clear(id)
             throw e
@@ -888,7 +892,7 @@ object Downloads {
      * running for a track that is still queued — or for one that gets cancelled
      * before its turn — and a preparation is not a download.
      */
-    internal suspend fun prepare(context: Context, song: Song): Prepared = withContext(Dispatchers.IO) {
+    internal suspend fun prepare(context: Context, song: Song, from: String? = null): Prepared = withContext(Dispatchers.IO) {
         // Downloads preserve the exact item the listener picked. Catalogue
         // matching is a manual playback action and must not silently change a
         // download or its filename.
@@ -911,7 +915,7 @@ object Downloads {
         // for lossless with a transcode.
         if (quality.keepsLossless) {
             LOSSLESS_EXTENSIONS.firstNotNullOfOrNull { extension ->
-                DownloadStore.existing(context, DownloadStore.fileNameFor(track, extension))
+                DownloadStore.existing(context, nameFor(track, extension, from))
             }?.let { uri ->
                 return@withContext Prepared(song.videoId, track, route = null, alreadyAt = uri)
             }
@@ -965,7 +969,7 @@ object Downloads {
      * commits or aborts, so a caller is free to call it a second time with a
      * freshly resolved plan without the first attempt leaving anything behind.
      */
-    private suspend fun transfer(context: Context, song: Song, plan: Prepared) {
+    private suspend fun transfer(context: Context, song: Song, plan: Prepared, from: String? = null) {
         val id = song.videoId
         val track = plan.track
 
@@ -1006,7 +1010,7 @@ object Downloads {
                     artwork = async { MediaTagger.artworkFor(context, track) }
                 }
 
-                val name = DownloadStore.fileNameFor(track, route.extension)
+                val name = nameFor(track, route.extension, from)
                 val alreadyThere = DownloadStore.existing(context, name)
                 if (alreadyThere != null) {
                     Log.d(TAG, "$name is already in Music; adopting it")
@@ -1090,6 +1094,24 @@ object Downloads {
         }
     }
 
+    /**
+     * The path a track is saved under, below the download folder.
+     *
+     * An album asked for whole supplies what a single track can't know: the
+     * album's own title and the track's place in it, which is what puts the
+     * file in the album's folder under its number. A playlist does not — its
+     * tracks come from many albums, so each keeps its own.
+     */
+    internal fun nameFor(song: Song, extension: String, from: String?): String {
+        val base = DownloadStore.infoOf(song)
+        val record = from?.let { _collections.value[it] }?.takeUnless { it.playlist }
+        val info = if (record == null) base else base.copy(
+            album = record.title.ifBlank { base.album },
+            track = record.videoIds.indexOf(song.videoId).takeIf { it >= 0 }?.plus(1) ?: base.track,
+        )
+        return DownloadStore.fileNameFor(song, extension, info)
+    }
+
     private suspend fun runLyricsOnly(context: Context, song: Song) = withContext(Dispatchers.IO) {
         val id = song.videoId
         _lyricsActive.update { it + id }
@@ -1108,7 +1130,8 @@ object Downloads {
                 return@withContext
             }
 
-            val displayName = DownloadStore.displayName(context, audioUri)
+            // The path below the download folder, so the lyrics land beside their track.
+            val displayName = DownloadStore.relativeName(context, audioUri)
                 ?: DownloadStore.fileNameFor(song, "m4a")
             val extension = displayName.substringAfterLast('.', "m4a")
 

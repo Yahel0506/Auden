@@ -92,8 +92,9 @@ object LocalMediaRepository {
                     MediaStore.Audio.Media.DATE_ADDED,
                     MediaStore.Audio.Media.DATE_MODIFIED,
                 )
-                val selection = "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?"
-                val selectionArgs = arrayOf("%${DownloadStore.FOLDER}%")
+                // Both names: what the folder is called now, and what it was before the rename.
+                val selection = "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ? OR ${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?"
+                val selectionArgs = arrayOf("%${DownloadStore.FOLDER}%", "%BitChord%")
 
                 context.contentResolver.query(
                     MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
@@ -139,7 +140,8 @@ object LocalMediaRepository {
                     DownloadStore.FOLDER,
                 )
                 if (folder.exists() && folder.isDirectory) {
-                    folder.listFiles()?.forEach { file ->
+                    // Folders now: Artist/Album/Song, however deep the template goes.
+                    folder.walkTopDown().forEach { file ->
                         if (file.isFile && isAudioFileName(file.name)) {
                             val uriStr = Uri.fromFile(file).toString()
                             if (uriStr !in knownUris) {

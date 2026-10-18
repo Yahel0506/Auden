@@ -1431,4 +1431,14 @@
     <string name="reject_match">Rejeitar</string>
     <string name="duplicate_playlist">Duplicar</string>
     <string name="playlist_copy_suffix">%1$s (cópia)</string>
+    <string name="download_folder_structure">Estrutura de pastas</string>
+    <string name="download_folder_structure_subtitle">Como as músicas transferidas são organizadas</string>
+    <string name="layout_preset_artist_album">Artista / Álbum / Faixa</string>
+    <string name="layout_preset_album">Álbum / Faixa</string>
+    <string name="layout_preset_flat">Uma pasta: Artista - Título</string>
+    <string name="layout_custom">Modelo personalizado</string>
+    <string name="layout_custom_hint">Campos: {title} {artist} {albumArtist} {album} {year} {track} {disc}. Usa / para pastas.</string>
+    <string name="layout_example">Exemplo: %1$s</string>
+    <string name="layout_applies_to_new">Aplica-se às músicas transferidas a partir de agora. Os ficheiros existentes não são movidos.</string>
+    <string name="layout_invalid">Esse modelo não pode ser usado</string>
 </resources>
