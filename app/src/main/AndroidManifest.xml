@@ -87,12 +87,8 @@
             android:resource="@xml/automotive_app_desc" />
 
         <!--
-          No android:screenOrientation here, and that is deliberate rather than
-          an omission: this attribute takes a constant, so setting it would
-          lock every device and leaving it off would free every device, and
-          neither is what this app wants. Tablets rotate, phones do not — a
-          question only a resource can answer, so MainActivity.onCreate asks
-          R.bool.allow_rotation and sets requestedOrientation from it.
+          No android:screenOrientation here, deliberately: the app follows the
+          system's own auto-rotate setting on every device, phones included.
 
           [android:configChanges] is the other half of that: without it, a
           rotation the system now allows is still a full Activity restart,
@@ -116,7 +112,6 @@
             android:theme="@style/Theme.BitChord">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
                 <!--
                   What makes the system call this a music app. "Play music" from
                   the assistant, Android Auto's media list and the OEM pickers
@@ -212,6 +207,16 @@
                     android:pathPattern="/invite/......" />
             </intent-filter>
 
+            <!-- Custom scheme for Listen Together invites on custom server deployments. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:scheme="bitchord"
+                    android:host="party" />
+            </intent-filter>
+
             <!--
               Share → BitChord, from YT Music's own share sheet or from
               anywhere a link can be sent. The text is whatever the sending app
@@ -225,6 +230,193 @@
             </intent-filter>
         </activity>
 
+        <!--
+          The launcher entries live on aliases, not on MainActivity, so the user can
+          swap the home-screen icon by enabling one alias and disabling the others
+          (see AppIcon). Exactly one is enabled at a time; Default is the shipped one.
+        -->
+        <activity-alias
+            android:name=".LauncherDefault"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherGlassLight"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_liquid_glass"
+            android:roundIcon="@mipmap/ic_liquid_glass"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherGlassDark"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_liquid_glass_dark"
+            android:roundIcon="@mipmap/ic_liquid_glass_dark"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherGlassClear"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_liquid_glass_clear"
+            android:roundIcon="@mipmap/ic_liquid_glass_clear"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherGlassClearDark"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_liquid_glass_clear_dark"
+            android:roundIcon="@mipmap/ic_liquid_glass_clear_dark"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherSamsungGlass"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_samsung_glass"
+            android:roundIcon="@mipmap/ic_samsung_glass"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherSamsungGlassDark"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_samsung_glass_dark"
+            android:roundIcon="@mipmap/ic_samsung_glass_dark"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherSamsungGlassClear"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_samsung_glass_clear"
+            android:roundIcon="@mipmap/ic_samsung_glass_clear"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherSamsungGlassClearDark"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_samsung_glass_clear_dark"
+            android:roundIcon="@mipmap/ic_samsung_glass_clear_dark"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherPixelGlass"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_pixel_glass"
+            android:roundIcon="@mipmap/ic_pixel_glass"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherPixelGlassDark"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_pixel_glass_dark"
+            android:roundIcon="@mipmap/ic_pixel_glass_dark"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherPixelGlassClear"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_pixel_glass_clear"
+            android:roundIcon="@mipmap/ic_pixel_glass_clear"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
+            android:name=".LauncherPixelGlassClearDark"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_pixel_glass_clear_dark"
+            android:roundIcon="@mipmap/ic_pixel_glass_clear_dark"
+            android:label="@string/app_name"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <service
             android:name=".playback.PlaybackService"
             android:exported="true"
@@ -235,6 +427,39 @@
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
         </service>
+
+        <!--
+          Commands from the BitChord watch app (wearos/). Exported because Play
+          services binds it; only messages from the same package and signing key
+          on a paired watch are ever delivered, and only under this path.
+        -->
+        <service
+            android:name=".wear.WearCommandService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/bitchord/command"
+                    android:scheme="wear" />
+            </intent-filter>
+            <!-- The watch's player reading a track through the phone. -->
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.CHANNEL_EVENT" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/bitchord/stream"
+                    android:scheme="wear" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name="androidx.media3.session.MediaButtonReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MEDIA_BUTTON" />
+            </intent-filter>
+        </receiver>
 
         <!--
           Downloads. Not exported: it is started by the app and by its own
@@ -279,6 +504,19 @@
                 android:resource="@xml/widget_media_wide" />
         </receiver>
 
+        <!-- The 4×1 capsule. Its own provider and layout; see MediaWidgetPill. -->
+        <receiver
+            android:name=".widget.MediaWidgetPill"
+            android:exported="false"
+            android:label="@string/widget_pill_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_media_pill" />
+        </receiver>
+
         <!-- The transport buttons. Reached only by this app's own PendingIntents. -->
         <receiver
             android:name=".widget.MediaWidgetActions"
@@ -308,6 +546,11 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Where the Cast framework asks how this app wants to cast. -->
+        <meta-data
+            android:name="com.google.android.gms.cast.framework.OPTIONS_PROVIDER_CLASS_NAME"
+            android:value="com.music.bitchord.playback.cast.CastOptionsProvider" />
     </application>
 
 </manifest>

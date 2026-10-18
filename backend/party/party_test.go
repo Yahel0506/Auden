@@ -24,6 +24,7 @@ func TestCodeNormalisation(t *testing.T) {
 		}
 	}
 }
+
 func TestPartyCreationAndJoin(t *testing.T) {
 	store := NewPartyStore()
 	p, err := store.Create()
@@ -247,5 +248,239 @@ func TestQueueMoveUpcoming(t *testing.T) {
 	// 8. Same fromIdx and toIdx should succeed as no-op
 	if !ps.MoveUpcoming(&memberId, 2, 2, "") {
 		t.Fatalf("MoveUpcoming no-op should succeed")
+	}
+}
+
+func TestQueueOperationsDoNotIncrementPlaybackSeq(t *testing.T) {
+	ps := NewPlaybackState()
+	t0 := &Track{VideoId: "t0", Title: "T0"}
+	t1 := &Track{VideoId: "t1", Title: "T1"}
+	t2 := &Track{VideoId: "t2", Title: "T2"}
+	t3 := &Track{VideoId: "t3", Title: "T3"}
+
+	ps.SetTrack(nil, t0, 0, true, nil, nil)
+	playbackSeq := ps.Seq
+
+	memberId := "mem-1"
+
+	// 1. SetQueue
+	ps.SetQueue(&memberId, []*Track{t0, t1, t2, t3}, 0)
+	if ps.Seq != playbackSeq {
+		t.Fatalf("SetQueue should not increment playback Seq, got %d vs %d", ps.Seq, playbackSeq)
+	}
+	if ps.QueueSeq == 0 {
+		t.Fatalf("SetQueue must increment QueueSeq")
+	}
+
+	// 2. MoveUpcoming
+	qSeq := ps.QueueSeq
+	if !ps.MoveUpcoming(&memberId, 1, 2, "") {
+		t.Fatalf("MoveUpcoming failed")
+	}
+	if ps.Seq != playbackSeq {
+		t.Fatalf("MoveUpcoming should not increment playback Seq, got %d vs %d", ps.Seq, playbackSeq)
+	}
+	if ps.QueueSeq != qSeq+1 {
+		t.Fatalf("MoveUpcoming must increment QueueSeq")
+	}
+
+	// 3. AddUpcoming
+	t4 := &Track{VideoId: "t4", Title: "T4"}
+	qSeq = ps.QueueSeq
+	ok, _ := ps.AddUpcoming(&memberId, []*Track{t4}, false)
+	if !ok {
+		t.Fatalf("AddUpcoming failed")
+	}
+	if ps.Seq != playbackSeq {
+		t.Fatalf("AddUpcoming should not increment playback Seq, got %d vs %d", ps.Seq, playbackSeq)
+	}
+	if ps.QueueSeq != qSeq+1 {
+		t.Fatalf("AddUpcoming must increment QueueSeq")
+	}
+
+	// 4. RemoveUpcoming
+	qSeq = ps.QueueSeq
+	if !ps.RemoveUpcoming(&memberId, "t4") {
+		t.Fatalf("RemoveUpcoming failed")
+	}
+	if ps.Seq != playbackSeq {
+		t.Fatalf("RemoveUpcoming should not increment playback Seq, got %d vs %d", ps.Seq, playbackSeq)
+	}
+	if ps.QueueSeq != qSeq+1 {
+		t.Fatalf("RemoveUpcoming must increment QueueSeq")
+	}
+
+	// 5. ClearUpcoming
+	qSeq = ps.QueueSeq
+	if !ps.ClearUpcoming(&memberId) {
+		t.Fatalf("ClearUpcoming failed")
+	}
+	if ps.Seq != playbackSeq {
+		t.Fatalf("ClearUpcoming should not increment playback Seq, got %d vs %d", ps.Seq, playbackSeq)
+	}
+	if ps.QueueSeq != qSeq+1 {
+		t.Fatalf("ClearUpcoming must increment QueueSeq")
+	}
+
+	// 6. SetAutoplay
+	ps.SetAutoplay(&memberId, true)
+	if ps.Seq != playbackSeq {
+		t.Fatalf("SetAutoplay should not increment playback Seq, got %d vs %d", ps.Seq, playbackSeq)
+	}
+}
+
+func TestHostOnlyControlIsHostOnly(t *testing.T) {
+	p := NewParty("TEST13")
+	host, err := p.Join("u1", "d1", "Host", nil)
+	if err != nil {
+		t.Fatalf("host join failed: %v", err)
+	}
+	listener, err := p.Join("u2", "d2", "Listener", nil)
+	if err != nil {
+		t.Fatalf("listener join failed: %v", err)
+	}
+
+	// A listener who could turn this off would not be restricted by it.
+	if err := p.SetHostOnlyControl(listener, true); err == nil {
+		t.Fatalf("expected a listener to be refused")
+	} else if pe, ok := err.(*PartyError); !ok || pe.Code != "host_only" {
+		t.Errorf("expected host_only, got %v", err)
+	}
+	if p.HostOnlyControl {
+		t.Errorf("a refused request must not have taken effect")
+	}
+
+	if err := p.SetHostOnlyControl(host, true); err != nil {
+		t.Fatalf("host was refused: %v", err)
+	}
+	if !p.HostOnlyControl {
+		t.Errorf("the host's request did not take effect")
+	}
+}
+
+func TestMayControlFollowsTheSetting(t *testing.T) {
+	p := NewParty("TEST14")
+	host, _ := p.Join("u1", "d1", "Host", nil)
+	listener, _ := p.Join("u2", "d2", "Listener", nil)
+
+	// Every party starts as the shared free-for-all this feature shipped as.
+	if !p.MayControl(listener) {
+		t.Errorf("an open party must let a listener control it")
+	}
+
+	if err := p.SetHostOnlyControl(host, true); err != nil {
+		t.Fatalf("host was refused: %v", err)
+	}
+	if p.MayControl(listener) {
+		t.Errorf("a locked party must not let a listener control it")
+	}
+	if !p.MayControl(host) {
+		t.Errorf("the host is never locked out of their own party")
+	}
+
+	if err := p.SetHostOnlyControl(host, false); err != nil {
+		t.Fatalf("host was refused: %v", err)
+	}
+	if !p.MayControl(listener) {
+		t.Errorf("handing control back must restore it")
+	}
+}
+
+func TestHostOnlyControlPassesToTheNewHost(t *testing.T) {
+	p := NewParty("TEST15")
+	host, _ := p.Join("u1", "d1", "Host", nil)
+	listener, _ := p.Join("u2", "d2", "Listener", nil)
+	if err := p.SetHostOnlyControl(host, true); err != nil {
+		t.Fatalf("host was refused: %v", err)
+	}
+
+	// The host leaving promotes a survivor, who inherits the party's setting
+	// rather than being locked out of a party they now own.
+	p.Remove(host.MemberId)
+	if !listener.IsHost {
+		t.Fatalf("the remaining member was not promoted")
+	}
+	if !p.HostOnlyControl {
+		t.Errorf("the setting belongs to the party, not to whoever set it")
+	}
+	if !p.MayControl(listener) {
+		t.Errorf("the new host must be able to control their own party")
+	}
+}
+
+func TestHostOnlyControlTravelsOnTheSnapshot(t *testing.T) {
+	p := NewParty("TEST16")
+	host, _ := p.Join("u1", "d1", "Host", nil)
+
+	if wire := p.ToWire(); wire["hostOnlyControl"] != false {
+		t.Errorf("a new party must report itself unlocked, got %v", wire["hostOnlyControl"])
+	}
+	if err := p.SetHostOnlyControl(host, true); err != nil {
+		t.Fatalf("host was refused: %v", err)
+	}
+	if wire := p.ToWire(); wire["hostOnlyControl"] != true {
+		t.Errorf("a joining device must learn the party is locked, got %v", wire["hostOnlyControl"])
+	}
+}
+
+func TestQueueAddSkipsAutoplayAlreadyWaiting(t *testing.T) {
+	ps := NewPlaybackState()
+	current := &Track{VideoId: "curr"}
+	ps.SetTrack(nil, current, 0, true, nil, nil)
+	ps.SetQueue(nil, []*Track{current}, 0)
+
+	var batch []*Track
+	for i := 0; i < 10; i++ {
+		batch = append(batch, &Track{VideoId: fmt.Sprintf("a%d", i), FromAutoplay: true})
+	}
+	if ok, reason := ps.AddUpcoming(nil, batch, false); !ok {
+		t.Fatalf("first batch refused: %s", reason)
+	}
+	seq := ps.QueueSeq
+	// The same station again, as a second supplier or a retry would send it.
+	if ok, reason := ps.AddUpcoming(nil, batch, false); !ok {
+		t.Fatalf("a batch that is already queued should succeed as a no-op, got %s", reason)
+	}
+	if len(ps.Queue) != 11 {
+		t.Fatalf("expected the station once (11 rows), got %d", len(ps.Queue))
+	}
+	if ps.QueueSeq != seq {
+		t.Fatalf("a no-op top-up should not bump the queue seq")
+	}
+
+	// A hand-queued duplicate is the listener's choice and is kept.
+	manual := []*Track{{VideoId: "a0"}}
+	if ok, _ := ps.AddUpcoming(nil, manual, false); !ok || len(ps.Queue) != 12 {
+		t.Fatalf("a manual duplicate should be queued, got len %d", len(ps.Queue))
+	}
+}
+
+func TestQueueIndexPrefersTheCopyAtTheNeedle(t *testing.T) {
+	ps := NewPlaybackState()
+	x := &Track{VideoId: "x"}
+	a := &Track{VideoId: "a"}
+	b := &Track{VideoId: "b"}
+	// x has played before and is playing again: [x, a, x, b] with the second x current.
+	ps.SetTrack(nil, x, 0, true, nil, nil)
+	ps.SetQueue(nil, []*Track{x, a, x, b}, 2)
+	if ps.QueueIndex != 2 {
+		t.Fatalf("setQueue should keep the sender's index for the playing track, got %d", ps.QueueIndex)
+	}
+
+	// Moving on to b, with no index sent, lands on the slot after the needle.
+	ps.SetTrack(nil, b, 0, true, nil, nil)
+	if ps.QueueIndex != 3 {
+		t.Fatalf("expected b at 3, got %d", ps.QueueIndex)
+	}
+	// Going back to x lands on the copy just behind, not the first one.
+	ps.SetTrack(nil, x, 0, true, nil, nil)
+	if ps.QueueIndex != 2 {
+		t.Fatalf("expected x at 2, got %d", ps.QueueIndex)
+	}
+	// An index that names a different track is not trusted.
+	wrong := 0
+	ps.SetTrack(nil, b, 0, true, &wrong, nil)
+	if ps.QueueIndex != 3 {
+		t.Fatalf("expected b at 3 despite a stale index, got %d", ps.QueueIndex)
 	}
 }

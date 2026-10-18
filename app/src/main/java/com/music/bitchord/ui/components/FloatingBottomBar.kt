@@ -18,7 +18,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -73,6 +76,21 @@ data class BottomTab(
  * rather than merely near it.
  */
 internal val PILL_INSET = 6.dp
+
+/**
+ * How far the floating bars stand off the bottom edge: the system navigation
+ * bar's inset, but never less than a gesture bar's.
+ *
+ * With the gesture hint (or the navigation bar itself) switched off that inset
+ * is zero, and the tab bar dropped onto the screen's very edge. It keeps the
+ * height it has with the hint showing instead. Three-button navigation is
+ * taller than the floor, so it still wins there.
+ */
+internal val floatingBarInsets: WindowInsets
+    @Composable get() = WindowInsets.navigationBars.union(WindowInsets(bottom = GESTURE_BAR_FLOOR))
+
+/** A gesture bar's inset — 45px at the test phone's 3x density. */
+private val GESTURE_BAR_FLOOR = 15.dp
 
 /**
  * Each tab's own vertical padding, and the counterweight to [PILL_INSET].
@@ -195,8 +213,8 @@ fun FloatingBottomBar(
 
     Box(
         modifier = modifier
-            .navigationBarsPadding()
-            .padding(horizontal = PAGE_GUTTER)
+            .windowInsetsPadding(floatingBarInsets)
+            .padding(horizontal = BAR_GUTTER)
             .padding(bottom = 2.dp)
             .fillMaxWidth()
             .clip(pillShape)
@@ -204,7 +222,7 @@ fun FloatingBottomBar(
                 if (reduceDynamicBlur) {
                     Modifier.background(container)
                 } else if (useGlass) {
-                    Modifier.liquidGlass(shape = pillShape)
+                    Modifier.liquidGlass(shape = pillShape, surfaceTint = glassBarTint())
                 } else {
                     Modifier.optimizedHazeEffect(
                         state = hazeState,
@@ -241,19 +259,19 @@ fun FloatingBottomBar(
                 .onSizeChanged { rowSize = it }
                 .pointerInput(Unit) {
                     var totalDrag = 0f
+                    var dragStartIndex = selectedIndex
                     detectHorizontalDragGestures(
-                        onDragStart = { totalDrag = 0f },
+                        onDragStart = {
+                            totalDrag = 0f
+                            dragStartIndex = selectedIndex
+                        },
                         onDragCancel = { dragOffset = 0f },
                         onDragEnd = {
                             if (tabStepPx > 0f) {
-                                val ratio = totalDrag / tabStepPx
-                                val shift = when {
-                                    ratio > 0.35f -> kotlin.math.max(1, ratio.roundToInt())
-                                    ratio < -0.35f -> kotlin.math.min(-1, ratio.roundToInt())
-                                    else -> 0
-                                }
-                                val newIndex = (currentSelectedIndex + shift).coerceIn(0, tabs.lastIndex)
-                                if (newIndex != currentSelectedIndex) {
+                                val absoluteIndexFloat = (dragStartIndex + totalDrag / tabStepPx)
+                                    .coerceIn(0f, tabs.lastIndex.toFloat())
+                                val newIndex = absoluteIndexFloat.roundToInt()
+                                if (newIndex != selectedIndex) {
                                     onTabSelected(newIndex)
                                 }
                             }
@@ -261,19 +279,11 @@ fun FloatingBottomBar(
                         },
                         onHorizontalDrag = { _, delta ->
                             totalDrag += delta
-                            val rawPx = when {
-                                totalDrag > 0 && currentSelectedIndex == tabs.lastIndex ->
-                                    totalDrag * 0.25f
-                                totalDrag < 0 && currentSelectedIndex == 0 ->
-                                    totalDrag * 0.25f
-                                else -> totalDrag
-                            }
-                            dragOffset = rawPx
+                            val absoluteIndexFloat = (dragStartIndex + totalDrag / tabStepPx)
+                                .coerceIn(0f, tabs.lastIndex.toFloat())
+                            dragOffset = absoluteIndexFloat * tabStepPx - selectedIndex * tabStepPx
 
-                            val approxTab =
-                                (currentSelectedIndex + dragOffset / tabStepPx)
-                                    .coerceIn(0f, tabs.lastIndex.toFloat())
-                                    .roundToInt()
+                            val approxTab = absoluteIndexFloat.roundToInt()
                             if (approxTab != lastHapticTab) {
                                 haptics.play(Haptic.Tick)
                                 lastHapticTab = approxTab

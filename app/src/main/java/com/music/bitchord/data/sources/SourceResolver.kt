@@ -111,8 +111,31 @@ object SourceResolver {
             configId = configId,
             trackId = trackId,
             target = targetIn(uri),
+            pickedMix = uri.getQueryParameter(MIX_PARAM),
         )
     }
+
+    /**
+     * `&mix=` on an addon row's playback URI: which mix the row itself was,
+     * [MIX_ATMOS] or [MIX_STEREO] as its search answer tagged it, or [MIX_ANY]
+     * when it said neither.
+     *
+     * Present on every addon row and nothing else. Those reach the queue one
+     * way — picked by hand from the Addons search, then replayed from history
+     * or a playlist — and the marker makes that play strict: the row the
+     * listener chose, never its Atmos sibling, another source's better copy,
+     * or YouTube's Opus. That last covers Automix too, which would otherwise
+     * fetch a YouTube match just to measure the track — see
+     * [isPickedAddonRow]. Absent, nothing changes.
+     */
+    const val MIX_PARAM = "mix"
+    const val MIX_STEREO = "stereo"
+    const val MIX_ATMOS = "atmos"
+    const val MIX_ANY = "any"
+
+    /** Whether [uri] is an addon row played as itself — see [MIX_PARAM]. */
+    fun isPickedAddonRow(uri: Uri): Boolean =
+        uri.authority == "source" && uri.getQueryParameter(MIX_PARAM) != null
 
     /**
      * The recording a playback URI describes, for matching it elsewhere.
@@ -140,17 +163,25 @@ object SourceResolver {
         configId: String,
         trackId: String,
         target: TrackMatcher.Target,
+        pickedMix: String? = null,
     ): SourceStream? {
         val request = requestForNow()
-        val pinned = SourceRegistry.instance(configId)
         val active = SourceRegistry.activeForPlayback()
+        // A pin identifies where the row originally came from; it does not
+        // override the source switch. Looking the instance up directly used to
+        // reopen disabled JioSaavn/addon tracks already sitting in the queue.
+        // Resolve the pin only from the enabled list so Off means off for both
+        // newly matched tracks and source-backed rows queued earlier.
+        val pinned = active.firstOrNull { it.configId == configId }
 
         // The upgrade path: with lossless asked for and the pinned source
         // unable to serve it, anything ranked above it that can is worth
         // asking first. This is the whole reason the list is ordered — it is
         // what makes "my own FLAC of this, if I have one, else stream it"
         // expressible.
-        if (request is StreamRequest.Lossless && pinned?.kind?.canServeLossless != true) {
+        // A row picked by hand is not up for substitution — see [MIX_PARAM].
+        val picked = pickedMix != null && pinned is AddonSource
+        if (!picked && request is StreamRequest.Lossless && pinned?.kind?.canServeLossless != true) {
             for (source in rankedAbove(configId, active)) {
                 if (!source.kind.canServeLossless) continue
                 val upgraded = matchAndStream(source, target, request) ?: continue
@@ -168,7 +199,13 @@ object SourceResolver {
         }
 
         if (pinned != null) {
-            attempt(pinned) { pinned.stream(trackId, request) }
+            attempt(pinned) {
+                if (picked) {
+                    (pinned as AddonSource).stream(trackId, request, stereoOnly = pickedMix == MIX_STEREO)
+                } else {
+                    pinned.stream(trackId, request)
+                }
+            }
                 ?.let { return it.copy(sourceConfigId = pinned.configId) }
         }
 
@@ -176,8 +213,14 @@ object SourceResolver {
         // user asked for, and another source having it is not unlikely — this
         // is the difference between a dead server skipping the queue forward
         // and a dead server being invisible.
-        val (fallbackSource, stream) =
-            bestAcross(active.filterNot { it.configId == configId }, target, request) ?: return null
+        //
+        // Not YouTube, though, for a row picked from the Addons search: its
+        // Opus is a lesser copy of a different upload, and the listener chose
+        // this addon's precisely to not be hearing it — see [MIX_PARAM].
+        val fallbacks = active.filterNot {
+            it.configId == configId || (pickedMix != null && it.kind == SourceKind.YOUTUBE)
+        }
+        val (fallbackSource, stream) = bestAcross(fallbacks, target, request) ?: return null
         TrackLog.d(TAG, "fallback: '${target.title}' served by ${fallbackSource.displayName}")
         return stream
     }
@@ -225,6 +268,31 @@ object SourceResolver {
                 " at ${stream.format.summary}" + if (stream.belowRequest) " (below request)" else "",
         )
         return stream
+    }
+
+    /**
+     * The reliable last rung for a source-backed queue item whose chosen stream
+     * failed in the player.
+     *
+     * Unlike [resolve], this asks only YouTube. The failed addon/JioSaavn source
+     * must not get another chance to return the identical URL, and unlike
+     * [substituteForYouTube] this starts with metadata rather than an existing
+     * YouTube video id, so it first finds the matching YouTube Music row.
+     */
+    suspend fun youtubeFallback(target: TrackMatcher.Target): SourceStream? {
+        if (target.title.isBlank() || target.isVideo) return null
+        val youtube = SourceRegistry.activeForPlayback()
+            .firstOrNull { it.kind == SourceKind.YOUTUBE }
+            ?: return null
+        return matchAndStream(
+            source = youtube,
+            target = target,
+            request = StreamRequest.Best,
+            strictLength = target.durationSec != null,
+            requireSharedArtist = true,
+        )?.also {
+            TrackLog.d(TAG, "YouTube fallback matched '${target.title}' after its higher-quality source failed")
+        }
     }
 
     /**
@@ -480,8 +548,9 @@ object SourceResolver {
         // [DownloadQuality]'s answer and what it may spend is
         // [AppSettings.wifiOnlyDownloads]'s, and a mobile-data rung of Medium
         // has no business deciding that a file saved over Wi-Fi later is a
-        // YouTube one.
-        val active = SourceRegistry.active()
+        // YouTube one. Minus any addon whose manifest says `allowDownloads: 0`:
+        // that one plays, but the file comes from whoever is next in line.
+        val active = SourceRegistry.activeForDownload()
         // YouTube can be switched off, and a download still goes to it when
         // nothing here answers — the download path never consults this list. So
         // an absent YouTube means everything enabled outranks it, which is
@@ -625,6 +694,13 @@ object SourceResolver {
      * in the audio for nothing. 160 to 320 clears it; 128 to 192 does not.
      */
     internal fun worthSwapping(candidate: StreamFormat, playing: StreamFormat?): Boolean {
+        // Never away from an immersive mix. A FLAC is a better *copy* and a
+        // worse *mix* once Atmos is what the listener chose, and cutting one in
+        // over the other mid-song is a downgrade dressed as an upgrade.
+        // [QualityUpgrade.needsLosslessFollowUp] already treats Atmos as final,
+        // so this is the belt to that braces — it also covers the late answer
+        // that arrives from a pass started before the Atmos stream landed.
+        if (playing?.isDolbyAtmos == true && !candidate.isDolbyAtmos) return false
         if (candidate.isLossless == true || candidate.isDolbyAtmos) return true
         val gain = (candidate.kbps ?: return false) - (playing?.kbps ?: return false)
         return gain >= UPGRADE_MIN_GAIN_KBPS
@@ -809,7 +885,15 @@ object SourceResolver {
     ): SourceStream? {
         for (query in TrackMatcher.queries(target)) {
             val candidates = attempt(source) {
-                source.search(query, limit = MATCH_CANDIDATES, waitForAll = waitForAll)
+                source.search(
+                    query,
+                    limit = MATCH_CANDIDATES,
+                    waitForAll = waitForAll,
+                    // The search and the stream are one question here: a
+                    // catalogue that files its rows by tier should describe
+                    // them at the tier this is about to ask for.
+                    request = request,
+                )
             } ?: return null
             var matches = TrackMatcher.ranked(candidates, target)
             if (requireSharedArtist) {
@@ -906,11 +990,33 @@ object SourceResolver {
     ): List<Song> {
         val sameLength = matches.filter { TrackMatcher.withinSeconds(it, target, SAME_RECORDING_SEC) }
         val eligible = sameLength.ifEmpty { matches }
+        // The immersive mix goes first when the listener asked for immersive
+        // audio and the device can decode it. This is not a quality rung and
+        // is not competing with one: a catalogue may publish the Atmos mix as
+        // its own row rather than as an alternate rendition of the stereo one,
+        // in which case no `?atmos=` hint on the stereo row can ever reach it
+        // — picking the row *is* the only way to hear it. Ordering is enough;
+        // [streamBest] stops at the first row that answers, and an Atmos
+        // answer on a device that cannot play it was already refused upstream
+        // by [ModuleSource.unplayable].
+        if (atmosWanted()) {
+            val immersiveFirst = eligible.sortedByDescending { it.sourceQuality == ModuleSource.DOLBY }
+            if (immersiveFirst.firstOrNull()?.sourceQuality == ModuleSource.DOLBY) return immersiveFirst
+        }
         if (!wantsLossless) return eligible
         // Stable, so the confidence order [TrackMatcher.ranked] produced
         // survives inside each tier.
         return eligible.sortedByDescending { it.sourceQuality == ModuleSource.LOSSLESS }
     }
+
+    /**
+     * Whether an immersive mix is worth preferring right now — the same two
+     * gates the playback side enforces in [ModuleSource.unplayable] and the
+     * addon path sends its `?atmos=` hint on, asked in the one place that
+     * chooses between rows.
+     */
+    private fun atmosWanted(): Boolean =
+        DeviceCodecs.playsDolbyAtmos && AppSettings.dolbyAtmos.value
 
     private suspend fun streamBest(
         source: MusicSource,
@@ -974,8 +1080,18 @@ object SourceResolver {
      */
     internal fun isBetter(candidate: StreamFormat, current: StreamFormat?): Boolean {
         if (current == null) return true
-        if (candidate.isLossless != current.isLossless) return candidate.isLossless == true
+        // Immersive first, and ahead of lossless rather than behind it. This
+        // used to sit *after* the lossless test, which made it unreachable in
+        // the only comparison it exists for: an Atmos stream is E-AC-3 and so
+        // answers `isLossless == false`, so a FLAC won on the line above and
+        // the Atmos line below never ran. A track offered as both then played
+        // as the FLAC no matter what the Atmos setting said — and worse, a
+        // mid-playback upgrade would cut the FLAC in over an Atmos stream
+        // already playing. Anything immersive that reaches here has already
+        // cleared [ModuleSource.unplayable], so it is a mix this device and
+        // this listener both want.
         if (candidate.isDolbyAtmos != current.isDolbyAtmos) return candidate.isDolbyAtmos
+        if (candidate.isLossless != current.isLossless) return candidate.isLossless == true
         return (candidate.kbps ?: 0) > (current.kbps ?: 0)
     }
 

@@ -10,13 +10,26 @@ import coil3.disk.DiskCache
 import coil3.disk.directory
 import coil3.memory.MemoryCache
 import coil3.request.crossfade
+import coil3.svg.SvgDecoder
+import coil3.network.okhttp.OkHttpNetworkFetcherFactory
+import okhttp3.OkHttpClient
 import com.music.bitchord.auth.AuthStore
+import com.music.bitchord.data.DebugLog
+import com.music.bitchord.data.lyrics.LyricsTranslation
+import androidx.appcompat.app.AppCompatDelegate
+import com.music.bitchord.ui.player.AndroidPlayerHost
+import com.music.bitchord.ui.player.PlayerPlatform
 import com.music.bitchord.data.canvas.CanvasCache
+import com.music.bitchord.data.smb.SmbCoverFetcher
+import com.music.bitchord.data.webdav.WebDavCoilAuth
 import com.music.bitchord.data.canvas.SpotifyToken
+import com.music.bitchord.data.spotify.SpotifyLibrary
 import com.music.bitchord.playback.AudioCache
 import com.music.bitchord.playback.LastPlayed
+import com.music.bitchord.playback.BoundedContextPersistence
 import com.music.bitchord.playback.OriginalVersion
 import com.music.bitchord.data.innertube.Innertube
+import com.music.bitchord.data.innertube.AndroidStreamHooks
 import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.scrobbling.LastFM
 import com.music.bitchord.data.settings.AppSettings
@@ -28,15 +41,59 @@ import com.music.bitchord.download.Downloads
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlin.concurrent.thread
 
 class BitChordApplication : Application(), SingletonImageLoader.Factory {
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
+        // The player is drawn by the shared UI module; this is what it reads
+        // underneath — settings, the Canvas decoder, outputs, the party.
+        AndroidStreamHooks.installEarly()
+        PlayerPlatform.install(AndroidPlayerHost(this))
+        com.music.bitchord.ui.AppUi.install(com.music.bitchord.ui.AndroidAppUiHost)
+        // The shared data layer (lyrics, the YouTube Music client) logs to
+        // logcat on debug builds only, as the app's own DebugLog always has.
+        if (BuildConfig.DEBUG) {
+            DebugLog.sink = DebugLog.Sink { level, tag, message, error ->
+                when (level) {
+                    'D' -> android.util.Log.d(tag, message, error)
+                    'I' -> android.util.Log.i(tag, message, error)
+                    'W' -> android.util.Log.w(tag, message, error)
+                    else -> android.util.Log.e(tag, message, error)
+                }
+            }
+        }
+        // The Spotify library and import live in the shared module; the tokens are the WebView's.
+        SpotifyLibrary.auth = SpotifyLibrary.Auth {
+            SpotifyToken.accessToken()?.let { SpotifyLibrary.Tokens(it, SpotifyToken.clientToken()) }
+        }
+        // The per-app language picker, which YouTube Music's `hl` follows.
+        // Full tag (zh-Hant / zh-Hans preserved); Innertube maps to hl/gl.
+        Innertube.appLanguage = { AppCompatDelegate.getApplicationLocales().get(0)?.toLanguageTag() }
+        migrateScriptOnlyAppLocale()
+        LyricsTranslation.cacheDir = cacheDir
         // PlaybackService shares this process, so seeding the cookie here means
         // stream resolution is authenticated from the first play onwards.
         authStore = AuthStore(this)
+        // Opened off the main thread, alongside everything below: none of these
+        // reads a setting or the session, and between them they are the slowest
+        // opens at startup — SourceRegistry's encrypted store most of all.
+        // Started only once [AuthStore] exists, because both encrypted stores
+        // share one keystore master key and a first launch must not have two
+        // threads racing to create it. Joined before onCreate returns, so
+        // nothing that runs after startup can see any of them half open.
+        val backgroundInit = thread(name = "startup-init") {
+            SourceRegistry.init(this)
+            AndroidStreamHooks.initInnerTubeX(this)
+            // Its own directory: canvas clips are looping video, not audio, and
+            // belong in a cache AudioCache's own limit and eviction policy were
+            // never sized for. See CanvasCache's doc for why this one exists at
+            // all — it is the fix for canvas clips re-fetching the same few
+            // seconds of video from the network on every loop.
+            CanvasCache.init(this)
+        }
         // Migration-safe: an old single cookie becomes the first encrypted
         // session, while newer installs restore the profile the listener chose.
         val restoredSession = authStore.activeSession
@@ -58,15 +115,18 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
                 ?.let { Innertube.selectChannel(it.pageId, it.dataSyncId, it.authUser) }
             CoroutineScope(Dispatchers.IO).launch { Innertube.ensureSessionScope() }
         }
-        AppSettings.init(this)
+        AppSettings.init(this, authStore)
+        // Before anything resolves a track: an addon with `checkValidLossless`
+        // is gated on this, and the gate reads "no" until it has looked.
+        com.music.bitchord.playback.audio.LosslessOutput.init(this)
         // Restores a party this device is still a member of, so a process death
         // mid-session is something the rest of the party never sees. The socket
         // and the clock offset are not restored — both are re-established on
         // the next connect, which is the only way to be sure they are current.
         ListenTogether.init(this)
-        SourceRegistry.init(this)
         SearchHistory.init(this)
         LastPlayed.init(this)
+        BoundedContextPersistence.init(this)
         com.music.bitchord.playback.PartyPersonalQueueStash.init(this)
         // Which tracks the listener has reverted to YouTube's own upload. Read
         // by [Song.toMediaItem], so it has to be open before the restart
@@ -84,24 +144,22 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
         // One cache directory can only be opened once per process, and
         // PlaybackService shares this one — so it's opened here, not there.
         AudioCache.init(this)
-        // Same reasoning, its own directory: canvas clips are looping video,
-        // not audio, and belong in a cache AudioCache's own limit and eviction
-        // policy were never sized for. See CanvasCache's doc for why this one
-        // exists at all — it is the fix for canvas clips re-fetching the same
-        // few seconds of video from the network on every loop.
-        CanvasCache.init(this)
         // The offscreen WebView that mints a Spotify access token from the
         // listener's own session cookie needs a Context, and nothing in the
         // suspend call chain that reaches it (a track's canvas lookup) has
         // one to hand — see SpotifyToken's doc for why.
         SpotifyToken.init(this)
         // A sideloaded update is just a new APK over the old one, so app data —
-        // including whatever the old build left in these caches — survives it
-        // untouched. Wipe both on the first launch of a higher versionCode so a
-        // format or key change between builds can't serve stale or mismatched
-        // bytes from a cache the new code didn't write.
+        // including whatever the old build left in the image cache — survives
+        // it untouched. Wipe that on the first launch of a higher versionCode so
+        // a format change between builds can't serve stale bytes.
+        //
+        // The song cache is deliberately *not* wiped here any more. It is the
+        // Cached songs folder and what plays offline, and clearing it on every
+        // update is what made the whole folder disappear overnight whenever a
+        // new build was installed. A build that really does change its keys or
+        // its bytes says so through AudioCache's own cache format instead.
         if (AppSettings.consumeVersionUpdate(BuildConfig.VERSION_CODE)) {
-            AudioCache.clear()
             SingletonImageLoader.get(this).let { loader ->
                 loader.memoryCache?.clear()
                 loader.diskCache?.clear()
@@ -109,6 +167,32 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
         }
         // Initialize LastFM with saved settings if available
         initLastfm()
+        // The public "apps open right now" count; see Presence.
+        com.music.bitchord.data.presence.AndroidPresence.install(this)
+        backgroundInit.join()
+    }
+
+    /**
+     * Coil's own transport, separate from [Http][com.music.bitchord.data.Http]'s
+     * playback-tuned client.
+     *
+     * Wikimedia (which serves signature art) answers generic clients with
+     * HTTP 403 under its User-Agent policy, so every image request carries an
+     * identifying agent. Anything else falls through to Coil's own fetchers.
+     */
+    private val coilHttpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                chain.proceed(
+                    chain.request().newBuilder()
+                        .header(
+                            "User-Agent",
+                            "BitChord/${BuildConfig.VERSION_NAME} (Android; +https://github.com/kushagrasinghx/BitChord)",
+                        )
+                        .build(),
+                )
+            }
+            .build()
     }
 
     /**
@@ -122,6 +206,21 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
      */
     override fun newImageLoader(context: PlatformContext): ImageLoader =
         ImageLoader.Builder(context)
+            // Covers on the WebDAV server need the credential or every one
+            // of them 401s — which reads as "this track has no artwork".
+            // Coil's own transport never sees Http.client's interceptor, so
+            // the header is attached per request instead. See WebDavCoilAuth.
+            .components {
+                add(WebDavCoilAuth())
+                // Covers filed on the SMB share; anything else falls
+                // through to Coil's own fetchers. See SmbCoverFetcher.
+                add(SmbCoverFetcher.Factory())
+                // Artist signatures are usually SVG, which Coil can't
+                // decode without this. See ArtistSignatureRepository.
+                add(SvgDecoder.Factory())
+                // Wikimedia 403s Coil's default client; see [coilHttpClient].
+                add(OkHttpNetworkFetcherFactory(callFactory = { coilHttpClient }))
+            }
             .memoryCache {
                 MemoryCache.Builder()
                     .maxSizePercent(context, 0.20)
@@ -156,5 +255,27 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
     companion object {
         lateinit var authStore: AuthStore
             private set
+
+        /**
+         * One-time move from region-less script tags to regional ones.
+         *
+         * Early builds of the Simplified/Traditional picker stored `zh-Hant` /
+         * `zh-Hans`. Android Views resolve those (script qualifiers), but the
+         * shared Compose resources only match language + region — so Settings
+         * read Traditional while the player read Simplified. Regional tags
+         * match on both systems. Bare `zh` is left alone: it historically
+         * meant Simplified.
+         */
+        private fun migrateScriptOnlyAppLocale() {
+            val current = AppCompatDelegate.getApplicationLocales().get(0)?.toLanguageTag()
+            val replacement = when (current) {
+                "zh-Hant" -> "zh-TW"
+                "zh-Hans" -> "zh-CN"
+                else -> return
+            }
+            AppCompatDelegate.setApplicationLocales(
+                androidx.core.os.LocaleListCompat.forLanguageTags(replacement),
+            )
+        }
     }
 }

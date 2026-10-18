@@ -31,13 +31,16 @@ import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DeleteSweep
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material.icons.rounded.Downloading
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.HighQuality
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.PlaylistRemove
@@ -45,6 +48,7 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.ThumbDown
 import androidx.compose.material.icons.rounded.ThumbDownOffAlt
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -52,6 +56,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,6 +64,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -76,6 +82,7 @@ import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.ROW_ART_PX
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.artworkAt
+import com.music.bitchord.data.webdav.WebDavUploads
 import com.music.bitchord.download.DownloadState
 import com.music.bitchord.download.Downloads
 import com.music.bitchord.playback.SleepTimer
@@ -124,6 +131,13 @@ fun SongActionsSheet(
     onAddToQueue: () -> Unit,
     onStartRadio: () -> Unit,
     onDownload: () -> Unit,
+    /**
+     * Copies this track to the WebDAV server. Null hides the row — the caller
+     * passes one only for a readable device file while a server is
+     * configured. Uploading while another upload of the same track runs just
+     * re-runs it; the conflict dialog keeps that idempotent.
+     */
+    onUploadToWebDav: (() -> Unit)? = null,
     onToggleLike: () -> Unit,
     onToggleDislike: () -> Unit,
     onAddToPlaylist: () -> Unit,
@@ -131,6 +145,11 @@ fun SongActionsSheet(
     onOpenArtist: (String) -> Unit,
     modifier: Modifier = Modifier,
     onRemoveFromPlaylist: (() -> Unit)? = null,
+    /**
+     * Takes this track out of the song cache. Null hides the row — the caller
+     * passes one only while the cache actually holds some of it.
+     */
+    onRemoveFromCache: (() -> Unit)? = null,
     showSleepTimer: Boolean = false,
     /**
      * Sends the playing track back to YouTube's own upload, and keeps it there.
@@ -147,6 +166,17 @@ fun SongActionsSheet(
      * See [com.music.bitchord.playback.OriginalVersion].
      */
     onUpgradeQuality: (() -> Unit)? = null,
+    /** Keeps the upgrade row visible but untappable while its lookup is running. */
+    upgradeQualityInProgress: Boolean = false,
+    /**
+     * Switches the playing track between its video and audio-only cuts. Null
+     * hides the row — offered only from the player, and only once an
+     * alternate cut is known to exist. See
+     * [com.music.bitchord.playback.PlaybackService.smoothSwapCurrentTrackVersion].
+     */
+    onToggleAudioVersion: (() -> Unit)? = null,
+    /** Which cut is playing now, so the row can offer the other one. */
+    isAudioVersion: Boolean = false,
     onShare: (() -> Unit)? = null,
     /**
      * Copies what the app logged while starting this track. Null everywhere
@@ -163,28 +193,40 @@ fun SongActionsSheet(
      * as before — present when the id is there, absent when it never was.
      */
     resolvingLinks: Boolean = false,
+    /**
+     * Where the rows are drawn. [SongActionsPresentation.Sheet] is the tinted
+     * bottom sheet with its own track header; [SongActionsPresentation.Menu]
+     * is only the rows, compact and in the theme's own colours, for the
+     * popup a held row lifts into — see [HeldContextMenu], which draws the
+     * held row itself above them.
+     */
+    presentation: SongActionsPresentation = SongActionsPresentation.Sheet,
 ) {
+    var showingSongInfo by remember(song.videoId) { mutableStateOf(false) }
     var pickingSleepTimer by remember { mutableStateOf(false) }
+    val menu = presentation == SongActionsPresentation.Menu
+    // The held-row menu has no pages to swap, so there Song Info opens as a dialog.
+    if (menu && showingSongInfo) SongInfoDialog(song) { showingSongInfo = false }
     // Read from the thumbnail the row that opened this sheet was already
     // showing, not a larger copy of it: the tint is a blur and a handful of
     // swatches, neither of which a bigger image improves, and going back for
     // one is what had the sheet opening grey and colouring in afterwards.
-    val palette = rememberArtworkPalette(song.thumbnailUrl, artPx = ROW_ART_PX)
+    //
+    // The popup stays neutral instead: it floats over a blurred page rather
+    // than sitting on the sleeve's own ground, and an accent pitched against
+    // that tint is not guaranteed to read against the theme's surface.
+    val palette = if (menu) {
+        neutralMenuPalette()
+    } else {
+        rememberArtworkPalette(song.thumbnailUrl, artPx = ROW_ART_PX)
+    }
     val liked = likeStatus == LikeStatus.LIKE
     val disliked = likeStatus == LikeStatus.DISLIKE
     // A local file or a finished download has no YouTube identity behind it to
     // rate, save, queue into a playlist, fetch again, or share a link for.
     val isOffline = song.localUri != null
 
-    TintedSheet(palette = palette, imageUrl = song.thumbnailUrl, modifier = modifier) {
-        if (pickingSleepTimer) {
-            SleepTimerPicker(palette = palette, onBack = { pickingSleepTimer = false })
-            return@TintedSheet
-        }
-
-        SheetTrackHeader(song, subtitleColor = palette.onBackgroundVariant)
-        HorizontalDivider(thickness = 0.5.dp, color = palette.divider)
-
+    val rows: @Composable ColumnScope.() -> Unit = {
         // Leads the list whenever it's available: which recording is playing
         // is the one question that has to be answered before any of the rows
         // below mean anything — there is no point rating, queueing or
@@ -194,28 +236,40 @@ fun SongActionsSheet(
         // a substituted copy, the other for a track held on YouTube's own —
         // and between them they are the whole of the choice, which is why they
         // sit in the same place under the same divider.
-        (onRollbackToOriginal ?: onUpgradeQuality)?.let {
-            ActionRow(
-                icon = if (onRollbackToOriginal != null) {
-                    Icons.AutoMirrored.Rounded.Undo
-                } else {
-                    Icons.Rounded.HighQuality
-                },
-                label = stringResource(
-                    if (onRollbackToOriginal != null) {
-                        R.string.revert_to_original
+        if (onRollbackToOriginal != null || onUpgradeQuality != null || onToggleAudioVersion != null) {
+            (onRollbackToOriginal ?: onUpgradeQuality)?.let {
+                ActionRow(
+                    icon = if (onRollbackToOriginal != null) {
+                        Icons.AutoMirrored.Rounded.Undo
                     } else {
-                        R.string.upgrade_quality
+                        Icons.Rounded.HighQuality
                     },
-                ),
-                accent = palette.accent,
-                onClick = it,
-            )
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 6.dp),
-                thickness = 0.5.dp,
-                color = palette.divider,
-            )
+                    label = stringResource(
+                        if (onRollbackToOriginal != null) {
+                            R.string.revert_to_original
+                        } else {
+                            R.string.upgrade_quality
+                        },
+                    ),
+                    accent = palette.accent,
+                    enabled = onRollbackToOriginal != null || !upgradeQualityInProgress,
+                    onClick = it,
+                )
+            }
+            // Which recording, not which quality — a different question from
+            // the row above, so it sits right under it rather than merged
+            // into it, but still ahead of the divider both share.
+            onToggleAudioVersion?.let {
+                ActionRow(
+                    icon = if (isAudioVersion) Icons.Rounded.Videocam else BitChordIcons.MusicNote,
+                    label = stringResource(
+                        if (isAudioVersion) R.string.convert_to_video else R.string.convert_to_audio,
+                    ),
+                    accent = palette.accent,
+                    onClick = it,
+                )
+            }
+            GroupSeparator(palette)
         }
 
         if (signedIn && !isOffline) {
@@ -247,14 +301,19 @@ fun SongActionsSheet(
                     onClick = it,
                 )
             }
-            HorizontalDivider(
-                modifier = Modifier.padding(vertical = 6.dp),
-                thickness = 0.5.dp,
-                color = palette.divider,
-            )
+            GroupSeparator(palette)
         }
 
         DownloadRow(song, palette, isOffline, onDownload)
+        onRemoveFromCache?.let {
+            ActionRow(
+                icon = Icons.Rounded.DeleteSweep,
+                label = stringResource(R.string.remove_from_cache),
+                accent = palette.accent,
+                onClick = it,
+            )
+        }
+        WebDavUploadRow(song, palette, isOffline, onUploadToWebDav)
         ActionRow(
             icon = Icons.Rounded.Radio,
             label = stringResource(R.string.start_radio),
@@ -293,6 +352,9 @@ fun SongActionsSheet(
                 accent = palette.accent,
             ) { onOpenArtist(id) }
         }
+        ActionRow(Icons.Rounded.Info, stringResource(R.string.song_info), accent = palette.accent) {
+            showingSongInfo = true
+        }
         if (showSleepTimer) {
             ActionRow(
                 icon = Icons.Rounded.Bedtime,
@@ -324,7 +386,81 @@ fun SongActionsSheet(
         onCopyLog?.let {
             ActionRow(Icons.Rounded.BugReport, stringResource(R.string.copy_log), accent = palette.accent, onClick = it)
         }
+    }
+
+    if (menu) {
+        CompositionLocalProvider(LocalActionRowStyle provides ActionRowStyle.Menu) {
+            Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState()), content = rows)
+        }
+        return
+    }
+
+    TintedSheet(palette = palette, imageUrl = song.thumbnailUrl, modifier = modifier) {
+        if (pickingSleepTimer) {
+            SleepTimerPicker(palette = palette, onBack = { pickingSleepTimer = false })
+            return@TintedSheet
+        }
+        if (showingSongInfo) {
+            SongInfoPage(song = song, palette = palette, onBack = { showingSongInfo = false })
+            return@TintedSheet
+        }
+
+        SheetTrackHeader(song, subtitleColor = palette.onBackgroundVariant)
+        HorizontalDivider(thickness = 0.5.dp, color = palette.divider)
+        rows()
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** How [SongActionsSheet] is being presented. */
+enum class SongActionsPresentation { Sheet, Menu }
+
+/** Row density and layout, set by whichever surface the rows are drawn on. */
+internal enum class ActionRowStyle { Sheet, Menu }
+
+internal val LocalActionRowStyle = staticCompositionLocalOf { ActionRowStyle.Sheet }
+
+/**
+ * The popup's colours: the theme's own, so the menu reads the same in light and
+ * dark whatever the artwork is. Shaped as an [ArtworkPalette] so every row below
+ * takes it exactly as it takes a sleeve's.
+ */
+@Composable
+private fun neutralMenuPalette(): ArtworkPalette {
+    val scheme = MaterialTheme.colorScheme
+    return remember(scheme) {
+        ArtworkPalette(
+            background = scheme.surfaceContainerHigh,
+            wash = scheme.surfaceContainerHigh,
+            elevated = scheme.surfaceContainerHighest,
+            accent = scheme.primary,
+            onBackground = scheme.onSurface,
+            onBackgroundVariant = scheme.onSurfaceVariant,
+            divider = scheme.onSurface.copy(alpha = 0.08f),
+        )
+    }
+}
+
+/**
+ * The break between groups of rows: a hairline on the sheet, and on the popup
+ * the thicker band iOS-style context menus use — a hairline between rows that
+ * are only 44dp apart reads as a row border rather than as a new group.
+ */
+@Composable
+private fun GroupSeparator(palette: ArtworkPalette) {
+    if (LocalActionRowStyle.current == ActionRowStyle.Menu) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(6.dp)
+                .background(palette.divider),
+        )
+    } else {
+        HorizontalDivider(
+            modifier = Modifier.padding(vertical = 6.dp),
+            thickness = 0.5.dp,
+            color = palette.divider,
+        )
     }
 }
 
@@ -500,6 +636,52 @@ private fun DownloadRow(song: Song, palette: ArtworkPalette, isOffline: Boolean,
     }
 }
 
+/**
+ * Sends a device file to the WebDAV server. Sits beside the download row
+ * because it is the same idea in the other direction — and like that row it
+ * reads its state where it is drawn rather than threading it through the
+ * sheet's signature.
+ *
+ * Shown only for readable local files. A track already on the server, or a
+ * stream with no bytes on this device, has nothing to send up.
+ */
+@Composable
+private fun WebDavUploadRow(
+    song: Song,
+    palette: ArtworkPalette,
+    isOffline: Boolean,
+    onUpload: (() -> Unit)?,
+) {
+    onUpload ?: return
+    if (!isOffline || !WebDavUploads.isUploadable(song)) return
+    val active by WebDavUploads.active.collectAsStateWithLifecycle()
+    when (val state = active[song.videoId]) {
+        is WebDavUploads.TrackState.Running -> ActionRow(
+            icon = Icons.Rounded.FileUpload,
+            label = stringResource(R.string.upload_to_webdav),
+            value = "${(state.fraction * 100).toInt()}%",
+            tint = palette.accent,
+            accent = palette.accent,
+            // In flight already; there is no cancel, so the row only reports.
+            onClick = {},
+        )
+        is WebDavUploads.TrackState.Failed -> ActionRow(
+            icon = Icons.Rounded.FileUpload,
+            label = state.reason,
+            value = stringResource(R.string.try_again),
+            tint = MaterialTheme.colorScheme.error,
+            accent = MaterialTheme.colorScheme.error,
+            onClick = onUpload,
+        )
+        else -> ActionRow(
+            icon = Icons.Rounded.FileUpload,
+            label = stringResource(R.string.upload_to_webdav),
+            accent = palette.accent,
+            onClick = onUpload,
+        )
+    }
+}
+
 /** End of track or a duration, plus a way out once one is running. */
 @Composable
 private fun SleepTimerPicker(palette: ArtworkPalette, onBack: () -> Unit) {
@@ -647,26 +829,47 @@ internal fun ActionRow(
     value: String? = null,
     tint: Color? = null,
     accent: Color = MaterialTheme.colorScheme.primary,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 22.dp, vertical = 15.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    val menu = LocalActionRowStyle.current == ActionRowStyle.Menu
+    // The popup sits on a surface rather than the page background, so its
+    // text follows the surface's colour — the two differ in light mode.
+    val foreground = if (menu) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onBackground
+    val alpha = if (enabled) 1f else 0.4f
+    val iconView: @Composable () -> Unit = {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = tint ?: MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.size(22.dp),
+            tint = (tint ?: foreground).copy(alpha = alpha),
+            modifier = Modifier.size(if (menu) 20.dp else 22.dp),
         )
-        Spacer(Modifier.width(18.dp))
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onClick)
+            .then(
+                if (menu) {
+                    Modifier.heightIn(min = 46.dp).padding(horizontal = 18.dp, vertical = 11.dp)
+                } else {
+                    Modifier.padding(horizontal = 22.dp, vertical = 15.dp)
+                },
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // A context menu reads label-first with the glyph at the far edge;
+        // the sheet keeps the glyph leading, like every other list in the app.
+        if (!menu) {
+            iconView()
+            Spacer(Modifier.width(18.dp))
+        }
         Text(
             text = label,
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onBackground,
+            color = foreground.copy(alpha = alpha),
+            maxLines = if (menu) 2 else Int.MAX_VALUE,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f),
         )
         if (value != null) {
@@ -674,9 +877,13 @@ internal fun ActionRow(
             Text(
                 text = value,
                 style = MaterialTheme.typography.bodyLarge,
-                color = accent,
+                color = accent.copy(alpha = alpha),
                 maxLines = 1,
             )
+        }
+        if (menu) {
+            Spacer(Modifier.width(14.dp))
+            iconView()
         }
     }
 }
@@ -689,10 +896,17 @@ internal fun ActionRow(
  */
 @Composable
 private fun LoadingActionRow(icon: ImageVector, label: String, palette: ArtworkPalette) {
+    val menu = LocalActionRowStyle.current == ActionRowStyle.Menu
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 22.dp, vertical = 15.dp),
+            .then(
+                if (menu) {
+                    Modifier.heightIn(min = 46.dp).padding(horizontal = 18.dp, vertical = 11.dp)
+                } else {
+                    Modifier.padding(horizontal = 22.dp, vertical = 15.dp)
+                },
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(

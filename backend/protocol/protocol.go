@@ -42,7 +42,27 @@ const (
 	ActionKick        = "kick"
 	ActionSetMaxMembers = "setMaxMembers"
 	ActionSetAutoplay = "setAutoplay"
+	ActionSetHostOnlyControl = "setHostOnlyControl"
 )
+
+// ControlActions are the actions a party's HostOnlyControl setting restricts to
+// the host. Membership actions are not here: kick and setMaxMembers are already
+// host-only unconditionally, and setHostOnlyControl has to stay reachable by
+// the host to be turned back off.
+var ControlActions = map[string]bool{
+	ActionPlay:        true,
+	ActionPause:       true,
+	ActionSeek:        true,
+	ActionSetTrack:    true,
+	ActionSetQueue:    true,
+	ActionQueueAdd:    true,
+	ActionQueueRemove: true,
+	ActionQueueClear:  true,
+	ActionQueueMove:   true,
+	ActionNext:        true,
+	ActionPrevious:    true,
+	ActionSetAutoplay: true,
+}
 
 // JoinRequest is the identity submitted when creating or joining a party.
 type JoinRequest struct {
@@ -51,6 +71,7 @@ type JoinRequest struct {
 	DisplayName string  `json:"displayName"`
 	AvatarUrl   *string `json:"avatarUrl,omitempty"`
 	MaxMembers  *int    `json:"maxMembers,omitempty"`
+	AutoplayEnabled *bool `json:"autoplayEnabled,omitempty"`
 }
 
 // Validate ensures all required identity fields are present and safe.

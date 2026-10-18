@@ -136,6 +136,8 @@ object LastPlayed {
         val artist: String,
         val artwork: String? = null,
         val auto: Boolean = false,
+        val tier: String? = null,
+        val entryId: String? = null,
         val local: String? = null,
         val path: String? = null,
         val lyricsUri: String? = null,
@@ -150,28 +152,37 @@ object LastPlayed {
         val sourceType: String? = null,
         val sourceId: String? = null,
     ) {
-        fun toSong() = Song(
-            videoId = id,
-            title = title,
-            artist = artist,
-            thumbnailUrl = artwork,
-            durationText = duration,
-            albumName = album,
-            isExplicit = explicit,
-            isVideo = video,
-            fromAutoplay = auto,
-            radioName = radio,
-            playbackSource = source,
-            playbackSourceType = sourceType?.let {
-                runCatching { com.music.bitchord.data.model.PlaybackSourceType.valueOf(it) }.getOrNull()
-            },
-            playbackSourceId = sourceId,
-            localUri = local,
-            localPath = path,
-            localLyricsUri = lyricsUri,
-            localLyricsSource = lyricsSource,
-            localLyricsFormat = lyricsFormat,
-        )
+        fun toSong(): Song {
+            val resolvedTier = when (tier) {
+                "USER_QUEUE" -> com.music.bitchord.data.model.QueueTier.USER_QUEUE
+                "CONTEXT" -> com.music.bitchord.data.model.QueueTier.CONTEXT
+                "AUTOPLAY" -> com.music.bitchord.data.model.QueueTier.AUTOPLAY
+                else -> if (auto) com.music.bitchord.data.model.QueueTier.AUTOPLAY else com.music.bitchord.data.model.QueueTier.CONTEXT
+            }
+            return Song(
+                videoId = id,
+                title = title,
+                artist = artist,
+                thumbnailUrl = artwork,
+                durationText = duration,
+                albumName = album,
+                isExplicit = explicit,
+                isVideo = video,
+                queueTier = resolvedTier,
+                queueEntryId = entryId,
+                radioName = radio,
+                playbackSource = source,
+                playbackSourceType = sourceType?.let {
+                    runCatching { com.music.bitchord.data.model.PlaybackSourceType.valueOf(it) }.getOrNull()
+                },
+                playbackSourceId = sourceId,
+                localUri = local,
+                localPath = path,
+                localLyricsUri = lyricsUri,
+                localLyricsSource = lyricsSource,
+                localLyricsFormat = lyricsFormat,
+            )
+        }
 
         companion object {
             fun from(song: Song) = StoredTrack(
@@ -180,6 +191,8 @@ object LastPlayed {
                 artist = song.artist,
                 artwork = song.thumbnailUrl,
                 auto = song.fromAutoplay,
+                tier = song.queueTier.name,
+                entryId = song.queueEntryId,
                 local = song.localUri,
                 path = song.localPath,
                 lyricsUri = song.localLyricsUri,

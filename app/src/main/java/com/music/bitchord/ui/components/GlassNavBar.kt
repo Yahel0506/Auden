@@ -25,7 +25,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,7 +33,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -61,6 +60,7 @@ import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBarDefaults
 import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBarScrollConnection
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
+import com.music.bitchord.ui.player.PlayerDock
 
 /**
  * The liquid glass navigation bar: the iOS 26 shape where the now playing
@@ -94,6 +94,13 @@ fun GlassNavBar(
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onExpand: () -> Unit,
+    /** @see com.music.bitchord.data.listentogether.ListenTogether.State.controlsLocked */
+    controlsLocked: Boolean = false,
+    onBlockedControl: () -> Unit = {},
+    /** Where the player's artwork lands when it closes into this bar. */
+    dock: PlayerDock? = null,
+    /** Dragging the bar's player up into the full player. */
+    pull: MiniPlayerPull? = null,
     modifier: Modifier = Modifier,
 ) {
     // Held for the same reason [tabs] is. The glass factory below closes over
@@ -119,14 +126,15 @@ fun GlassNavBar(
 
     // A factory, not a value — see the note in FloatingTabBar's header. Each of
     // the three surfaces gets its own glass modifier and so its own shape cache.
-    val glassSurface: @Composable () -> Modifier = { Modifier.liquidGlass(shape = pillShape) }
+    val barTint = glassBarTint()
+    val glassSurface: @Composable () -> Modifier = { Modifier.liquidGlass(shape = pillShape, surfaceTint = barTint) }
 
     FloatingTabBar(
         selectedTabKey = selectedIndex,
         scrollConnection = scrollConnection,
         modifier = modifier
-            .navigationBarsPadding()
-            .padding(horizontal = PAGE_GUTTER)
+            .windowInsetsPadding(floatingBarInsets)
+            .padding(horizontal = BAR_GUTTER)
             .padding(bottom = 2.dp)
             .fillMaxWidth(),
         tabBarContentModifier = glassSurface,
@@ -142,6 +150,10 @@ fun GlassNavBar(
                     onNext = onNext,
                     onPrevious = onPrevious,
                     onExpand = onExpand,
+                    controlsLocked = controlsLocked,
+                    onBlockedControl = onBlockedControl,
+                    dock = dock,
+                    pull = pull,
                     modifier = accessoryModifier.then(glassSurface()),
                 )
             }
@@ -158,6 +170,10 @@ fun GlassNavBar(
                     onNext = onNext,
                     onPrevious = onPrevious,
                     onExpand = onExpand,
+                    controlsLocked = controlsLocked,
+                    onBlockedControl = onBlockedControl,
+                    dock = dock,
+                    pull = pull,
                     modifier = accessoryModifier.fillMaxWidth().then(glassSurface()),
                 )
             }
@@ -167,7 +183,7 @@ fun GlassNavBar(
         colors = FloatingTabBarDefaults.colors(
             backgroundColor = Color.Transparent,
             accessoryBackgroundColor = Color.Transparent,
-            indicatorColor = glassIndicatorColor().copy(alpha = 0.5f),
+            indicatorColor = glassIndicatorColor(),
         ),
         // Flat, because the glass is not. Every surface here already draws its
         // own [Shadow.Default] as part of the backdrop pass, and the library's
@@ -270,6 +286,10 @@ private fun GlassNowPlaying(
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onExpand: () -> Unit,
+    controlsLocked: Boolean,
+    onBlockedControl: () -> Unit,
+    dock: PlayerDock?,
+    pull: MiniPlayerPull?,
     modifier: Modifier = Modifier,
 ) {
     val haptics = rememberHaptics()
@@ -282,6 +302,12 @@ private fun GlassNowPlaying(
     )
 
     val artSize = if (isInline) 32.dp else 40.dp
+    // Collapsed, the cover is a circle, as in the iOS 26 bar: it sits at the
+    // round end of a pill and echoes it. Expanded it keeps its rounded square.
+    // Half the size rather than a percent so the player, flying its artwork
+    // into this cover as it closes, can round off into the same radius it
+    // lands on — see [playerDockArt].
+    val artCorner = if (isInline) artSize / 2 else 8.dp
     val glyphSlot = if (isInline) 32.dp else 40.dp
     val glyphSize = if (isInline) 24.dp else 32.dp
 
@@ -294,43 +320,54 @@ private fun GlassNowPlaying(
         // couple of dp above the pill's centre line. Expanded the Box wraps its
         // content, so centring is a no-op there.
         contentAlignment = Alignment.Center,
+        // The gestures and the tap belong to the whole glass surface, not the
+        // row centred in it. Inline, that row is shorter than the pill it sits
+        // in, and a pull started in the strip above or below it went nowhere —
+        // on a bar only 45dp tall to begin with.
         modifier = Modifier
+            // Outside the press scale, which it lifts along with everything else.
+            .miniPlayerGestures(
+                pull = pull,
+                onNext = {
+                    haptics.play(Haptic.SkipNext)
+                    onNext()
+                },
+                onPrevious = {
+                    haptics.play(Haptic.SkipPrevious)
+                    onPrevious()
+                },
+                locked = controlsLocked,
+                onBlocked = onBlockedControl,
+            )
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
             }
-            .then(modifier),
+            .then(modifier)
+            .clickable(
+                interactionSource = pressSource,
+                indication = null,
+                onClick = onExpand,
+            ),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(
-                    interactionSource = pressSource,
-                    indication = null,
-                    onClick = onExpand,
-                )
-                .miniPlayerTrackSwipe(
-                    onNext = {
-                        haptics.play(Haptic.SkipNext)
-                        onNext()
-                    },
-                    onPrevious = {
-                        haptics.play(Haptic.SkipPrevious)
-                        onPrevious()
-                    },
-                )
                 .padding(
                     horizontal = if (isInline) 8.dp else 12.dp,
                     vertical = if (isInline) 4.dp else 8.dp,
                 ),
         ) {
             AsyncImage(
-                model = song.artworkAt(ROW_ART_PX),
+                model = rememberRemoteArtworkUrl(song)?.artworkAt(ROW_ART_PX),
                 contentDescription = null,
                 modifier = Modifier
                     .size(artSize)
-                    .clip(RoundedCornerShape(if (isInline) 6.dp else 8.dp))
+                    // Whichever of the two densities is on screen is the one
+                    // the player flies to: only one is composed at rest.
+                    .playerDockArt(dock, artCorner)
+                    .clip(RoundedCornerShape(artCorner))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             )
             Spacer(Modifier.width(if (isInline) 8.dp else 10.dp))
@@ -406,13 +443,11 @@ private fun GlassNowPlaying(
                         haptics.play(Haptic.SkipNext)
                         onNext()
                     },
+                    enabled = !controlsLocked,
                     modifier = Modifier.size(glyphSlot),
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.SkipNext,
-                        contentDescription = stringResource(R.string.widget_next),
-                        tint = contentColor,
-                        modifier = Modifier.size(glyphSize),
+                    MiniPlayerNextGlyph(
+                        tint = contentColor.copy(alpha = if (controlsLocked) 0.3f else 1f),
                     )
                 }
             }

@@ -1,6 +1,5 @@
 package com.music.bitchord.ui.screens
 
-import android.media.AudioFormat
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -236,17 +235,24 @@ fun EqualizerScreen(
                 )
             }
 
-            // Media3 builds its float pipeline out of the format converter alone and
-            // appends the processor chain only on the 16-bit branch, so on this
-            // route there is nothing for the equaliser to run in. Said plainly here
-            // rather than left as a dead control, because the alternative is a
-            // screen that responds to every touch and changes no sound whatsoever.
-            if (outputStatus.actualEncoding == AudioFormat.ENCODING_PCM_FLOAT) {
-                SettingsGroup(footer = stringResource(R.string.equalizer_float_footer)) {
+            // A stream that never gets decoded to linear PCM — a passthrough or
+            // offload bitstream — reaches the output as the bytes it arrived
+            // as, and there is no sample for a filter to touch. Said plainly
+            // here rather than left as a dead control, because the alternative
+            // is a screen that responds to every touch and changes no sound.
+            //
+            // This tested `actualEncoding == ENCODING_PCM_FLOAT` for a long
+            // while, which was true of the old pipeline and has been wrong
+            // since the DSP chain moved upstream into [PrecisionAudioSink].
+            // Float output does not affect the equaliser at all; it only drops
+            // Media3's *own* processors, which is a claim about silence
+            // skipping and belongs on that setting, not this screen.
+            if (!outputStatus.dspAvailable) {
+                SettingsGroup(footer = stringResource(R.string.equalizer_bitstream_footer)) {
                     SettingsRow(
                         icon = Icons.Rounded.Warning,
-                        title = stringResource(R.string.equalizer_float_title),
-                        subtitle = stringResource(R.string.equalizer_float_subtitle),
+                        title = stringResource(R.string.equalizer_bitstream_title),
+                        subtitle = stringResource(R.string.equalizer_bitstream_subtitle),
                     )
                 }
             }
@@ -318,6 +324,7 @@ private fun TonePad(
     // from where it was the first time this screen composed.
     val latestX by rememberUpdatedState(x)
     val latestY by rememberUpdatedState(y)
+    val currentOnChange by rememberUpdatedState(onChange)
 
     // Spring, not tween: the puck has to keep up with a fast drag and still
     // settle rather than arrive and stop dead.
@@ -354,7 +361,7 @@ private fun TonePad(
                             lastX = newX
                             lastY = newY
                             haptics.play(Haptic.Tick)
-                            onChange(newX, newY)
+                            currentOnChange(newX, newY)
                         }
                     }
                     report(down.position)
@@ -580,7 +587,11 @@ private fun BandFader(
     val knobColor = MaterialTheme.colorScheme.background
     val range = EqLayout.MANUAL_RANGE_DB
     // See [TonePad]: the gesture block outlives the composition that made it.
+    // [onChange] too, and that one matters most: the caller's lambda closes
+    // over the whole band list, so a stale copy writes every *other* band
+    // back to whatever it was when this fader first composed.
     val latest by rememberUpdatedState(value)
+    val currentOnChange by rememberUpdatedState(onChange)
 
     Canvas(
         modifier = Modifier
@@ -603,7 +614,7 @@ private fun BandFader(
                             // people are aiming for when they undo a band.
                             haptics.play(Haptic.Tick)
                             last = snapped
-                            onChange(snapped)
+                            currentOnChange(snapped)
                         }
                     }
                     report(down.position)
@@ -711,6 +722,7 @@ private fun BalanceControl(
     val knobColor = MaterialTheme.colorScheme.background
     // See [TonePad]: the gesture block outlives the composition that made it.
     val latest by rememberUpdatedState(balance)
+    val currentOnChange by rememberUpdatedState(onChange)
 
     Column(Modifier.padding(horizontal = ROW_INSET, vertical = 14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -752,7 +764,7 @@ private fun BalanceControl(
                             if (abs(snapped - last) > 0.004f) {
                                 if (snapped == 0f && last != 0f) haptics.play(Haptic.Tick)
                                 last = snapped
-                                onChange(snapped)
+                                currentOnChange(snapped)
                             }
                         }
                         report(down.position)

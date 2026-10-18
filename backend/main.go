@@ -4,10 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
+	"html/template"
 	"io"
 	"log"
 	"net"
 	"net/http"
+	"net/url"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -15,9 +19,11 @@ import (
 	"github.com/gorilla/websocket"
 
 	"github.com/KabirSinghBhatia/BitChord/backend/clock"
+	"github.com/KabirSinghBhatia/BitChord/backend/codes"
 	"github.com/KabirSinghBhatia/BitChord/backend/config"
 	"github.com/KabirSinghBhatia/BitChord/backend/hub"
 	"github.com/KabirSinghBhatia/BitChord/backend/party"
+	"github.com/KabirSinghBhatia/BitChord/backend/presence"
 	"github.com/KabirSinghBhatia/BitChord/backend/protocol"
 )
 
@@ -25,7 +31,15 @@ var (
 	store    = party.NewPartyStore()
 	hubInst  = hub.NewHub()
 	createLimiter = newIPRateLimiter(time.Minute, config.CreateRatePerMinute, config.RateLimitMaxEntries)
+	presenceTracker = presence.NewTracker(
+		time.Duration(config.PresenceIntervalSec+config.PresenceGraceSec)*time.Second,
+		config.PresenceMaxEntries,
+	)
+	presenceLimiter = newIPRateLimiter(time.Minute, config.PresencePingsPerMinute, config.PresenceRateLimitMaxIPs)
 	upgrader = websocket.Upgrader{
+		// Answered only to a browser that offered it with its token (see
+		// parseSocketToken); a native client offers no subprotocol and gets none.
+		Subprotocols: []string{socketProtocol},
 		CheckOrigin: func(r *http.Request) bool {
 			origin := r.Header.Get("Origin")
 			return origin == "" || config.IsAllowedOrigin(origin)
@@ -35,17 +49,27 @@ var (
 
 func main() {
 	go startHeartbeatTicker()
+	go startPresenceSweeper()
 
 	mux := http.NewServeMux()
 
 	// REST endpoints
-	mux.HandleFunc("GET /", handleRoot)
+	mux.HandleFunc("GET /{$}", handleRoot)
 	mux.HandleFunc("GET /healthz", handleHealthz)
 	mux.HandleFunc("GET /api/time", handleTime)
 	mux.HandleFunc("POST /api/parties", handleCreateParty)
 	mux.HandleFunc("POST /api/parties/{code}/join", handleJoinParty)
 	mux.HandleFunc("GET /api/parties/{code}", handleGetParty)
+	mux.HandleFunc("GET /api/parties/{code}/preview", handlePreviewParty)
 	mux.HandleFunc("POST /api/parties/{code}/leave", handleLeaveParty)
+
+	// Open-app counter
+	mux.HandleFunc("POST /api/presence", handlePresence)
+	mux.HandleFunc("GET /api/stats/live", handleLiveStats)
+	mux.HandleFunc("GET /api/stats/live/badge.svg", handleLiveBadge)
+
+	// Web invite endpoint
+	mux.HandleFunc("GET /invite/{code}", handleInviteLanding)
 
 	// WebSocket endpoint
 	mux.HandleFunc("GET /ws/parties/{code}", handleWebSocket)
@@ -94,6 +118,7 @@ type ipRateLimiter struct {
 	limit   int
 	maxKeys int
 	entries map[string]ipRateEntry
+	swept   time.Time
 }
 
 type ipRateEntry struct {
@@ -112,10 +137,15 @@ func (l *ipRateLimiter) Allow(ip string) bool {
 	now := time.Now()
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	for key, entry := range l.entries {
-		if now.Sub(entry.started) >= l.window {
-			delete(l.entries, key)
+	// Expired entries are also reset on lookup below, so a full sweep only needs
+	// to run about once a second, or when the table is full and needs the room.
+	if now.Sub(l.swept) >= time.Second || (l.maxKeys > 0 && len(l.entries) >= l.maxKeys) {
+		for key, entry := range l.entries {
+			if now.Sub(entry.started) >= l.window {
+				delete(l.entries, key)
+			}
 		}
+		l.swept = now
 	}
 	entry := l.entries[ip]
 	if entry.started.IsZero() || now.Sub(entry.started) >= l.window {
@@ -188,12 +218,40 @@ func parseBearerToken(r *http.Request) string {
 	return ""
 }
 
+// Browsers cannot set headers on a WebSocket handshake, so the web player
+// offers its token as a subprotocol instead: "bitchord.v1, bitchord.token.<hex>".
+// It still stays out of the URL, and so out of access logs, which is the reason
+// the header was chosen; the server answers with "bitchord.v1" alone and never
+// echoes the token.
+const (
+	socketProtocol    = "bitchord.v1"
+	socketTokenPrefix = "bitchord.token."
+)
+
+// parseSocketToken reads the party token from the Authorization header (the
+// apps) or from an offered subprotocol (browsers).
+func parseSocketToken(r *http.Request) string {
+	if token := parseBearerToken(r); token != "" {
+		return token
+	}
+	for _, protocol := range websocket.Subprotocols(r) {
+		if strings.HasPrefix(protocol, socketTokenPrefix) {
+			return strings.TrimPrefix(protocol, socketTokenPrefix)
+		}
+	}
+	return ""
+}
+
 // REST Handlers
 
 func handleRoot(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"service":    "bitchord-listen-together",
-		"maxMembers": config.MaxMembers,
+		"members":    store.MemberCount(),
 		"parties":    store.Len(),
 		"serverMs":   clock.NowMs(),
 	})
@@ -210,6 +268,77 @@ func handleTime(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, map[string]interface{}{
 		"serverMs": clock.NowMs(),
 	})
+}
+
+// handlePresence takes the open apps' heartbeat:
+// {"id": "<install uuid>", "platform": "android"|"pc", "open": true|false}.
+func handlePresence(w http.ResponseWriter, r *http.Request) {
+	// Only the apps ping, and they send no Origin. Refusing browsers stops any web
+	// page from making its visitors post made-up installs from their addresses.
+	if r.Header.Get("Origin") != "" {
+		jsonError(w, http.StatusForbidden, "origin_not_allowed", "Presence is only accepted from the apps.")
+		return
+	}
+	if !presenceLimiter.Allow(clientIP(r)) {
+		jsonError(w, http.StatusTooManyRequests, "rate_limited", "Too many presence pings from this address.")
+		return
+	}
+	var body struct {
+		ID       string `json:"id"`
+		Platform string `json:"platform"`
+		Open     *bool  `json:"open"`
+	}
+	if !decodeJSONBody(w, r, &body) {
+		return
+	}
+	id, ok := presence.ParseID(body.ID)
+	if !ok {
+		jsonError(w, http.StatusUnprocessableEntity, "invalid_id", "id must be a UUID.")
+		return
+	}
+	platform, ok := presence.ParsePlatform(body.Platform)
+	if !ok {
+		jsonError(w, http.StatusUnprocessableEntity, "invalid_platform", "platform must be android or pc.")
+		return
+	}
+	if body.Open == nil {
+		jsonError(w, http.StatusUnprocessableEntity, "invalid_open", "open must be true or false.")
+		return
+	}
+	if *body.Open {
+		presenceTracker.Ping(id, platform, clock.NowMs())
+	} else {
+		presenceTracker.Close(id)
+	}
+	jsonResponse(w, http.StatusOK, map[string]int{"intervalSec": config.PresenceIntervalSec})
+}
+
+// handleLiveStats is public on purpose: anyone, including a README badge or
+// another site's script, may read how many apps are open.
+func handleLiveStats(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Cache-Control", "public, max-age=15")
+	jsonResponse(w, http.StatusOK, presenceTracker.Counts())
+}
+
+// handleLiveBadge draws the README's "listening now" badge itself. Going
+// through shields.io meant its 2-5 minute cache stacked on GitHub's camo
+// proxy, so the README trailed the real count by minutes. no-cache here is
+// what camo honours, so every README view gets the current number.
+//
+// The geometry copies shields' for-the-badge render byte for byte: a fixed
+// 124.25px label, bold Verdana digits at 8.25px each, 12px padding a side.
+func handleLiveBadge(w http.ResponseWriter, r *http.Request) {
+	value := fmt.Sprint(presenceTracker.Counts().Online)
+	valueWidth := 8.25*float64(len(value)) + 24
+	width := 124.25 + valueWidth
+	svg := fmt.Sprintf(`<svg xmlns="http://www.w3.org/2000/svg" width="%g" height="28" role="img" aria-label="LISTENING NOW: %s"><title>LISTENING NOW: %s</title><g shape-rendering="crispEdges"><rect width="124.25" height="28" fill="#0d1117"/><rect x="124.25" width="%g" height="28" fill="#fb4f67"/></g><g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" text-rendering="geometricPrecision" font-size="100"><text transform="scale(.1)" x="621.25" y="175" textLength="1002.5">LISTENING NOW</text><text transform="scale(.1)" x="%g" y="175" textLength="%g" font-weight="bold">%s</text></g></svg>`,
+		width, value, value, valueWidth, (124.25+valueWidth/2)*10, 82.5*float64(len(value)), value)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Content-Type", "image/svg+xml;charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte(svg))
 }
 
 func handleCreateParty(w http.ResponseWriter, r *http.Request) {
@@ -236,6 +365,11 @@ func handleCreateParty(w http.ResponseWriter, r *http.Request) {
 		}
 		jsonError(w, http.StatusInternalServerError, "server_error", "Failed to create party.")
 		return
+	}
+	// This must be present in the creation response. Waiting for the first
+	// WebSocket control can lose the setting before that socket is established.
+	if req.AutoplayEnabled != nil {
+		p.Playback.AutoplayEnabled = *req.AutoplayEnabled
 	}
 
 	p.Lock()
@@ -308,6 +442,66 @@ func handleJoinParty(w http.ResponseWriter, r *http.Request) {
 		"you":   youWire,
 		"party": partyWire,
 	})
+}
+
+// handlePreviewParty answers who is in a party, without a token and without
+// joining it.
+//
+// Deliberately unauthenticated: the whole point is to let somebody who has been
+// handed a code see who they would be joining before they commit a device slot
+// to it. What it discloses — display names, avatars, how full the party is — is
+// exactly what joining would disclose a second later, and anyone holding a code
+// can join. What it does not disclose is what the party is playing, its queue,
+// member or user ids, or anything that would let a caller act on the party.
+//
+// Not rate-limited beyond the service-wide limits: it takes no locks it does
+// not release, allocates a short slice, and creates nothing.
+func handlePreviewParty(w http.ResponseWriter, r *http.Request) {
+	code := r.PathValue("code")
+	p, err := store.Get(code)
+	if err != nil {
+		if pe, ok := err.(*party.PartyError); ok {
+			jsonError(w, pe.Status, pe.Code, pe.Message)
+			return
+		}
+		jsonError(w, http.StatusNotFound, "no_such_party", "No party with that code.")
+		return
+	}
+
+	p.Lock()
+	// Joined order, as the snapshot uses: the caller draws the first few faces
+	// and counts the rest, so which faces those are must not change between two
+	// reads of an unchanged party.
+	ordered := make([]*party.Member, 0, len(p.Members))
+	for _, m := range p.Members {
+		ordered = append(ordered, m)
+	}
+	sort.Slice(ordered, func(i, j int) bool {
+		return ordered[i].JoinedAtMs < ordered[j].JoinedAtMs
+	})
+	members := make([]map[string]interface{}, 0, len(ordered))
+	hostName := ""
+	for _, m := range ordered {
+		members = append(members, map[string]interface{}{
+			"displayName": m.DisplayName,
+			"avatarUrl":   m.AvatarUrl,
+			"isHost":      m.IsHost,
+		})
+		if m.IsHost {
+			hostName = m.DisplayName
+		}
+	}
+	preview := map[string]interface{}{
+		"code":        p.Code,
+		"hostName":    hostName,
+		"memberCount": len(p.Members),
+		"maxMembers":  p.MaxMembers,
+		"isFull":      len(p.Members) >= p.MaxMembers,
+		"members":     members,
+	}
+	p.Unlock()
+
+	jsonResponse(w, http.StatusOK, preview)
 }
 
 func handleGetParty(w http.ResponseWriter, r *http.Request) {
@@ -390,11 +584,280 @@ func handleLeaveParty(w http.ResponseWriter, r *http.Request) {
 	jsonResponse(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
+// Web Invite Landing Handler
+
+type invitePageData struct {
+	Code              string
+	DeepLink          string
+	IntentURI         template.URL
+	SafeDeepLink      template.URL
+	ServerOrigin      string
+	CurrentSongTitle  string
+	CurrentSongArtist string
+	MemberCount       int
+	IsActive          bool
+}
+
+var inviteTemplate = template.Must(template.New("invite").Parse(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BitChord Listen Together - Party {{.Code}}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: #0b0b0e;
+            color: #f3f3f7;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .container {
+            background: rgba(22, 22, 30, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 28px;
+            max-width: 440px;
+            width: 100%;
+            padding: 36px 28px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 40px rgba(124, 77, 255, 0.1);
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(124, 77, 255, 0.15);
+            color: #b388ff;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+        }
+        .badge-dot {
+            width: 8px;
+            height: 8px;
+            background: #00e676;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #00e676;
+        }
+        .badge-dot.offline {
+            background: #ff5252;
+            box-shadow: 0 0 8px #ff5252;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+        .subtitle {
+            color: #9e9ea7;
+            font-size: 15px;
+            line-height: 1.5;
+            margin-bottom: 28px;
+        }
+        .code-box {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 18px;
+            padding: 16px 20px;
+            margin-bottom: 28px;
+        }
+        .code-label {
+            font-size: 12px;
+            color: #71717a;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 6px;
+        }
+        .code-val {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: 6px;
+            color: #ffffff;
+        }
+        .now-playing {
+            font-size: 14px;
+            color: #d1d1d6;
+            margin-top: 10px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #7c4dff 0%, #3d5afe 100%);
+            color: #ffffff;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            border-radius: 16px;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+            box-shadow: 0 8px 24px rgba(124, 77, 255, 0.35);
+        }
+        .btn:hover {
+            transform: translateY(-1px);
+            opacity: 0.95;
+        }
+        .btn:active {
+            transform: scale(0.98);
+        }
+        .footer-note {
+            margin-top: 24px;
+            font-size: 13px;
+            color: #71717a;
+            line-height: 1.5;
+        }
+        .footer-note a {
+            color: #b388ff;
+            text-decoration: none;
+        }
+        .footer-note a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {{if .IsActive}}
+            <div class="badge">
+                <span class="badge-dot"></span>
+                <span>Listen Together • {{.MemberCount}} in party</span>
+            </div>
+            <h1>Join the Music Party</h1>
+            <p class="subtitle">Opening BitChord to sync playback in real time.</p>
+            <div class="code-box">
+                <div class="code-label">Party Code</div>
+                <div class="code-val">{{.Code}}</div>
+                {{if .CurrentSongTitle}}
+                    <div class="now-playing">🎵 {{.CurrentSongTitle}} - {{.CurrentSongArtist}}</div>
+                {{end}}
+            </div>
+            <a id="joinBtn" href="{{.IntentURI}}" class="btn">Join Party in BitChord</a>
+            <p class="footer-note">
+                Didn’t open automatically? Tap the button above.<br>
+                Don't have BitChord yet? <a href="https://github.com/kushagrasinghx/BitChord/releases" target="_blank" rel="noopener">Download it here</a>.
+            </p>
+            <script>
+                var intentUri = {{.IntentURI}};
+                var deepLink = {{.SafeDeepLink}};
+                function launch() {
+                    if (/Android/i.test(navigator.userAgent)) {
+                        window.location.href = intentUri;
+                    } else {
+                        window.location.href = deepLink;
+                    }
+                }
+                setTimeout(launch, 100);
+            </script>
+        {{else}}
+            <div class="badge">
+                <span class="badge-dot offline"></span>
+                <span>Party Inactive</span>
+            </div>
+            <h1>Party Not Found</h1>
+            <p class="subtitle">This party code has expired or does not exist on this server.</p>
+            <div class="code-box">
+                <div class="code-label">Party Code</div>
+                <div class="code-val" style="color: #a1a1aa;">{{.Code}}</div>
+            </div>
+            <p class="footer-note">
+                Please ask the host for a new invite link or check your server configuration.
+            </p>
+        {{end}}
+    </div>
+</body>
+</html>`))
+
+func requestOrigin(r *http.Request) string {
+	if config.PublicOrigin != "" {
+		return config.PublicOrigin
+	}
+	proto := "http"
+	if r.TLS != nil {
+		proto = "https"
+	}
+	if config.TrustProxy {
+		if forwardedProto := r.Header.Get("X-Forwarded-Proto"); forwardedProto != "" {
+			proto = strings.TrimSpace(strings.Split(forwardedProto, ",")[0])
+		}
+	}
+	host := r.Host
+	if host == "" {
+		host = "localhost"
+	}
+	return fmt.Sprintf("%s://%s", proto, host)
+}
+
+func handleInviteLanding(w http.ResponseWriter, r *http.Request) {
+	code := codes.Normalise(r.PathValue("code"))
+	origin := requestOrigin(r)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	if len(code) != codes.CodeLength {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = inviteTemplate.Execute(w, invitePageData{
+			Code:     html.EscapeString(r.PathValue("code")),
+			IsActive: false,
+		})
+		return
+	}
+
+	p := store.Find(code)
+	if p == nil {
+		w.WriteHeader(http.StatusNotFound)
+		_ = inviteTemplate.Execute(w, invitePageData{
+			Code:     code,
+			IsActive: false,
+		})
+		return
+	}
+
+	deepLink := fmt.Sprintf("bitchord://party/%s?server=%s", url.PathEscape(code), url.QueryEscape(origin))
+	intentURI := fmt.Sprintf("intent://party/%s?server=%s#Intent;scheme=bitchord;end", url.PathEscape(code), url.QueryEscape(origin))
+
+	currentSongTitle := ""
+	currentSongArtist := ""
+	p.Lock()
+	if p.Playback != nil && p.Playback.Track != nil {
+		currentSongTitle = p.Playback.Track.Title
+		currentSongArtist = p.Playback.Track.Artist
+	}
+	memberCount := len(p.Members)
+	p.Unlock()
+
+	w.WriteHeader(http.StatusOK)
+	_ = inviteTemplate.Execute(w, invitePageData{
+		Code:              code,
+		DeepLink:          deepLink,
+		IntentURI:         template.URL(intentURI),
+		SafeDeepLink:      template.URL(deepLink),
+		ServerOrigin:      origin,
+		CurrentSongTitle:  currentSongTitle,
+		CurrentSongArtist: currentSongArtist,
+		MemberCount:       memberCount,
+		IsActive:          true,
+	})
+}
+
 // WebSocket Handler
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	code := r.PathValue("code")
-	token := parseBearerToken(r)
+	token := parseSocketToken(r)
 	if token == "" {
 		http.Error(w, "missing token", http.StatusUnauthorized)
 		return
@@ -526,7 +989,9 @@ func handleSocketFrame(p *party.Party, member *party.Member, sc *hub.SafeConn, f
 				hubInst.Broadcast(p.Code, queueFrame(p), "")
 			}
 			hubInst.Broadcast(p.Code, stateFrame(p), "")
-			if action == protocol.ActionKick || action == protocol.ActionSetMaxMembers {
+			if action == protocol.ActionKick ||
+				action == protocol.ActionSetMaxMembers ||
+				action == protocol.ActionSetHostOnlyControl {
 				hubInst.Broadcast(p.Code, membersFrame(p), "")
 			}
 			hubInst.Broadcast(p.Code, activityFrame(member, action, frame), "")
@@ -541,6 +1006,14 @@ func handleSocketFrame(p *party.Party, member *party.Member, sc *hub.SafeConn, f
 }
 
 func applyControl(p *party.Party, member *party.Member, action string, frame map[string]interface{}) (bool, string, string) {
+	// Enforced here rather than left to the clients. An app that hides its own
+	// next button is a courtesy; this is what actually stops a listener's
+	// device — a stale build, a backgrounded one still echoing an old intent,
+	// or something else entirely — from moving the music for everybody.
+	if protocol.ControlActions[action] && !p.MayControl(member) {
+		return false, "host_only", "Only the host can control the music in this party."
+	}
+
 	var posPtr *int64
 	if pos, ok := frame["positionMs"].(float64); ok {
 		pVal := int64(pos)
@@ -695,12 +1168,27 @@ func applyControl(p *party.Party, member *party.Member, action string, frame map
 		p.Playback.SetAutoplay(&member.MemberId, enabled)
 		return true, "", ""
 
+	case protocol.ActionSetHostOnlyControl:
+		enabled, ok := frame["enabled"].(bool)
+		if !ok {
+			return false, "invalid_control_policy", "Host-only control must be enabled or disabled."
+		}
+		if err := p.SetHostOnlyControl(member, enabled); err != nil {
+			pe := err.(*party.PartyError)
+			return false, pe.Code, pe.Message
+		}
+		return true, "", ""
+
 	case protocol.ActionKick:
 		targetID, _ := frame["memberId"].(string)
 		if !member.IsHost { return false, "host_only", "Only the host can remove listeners." }
 		if targetID == "" || targetID == member.MemberId { return false, "invalid_member", "Choose another listener to remove." }
 		if p.Remove(targetID) == nil { return false, "not_found", "That listener is no longer in this party." }
-		hubInst.Send(p.Code, targetID, map[string]interface{}{ "type": protocol.FrameBye, "message": "The host removed you from this party." })
+		hubInst.Send(p.Code, targetID, map[string]interface{}{
+			"type":    protocol.FrameBye,
+			"reason":  "kicked",
+			"message": "The host removed you from this party.",
+		})
 		hubInst.CloseMember(p.Code, targetID)
 		return true, "", ""
 
@@ -767,14 +1255,25 @@ func membersFrame(p *party.Party) map[string]interface{} {
 		membersList = append(membersList, m.ToWire())
 	}
 	return map[string]interface{}{
-		"type":       protocol.FrameMembers,
-		"members":    membersList,
-		"maxMembers": p.MaxMembers,
-		"serverMs":   clock.NowMs(),
+		"type":            protocol.FrameMembers,
+		"members":         membersList,
+		"maxMembers":      p.MaxMembers,
+		"hostOnlyControl": p.HostOnlyControl,
+		"serverMs":        clock.NowMs(),
 	}
 }
 
 // Background Heartbeat Ticker
+
+// startPresenceSweeper refreshes the live counts. A pass over 10k installs is
+// well under a millisecond, and stats reads never wait on it.
+func startPresenceSweeper() {
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+	for range ticker.C {
+		presenceTracker.Sweep(clock.NowMs())
+	}
+}
 
 func startHeartbeatTicker() {
 	interval := time.Duration(config.StateHeartbeatMs) * time.Millisecond

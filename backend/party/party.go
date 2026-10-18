@@ -136,6 +136,12 @@ func (p *PlaybackState) touch(memberId *string) {
 	p.UpdatedAtMs = clock.NowMs()
 }
 
+func (p *PlaybackState) touchQueue(memberId *string) {
+	p.QueueSeq++
+	p.UpdatedBy = memberId
+	p.UpdatedAtMs = clock.NowMs()
+}
+
 func (p *PlaybackState) Play(memberId *string, positionMs *int64) {
 	now := clock.NowMs()
 	startAt := p.PositionAt(now)
@@ -199,17 +205,13 @@ func (p *PlaybackState) SetTrack(
 	}
 	p.AnchorMs = clock.NowMs() + lead
 
-	if queueIndex != nil {
+	if queueIndex != nil && *queueIndex >= 0 && *queueIndex < len(p.Queue) &&
+		track != nil && p.Queue[*queueIndex].VideoId == track.VideoId {
 		p.QueueIndex = *queueIndex
 	} else if track != nil {
-		match := -1
-		for i, item := range p.Queue {
-			if item.VideoId == track.VideoId {
-				match = i
-				break
-			}
-		}
-		p.QueueIndex = match
+		p.QueueIndex = nearestIndexOf(p.Queue, track.VideoId, p.QueueIndex)
+	} else if queueIndex != nil {
+		p.QueueIndex = *queueIndex
 	}
 
 	p.StartedBy = memberId
@@ -218,12 +220,13 @@ func (p *PlaybackState) SetTrack(
 }
 
 func (p *PlaybackState) SetQueue(memberId *string, queue []*Track, queueIndex int) {
+	// The sender's own index wins when it names the playing track. Searching
+	// from the top instead found the copy of that track already in history
+	// whenever it had played before, and every device then showed what came
+	// after that old copy as still to come.
 	if p.Track != nil {
-		for i, item := range queue {
-			if item.VideoId == p.Track.VideoId {
-				queueIndex = i
-				break
-			}
+		if queueIndex < 0 || queueIndex >= len(queue) || queue[queueIndex].VideoId != p.Track.VideoId {
+			queueIndex = nearestIndexOf(queue, p.Track.VideoId, queueIndex)
 		}
 	}
 
@@ -251,8 +254,67 @@ func (p *PlaybackState) SetQueue(memberId *string, queue []*Track, queueIndex in
 			p.QueueIndex = -1
 		}
 	}
-	p.QueueSeq++
-	p.touch(memberId)
+	p.touchQueue(memberId)
+}
+
+// nearestIndexOf finds videoId in queue closest to around: the slot right after
+// it first (the queue moving on), then the one before it (going back), then
+// the nearest copy either way. A queue can hold one track twice, once played
+// and once to come, and the first copy from the top is the wrong one as often
+// as not.
+func nearestIndexOf(queue []*Track, videoId string, around int) int {
+	if around+1 >= 0 && around+1 < len(queue) && queue[around+1].VideoId == videoId {
+		return around + 1
+	}
+	if around-1 >= 0 && around-1 < len(queue) && queue[around-1].VideoId == videoId {
+		return around - 1
+	}
+	best := -1
+	bestDistance := 0
+	for i, item := range queue {
+		if item.VideoId != videoId {
+			continue
+		}
+		distance := i - around
+		if distance < 0 {
+			// Behind the needle costs a little more than ahead of it.
+			distance = -distance*2 + 1
+		}
+		if best == -1 || distance < bestDistance {
+			best = i
+			bestDistance = distance
+		}
+	}
+	return best
+}
+
+// withoutQueuedAutoplay drops AutoPlay suggestions that are already waiting
+// after the current track, or repeated within the batch. Two devices can both
+// believe they supply AutoPlay for a moment (a host reconnecting), and one can
+// retry before its first batch has echoed back; either way the same station
+// arrives twice and the queue shows every suggestion twice. Tracks somebody
+// queued by hand are never filtered: queueing a song twice is allowed.
+func withoutQueuedAutoplay(queue []*Track, queueIndex int, tracks []*Track) []*Track {
+	waiting := make(map[string]bool)
+	for i := queueIndex + 1; i < len(queue); i++ {
+		if i >= 0 {
+			waiting[queue[i].VideoId] = true
+		}
+	}
+	out := make([]*Track, 0, len(tracks))
+	for _, t := range tracks {
+		if t == nil {
+			continue
+		}
+		if t.FromAutoplay {
+			if waiting[t.VideoId] {
+				continue
+			}
+			waiting[t.VideoId] = true
+		}
+		out = append(out, t)
+	}
+	return out
 }
 
 func (p *PlaybackState) AddUpcoming(memberId *string, tracks []*Track, playNext bool) (bool, string) {
@@ -271,7 +333,13 @@ func (p *PlaybackState) AddUpcoming(memberId *string, tracks []*Track, playNext 
 		return false, "queue_full"
 	}
 
-	toAdd := tracks
+	toAdd := withoutQueuedAutoplay(p.Queue, p.QueueIndex, tracks)
+	if len(toAdd) == 0 && len(tracks) > 0 {
+		// Every suggestion is already waiting in the queue: a second supplier,
+		// or the same one retrying before its first batch came back. Nothing to
+		// do is not a refusal, so the sender's echo wait still completes.
+		return true, ""
+	}
 	if len(toAdd) > slotsLeft {
 		toAdd = toAdd[:slotsLeft]
 	}
@@ -290,8 +358,7 @@ func (p *PlaybackState) AddUpcoming(memberId *string, tracks []*Track, playNext 
 		p.Queue = append(p.Queue, toAdd...)
 	}
 
-	p.QueueSeq++
-	p.touch(memberId)
+	p.touchQueue(memberId)
 	return true, ""
 }
 
@@ -311,8 +378,7 @@ func (p *PlaybackState) RemoveUpcoming(memberId *string, videoId string) bool {
 	if p.QueueIndex > match {
 		p.QueueIndex--
 	}
-	p.QueueSeq++
-	p.touch(memberId)
+	p.touchQueue(memberId)
 	return true
 }
 
@@ -328,8 +394,7 @@ func (p *PlaybackState) ClearUpcoming(memberId *string) bool {
 		}
 		p.Queue = p.Queue[:0]
 	}
-	p.QueueSeq++
-	p.touch(memberId)
+	p.touchQueue(memberId)
 	return true
 }
 
@@ -367,8 +432,7 @@ func (p *PlaybackState) MoveUpcoming(memberId *string, fromIdx, toIdx int, video
 	newQ = append(newQ, p.Queue[toIdx:]...)
 	p.Queue = newQ
 
-	p.QueueSeq++
-	p.touch(memberId)
+	p.touchQueue(memberId)
 	return true
 }
 
@@ -412,7 +476,8 @@ func (p *PlaybackState) SetAutoplay(memberId *string, enabled bool) {
 		return
 	}
 	p.AutoplayEnabled = enabled
-	p.touch(memberId)
+	p.UpdatedBy = memberId
+	p.UpdatedAtMs = clock.NowMs()
 }
 
 func (p *PlaybackState) QueueToWire() map[string]interface{} {
@@ -456,14 +521,21 @@ func (m *Member) ToWire() map[string]interface{} {
 
 // Party holds members and playback state for a single room code.
 type Party struct {
-	mu           sync.Mutex
-	Code         string
-	Members      map[string]*Member
-	Playback     *PlaybackState
-	MaxMembers   int
-	CreatedAtMs  int64
-	TouchedAtMs  int64
-	EmptySinceMs *int64
+	mu         sync.Mutex
+	Code       string
+	Members    map[string]*Member
+	Playback   *PlaybackState
+	MaxMembers int
+	// HostOnlyControl restricts every playback and queue action to the host.
+	//
+	// Deliberately on Party rather than on PlaybackState: it changes rarely and
+	// PlaybackState.ToWire rides the heartbeat to every device every few
+	// seconds. It travels with MaxMembers on the members frame instead, which
+	// is only sent when something about the membership actually changes.
+	HostOnlyControl bool
+	CreatedAtMs     int64
+	TouchedAtMs     int64
+	EmptySinceMs    *int64
 }
 
 func NewParty(code string) *Party {
@@ -556,6 +628,31 @@ func (p *Party) SetMaxMembers(member *Member, maxMembers int) error {
 	p.MaxMembers = maxMembers
 	p.Touch()
 	return nil
+}
+
+// SetHostOnlyControl restricts the music to the host, or hands it back to
+// everyone. Host-only, like SetMaxMembers: a listener who could turn this off
+// is not restricted by it.
+func (p *Party) SetHostOnlyControl(member *Member, enabled bool) error {
+	if !member.IsHost {
+		return NewPartyError(403, "host_only", "Only the host can change who controls the music.")
+	}
+	if p.HostOnlyControl == enabled {
+		return nil
+	}
+	p.HostOnlyControl = enabled
+	p.Touch()
+	return nil
+}
+
+// MayControl reports whether this member is allowed to drive playback and the
+// queue right now.
+//
+// The host always may. Everyone else may until the host says otherwise — which
+// is the behaviour this feature shipped with and stays the default for a party
+// that never touches the setting.
+func (p *Party) MayControl(member *Member) bool {
+	return !p.HostOnlyControl || member.IsHost
 }
 
 func (p *Party) Authenticate(token string) (*Member, error) {
@@ -681,13 +778,14 @@ func (p *Party) ToWire() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"code":        p.Code,
-		"createdAtMs": p.CreatedAtMs,
-		"maxMembers":  p.MaxMembers,
-		"members":     membersWire,
-		"playback":    p.Playback.ToWire(now),
-		"queue":       p.Playback.QueueToWire(),
-		"serverMs":    now,
+		"code":            p.Code,
+		"createdAtMs":     p.CreatedAtMs,
+		"maxMembers":      p.MaxMembers,
+		"hostOnlyControl": p.HostOnlyControl,
+		"members":         membersWire,
+		"playback":        p.Playback.ToWire(now),
+		"queue":           p.Playback.QueueToWire(),
+		"serverMs":        now,
 	}
 }
 
@@ -707,6 +805,24 @@ func (s *PartyStore) Len() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return len(s.parties)
+}
+
+// MemberCount is the number of members across every live party. Parties are
+// copied out first so no party lock is ever taken under the store lock.
+func (s *PartyStore) MemberCount() int {
+	s.mu.RLock()
+	parties := make([]*Party, 0, len(s.parties))
+	for _, p := range s.parties {
+		parties = append(parties, p)
+	}
+	s.mu.RUnlock()
+	total := 0
+	for _, p := range parties {
+		p.mu.Lock()
+		total += len(p.Members)
+		p.mu.Unlock()
+	}
+	return total
 }
 
 func (s *PartyStore) Create() (*Party, error) {
