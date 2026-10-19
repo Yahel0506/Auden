@@ -72,6 +72,7 @@ import androidx.compose.material.icons.rounded.PlaylistPlay
 import androidx.compose.material.icons.rounded.SignalCellularAlt
 import androidx.compose.material.icons.rounded.SmartDisplay
 import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material.icons.rounded.SurroundSound
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VolumeOff
@@ -239,6 +240,8 @@ fun SettingsScreen(
     val downloadTemplate by AppSettings.downloadTemplate.collectAsStateWithLifecycle()
     val downloadConcurrency by AppSettings.downloadConcurrency.collectAsStateWithLifecycle()
     val lyricsExtras by AppSettings.lyricsDownloadExtras.collectAsStateWithLifecycle()
+    val autoSync by AppSettings.autoSyncPlaylists.collectAsStateWithLifecycle()
+    val autoSyncMobile by AppSettings.autoSyncOnMobileData.collectAsStateWithLifecycle()
     val wifiOnlyDownloads by AppSettings.wifiOnlyDownloads.collectAsStateWithLifecycle()
     val exportDownloads by AppSettings.exportDownloads.collectAsStateWithLifecycle()
     val stopOnTaskRemoved by AppSettings.stopOnTaskRemoved.collectAsStateWithLifecycle()
@@ -581,6 +584,35 @@ fun SettingsScreen(
                     subtitle = com.music.bitchord.download.DownloadLayout.preview(downloadTemplate),
                     onClick = { pickingDownloadLayout = true },
                 )
+            }
+            val autoSyncTitle = stringResource(R.string.autosync_setting)
+            row(autoSyncTitle, "sync", "spotify", "playlists", "update", "library") {
+                SettingsRow(
+                    icon = Icons.Rounded.Sync,
+                    title = autoSyncTitle,
+                    subtitle = stringResource(R.string.autosync_setting_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = autoSync,
+                            onCheckedChange = AppSettings::setAutoSyncPlaylists,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setAutoSyncPlaylists(!autoSync) },
+                )
+            }
+            if (autoSync) {
+                val autoSyncMobileTitle = stringResource(R.string.autosync_mobile)
+                row(autoSyncMobileTitle, "sync", "cellular", "mobile data", divided = false) {
+                    SettingsSubRow(
+                        title = autoSyncMobileTitle,
+                        checked = autoSyncMobile,
+                        onCheckedChange = AppSettings::setAutoSyncOnMobileData,
+                    )
+                }
             }
             val lyricsExtrasTitle = stringResource(R.string.download_lyrics_extras)
             row(lyricsExtrasTitle, "lyrics", "providers", "versions", "download") {

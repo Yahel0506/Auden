@@ -1493,4 +1493,9 @@
     <string name="spotify_open_missing">Introuvable sur YouTube Music</string>
     <string name="spotify_empty_albums">Aucun album enregistré</string>
     <string name="spotify_empty_artists">Aucun artiste suivi</string>
+    <string name="autosync_title">Playlists mises à jour</string>
+    <string name="autosync_done">%1$d nouveaux titres dans vos playlists enregistrées</string>
+    <string name="autosync_setting">Garder les playlists enregistrées à jour</string>
+    <string name="autosync_setting_subtitle">Ajoute à vos copies les nouveaux titres de Spotify et YouTube Music. Rien n’est jamais modifié sur ces services.</string>
+    <string name="autosync_mobile">Aussi en données mobiles</string>
 </resources>

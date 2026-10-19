@@ -65,23 +65,24 @@ object CloudSaver {
         return done
     }
 
-    private suspend fun saveNow(app: Context, browseId: String, title: String, thumbnailUrl: String?): Result {
+    /** [quiet]: no notification — for the background sync, which reports once at the end instead. */
+    internal suspend fun saveNow(app: Context, browseId: String, title: String, thumbnailUrl: String?, quiet: Boolean = false): Result {
         val source = sourceId(browseId)
         if (source in _saving.value) return Result.Failed
         _saving.value = _saving.value + source
-        val notifier = Notifier(app, source, title)
-        notifier.reading()
+        val notifier = if (quiet) null else Notifier(app, source, title)
+        notifier?.reading()
         val result = runCatching { run(app, browseId, source, title, thumbnailUrl, notifier) }
             .getOrElse { Result.Failed }
         when (result) {
-            is Result.Saved -> notifier.done(result)
-            Result.Failed -> notifier.failed()
+            is Result.Saved -> notifier?.done(result)
+            Result.Failed -> notifier?.failed()
         }
         _saving.value = _saving.value - source
         return result
     }
 
-    private suspend fun run(context: Context, browseId: String, source: String, title: String, thumbnailUrl: String?, notifier: Notifier): Result {
+    private suspend fun run(context: Context, browseId: String, source: String, title: String, thumbnailUrl: String?, notifier: Notifier?): Result {
         var unmatched = 0
         val songs: List<Song> = if (browseId.startsWith(SPOTIFY_PAGE_PREFIX)) {
             val tracks = SpotifyLibrary.tracks(browseId.removePrefix(SPOTIFY_PAGE_PREFIX)) { }
@@ -92,7 +93,7 @@ object CloudSaver {
                     async {
                         gate.withPermit {
                             val found = runCatching { dev.auden.library.spotify.SpotifyMatches.resolve(context, track) }.getOrNull()
-                            notifier.matching(done.incrementAndGet(), tracks.size)
+                            notifier?.matching(done.incrementAndGet(), tracks.size)
                             found
                         }
                     }
@@ -110,7 +111,7 @@ object CloudSaver {
             }
         }
         require(songs.isNotEmpty()) { "nothing to save" }
-        notifier.storing(songs.size)
+        notifier?.storing(songs.size)
         val saved = LocalPlaylists.saveFromSource(source, title, songs)
         return Result.Saved(saved.playlist.title, saved.added, saved.created, unmatched)
     }

@@ -1497,4 +1497,9 @@
     <string name="spotify_open_missing">Não encontrado no YouTube Music</string>
     <string name="spotify_empty_albums">Sem álbuns guardados</string>
     <string name="spotify_empty_artists">Não segues nenhum artista</string>
+    <string name="autosync_title">Listas atualizadas</string>
+    <string name="autosync_done">%1$d músicas novas nas tuas listas guardadas</string>
+    <string name="autosync_setting">Manter as listas guardadas atualizadas</string>
+    <string name="autosync_setting_subtitle">Adiciona às tuas cópias as músicas novas do Spotify e do YouTube Music. Nunca se altera nada nesses serviços.</string>
+    <string name="autosync_mobile">Também com dados móveis</string>
 </resources>

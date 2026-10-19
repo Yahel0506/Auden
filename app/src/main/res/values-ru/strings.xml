@@ -1524,4 +1524,9 @@
     <string name="spotify_open_missing">Couldn’t find it on YouTube Music</string>
     <string name="spotify_empty_albums">No saved albums</string>
     <string name="spotify_empty_artists">No followed artists</string>
+    <string name="autosync_title">Playlists updated</string>
+    <string name="autosync_done">%1$d new songs added to your saved playlists</string>
+    <string name="autosync_setting">Keep saved playlists up to date</string>
+    <string name="autosync_setting_subtitle">Adds new songs from Spotify and YouTube Music to your copies. Nothing is ever changed on those services.</string>
+    <string name="autosync_mobile">Also on mobile data</string>
 </resources>

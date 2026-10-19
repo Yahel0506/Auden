@@ -209,6 +209,10 @@ object AppSettings {
      */
     val exportDownloads = MutableStateFlow(false)
 
+    /** Keep library copies of Spotify and YouTube Music playlists up to date by themselves (read-only, additive). */
+    val autoSyncPlaylists = MutableStateFlow(true)
+    val autoSyncOnMobileData = MutableStateFlow(false)
+
     /** How many tracks may download at once, 1 to 4. */
     val downloadConcurrency = MutableStateFlow(4)
 
@@ -825,6 +829,8 @@ object AppSettings {
         downloadQuality.value = readDownloadQuality()
         wifiOnlyDownloads.value = prefs.getBoolean(KEY_WIFI_ONLY_DOWNLOADS, true)
         exportDownloads.value = prefs.getBoolean(KEY_EXPORT_DOWNLOADS, false)
+        autoSyncPlaylists.value = prefs.getBoolean(KEY_AUTO_SYNC, true)
+        autoSyncOnMobileData.value = prefs.getBoolean(KEY_AUTO_SYNC_MOBILE, false)
         downloadConcurrency.value = prefs.getInt(KEY_DOWNLOAD_CONCURRENCY, 4).coerceIn(1, 4)
         downloadTemplate.value = prefs.getString(KEY_DOWNLOAD_TEMPLATE, null)
             ?.takeIf(com.music.bitchord.download.DownloadLayout::valid)
@@ -1596,6 +1602,16 @@ object AppSettings {
         prefs.edit().putInt(KEY_DOWNLOAD_CONCURRENCY, downloadConcurrency.value).apply()
     }
 
+    fun setAutoSyncPlaylists(value: Boolean) {
+        autoSyncPlaylists.value = value
+        prefs.edit().putBoolean(KEY_AUTO_SYNC, value).apply()
+    }
+
+    fun setAutoSyncOnMobileData(value: Boolean) {
+        autoSyncOnMobileData.value = value
+        prefs.edit().putBoolean(KEY_AUTO_SYNC_MOBILE, value).apply()
+    }
+
     fun setExportDownloads(value: Boolean) {
         exportDownloads.value = value
         prefs.edit().putBoolean(KEY_EXPORT_DOWNLOADS, value).apply()
@@ -2024,6 +2040,8 @@ object AppSettings {
     private const val KEY_WIFI_ONLY_DOWNLOADS = "wifi_only_downloads"
     private const val KEY_EXPORT_DOWNLOADS = "export_downloads"
     private const val KEY_DOWNLOAD_TEMPLATE = "download_template"
+    private const val KEY_AUTO_SYNC = "auto_sync_playlists"
+    private const val KEY_AUTO_SYNC_MOBILE = "auto_sync_mobile"
     private const val KEY_LYRICS_DOWNLOAD_EXTRAS = "lyrics_download_extras"
     private const val KEY_DOWNLOAD_CONCURRENCY = "download_concurrency"
     private const val KEY_LOSSLESS = "lossless_audio"
