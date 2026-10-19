@@ -222,7 +222,7 @@ private fun ColumnScope.NamePage(
             Image(
                 painter = painterResource(Res.drawable.ic_logo),
                 contentDescription = null,
-                modifier = Modifier.size(width = 46.dp, height = 30.dp),
+                modifier = Modifier.size(width = 66.dp, height = 28.dp),
             )
         }
     }

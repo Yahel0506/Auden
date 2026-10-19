@@ -75,6 +75,8 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
         // Full tag (zh-Hant / zh-Hans preserved); Innertube maps to hl/gl.
         Innertube.appLanguage = { AppCompatDelegate.getApplicationLocales().get(0)?.toLanguageTag() }
         migrateScriptOnlyAppLocale()
+        // The Samsung / Pixel / Clear icons are gone with the old mark; a phone still on one moves to the default.
+        runCatching { AppIcon.migrateLegacy(this) }
         LyricsTranslation.cacheDir = cacheDir
         // PlaybackService shares this process, so seeding the cookie here means
         // stream resolution is authenticated from the first play onwards.
