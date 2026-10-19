@@ -65,4 +65,53 @@ class SpotifyLibraryTest {
         assertNull(SpotifyImporter.extractPlaylistId("https://open.spotify.com/playlist/short"))
         assertNull(SpotifyImporter.extractPlaylistId(""))
     }
+
+    @Test
+    fun albumsReadNameArtistAndWidestCover() {
+        val root = json.parseToJsonElement(
+            """
+            {"data":{"me":{"libraryV3":{"totalCount":2,"items":[
+              {"item":{"__typename":"AlbumResponseWrapper","_uri":"spotify:album:al1","data":{
+                "__typename":"Album","name":"Record",
+                "artists":{"items":[{"profile":{"name":"Band"}},{"profile":{"name":"Guest"}}]},
+                "coverArt":{"sources":[{"url":"https://small","width":64},{"url":"https://big","width":640}]}
+              }}},
+              {"item":{"__typename":"PlaylistResponseWrapper","_uri":"spotify:playlist:p","data":{"__typename":"Playlist","name":"Not an album"}}}
+            ]}}}}
+            """.trimIndent(),
+        ).jsonObject
+        val (items, total, raw) = parseAlbumPage(root)
+        assertEquals(2, total)
+        assertEquals(2, raw)
+        val album = items.single()
+        assertEquals("al1", album.id)
+        assertEquals("Record", album.name)
+        assertEquals("Band, Guest", album.artist)
+        assertEquals("https://big", album.imageUrl)
+    }
+
+    @Test
+    fun artistsReadNameAndAvatar() {
+        val root = json.parseToJsonElement(
+            """
+            {"data":{"me":{"libraryV3":{"totalCount":1,"items":[
+              {"item":{"__typename":"ArtistResponseWrapper","_uri":"spotify:artist:ar1","data":{
+                "__typename":"Artist","profile":{"name":"Singer"},
+                "visuals":{"avatarImage":{"sources":[{"url":"https://face","width":320}]}}
+              }}}
+            ]}}}}
+            """.trimIndent(),
+        ).jsonObject
+        val artist = parseArtistPage(root).first.single()
+        assertEquals("ar1", artist.id)
+        assertEquals("Singer", artist.name)
+        assertEquals("https://face", artist.imageUrl)
+    }
+
+    @Test
+    fun anUnexpectedLibraryShapeIsAnErrorNotACrash() {
+        val root = json.parseToJsonElement("""{"data":{}}""").jsonObject
+        val failed = runCatching { parseAlbumPage(root) }.exceptionOrNull()
+        assertEquals(true, failed is IllegalStateException)
+    }
 }

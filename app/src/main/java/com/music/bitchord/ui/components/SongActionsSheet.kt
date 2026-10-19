@@ -43,6 +43,7 @@ import androidx.compose.material.icons.rounded.HighQuality
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Radio
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.PlaylistRemove
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.ThumbDown
@@ -203,6 +204,8 @@ fun SongActionsSheet(
     presentation: SongActionsPresentation = SongActionsPresentation.Sheet,
     /** The file the player is reading for this song right now, to outline it among its copies. */
     playingUri: String? = null,
+    /** A row from a Spotify playlist: lets its YouTube Music match be corrected by hand. */
+    onFixSpotifyMatch: (() -> Unit)? = null,
 ) {
     var showingSongInfo by remember(song.videoId) { mutableStateOf(false) }
     var pickingSleepTimer by remember { mutableStateOf(false) }
@@ -318,6 +321,14 @@ fun SongActionsSheet(
             )
         }
         WebDavUploadRow(song, palette, isOffline, onUploadToWebDav)
+        onFixSpotifyMatch?.let {
+            ActionRow(
+                icon = Icons.Rounded.SwapHoriz,
+                label = stringResource(R.string.spotify_fix_match),
+                accent = palette.accent,
+                onClick = it,
+            )
+        }
         ActionRow(
             icon = Icons.Rounded.Radio,
             label = stringResource(R.string.start_radio),

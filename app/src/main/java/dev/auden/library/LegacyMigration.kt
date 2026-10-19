@@ -52,6 +52,7 @@ internal fun Song.toTrack() = TrackEntity(
     videoId = videoId.takeIf { it.isNotBlank() && !it.startsWith("content:") && !it.startsWith("sp:") && !it.startsWith("sp-miss:") },
     localUri = localUri,
     path = localPath,
+    spotifyId = spotifyId,
     title = title,
     artist = artist,
     artistId = artistId,

@@ -97,6 +97,8 @@ data class Song(
     val localDateModifiedSeconds: Long? = null,
     /** Genre tag of a device file, where the platform exposes it. */
     val localGenre: String? = null,
+    /** The Spotify track this row stands for, when it came from a Spotify playlist; what lets its match be corrected. */
+    val spotifyId: String? = null,
     /**
      * Track number within its album, from the file's own tags (`TRACK` in
      * MediaStore, `CD_TRACK_NUMBER` via retriever). Null when the tags don't

@@ -1,5 +1,18 @@
 package com.music.bitchord.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import com.music.bitchord.data.spotify.SpotifyAlbum
+import com.music.bitchord.data.spotify.SpotifyArtist
+import com.music.bitchord.data.spotify.SpotifyException
+import com.music.bitchord.data.spotify.SPOTIFY_PAGE_PREFIX
+import dev.auden.library.spotify.SpotifyLibraryCache
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,33 +61,51 @@ import com.music.bitchord.data.spotify.SpotifyPlaylist
 import com.music.bitchord.data.spotify.SpotifyTrack
 
 /**
- * The signed-in Spotify account's playlists. A tap opens one as an ordinary
- * playlist page ([onOpenPlaylist]) — this screen is only the way in.
+ * The signed-in Spotify account's library: playlists, saved albums and followed artists. Each opens as an ordinary
+ * page of this app — a playlist is read from Spotify and matched to YouTube Music, an album or artist is
+ * found on YouTube Music — so this screen is only the way in.
+ *
+ * What was seen last time is shown at once and refreshed behind it, so the page works offline and never opens
+ * empty; a failure says what to do about it rather than quoting an error.
  */
 @Composable
 fun SpotifyLibraryScreen(
     onOpenPlaylist: (SpotifyPlaylist) -> Unit,
+    onOpenAlbum: (SpotifyAlbum) -> Unit,
+    onOpenArtist: (SpotifyArtist) -> Unit,
     onOpenLogin: () -> Unit,
     onOpenTokenSetup: () -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val cookie by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
-    var playlists by remember { mutableStateOf<List<SpotifyPlaylist>>(emptyList()) }
+    val copies by dev.auden.library.LocalPlaylists.playlists.collectAsStateWithLifecycle()
+    val syncing by dev.auden.library.CloudSaver.saving.collectAsStateWithLifecycle()
+    var tab by remember { mutableIntStateOf(0) }
+    var playlists by remember { mutableStateOf(SpotifyLibraryCache.playlists(context)) }
+    var albums by remember { mutableStateOf(SpotifyLibraryCache.albums(context)) }
+    var artists by remember { mutableStateOf(SpotifyLibraryCache.artists(context)) }
     var loading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var failure by remember { mutableStateOf<SpotifyException?>(null) }
+    var reload by remember { mutableIntStateOf(0) }
+    val spotifyCopies = copies.count { it.sourceId?.startsWith(SPOTIFY_PAGE_PREFIX) == true }
 
-    LaunchedEffect(cookie) {
+    LaunchedEffect(cookie, reload) {
         if (cookie.isBlank()) {
-            playlists = emptyList()
-            error = null
+            failure = null
             return@LaunchedEffect
         }
         loading = true
-        error = null
-        runCatching { SpotifyLibrary.playlists() }
-            .onSuccess { playlists = it }
-            .onFailure { error = it.message }
+        failure = null
+        // Each list on its own: an account with no followed artists, or a response in a shape not understood, must
+        // not take the playlists down with it.
+        val errors = mutableListOf<Throwable>()
+        runCatching { SpotifyLibrary.playlists() }.onSuccess { playlists = it; SpotifyLibraryCache.savePlaylists(context, it) }.onFailure(errors::add)
+        runCatching { SpotifyLibrary.albums() }.onSuccess { albums = it; SpotifyLibraryCache.saveAlbums(context, it) }
+        runCatching { SpotifyLibrary.artists() }.onSuccess { artists = it; SpotifyLibraryCache.saveArtists(context, it) }
+        failure = errors.firstOrNull()?.let { it as? SpotifyException ?: SpotifyException(SpotifyException.Kind.UNKNOWN, it.message.orEmpty()) }
         loading = false
     }
 
@@ -119,33 +150,139 @@ fun SpotifyLibraryScreen(
                     }
                 }
             }
-        } else {
-            if (loading) {
-                item {
-                    Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                }
-            }
-            error?.let { message ->
-                item {
-                    Text(
-                        text = message,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                    )
-                }
-            }
-            items(playlists, key = { it.id }) { item ->
-                LibraryRow(
-                    title = item.name,
-                    subtitle = item.owner.orEmpty(),
-                    imageUrl = item.imageUrl,
-                    onClick = { onOpenPlaylist(item) },
+            return@LazyColumn
+        }
+
+        item {
+            SegmentedControl(
+                options = listOf(
+                    stringResource(R.string.playlists),
+                    stringResource(R.string.albums),
+                    stringResource(R.string.artists),
+                ),
+                selectedIndex = tab,
+                onSelect = { tab = it },
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
+            )
+        }
+        failure?.let { problem ->
+            item {
+                SpotifyProblem(
+                    problem = problem,
+                    onRetry = { reload++ },
+                    onSignIn = onOpenLogin,
                 )
             }
         }
+        if (loading && (tab == 0 && playlists.isEmpty() || tab == 1 && albums.isEmpty() || tab == 2 && artists.isEmpty())) {
+            item {
+                Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+        }
+        when (tab) {
+            0 -> {
+                if (spotifyCopies > 0) {
+                    item {
+                        SyncRow(
+                            copies = spotifyCopies,
+                            busy = syncing.any { it.startsWith(SPOTIFY_PAGE_PREFIX) },
+                            onClick = { scope.launch { dev.auden.library.CloudSaver.syncSpotifyCopies(context) } },
+                        )
+                    }
+                }
+                items(playlists, key = { "p-${it.id}" }) { item ->
+                    LibraryRow(
+                        title = item.name,
+                        subtitle = item.owner.orEmpty(),
+                        imageUrl = item.imageUrl,
+                        round = false,
+                        onClick = { onOpenPlaylist(item) },
+                    )
+                }
+            }
+            1 -> {
+                if (!loading && albums.isEmpty() && failure == null) item { EmptyNote(stringResource(R.string.spotify_empty_albums)) }
+                items(albums, key = { "a-${it.id}" }) { item ->
+                    LibraryRow(title = item.name, subtitle = item.artist, imageUrl = item.imageUrl, round = false, onClick = { onOpenAlbum(item) })
+                }
+            }
+            else -> {
+                if (!loading && artists.isEmpty() && failure == null) item { EmptyNote(stringResource(R.string.spotify_empty_artists)) }
+                items(artists, key = { "r-${it.id}" }) { item ->
+                    LibraryRow(title = item.name, subtitle = "", imageUrl = item.imageUrl, round = true, onClick = { onOpenArtist(item) })
+                }
+            }
+        }
     }
+}
+
+/** What went wrong, in words, with the one thing that can help: sign in again, or try again. */
+@Composable
+private fun SpotifyProblem(problem: SpotifyException, onRetry: () -> Unit, onSignIn: () -> Unit) {
+    val needsSignIn = problem.kind == SpotifyException.Kind.SIGNED_OUT || problem.kind == SpotifyException.Kind.EXPIRED
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(16.dp),
+    ) {
+        Text(
+            text = stringResource(
+                when (problem.kind) {
+                    SpotifyException.Kind.SIGNED_OUT -> R.string.spotify_err_signed_out
+                    SpotifyException.Kind.EXPIRED -> R.string.spotify_err_expired
+                    SpotifyException.Kind.RATE_LIMITED -> R.string.spotify_err_rate_limited
+                    SpotifyException.Kind.NETWORK -> R.string.spotify_err_network
+                    SpotifyException.Kind.UNKNOWN -> R.string.spotify_err_unknown
+                },
+            ),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(Modifier.height(10.dp))
+        TextButton(onClick = if (needsSignIn) onSignIn else onRetry) {
+            Text(stringResource(if (needsSignIn) R.string.spotify_sign_in else R.string.retry))
+        }
+    }
+}
+
+@Composable
+private fun SyncRow(copies: Int, busy: Boolean, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !busy, onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+            if (busy) CircularProgressIndicator(strokeWidth = 2.5.dp, modifier = Modifier.size(24.dp))
+            else Icon(Icons.Rounded.Sync, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.spotify_sync_copies), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onBackground)
+            Text(
+                stringResource(R.string.spotify_sync_copies_count, copies),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyNote(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp),
+    )
 }
 
 @Composable
@@ -153,6 +290,7 @@ private fun LibraryRow(
     title: String,
     subtitle: String,
     imageUrl: String?,
+    round: Boolean,
     onClick: () -> Unit,
 ) {
     Row(
@@ -167,7 +305,7 @@ private fun LibraryRow(
             model = imageUrl,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.size(52.dp).clip(RoundedCornerShape(8.dp)),
+            modifier = Modifier.size(52.dp).clip(if (round) CircleShape else RoundedCornerShape(8.dp)),
         )
         Column(Modifier.weight(1f)) {
             Text(

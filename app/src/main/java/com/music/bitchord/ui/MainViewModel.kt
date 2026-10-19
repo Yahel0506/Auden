@@ -3055,7 +3055,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     setSongs(UiState.Success(soFar.map { it.asPendingSong() }))
                 }
             }.getOrElse {
-                setSongs(UiState.Error(it.message ?: text(R.string.failed)))
+                setSongs(
+                    UiState.Error(
+                        when ((it as? com.music.bitchord.data.spotify.SpotifyException)?.kind) {
+                            com.music.bitchord.data.spotify.SpotifyException.Kind.SIGNED_OUT -> text(R.string.spotify_err_signed_out)
+                            com.music.bitchord.data.spotify.SpotifyException.Kind.EXPIRED -> text(R.string.spotify_err_expired)
+                            com.music.bitchord.data.spotify.SpotifyException.Kind.RATE_LIMITED -> text(R.string.spotify_err_rate_limited)
+                            com.music.bitchord.data.spotify.SpotifyException.Kind.NETWORK -> text(R.string.spotify_err_network)
+                            else -> it.message ?: text(R.string.failed)
+                        },
+                    ),
+                )
                 return@launch
             }
             if (tracks.isEmpty()) {
@@ -3068,8 +3078,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     launch {
                         gate.withPermit {
                             if (!open()) return@withPermit
-                            val match = runCatching { SpotifyImporter.matchTrack(track) }.getOrNull()
-                            val found = match?.copy(thumbnailUrl = match.thumbnailUrl ?: track.imageUrl)
+                            // Remembered across opens, saves and syncs; see SpotifyMatches.
+                            val match = runCatching { dev.auden.library.spotify.SpotifyMatches.resolve(getApplication(), track) }.getOrNull()
+                            val found = match
                                 ?: track.asPendingSong().let {
                                     it.copy(videoId = SPOTIFY_MISSING_PREFIX + track.id)
                                 }
@@ -3086,8 +3097,63 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * The listener picked [chosen] as the right song for the Spotify track [row] stands for. Remembered for
+     * good, and applied to every open page and library playlist that showed the old match.
+     */
+    fun applySpotifyCorrection(row: Song, chosen: Song) {
+        val spotifyId = row.spotifyId ?: return
+        val fixed = chosen.copy(spotifyId = spotifyId, thumbnailUrl = chosen.thumbnailUrl ?: row.thumbnailUrl)
+        viewModelScope.launch {
+            dev.auden.library.spotify.SpotifyMatches.setManual(getApplication(), spotifyId, fixed)
+            _detailStack.value = _detailStack.value.map { page ->
+                val songs = (page.songs as? UiState.Success)?.data ?: return@map page
+                if (songs.none { it.spotifyId == spotifyId }) page
+                else page.copy(songs = UiState.Success(songs.map { if (it.spotifyId == spotifyId) fixed else it }))
+            }
+            dev.auden.library.LocalPlaylists.replaceSpotifyMatch(spotifyId, fixed)
+        }
+    }
+
+    /** Opens the YouTube Music album that is [album], or says there is none. */
+    fun openSpotifyAlbum(album: com.music.bitchord.data.spotify.SpotifyAlbum, onMissing: () -> Unit) {
+        viewModelScope.launch {
+            val found = bestBrowseMatch(
+                query = "${album.name} ${album.artist}", filter = SearchFilter.ALBUMS,
+                title = album.name, credit = album.artist, type = BrowseType.ALBUM,
+            )
+            if (found == null) onMissing() else openDetail(found.browseId, found.title, found.subtitle, found.thumbnailUrl, BrowseType.ALBUM)
+        }
+    }
+
+    /** Opens the YouTube Music artist that is [artist], or says there is none. */
+    fun openSpotifyArtist(artist: com.music.bitchord.data.spotify.SpotifyArtist, onMissing: () -> Unit) {
+        viewModelScope.launch {
+            val found = bestBrowseMatch(
+                query = artist.name, filter = SearchFilter.ARTISTS,
+                title = artist.name, credit = null, type = BrowseType.ARTIST,
+            )
+            if (found == null) onMissing() else openDetail(found.browseId, found.title, found.subtitle, found.thumbnailUrl, BrowseType.ARTIST)
+        }
+    }
+
+    /** The search hit whose name is [title] (and whose credit names [credit], for an album), best first. */
+    private suspend fun bestBrowseMatch(
+        query: String, filter: SearchFilter, title: String, credit: String?, type: BrowseType,
+    ): com.music.bitchord.data.model.BrowseItem? {
+        val hits = YtMusicRepository.search(query, filter).getOrNull()
+            ?.filterIsInstance<SearchResult.Browse>()?.map { it.item }?.filter { it.type == type }.orEmpty()
+        val wanted = dev.auden.library.io.PlaylistMatcher.normalize(title)
+        val sameName = hits.filter { dev.auden.library.io.PlaylistMatcher.normalize(it.title) == wanted }
+        if (credit.isNullOrBlank()) return sameName.firstOrNull()
+        val artist = dev.auden.library.io.PlaylistMatcher.normalize(credit.substringBefore(','))
+        return sameName.firstOrNull { dev.auden.library.io.PlaylistMatcher.normalize(it.subtitle).contains(artist) }
+            ?: sameName.firstOrNull()
+    }
+
     private fun SpotifyTrack.asPendingSong() = Song(
         videoId = SPOTIFY_PENDING_PREFIX + id,
+        spotifyId = id,
         title = title,
         artist = artist,
         thumbnailUrl = imageUrl,

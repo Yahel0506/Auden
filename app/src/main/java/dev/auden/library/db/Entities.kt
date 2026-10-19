@@ -161,3 +161,26 @@ data class PlayEventEntity(
     val listenedMs: Long,
     val completed: Boolean,
 )
+
+/**
+ * The YouTube Music song a Spotify track was matched to, kept so the same track is never searched for twice
+ * and so a correction made by hand is never undone by a later automatic search.
+ */
+@Entity(tableName = "spotify_match")
+data class SpotifyMatchEntity(
+    @PrimaryKey val spotifyId: String,
+    /** [SpotifyMatchStatus]. */
+    val status: String,
+    /** The matched song as JSON; null for a miss. */
+    val songJson: String? = null,
+    val matchedAt: Long = System.currentTimeMillis(),
+)
+
+object SpotifyMatchStatus {
+    /** Found by the automatic search. */
+    const val AUTO = "AUTO"
+    /** Chosen by the listener; never replaced automatically. */
+    const val MANUAL = "MANUAL"
+    /** The search found nothing; tried again after a few days. */
+    const val MISSING = "MISSING"
+}

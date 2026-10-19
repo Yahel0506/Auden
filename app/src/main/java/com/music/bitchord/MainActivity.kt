@@ -163,6 +163,7 @@ import com.music.bitchord.ui.navigation.AppDestination
 import com.music.bitchord.ui.navigation.AppRoute
 import com.music.bitchord.ui.components.ConfirmAlert
 import com.music.bitchord.ui.components.SpotifyImportAlert
+import com.music.bitchord.ui.components.SpotifyMatchSheet
 import com.music.bitchord.ui.screens.WearOsScreen
 import com.music.bitchord.ui.screens.AccountAndScrobblingScreen
 import com.music.bitchord.ui.screens.DiscordDialog
@@ -645,6 +646,8 @@ private fun BitChordApp(
     // The picker opened from the Library tab, where there is no track and
     // creating the playlist is the whole errand.
     var creatingPlaylist by remember { mutableStateOf(false) }
+    // The Spotify row whose YouTube Music match is being corrected.
+    var fixingSpotifyMatch by remember { mutableStateOf<Song?>(null) }
     var showSpotifyImportDialog by remember { mutableStateOf(false) }
     // Which album or playlist the collection menu is open on, or null when it
     // is shut. One slot for every surface that can open it — the shelves on
@@ -2807,6 +2810,16 @@ private fun BitChordApp(
                                         type = BrowseType.PLAYLIST,
                                     )
                                 },
+                                onOpenAlbum = { album ->
+                                    viewModel.openSpotifyAlbum(album) {
+                                        Toast.makeText(context, context.getString(R.string.spotify_open_missing), Toast.LENGTH_SHORT).show()
+                                    }
+                                },
+                                onOpenArtist = { artist ->
+                                    viewModel.openSpotifyArtist(artist) {
+                                        Toast.makeText(context, context.getString(R.string.spotify_open_missing), Toast.LENGTH_SHORT).show()
+                                    }
+                                },
                                 onOpenLogin = { showSpotifyLogin = true },
                                 onOpenTokenSetup = { showSpotifyCanvasAuth = true },
                                 contentPadding = listPadding,
@@ -4274,6 +4287,7 @@ private fun BitChordApp(
                     withContext(Dispatchers.IO) { AudioCache.holds(song.videoId) }
             }
             SongActionsSheet(
+                onFixSpotifyMatch = song.spotifyId?.let { { songActions = null; fixingSpotifyMatch = song } },
                 playingUri = player.song?.takeIf { it.videoId == song.videoId }?.localUri,
                 song = song,
                 presentation = presentation,
@@ -4571,6 +4585,18 @@ private fun BitChordApp(
                         dismiss()
                     },
                 )
+            }
+        }
+
+        fixingSpotifyMatch?.let { row ->
+            ModalBottomSheet(
+                onDismissRequest = { fixingSpotifyMatch = null },
+                containerColor = MaterialTheme.colorScheme.background,
+            ) {
+                SpotifyMatchSheet(row = row, onPick = { chosen ->
+                    viewModel.applySpotifyCorrection(row, chosen)
+                    fixingSpotifyMatch = null
+                })
             }
         }
 

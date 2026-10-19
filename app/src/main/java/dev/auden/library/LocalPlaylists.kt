@@ -126,6 +126,13 @@ object LocalPlaylists {
         replace(playlist.copy(songs = songs))
     }
 
+    /** A Spotify track was matched to a different song: every library playlist that held the old match takes the new one. */
+    fun replaceSpotifyMatch(spotifyId: String, replacement: Song) {
+        _playlists.value.filter { p -> p.songs.any { it.spotifyId == spotifyId } }.forEach { p ->
+            replace(p.copy(songs = p.songs.map { if (it.spotifyId == spotifyId) replacement.copy(spotifyId = spotifyId) else it }))
+        }
+    }
+
     /** The playlist as the account-playlist menus see it, so they can manage it too. */
     fun asUserPlaylist(id: String): com.music.bitchord.data.model.UserPlaylist? {
         val playlist = get(id) ?: return null
@@ -193,4 +200,5 @@ internal fun TrackEntity.toSong() = Song(
     localPath = path,
     localGenre = genre,
     trackNumber = trackNumber,
+    spotifyId = spotifyId,
 )

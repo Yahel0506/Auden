@@ -48,25 +48,40 @@ object CloudSaver {
     fun sourceId(browseId: String) = browseId.removePrefix("VL")
 
     fun save(context: Context, browseId: String, title: String, thumbnailUrl: String?, onDone: (Result) -> Unit = {}) {
-        val source = sourceId(browseId)
-        if (source in _saving.value) return
-        _saving.value = _saving.value + source
         val app = context.applicationContext
-        scope.launch {
-            val notifier = Notifier(app, source, title)
-            notifier.reading()
-            val result = runCatching { run(browseId, source, title, thumbnailUrl, notifier) }
-                .getOrElse { Result.Failed }
-            when (result) {
-                is Result.Saved -> notifier.done(result)
-                Result.Failed -> notifier.failed()
-            }
-            _saving.value = _saving.value - source
-            onDone(result)
-        }
+        scope.launch { onDone(saveNow(app, browseId, title, thumbnailUrl)) }
     }
 
-    private suspend fun run(browseId: String, source: String, title: String, thumbnailUrl: String?, notifier: Notifier): Result {
+    /**
+     * Brings every library copy of a Spotify playlist up to date, one after another so a long list of them does
+     * not hit Spotify all at once. Returns how many were synced.
+     */
+    suspend fun syncSpotifyCopies(context: Context): Int {
+        val copies = LocalPlaylists.playlists.value.filter { it.sourceId?.startsWith(SPOTIFY_PAGE_PREFIX) == true }
+        var done = 0
+        for (copy in copies) {
+            if (saveNow(context.applicationContext, copy.sourceId!!, copy.title, null) is Result.Saved) done++
+        }
+        return done
+    }
+
+    private suspend fun saveNow(app: Context, browseId: String, title: String, thumbnailUrl: String?): Result {
+        val source = sourceId(browseId)
+        if (source in _saving.value) return Result.Failed
+        _saving.value = _saving.value + source
+        val notifier = Notifier(app, source, title)
+        notifier.reading()
+        val result = runCatching { run(app, browseId, source, title, thumbnailUrl, notifier) }
+            .getOrElse { Result.Failed }
+        when (result) {
+            is Result.Saved -> notifier.done(result)
+            Result.Failed -> notifier.failed()
+        }
+        _saving.value = _saving.value - source
+        return result
+    }
+
+    private suspend fun run(context: Context, browseId: String, source: String, title: String, thumbnailUrl: String?, notifier: Notifier): Result {
         var unmatched = 0
         val songs: List<Song> = if (browseId.startsWith(SPOTIFY_PAGE_PREFIX)) {
             val tracks = SpotifyLibrary.tracks(browseId.removePrefix(SPOTIFY_PAGE_PREFIX)) { }
@@ -76,8 +91,7 @@ object CloudSaver {
                 tracks.map { track ->
                     async {
                         gate.withPermit {
-                            val found = runCatching { SpotifyImporter.matchTrack(track) }.getOrNull()
-                                ?.let { it.copy(thumbnailUrl = it.thumbnailUrl ?: track.imageUrl) }
+                            val found = runCatching { dev.auden.library.spotify.SpotifyMatches.resolve(context, track) }.getOrNull()
                             notifier.matching(done.incrementAndGet(), tracks.size)
                             found
                         }

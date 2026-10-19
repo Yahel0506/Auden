@@ -1456,4 +1456,18 @@
     <string name="lyrics_batch_done_title">Lyrics for “%1$s” saved</string>
     <string name="lyrics_batch_done_text">%1$d found · %2$d without lyrics</string>
     <string name="find_lyrics_for_all">Find lyrics</string>
+    <string name="spotify_fix_match">Fix Spotify match</string>
+    <string name="spotify_fix_match_hint">Pick the right song for “%1$s”</string>
+    <string name="spotify_search_hint">Search YouTube Music</string>
+    <string name="spotify_no_results">No songs found</string>
+    <string name="spotify_err_signed_out">Connect your Spotify account to see your library</string>
+    <string name="spotify_err_expired">Your Spotify session expired. Sign in again.</string>
+    <string name="spotify_err_rate_limited">Spotify asked to slow down. Try again in a moment.</string>
+    <string name="spotify_err_network">Couldn’t reach Spotify. Check your connection.</string>
+    <string name="spotify_err_unknown">Something went wrong with Spotify.</string>
+    <string name="spotify_sync_copies">Sync saved playlists</string>
+    <string name="spotify_sync_copies_count">%1$d on this device</string>
+    <string name="spotify_open_missing">Couldn’t find it on YouTube Music</string>
+    <string name="spotify_empty_albums">No saved albums</string>
+    <string name="spotify_empty_artists">No followed artists</string>
 </resources>

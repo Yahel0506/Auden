@@ -20,9 +20,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         PlaylistEntryEntity::class,
         LyricsVariantEntity::class,
         SongLyricsPrefEntity::class,
+        SpotifyMatchEntity::class,
         PlayEventEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class AudenDb : RoomDatabase() {
@@ -30,13 +31,14 @@ abstract class AudenDb : RoomDatabase() {
     abstract fun playlists(): PlaylistDao
     abstract fun playlistWrites(): PlaylistWriteDao
     abstract fun lyrics(): LyricsDao
+    abstract fun spotifyMatches(): SpotifyMatchDao
 
     companion object {
         @Volatile private var instance: AudenDb? = null
 
         fun get(context: Context): AudenDb = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, AudenDb::class.java, "auden.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .build()
                 .also { instance = it }
         }
@@ -83,6 +85,13 @@ abstract class AudenDb : RoomDatabase() {
                 db.execSQL("DROP TABLE IF EXISTS lyrics_variant")
                 db.execSQL("CREATE TABLE IF NOT EXISTS `lyrics_variant` (`songKey` TEXT NOT NULL, `provider` TEXT NOT NULL, `format` TEXT NOT NULL, `content` TEXT NOT NULL, `fetchedAt` INTEGER NOT NULL, PRIMARY KEY(`songKey`, `provider`))")
                 db.execSQL("CREATE TABLE IF NOT EXISTS `song_lyrics_pref` (`songKey` TEXT NOT NULL, `activeProvider` TEXT, `offsetMs` INTEGER, PRIMARY KEY(`songKey`))")
+            }
+        }
+
+        /** The remembered Spotify-to-YouTube Music matches. */
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `spotify_match` (`spotifyId` TEXT NOT NULL, `status` TEXT NOT NULL, `songJson` TEXT, `matchedAt` INTEGER NOT NULL, PRIMARY KEY(`spotifyId`))")
             }
         }
     }

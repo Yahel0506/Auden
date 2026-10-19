@@ -70,6 +70,9 @@ interface TrackDao {
     @Query("UPDATE track SET identStatus = NULL, identSource = NULL, suggestedVideoId = NULL, suggestedTitle = NULL, suggestedArtist = NULL WHERE videoId IS NULL AND identStatus IN ('NOT_FOUND', 'REJECTED')")
     suspend fun resetVerdicts()
 
+    @Query("UPDATE track SET spotifyId = :spotifyId WHERE id = :id AND spotifyId IS NULL")
+    suspend fun linkSpotify(id: Long, spotifyId: String)
+
     @Query("SELECT * FROM track WHERE id = :id")
     suspend fun byId(id: Long): TrackEntity?
 
@@ -79,7 +82,11 @@ interface TrackDao {
      */
     @Transaction
     suspend fun upsertByVideoId(track: TrackEntity): Long {
-        track.videoId?.let { byVideoId(it) }?.let { return it.id }
+        track.videoId?.let { byVideoId(it) }?.let {
+            // The same song, now known to be a Spotify track too.
+            track.spotifyId?.let { id -> linkSpotify(it.id, id) }
+            return it.id
+        }
         track.localUri?.let { byLocalUri(it) }?.let { return it.id }
         val id = insert(track)
         return if (id > 0) id else error("track could not be stored: ${track.title}")
@@ -153,4 +160,16 @@ interface LyricsDao {
 
     @Query("SELECT * FROM song_lyrics_pref WHERE songKey = :songKey")
     fun observePref(songKey: String): Flow<SongLyricsPrefEntity?>
+}
+
+@Dao
+interface SpotifyMatchDao {
+    @Query("SELECT * FROM spotify_match WHERE spotifyId = :id")
+    suspend fun get(id: String): SpotifyMatchEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun put(match: SpotifyMatchEntity)
+
+    @Query("DELETE FROM spotify_match WHERE spotifyId = :id")
+    suspend fun delete(id: String)
 }

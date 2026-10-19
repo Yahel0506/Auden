@@ -1479,4 +1479,18 @@
     <string name="lyrics_batch_done_title">Paroles de « %1$s » enregistrées</string>
     <string name="lyrics_batch_done_text">%1$d trouvées · %2$d sans paroles</string>
     <string name="find_lyrics_for_all">Chercher les paroles</string>
+    <string name="spotify_fix_match">Corriger la correspondance Spotify</string>
+    <string name="spotify_fix_match_hint">Choisissez le bon titre pour « %1$s »</string>
+    <string name="spotify_search_hint">Rechercher sur YouTube Music</string>
+    <string name="spotify_no_results">Aucun titre trouvé</string>
+    <string name="spotify_err_signed_out">Connectez votre compte Spotify pour voir votre bibliothèque</string>
+    <string name="spotify_err_expired">Votre session Spotify a expiré. Reconnectez-vous.</string>
+    <string name="spotify_err_rate_limited">Spotify demande de ralentir. Réessayez dans un instant.</string>
+    <string name="spotify_err_network">Impossible de joindre Spotify. Vérifiez votre connexion.</string>
+    <string name="spotify_err_unknown">Un problème est survenu avec Spotify.</string>
+    <string name="spotify_sync_copies">Synchroniser les playlists enregistrées</string>
+    <string name="spotify_sync_copies_count">%1$d sur cet appareil</string>
+    <string name="spotify_open_missing">Introuvable sur YouTube Music</string>
+    <string name="spotify_empty_albums">Aucun album enregistré</string>
+    <string name="spotify_empty_artists">Aucun artiste suivi</string>
 </resources>

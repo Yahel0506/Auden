@@ -24,10 +24,47 @@ import okhttp3.RequestBody.Companion.toRequestBody
 /** A Spotify playlist's page id in the detail stack: this plus the playlist id (or [SpotifyLibrary.LIKED_ID]). */
 const val SPOTIFY_PAGE_PREFIX = "spotify:playlist:"
 
+/**
+ * Why a Spotify request did not work, in terms a screen can act on: sign in again, wait, check the connection.
+ * An [IllegalStateException] so code that already catches that keeps working.
+ */
+class SpotifyException(
+    val kind: Kind,
+    message: String,
+    /** How long Spotify asked to wait, for [Kind.RATE_LIMITED]. */
+    val retryAfterSec: Int? = null,
+) : IllegalStateException(message) {
+    enum class Kind {
+        /** No account is connected. */
+        SIGNED_OUT,
+        /** An account is connected but Spotify no longer accepts its session. */
+        EXPIRED,
+        RATE_LIMITED,
+        NETWORK,
+        UNKNOWN,
+    }
+}
+
+@kotlinx.serialization.Serializable
 data class SpotifyPlaylist(
     val id: String,
     val name: String,
     val owner: String?,
+    val imageUrl: String?,
+)
+
+@kotlinx.serialization.Serializable
+data class SpotifyAlbum(
+    val id: String,
+    val name: String,
+    val artist: String,
+    val imageUrl: String?,
+)
+
+@kotlinx.serialization.Serializable
+data class SpotifyArtist(
+    val id: String,
+    val name: String,
     val imageUrl: String?,
 )
 
@@ -56,6 +93,14 @@ object SpotifyLibrary {
     @Volatile
     var auth: Auth? = null
 
+    /** Whether an account is connected, so a failed token can be told apart from there being none. */
+    @Volatile
+    var isSignedIn: () -> Boolean = { true }
+
+    /** Called when Spotify refuses the token in use, so the next request mints a fresh one. */
+    @Volatile
+    var onTokenRejected: () -> Unit = {}
+
     private const val GQL = "https://api-partner.spotify.com/pathfinder/v2/query"
     private const val LIBRARY = "973e511ca44261fda7eebac8b653155e7caee3675abb4fb110cc1b8c78b091c3"
     private const val PLAYLIST = "346811f856fb0b7e4f6c59f8ebea78dd081c6e2fb01b77c954b26259d5fc6763"
@@ -72,8 +117,7 @@ object SpotifyLibrary {
     private val mediaType = "application/json; charset=utf-8".toMediaType()
 
     /** Every playlist in the library, however many pages it takes. */
-    suspend fun playlists(): List<SpotifyPlaylist> = withContext(Dispatchers.IO) {
-        val headers = authHeaders()
+    suspend fun playlists(): List<SpotifyPlaylist> = withContext(Dispatchers.IO) { withRetry { headers ->
         val collected = mutableListOf<SpotifyPlaylist>()
         var offset = 0
         while (true) {
@@ -85,7 +129,7 @@ object SpotifyLibrary {
         // Liked Songs is not a playlist to Spotify's library query, so it is
         // always offered first rather than depending on it turning up there.
         listOf(SpotifyPlaylist(id = LIKED_ID, name = "Liked Songs", owner = null, imageUrl = LIKED_COVER)) + collected
-    }
+    } }
 
     /**
      * Every track of a playlist, however long. [onPage] gets the running list
@@ -95,8 +139,7 @@ object SpotifyLibrary {
     suspend fun tracks(
         playlistId: String,
         onPage: (List<SpotifyTrack>) -> Unit = {},
-    ): List<SpotifyTrack> = withContext(Dispatchers.IO) {
-        val headers = authHeaders()
+    ): List<SpotifyTrack> = withContext(Dispatchers.IO) { withRetry { headers ->
         val collected = mutableListOf<SpotifyTrack>()
         var offset = 0
         while (true) {
@@ -111,11 +154,40 @@ object SpotifyLibrary {
             if (raw == 0 || offset >= total) break
         }
         collected
+    } }
+
+    /** Every album saved to the library. */
+    suspend fun albums(): List<SpotifyAlbum> = withContext(Dispatchers.IO) { withRetry { headers ->
+        collectLibrary(headers, "Albums", ::parseAlbumPage)
+    } }
+
+    /** Every artist followed. */
+    suspend fun artists(): List<SpotifyArtist> = withContext(Dispatchers.IO) { withRetry { headers ->
+        collectLibrary(headers, "Artists", ::parseArtistPage)
+    } }
+
+    private fun <T> collectLibrary(
+        headers: Map<String, String>,
+        filter: String,
+        parse: (JsonObject) -> Triple<List<T>, Int, Int>,
+    ): List<T> {
+        val collected = mutableListOf<T>()
+        var offset = 0
+        while (true) {
+            val (items, total, raw) = parse(libraryRoot(headers, filter, offset))
+            collected += items
+            offset += raw
+            if (raw == 0 || offset >= total) break
+        }
+        return collected
     }
 
-    private fun playlistPage(headers: Map<String, String>, offset: Int): Triple<List<SpotifyPlaylist>, Int, Int> {
+    private fun playlistPage(headers: Map<String, String>, offset: Int): Triple<List<SpotifyPlaylist>, Int, Int> =
+        parsePlaylistPage(libraryRoot(headers, "Playlists", offset))
+
+    private fun libraryRoot(headers: Map<String, String>, filter: String, offset: Int): JsonObject {
         val variables = buildJsonObject {
-            putJsonArray("filters") { add("Playlists") }
+            putJsonArray("filters") { add(filter) }
             put("order", null as String?)
             put("textFilter", "")
             putJsonArray("features") {
@@ -131,7 +203,7 @@ object SpotifyLibrary {
             put("folderUri", null as String?)
             put("includeFoldersWhenFlattening", false)
         }
-        return parsePlaylistPage(gql("libraryV3", LIBRARY, variables, headers))
+        return gql("libraryV3", LIBRARY, variables, headers)
     }
 
     private fun trackPage(
@@ -153,17 +225,17 @@ object SpotifyLibrary {
      * thumbnail, which looks soft once it fills a playlist page's header, so
      * the page asks for the real image after it opens.
      */
-    suspend fun cover(playlistId: String): String? = withContext(Dispatchers.IO) {
-        if (playlistId == LIKED_ID) return@withContext LIKED_COVER
+    suspend fun cover(playlistId: String): String? = withContext(Dispatchers.IO) { withRetry { headers ->
+        if (playlistId == LIKED_ID) return@withRetry LIKED_COVER
         val variables = buildJsonObject {
             put("uri", "spotify:playlist:$playlistId")
             put("offset", 0)
             put("limit", 1)
             put("enableWatchFeedEntrypoint", false)
         }
-        val root = gql("fetchPlaylist", PLAYLIST, variables, authHeaders())
+        val root = gql("fetchPlaylist", PLAYLIST, variables, headers)
         largestSource(root.obj("data")?.obj("playlistV2")?.obj("images"))
-    }
+    } }
 
     private fun likedPage(headers: Map<String, String>, offset: Int): Triple<List<SpotifyTrack>, Int, Int> {
         val variables = buildJsonObject {
@@ -173,9 +245,39 @@ object SpotifyLibrary {
         return parseLikedPage(gql("fetchLibraryTracks", LIKED, variables, headers))
     }
 
+    /**
+     * Runs [block] with fresh headers, and tries again where trying again can help: once after a refused
+     * token (a new one is minted), and with a growing wait after a rate limit or a dropped connection.
+     */
+    private suspend fun <T> withRetry(block: suspend (Map<String, String>) -> T): T {
+        var attempt = 0
+        while (true) {
+            try {
+                return block(authHeaders())
+            } catch (e: SpotifyException) {
+                val again = when (e.kind) {
+                    SpotifyException.Kind.EXPIRED -> attempt == 0
+                    SpotifyException.Kind.RATE_LIMITED, SpotifyException.Kind.NETWORK -> attempt < 2
+                    else -> false
+                }
+                if (!again) throw e
+                val wait = when (e.kind) {
+                    SpotifyException.Kind.RATE_LIMITED -> ((e.retryAfterSec ?: 2) * 1000L).coerceAtMost(8_000L)
+                    SpotifyException.Kind.NETWORK -> 1_000L shl attempt
+                    else -> 0L
+                }
+                if (wait > 0) kotlinx.coroutines.delay(wait)
+                attempt++
+            }
+        }
+    }
+
     private suspend fun authHeaders(): Map<String, String> {
         val tokens = auth?.tokens()
-            ?: throw IllegalStateException("Spotify sign-in expired")
+            ?: throw SpotifyException(
+                if (isSignedIn()) SpotifyException.Kind.EXPIRED else SpotifyException.Kind.SIGNED_OUT,
+                if (isSignedIn()) "Spotify sign-in expired" else "Not signed in to Spotify",
+            )
         return buildMap {
             put("Authorization", "Bearer ${tokens.bearer}")
             put("Accept", "application/json")
@@ -203,12 +305,26 @@ object SpotifyLibrary {
             .post(body.toString().toRequestBody(mediaType))
             .apply { headers.forEach { (name, value) -> header(name, value) } }
             .build()
-        val text = Http.client.newCall(request).execute().use { response ->
-            val payload = response.body?.string().orEmpty()
-            if (!response.isSuccessful) {
-                throw IllegalStateException("Spotify $operation failed (${response.code})")
+        val text = try {
+            Http.client.newCall(request).execute().use { response ->
+                val payload = response.body?.string().orEmpty()
+                if (!response.isSuccessful) {
+                    when (response.code) {
+                        401, 403 -> {
+                            onTokenRejected()
+                            throw SpotifyException(SpotifyException.Kind.EXPIRED, "Spotify refused the session (${response.code})")
+                        }
+                        429 -> throw SpotifyException(
+                            SpotifyException.Kind.RATE_LIMITED, "Spotify asked to slow down",
+                            retryAfterSec = response.header("Retry-After")?.toIntOrNull(),
+                        )
+                        else -> throw SpotifyException(SpotifyException.Kind.UNKNOWN, "Spotify $operation failed (${response.code})")
+                    }
+                }
+                payload
             }
-            payload
+        } catch (e: java.io.IOException) {
+            throw SpotifyException(SpotifyException.Kind.NETWORK, "Couldn't reach Spotify")
         }
         val root = json.parseToJsonElement(text).jsonObject
         val error = root.arr("errors")?.firstOrNull()?.jsonObject?.str("message")
@@ -240,6 +356,58 @@ internal fun parsePlaylistPage(root: JsonObject): Triple<List<SpotifyPlaylist>, 
     }
     return Triple(items, library.int("totalCount") ?: rawItems.size, rawItems.size)
 }
+
+/** The albums kept, the library's total, and how many entries the page held before filtering. */
+internal fun parseAlbumPage(root: JsonObject): Triple<List<SpotifyAlbum>, Int, Int> {
+    val library = root.obj("data")?.obj("me")?.obj("libraryV3")
+        ?: throw IllegalStateException("Spotify library response was empty")
+    val rawItems = library.arr("items").orEmpty()
+    val items = rawItems.mapNotNull { element ->
+        val wrapper = element.jsonObject.obj("item") ?: return@mapNotNull null
+        if (!wrapper.str("__typename").orEmpty().contains("Album", ignoreCase = true)) return@mapNotNull null
+        val data = wrapper.obj("data") ?: return@mapNotNull null
+        val uri = wrapper.str("_uri") ?: data.str("uri") ?: return@mapNotNull null
+        val name = data.str("name").orEmpty()
+        if (name.isBlank()) return@mapNotNull null
+        SpotifyAlbum(
+            id = uri.substringAfterLast(":"),
+            name = name,
+            artist = data.obj("artists")?.arr("items").orEmpty().mapNotNull {
+                it.jsonObject.obj("profile")?.str("name")?.takeIf { n -> n.isNotBlank() }
+            }.joinToString(", "),
+            imageUrl = sourcesByWidth(data.obj("coverArt")?.arr("sources")),
+        )
+    }
+    return Triple(items, library.int("totalCount") ?: rawItems.size, rawItems.size)
+}
+
+/** The artists followed, the library's total, and how many entries the page held before filtering. */
+internal fun parseArtistPage(root: JsonObject): Triple<List<SpotifyArtist>, Int, Int> {
+    val library = root.obj("data")?.obj("me")?.obj("libraryV3")
+        ?: throw IllegalStateException("Spotify library response was empty")
+    val rawItems = library.arr("items").orEmpty()
+    val items = rawItems.mapNotNull { element ->
+        val wrapper = element.jsonObject.obj("item") ?: return@mapNotNull null
+        if (!wrapper.str("__typename").orEmpty().contains("Artist", ignoreCase = true)) return@mapNotNull null
+        val data = wrapper.obj("data") ?: return@mapNotNull null
+        val uri = wrapper.str("_uri") ?: data.str("uri") ?: return@mapNotNull null
+        val name = data.obj("profile")?.str("name") ?: data.str("name") ?: return@mapNotNull null
+        if (name.isBlank()) return@mapNotNull null
+        SpotifyArtist(
+            id = uri.substringAfterLast(":"),
+            name = name,
+            imageUrl = sourcesByWidth(data.obj("visuals")?.obj("avatarImage")?.arr("sources")),
+        )
+    }
+    return Triple(items, library.int("totalCount") ?: rawItems.size, rawItems.size)
+}
+
+/** The widest of a list of `{url, width}` sources. */
+private fun sourcesByWidth(sources: JsonArray?): String? =
+    sources?.mapNotNull { source ->
+        val url = source.jsonObject.str("url") ?: return@mapNotNull null
+        url to (source.jsonObject.int("width") ?: 0)
+    }?.maxByOrNull { it.second }?.first
 
 /** The tracks kept, the playlist's total, and how many entries the page held before filtering. */
 internal fun parseTrackPage(root: JsonObject): Triple<List<SpotifyTrack>, Int, Int> {

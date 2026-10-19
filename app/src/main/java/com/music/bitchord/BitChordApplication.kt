@@ -66,6 +66,8 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
             }
         }
         // The Spotify library and import live in the shared module; the tokens are the WebView's.
+        SpotifyLibrary.isSignedIn = { com.music.bitchord.data.settings.AppSettings.spotifySpdcToken.value.isNotBlank() }
+        SpotifyLibrary.onTokenRejected = { SpotifyToken.invalidate() }
         SpotifyLibrary.auth = SpotifyLibrary.Auth {
             SpotifyToken.accessToken()?.let { SpotifyLibrary.Tokens(it, SpotifyToken.clientToken()) }
         }

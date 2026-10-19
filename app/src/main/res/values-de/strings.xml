@@ -1478,4 +1478,18 @@
     <string name="lyrics_batch_done_title">Texte für „%1$s“ gespeichert</string>
     <string name="lyrics_batch_done_text">%1$d gefunden · %2$d ohne Text</string>
     <string name="find_lyrics_for_all">Texte suchen</string>
+    <string name="spotify_fix_match">Spotify-Zuordnung korrigieren</string>
+    <string name="spotify_fix_match_hint">Wähle den richtigen Titel für „%1$s“</string>
+    <string name="spotify_search_hint">YouTube Music durchsuchen</string>
+    <string name="spotify_no_results">Keine Titel gefunden</string>
+    <string name="spotify_err_signed_out">Verbinde dein Spotify-Konto, um deine Bibliothek zu sehen</string>
+    <string name="spotify_err_expired">Deine Spotify-Sitzung ist abgelaufen. Melde dich erneut an.</string>
+    <string name="spotify_err_rate_limited">Spotify bittet um eine Pause. Versuche es gleich erneut.</string>
+    <string name="spotify_err_network">Spotify nicht erreichbar. Prüfe deine Verbindung.</string>
+    <string name="spotify_err_unknown">Bei Spotify ist etwas schiefgelaufen.</string>
+    <string name="spotify_sync_copies">Gespeicherte Playlists synchronisieren</string>
+    <string name="spotify_sync_copies_count">%1$d auf diesem Gerät</string>
+    <string name="spotify_open_missing">Auf YouTube Music nicht gefunden</string>
+    <string name="spotify_empty_albums">Keine gespeicherten Alben</string>
+    <string name="spotify_empty_artists">Keine gefolgten Künstler</string>
 </resources>
