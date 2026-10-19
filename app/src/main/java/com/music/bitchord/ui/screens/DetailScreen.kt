@@ -461,7 +461,11 @@ fun DetailScreen(
     // rest of the page. Null on any page that is itself a reading of this
     // device — the Downloads folder, one downloaded playlist — where every row
     // qualifies and the badge would be decoration rather than information.
-    val downloadedTint = palette.accent.takeUnless { page.browseId.startsWith("local:") }
+    // A folder is all on the device, so a mark on every row would say nothing. A playlist kept in the
+    // library holds songs from anywhere, and the mark is how to tell which are downloaded.
+    val downloadedTint = palette.accent.takeUnless {
+        page.browseId.startsWith("local:") && dev.auden.library.LocalPlaylists.get(page.browseId) == null
+    }
 
     // Animated cover art on the header, the same feature the player has.
     // Albums only: a playlist's artwork is a collage and an artist page's is a

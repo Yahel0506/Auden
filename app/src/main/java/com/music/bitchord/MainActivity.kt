@@ -891,7 +891,11 @@ private fun BitChordApp(
     // `local:playlist:` prefix; a release still reachable by its real id (an
     // album's own page, a search hit) is looked up directly under that instead.
     val downloadIdFor: (String?) -> String? = { id ->
-        id?.let { Downloads.recordIdOf(it) ?: it }?.takeIf { it in savedCollections }
+        // A library copy of an album or playlist answers for the download of the page it was saved from.
+        val copied = id?.let { dev.auden.library.LocalPlaylists.get(it)?.sourceId }
+        (copied?.takeIf { source -> savedCollections.keys.any { it.removePrefix("VL") == source } }
+            ?.let { source -> savedCollections.keys.first { it.removePrefix("VL") == source } })
+            ?: id?.let { Downloads.recordIdOf(it) ?: it }?.takeIf { it in savedCollections }
     }
     LaunchedEffect(savedDownloads, savedCollections, topDetail?.browseId, localPlaylists) {
         val openPage = topDetail ?: return@LaunchedEffect
@@ -3409,7 +3413,18 @@ private fun BitChordApp(
                                 pullState = libraryPull,
                                 contentPadding = listPadding,
                                 links = libraryLinks(),
-                                deviceItems = libraryDeviceItems(downloadedReleases) + localPlaylistItems,
+                                // An album kept on the device and then downloaded is one album: its copy in
+                                // the library is the card, not the download's record beside it.
+                                deviceItems = libraryDeviceItems(
+                                    downloadedReleases.filterNot { release ->
+                                        localPlaylists.any {
+                                            // Downloaded from the page it was copied from, or from the copy itself.
+                                            it.sourceId == release.id.removePrefix("VL") ||
+                                                it.browseId == release.id ||
+                                                it.id == release.id
+                                        }
+                                    },
+                                ) + localPlaylistItems,
                             )
                         }
                     }
