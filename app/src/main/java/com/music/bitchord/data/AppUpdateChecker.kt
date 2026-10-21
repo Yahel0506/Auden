@@ -12,7 +12,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
@@ -20,7 +22,7 @@ import okhttp3.Request
 import java.io.File
 
 /**
- * BitChord ships as a sideloaded APK off GitHub Releases rather than through
+ * Auden ships as a sideloaded APK off GitHub Releases rather than through
  * a store, so there's nothing to push an update notice on its own — this
  * polls the repo's "latest release" once per launch and compares its tag
  * against the running build.
@@ -42,8 +44,11 @@ object AppUpdateChecker {
 
     private const val CACHE_SUBDIR = "updates"
 
-    private const val LATEST_RELEASE_URL =
-        "https://api.github.com/repos/kushagrasinghx/BitChord/releases/latest"
+    private const val REPO = "Yahel0506/Auden"
+    private const val LATEST_RELEASE_URL = "https://api.github.com/repos/$REPO/releases/latest"
+
+    /** Newest first, pre-releases included — what a beta build follows, since "latest" skips them. */
+    private const val RELEASES_URL = "https://api.github.com/repos/$REPO/releases?per_page=10"
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -67,11 +72,23 @@ object AppUpdateChecker {
 
     suspend fun check() = withContext(Dispatchers.IO) {
         runCatching {
-            val request = Request.Builder().url(LATEST_RELEASE_URL).build()
+            // A beta build (a "-suffix" in its version) follows pre-releases too;
+            // a plain release only ever hears about plain releases.
+            val followsBetas = '-' in BuildConfig.VERSION_NAME
+            val request = Request.Builder()
+                .url(if (followsBetas) RELEASES_URL else LATEST_RELEASE_URL)
+                .build()
             val body = Http.client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) null else response.body?.string()
             } ?: return@runCatching
-            val release = json.parseToJsonElement(body) as? JsonObject ?: return@runCatching
+            val parsed = json.parseToJsonElement(body)
+            val release = (
+                if (followsBetas) {
+                    (parsed as? JsonArray)?.firstOrNull {
+                        (it as? JsonObject)?.get("draft")?.jsonPrimitive?.booleanOrNull != true
+                    }
+                } else parsed
+            ) as? JsonObject ?: return@runCatching
             val tag = release["tag_name"]?.jsonPrimitive?.contentOrNull ?: return@runCatching
             val url = release["html_url"]?.jsonPrimitive?.contentOrNull ?: return@runCatching
             val apkUrl = apkAssetUrl(release)
@@ -97,11 +114,11 @@ object AppUpdateChecker {
      * One release carries the phone app and the TV app, each as a universal
      * APK plus per-ABI splits:
      *
-     *     BitChord-v1.8.apk     BitChord-v1.8_arm64-v8a.apk     ...
-     *     BitChordTV-v1.8.apk   BitChordTV-v1.8_arm64-v8a.apk   ...
+     *     Auden-v1.8.apk     Auden-v1.8_arm64-v8a.apk     ...
+     *     AudenTV-v1.8.apk   AudenTV-v1.8_arm64-v8a.apk   ...
      *
      * so this app's APKs are the ones named with its own
-     * [BuildConfig.UPDATE_APK_PREFIX] — "BitChord-" never matches a TV file,
+     * [BuildConfig.UPDATE_APK_PREFIX] — "Auden-" never matches a TV file,
      * since the prefix ends at the hyphen. The universal build (no `_ABI`
      * suffix) is taken first, as it installs anywhere; failing that, the split
      * for this device's ABI. A release with neither leaves
@@ -142,7 +159,7 @@ object AppUpdateChecker {
             val dir = File(context.cacheDir, CACHE_SUBDIR).apply { mkdirs() }
             // Drop anything left over from an earlier attempt.
             dir.listFiles()?.forEach { it.delete() }
-            val target = File(dir, "bitchord-${info.version}.apk")
+            val target = File(dir, "auden-${info.version}.apk")
 
             val request = Request.Builder().url(url).build()
             Http.client.newCall(request).execute().use { response ->

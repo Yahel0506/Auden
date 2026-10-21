@@ -1,56 +1,139 @@
-name: Android Release APK
+name: Release
 
+# Every push to main looks at the version in build.gradle.kts. If no release
+# carries that tag yet, the phone, TV and watch apps are built, signed and
+# published as a GitHub release — which is exactly what the in-app updater
+# polls (AppUpdateChecker). To ship: bump bitchordVersionName / VersionCode
+# (and blank or bump bitchordBetaSuffix) in build.gradle.kts and push to main.
+# A version that was already released is skipped, so ordinary commits only run
+# the checks in check.yml.
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
 jobs:
-  build-prod-release:
+  version:
+    name: Is there something to release?
     runs-on: ubuntu-latest
-
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      name: ${{ steps.v.outputs.name }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+      release: ${{ steps.v.outputs.release }}
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: gradle
+      - name: Read the version and look for its release
+        id: v
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          name=$(sed -nE 's/^extra\["bitchordVersionName"\] = "([^"]+)".*/\1/p' build.gradle.kts)
+          beta=$(sed -nE 's/^extra\["bitchordBetaSuffix"\] = "([^"]*)".*/\1/p' build.gradle.kts)
+          [ -n "$name" ] || { echo "versionName not found in build.gradle.kts"; exit 1; }
+          full="$name"
+          pre=false
+          if [ -n "$beta" ]; then full="$name-$beta"; pre=true; fi
+          echo "tag=v$full" >> "$GITHUB_OUTPUT"
+          echo "name=$full" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$pre" >> "$GITHUB_OUTPUT"
+          if gh release view "v$full" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "v$full is already released; nothing to do."
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          fi
 
-    - name: Setup Secrets (Keystore & local.properties)
-      run: |
-        echo "LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }}" > local.properties
-        echo "LASTFM_SECRET=${{ secrets.LASTFM_SECRET }}" >> local.properties
-        echo "LISTEN_TOGETHER_SERVER=${{ secrets.LISTEN_TOGETHER_SERVER }}" >> local.properties
+  release:
+    name: Build and publish ${{ needs.version.outputs.tag }}
+    needs: version
+    if: needs.version.outputs.release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > bitchord-release.jks
-        {
-          echo "storeFile=bitchord-release.jks"
-          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}"
-          echo "keyAlias=${{ secrets.KEY_ALIAS }}"
-          echo "keyPassword=${{ secrets.KEY_PASSWORD }}"
-        } > keystore.properties
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
+      - uses: gradle/actions/setup-gradle@v4
 
-    - name: Build Signed Prod Release APK
-      run: ./gradlew assembleProdRelease
+      - name: Setup Secrets (Keystore & local.properties)
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          # An unsigned APK cannot update an installed app, so a release
+          # without the key is a failure, not a quieter build.
+          [ -n "$KEYSTORE_BASE64" ] || { echo "::error::KEYSTORE_BASE64 secret is missing"; exit 1; }
 
-    - name: Upload APK Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: bitchord-prod-release-signed
-        path: app/build/outputs/apk/prod/release/*.apk
+          echo "LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }}" > local.properties
+          echo "LASTFM_SECRET=${{ secrets.LASTFM_SECRET }}" >> local.properties
+          echo "LISTEN_TOGETHER_SERVER=${{ secrets.LISTEN_TOGETHER_SERVER }}" >> local.properties
 
-    # Built by the same assembleProdRelease, with the same key. The watch app
-    # only pairs with a phone app signed by the same key, so a prod watch APK
-    # for these phone builds can only come from here, never a local build.
-    - name: Upload Wear OS APK Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: bitchord-wear-prod-release-signed
-        path: wearos/build/outputs/apk/prod/release/*.apk
+          echo "$KEYSTORE_BASE64" | base64 -d > auden-release.jks
+          {
+            echo "storeFile=auden-release.jks"
+            echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}"
+            echo "keyAlias=${{ secrets.KEY_ALIAS }}"
+            echo "keyPassword=${{ secrets.KEY_PASSWORD }}"
+          } > keystore.properties
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      # The phone build also builds and bundles the watch app (see
+      # app/build.gradle.kts); the TV app is its own module.
+      - name: Build signed prod release APKs
+        run: ./gradlew assembleProdRelease :tv:assembleProdRelease
+
+      # AppUpdateChecker picks its APK by file name: "Auden-" for the phone
+      # (universal first, then the device's ABI split) and "AudenTV-" for the
+      # TV. The watch APK is named "AudenWear-" so neither prefix matches it.
+      - name: Name the release assets
+        env:
+          NAME: ${{ needs.version.outputs.name }}
+        run: |
+          mkdir -p dist
+          rename() { # <dir> <prefix>
+            for f in "$1"/*.apk; do
+              [ -e "$f" ] || continue
+              b=$(basename "$f" .apk)
+              case "$b" in
+                *universal*) suffix="" ;;
+                *arm64-v8a*) suffix="_arm64-v8a" ;;
+                *armeabi-v7a*) suffix="_armeabi-v7a" ;;
+                *x86_64*) suffix="_x86_64" ;;
+                *x86*) suffix="_x86" ;;
+                *) suffix="" ;;
+              esac
+              cp "$f" "dist/$2-v$NAME$suffix.apk"
+            done
+          }
+          rename app/build/outputs/apk/prod/release Auden
+          rename tv/build/outputs/apk/prod/release AudenTV
+          for f in wearos/build/outputs/apk/prod/release/*.apk; do
+            [ -e "$f" ] && cp "$f" "dist/AudenWear-v$NAME.apk"
+          done
+          ls -la dist
+          ls dist/Auden-v$NAME.apk   # the universal phone APK must exist
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: Auden ${{ needs.version.outputs.name }}
+          target_commitish: ${{ github.sha }}
+          prerelease: ${{ needs.version.outputs.prerelease == 'true' }}
+          generate_release_notes: true
+          files: dist/*.apk

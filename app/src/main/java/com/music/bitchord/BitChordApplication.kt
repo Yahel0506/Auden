@@ -208,7 +208,7 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory {
                     chain.request().newBuilder()
                         .header(
                             "User-Agent",
-                            "BitChord/${BuildConfig.VERSION_NAME} (Android; +https://github.com/kushagrasinghx/BitChord)",
+                            "Auden/${BuildConfig.VERSION_NAME} (Android; +https://github.com/Yahel0506/Auden)",
                         )
                         .build(),
                 )

@@ -104,7 +104,7 @@ android {
         // apart by name (BitChordTV-v1.8.apk, BitChordTV-v1.8_x86_64.apk), so
         // the updater installs the TV app here, never the phone app. See
         // AppUpdateChecker.apkAssetUrl.
-        buildConfigField("String", "UPDATE_APK_PREFIX", "\"BitChordTV-\"")
+        buildConfigField("String", "UPDATE_APK_PREFIX", "\"AudenTV-\"")
     }
 
     splits {
@@ -153,11 +153,11 @@ android {
         create("dev") {
             dimension = "env"
             applicationId = "dev.auden.app.dev.tv"
-            resValue("string", "app_name", "BitChord TV")
+            resValue("string", "app_name", "Auden TV")
         }
         create("prod") {
             dimension = "env"
-            resValue("string", "app_name", "BitChord TV")
+            resValue("string", "app_name", "Auden TV")
         }
     }
 
