@@ -44,12 +44,15 @@ data class DjUiState(
     val voice: Voice = Voice.Unavailable,
     /** Why the last start did not happen, if it did not. */
     val problem: Problem? = null,
+    /** Why a line could not be spoken, when one could not: shown, so it can be told and fixed. */
+    val speechError: String? = null,
 ) {
     sealed interface Voice {
         /** No voice exists for the app's language: the DJ plays, and the words are on screen. */
         data object Unavailable : Voice
         /** A voice exists and has to be downloaded first. */
-        data class NotInstalled(val pack: VoicePacks.Pack) : Voice
+        /** A voice exists and has to be downloaded first; [failure] says why the last try did not finish. */
+        data class NotInstalled(val pack: VoicePacks.Pack, val failure: String? = null) : Voice
         data class Downloading(val pack: VoicePacks.Pack, val fraction: Float) : Voice
         data class Ready(val pack: VoicePacks.Pack) : Voice
     }
@@ -164,6 +167,7 @@ object DjSession {
         return when (val s = states[pack.id]) {
             is VoicePackStore.State.Downloading -> DjUiState.Voice.Downloading(pack, s.fraction)
             VoicePackStore.State.Ready -> DjUiState.Voice.Ready(pack)
+            is VoicePackStore.State.Failed -> if (VoicePackStore.isReady(pack)) DjUiState.Voice.Ready(pack) else DjUiState.Voice.NotInstalled(pack, s.message)
             else -> if (VoicePackStore.isReady(pack)) DjUiState.Voice.Ready(pack) else DjUiState.Voice.NotInstalled(pack)
         }
     }
@@ -177,10 +181,11 @@ object DjSession {
     private class Run(private val app: Context, requestText: String) {
         private val lang = language(app)
         private val blockSize = AppSettings.djBlockSize.value
-        private val speakable = AppSettings.djVoice.value &&
+        // Asked each time, not once: a voice downloaded while the DJ is on starts speaking at the next line.
+        private fun speakable() = AppSettings.djVoice.value &&
             VoicePacks.forLanguage(lang)?.let(VoicePackStore::isReady) == true &&
             DjPhrasesCheck.supports(app, lang)
-        private val chatty = AppSettings.djChatty.value && speakable
+        private fun chatty() = AppSettings.djChatty.value && speakable()
         private val now = System.currentTimeMillis()
         private val songs = HashMap<String, Song>()
         private val tracks = HashMap<String, DjTrack>()
@@ -205,7 +210,7 @@ object DjSession {
             tracks.putAll(loaded.tracks.associateBy { it.id })
             songs.putAll(loaded.songs)
             val parsed = requestText.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, loaded.tracks) }
-            planner = DjPlanner(loaded.tracks, now, seed = now, blockSize = blockSize, request = parsed, genresOf = ArtistFacts::genresForDj)
+            planner = DjPlanner(loaded.tracks, now, seed = now, blockSize = blockSize, request = parsed, genresOf = ArtistFacts::genresForDj, recently = DjHistory.recent(app))
             // The Last.fm genres of the artists the listener plays most, asked for once and kept: they
             // give a track its mood. Off the main thread, and the sets already chosen do not wait for it.
             queueing += scope.launch(Dispatchers.IO) {
@@ -242,6 +247,13 @@ object DjSession {
                 controller.playSongs(order.mapNotNull(::songFor), 0, shuffle = false)
                 listener = object : Player.Listener {
                     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) = entered(mediaItem?.mediaId)
+                    // A line the player cannot play is not silent: the cause is shown, so it can be fixed.
+                    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                        if (controller.currentMediaItem?.mediaId?.startsWith(com.music.bitchord.data.model.DJ_CLIP_PREFIX) == true) {
+                            Log.w(TAG, "clip failed to play", error)
+                            _state.value = _state.value.copy(speechError = error.errorCodeName)
+                        }
+                    }
                 }.also(controller::addListener)
             }
             _state.value = DjUiState(running = true, theme = label(first.theme), voice = voiceFor(lang))
@@ -309,9 +321,13 @@ object DjSession {
         }
 
         private suspend fun renderLine(line: String, seed: Long): DjClip? {
-            if (!speakable || line.isBlank()) return null
+            if (!speakable() || line.isBlank()) return null
             return runCatching { renderer.render(lang, line, seed) }
-                .onFailure { Log.w(TAG, "line not spoken", it) }
+                .onFailure {
+                    Log.w(TAG, "line not spoken", it)
+                    _state.value = _state.value.copy(speechError = it.message ?: it.javaClass.simpleName)
+                }
+                .onSuccess { if (it != null) _state.value = _state.value.copy(speechError = null) }
                 .getOrNull()
         }
 
@@ -329,9 +345,11 @@ object DjSession {
                 return
             }
             val (set, pos) = at
+            // A song, not the DJ's own voice, goes in the memory that keeps the next session fresh.
+            if (pos >= 0) DjHistory.record(app, mediaId)
             _state.value = _state.value.copy(theme = label(sets[set].theme))
             if (pos == 0 && sets.size <= set + 1) planSet(set)
-            if (pos == 1 && chatty && noted.add(set)) commentOnNext(set)
+            if (pos == 1 && chatty() && noted.add(set)) commentOnNext(set)
         }
 
         /** Chooses, renders and queues the set after [set]. */

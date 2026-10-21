@@ -29,6 +29,8 @@ class DjPlanner(
     request: DjRequest? = null,
     /** An artist's Last.fm genres, for reading a mood beyond the title. Empty when unknown. */
     private val genresOf: (String) -> List<String> = { emptyList() },
+    /** Songs the DJ played recently, in earlier sessions too: chosen last, so a new session sounds new. */
+    private val recently: Set<String> = emptySet(),
 ) {
     private val rng = Random(seed)
     private val pool = pool.toMutableList()
@@ -298,7 +300,11 @@ class DjPlanner(
             else -> 1
         }
         // Each song's jitter is drawn once: a sort whose key changes between comparisons has no order.
-        val ranked = eligible.map { it to fit(it) + 0.3 * rng.nextDouble() }.sortedByDescending { it.second }.map { it.first }
+        // Well-known songs are favoured, not guaranteed: a wide random spread keeps the top of the list from
+        // being every set's answer, and songs heard lately sink.
+        val ranked = eligible
+            .map { it to 0.7 * fit(it) + 1.1 * rng.nextGaussian() - (if (it.id in recently) RECENT_PENALTY else 0.0) }
+            .sortedByDescending { it.second }.map { it.first }
         val familiar = ranked.filter { !it.discovery && it.plays > 0 }
         val newer = ranked.filter { it.discovery || it.plays == 0 }
         val familiarTarget = if (surprise) (n * FAMILIAR_SHARE).roundToInt() else n
@@ -402,6 +408,7 @@ class DjPlanner(
         const val MIN_BLOCK = 4
         private const val RECENT_THEMES = 4
         private const val ARTIST_COOLDOWN_SETS = 2
+        private const val RECENT_PENALTY = 3.0
         private const val FAMILIAR_SHARE = 0.7
         private const val FAVORITE_MIN_PLAYS = 3
         private const val REDISCOVER_MIN_PLAYS = 5

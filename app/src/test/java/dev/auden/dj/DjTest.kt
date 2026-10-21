@@ -288,4 +288,19 @@ class DjTest {
         }
         assertTrue(named)
     }
+
+    @Test
+    fun aNewSessionLeansAwayFromWhatTheLastOnePlayed() {
+        val first = DjPlanner(varied, now, seed = 5, blockSize = 5)
+        val played = generateSequence { first.next() }.take(3).flatMap { it.tracks }.map { it.id }.toSet()
+        var overlapFresh = 0
+        var overlapPlain = 0
+        repeat(20) { seed ->
+            val fresh = DjPlanner(varied, now, seed = 100L + seed, blockSize = 5, recently = played)
+            val plain = DjPlanner(varied, now, seed = 100L + seed, blockSize = 5)
+            overlapFresh += generateSequence { fresh.next() }.take(3).flatMap { it.tracks }.count { it.id in played }
+            overlapPlain += generateSequence { plain.next() }.take(3).flatMap { it.tracks }.count { it.id in played }
+        }
+        assertTrue("fresh $overlapFresh vs plain $overlapPlain", overlapFresh < overlapPlain)
+    }
 }
