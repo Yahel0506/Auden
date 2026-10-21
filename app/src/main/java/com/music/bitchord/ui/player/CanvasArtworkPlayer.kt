@@ -161,6 +161,8 @@ internal fun AndroidCanvasArtworkPlayer(
      * while paused, so there is nothing to fade back in once it lifts.
      */
     pausedForTransition: Boolean = false,
+    offerPosition: ((() -> Long)?) -> Unit = {},
+    syncTo: (() -> Long)? = null,
 ) {
     val context = LocalContext.current
 
@@ -263,8 +265,20 @@ internal fun AndroidCanvasArtworkPlayer(
     // regardless of playback state, so coming back from background always has
     // a surface ready and `onRenderedFirstFrame()` fires naturally.
     val foreground = rememberIsForeground()
+    val currentSyncTo by rememberUpdatedState(syncTo)
     LaunchedEffect(foreground, pausedForTransition) {
-        player.playWhenReady = foreground && !pausedForTransition
+        val playing = foreground && !pausedForTransition
+        // Taking over from another player of the same clip: start from its playhead, so the
+        // hand-over is the same picture moving on rather than a loop restarting.
+        if (playing && !player.playWhenReady) {
+            currentSyncTo?.invoke()?.takeIf { it > 0L }?.let { player.seekTo(it) }
+        }
+        player.playWhenReady = playing
+    }
+    val currentOffer by rememberUpdatedState(offerPosition)
+    DisposableEffect(player) {
+        currentOffer { player.currentPosition }
+        onDispose { currentOffer(null) }
     }
 
     // Repaint onto a surface that has just been handed back. A TextureView's
@@ -772,6 +786,8 @@ internal fun AndroidCanvasVideo(spec: CanvasVideoSpec, modifier: Modifier) {
         bottomFade = spec.bottomFade,
         bottomFadeEndPx = spec.bottomFadeEndPx,
         pausedForTransition = spec.pausedForTransition,
+        offerPosition = spec.offerPosition,
+        syncTo = spec.syncTo,
     )
 }
 

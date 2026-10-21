@@ -837,6 +837,8 @@ fun NowPlayingScreen(
     val canvasRenderedState = remember(canvas?.url) { mutableStateOf(false) }
     var canvasRendered by canvasRenderedState
     var canvasFrame by remember(canvas?.url) { mutableStateOf<ImageBitmap?>(null) }
+    // The banner's playhead, for the thumbnail's player to pick up from — see where it is mounted.
+    val heroPlayhead = remember(canvas?.url) { mutableStateOf<(() -> Long)?>(null) }
     // Spotify's phone presentation starts with the full control deck over its
     // video. It leaves on a Canvas tap, or after the optional idle timeout.
     var spotifyCanvasControlsOpen by remember(canvas?.url) { mutableStateOf(true) }
@@ -2195,6 +2197,7 @@ fun NowPlayingScreen(
                             // Compose layer around it.
                             presentationAlpha = { (1f - 2f * p()).coerceIn(0f, 1f) * dockFade() },
                             onRenderedChanged = { canvasRendered = it },
+                            offerPosition = { heroPlayhead.value = it },
                             onFrameCaptured = {
                                 if (!clipFullscreen && !lyricsOpen && !queueOpen && !queueDragging) {
                                     canvasFrame = it
@@ -3078,25 +3081,34 @@ fun NowPlayingScreen(
                             )
 
                             // Where the clip plays when it can't have the banner — and, in
-                            // the lyrics and the queue, the thumbnail beside the title: the
-                            // banner has gone by then, and the small cover keeps moving.
+                            // full-bleed mode, the player the banner hands over to when the
+                            // lyrics or the queue take the screen: the sleeve is the banner's
+                            // own rectangle at rest, then shrinks into the thumbnail, so this
+                            // is the same animated cover carried through the collapse rather
+                            // than a still one standing in until a clip starts again.
+                            //
+                            // Under the banner it is prepared but held, so it has a first
+                            // frame ready (it is hidden by the banner's own opacity there);
+                            // it starts, from the banner's playhead, as the collapse begins.
                             // Inside the same clip as the still art, taking the sleeve's
                             // corners, shadow and paused shrink for free.
-                            //
-                            // Still while the sleeve is travelling, as the banner is: a clip
-                            // decoding behind a moving cover is work nobody can see.
-                            if (canvas != null && (!heroMode || collapsePastHalf)) {
+                            if (canvas != null) {
+                                val thumbActive = !heroMode || lyricsOpen || queueOpen || queueDragging ||
+                                    collapseStarted
                                 CanvasArtworkPlayer(
                                     canvas = canvas,
                                     isPlaying = isPlaying,
-                                    pausedForTransition = queueDragging || dockMoving ||
-                                        (collapseStarted && !collapseDone) ||
-                                        ((lyricsOpen || queueOpen) && !collapseDone),
+                                    pausedForTransition = !thumbActive || dockMoving,
                                     onRenderedChanged = { if (!heroMode) canvasRendered = it },
-                                    onFrameCaptured = { if (!queueDragging) canvasFrame = it },
-                                    refreshFrameEveryMs = if (
-                                        dockMoving || queueDragging || (collapseStarted && !collapseDone)
-                                    ) null else if (followsFrames) BACKDROP_REFRESH_MS else meshRefreshMs,
+                                    onFrameCaptured = { if (thumbActive && !queueDragging) canvasFrame = it },
+                                    refreshFrameEveryMs = if (!thumbActive || dockMoving || queueDragging) {
+                                        null
+                                    } else if (followsFrames) {
+                                        BACKDROP_REFRESH_MS
+                                    } else {
+                                        meshRefreshMs
+                                    },
+                                    syncTo = if (heroMode) ({ heroPlayhead.value?.invoke() ?: 0L }) else null,
                                     modifier = Modifier.fillMaxSize(),
                                 )
                             }
