@@ -120,6 +120,28 @@ fun rememberFullArtworkBlurImage(
 }
 
 /**
+ * [frame] — a small capture off a playing motion cover — blurred the same way as
+ * [rememberFullArtworkBlurImage], so the backdrop can follow the clip.
+ *
+ * Frames arrive at [CANVAS_FRAME_CAPTURE_PX] already, so each pass is a few
+ * milliseconds on a worker thread. The previous result stays up until the next is
+ * ready, and null in means null out (a different clip, or none), which hands the
+ * backdrop back to the still cover's blur.
+ */
+@Composable
+fun rememberBlurredFrame(frame: ImageBitmap?): ImageBitmap? {
+    var blurred by remember { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(frame) {
+        if (frame == null) {
+            blurred = null
+            return@LaunchedEffect
+        }
+        blurred = withContext(Dispatchers.Default) { frame.boxBlurred(FULL_BLUR_PASSES) }
+    }
+    return blurred
+}
+
+/**
  * A full-surface, still-art backdrop for player views that do not have an
  * artwork edge to continue from.
  *
@@ -140,21 +162,25 @@ fun rememberFullArtworkBlurImage(
 fun FullArtworkBlurBackdrop(
     image: ImageBitmap?,
     modifier: Modifier = Modifier,
+    /** How long one picture takes to give way to the next; long for a moving cover, so it drifts. */
+    crossfadeMs: Int = 320,
 ) {
-    val imageAlpha by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (image != null) 1f else 0f,
-        animationSpec = tween(320, easing = FastOutSlowInEasing),
-        label = "preparedBackdropImage",
-    )
     Box(modifier = modifier.fillMaxSize().background(FallbackBackdrop)) {
-        image?.let { bitmap ->
-            val painter = remember(bitmap) { BitmapPainter(bitmap) }
-            Image(
-                painter = painter,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = imageAlpha },
-            )
+        androidx.compose.animation.Crossfade(
+            targetState = image,
+            animationSpec = tween(crossfadeMs, easing = FastOutSlowInEasing),
+            label = "preparedBackdropImage",
+            modifier = Modifier.fillMaxSize(),
+        ) { bitmap ->
+            if (bitmap != null) {
+                val painter = remember(bitmap) { BitmapPainter(bitmap) }
+                Image(
+                    painter = painter,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
 
         // Lyrics and queue are dense white foregrounds. Preserve the cover's

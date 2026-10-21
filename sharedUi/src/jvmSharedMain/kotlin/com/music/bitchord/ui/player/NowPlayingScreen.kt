@@ -291,6 +291,15 @@ private const val SUBVIEW_STATUS_SCRIM_MIN_ALPHA = 0.40f
  */
 private const val MESH_REFRESH_MS = 3_000L
 
+/**
+ * How often the full-cover backdrop reads a frame off a playing motion cover.
+ * Each read is the same 128px capture as the mesh's, so the cost is the readback
+ * alone; the fade below runs a little longer than the gap, which keeps the
+ * backdrop in constant slow motion rather than stepping from frame to frame.
+ */
+private const val BACKDROP_REFRESH_MS = 1_000L
+private const val BACKDROP_FRAME_FADE_MS = 1_100
+
 /** The player's side margin. Scrollable panels reach back across it. */
 internal val PLAYER_GUTTER = 30.dp
 /**
@@ -1336,7 +1345,13 @@ fun NowPlayingScreen(
     }
     // Portrait clips always use the existing artwork mesh, even if the user
     // selected the legacy backdrop for ordinary artwork.
-    val artMesh = if (legacyMesh && !canvasFirstPortrait) null else
+    //
+    // A clip that fills the screen, or stands in a portrait frame, is a video and
+    // keeps the mesh. Still artwork and a landscape motion cover get the same
+    // full-cover blur as the lyrics and the queue — see [stillBackdrop].
+    val videoBackdrop = spotifyCanvasPresentation || clipFullscreen || canvasFirstPortrait
+    val stillBackdrop = !videoBackdrop
+    val artMesh = if (stillBackdrop || (legacyMesh && !canvasFirstPortrait)) null else
         key(song.videoId) { rememberArtworkMesh(remoteArt, canvasFrame, ART_PX) }
     // Whether the banner is the presentation at all: full-bleed is on, and there
     // is something to blow out. The collapse is deliberately *not* part of this:
@@ -1601,16 +1616,22 @@ fun NowPlayingScreen(
         imageUrl = remoteArt,
         artPx = ART_PX,
         prepare = landscape || tabletArtworkBackdrop || lyricsOpen || queueOpen ||
-            playerPrewarmStage >= 1,
+            stillBackdrop || playerPrewarmStage >= 1,
     )
+    // While a motion cover plays, the backdrop follows its frames; otherwise (and
+    // until the first frame arrives) it is the still cover's blur.
+    val liveBlurImage = rememberBlurredFrame(if (stillBackdrop) canvasFrame else null)
+    val backdropImage = liveBlurImage ?: fullArtworkBlurImage
     // One movable Image node, not two backdrop call sites. Compose carries it
     // between the portrait and landscape players; only the cached bitmap
     // changes when the artwork preparation above completes for another song.
-    val currentFullArtworkBlurImage = rememberUpdatedState(fullArtworkBlurImage)
+    val currentFullArtworkBlurImage = rememberUpdatedState(backdropImage)
+    val backdropCrossfadeMs = if (liveBlurImage != null) BACKDROP_FRAME_FADE_MS else 320
     val fullArtworkBlurContent = remember {
-        movableContentOf<Modifier> { backdropModifier ->
+        movableContentOf<Modifier, Int> { backdropModifier, fadeMs ->
             FullArtworkBlurBackdrop(
                 image = currentFullArtworkBlurImage.value,
+                crossfadeMs = fadeMs,
                 modifier = backdropModifier,
             )
         }
@@ -1796,7 +1817,7 @@ fun NowPlayingScreen(
                     background = { backgroundModifier ->
                         // The whole screen is the sheets' frost source: there is
                         // no full-bleed banner here to be it instead.
-                        fullArtworkBlurContent(backgroundModifier.hazeSource(playerHaze))
+                        fullArtworkBlurContent(backgroundModifier.hazeSource(playerHaze), backdropCrossfadeMs)
                     },
                     artwork = { artworkModifier ->
                         LandscapeArtwork(
@@ -2071,13 +2092,13 @@ fun NowPlayingScreen(
                 // The tablet has no mirrored main-player treatment to crossfade from.
                 // Legacy mesh is the whole backdrop on every page, so the lyrics and
                 // queue panels must not crossfade the blurred artwork over it.
-                val legacyMeshBackdrop = !tabletArtworkBackdrop && !spotifyCanvasPresentation &&
-                    legacyMesh && !canvasFirstPortrait
+                val legacyMeshBackdrop = videoBackdrop && !tabletArtworkBackdrop &&
+                    !spotifyCanvasPresentation && legacyMesh && !canvasFirstPortrait
                 val fullArtworkBackdropAlpha by animateFloatAsState(
                     targetValue = if (
                         !legacyMeshBackdrop &&
-                        (tabletArtworkBackdrop || lyricsOpen || queueOpen) &&
-                        (tabletArtworkBackdrop || fullArtworkBlurImage != null)
+                        (stillBackdrop || tabletArtworkBackdrop || lyricsOpen || queueOpen) &&
+                        (tabletArtworkBackdrop || backdropImage != null)
                     ) 1f else 0f,
                     animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
                     label = "fullArtworkBackdropCrossfade",
@@ -2095,7 +2116,7 @@ fun NowPlayingScreen(
                         trackKey = song.videoId,
                         modifier = Modifier.graphicsLayer { alpha = 1f - fullArtworkBackdropAlpha },
                     )
-                } else if (!tabletArtworkBackdrop && !spotifyCanvasPresentation) {
+                } else if (!tabletArtworkBackdrop && !spotifyCanvasPresentation && !stillBackdrop) {
                     ArtworkMeshBackdrop(
                         mesh = artMesh,
                         seam = if (canvasFirstPortrait) renderedCanvasBottom else if (heroMode) heroHeight else 0.dp,
@@ -2104,6 +2125,7 @@ fun NowPlayingScreen(
                 }
                 fullArtworkBlurContent(
                     Modifier.graphicsLayer { alpha = fullArtworkBackdropAlpha },
+                    backdropCrossfadeMs,
                 )
 
                 // Mount once, behind the controls. A known portrait aspect changes the
@@ -2144,18 +2166,20 @@ fun NowPlayingScreen(
                             presentationAlpha = { (1f - 2f * p()).coerceIn(0f, 1f) * dockFade() },
                             onRenderedChanged = { canvasRendered = it },
                             onFrameCaptured = {
-                                if (!clipFullscreen && !tabletArtworkBackdrop &&
-                                    !lyricsOpen && !queueOpen && !queueDragging
-                                ) canvasFrame = it
+                                if (!clipFullscreen && !lyricsOpen && !queueOpen && !queueDragging) {
+                                    canvasFrame = it
+                                }
                             },
                             // The full-screen Spotify video has no mesh to re-tint.
                             // Keeping this null also removes the old three-second GPU
                             // readback cadence from this provider alone.
                             refreshFrameEveryMs = if (
-                                clipFullscreen || tabletArtworkBackdrop || lyricsOpen || queueOpen ||
+                                clipFullscreen || lyricsOpen || queueOpen ||
                                 queueDragging || dockMoving
                             ) {
                                 null
+                            } else if (stillBackdrop) {
+                                BACKDROP_REFRESH_MS
                             } else {
                                 meshRefreshMs
                             },
@@ -3031,13 +3055,11 @@ fun NowPlayingScreen(
                                             collapseStarted || dockMoving,
                                         onRenderedChanged = { canvasRendered = it },
                                         onFrameCaptured = {
-                                            if (!tabletArtworkBackdrop && !lyricsOpen && !queueOpen) {
-                                                canvasFrame = it
-                                            }
+                                            if (!lyricsOpen && !queueOpen) canvasFrame = it
                                         },
                                         refreshFrameEveryMs = if (
-                                            tabletArtworkBackdrop || lyricsOpen || queueOpen || dockMoving
-                                        ) null else meshRefreshMs,
+                                            lyricsOpen || queueOpen || dockMoving
+                                        ) null else if (stillBackdrop) BACKDROP_REFRESH_MS else meshRefreshMs,
                                         modifier = Modifier.fillMaxSize(),
                                     )
                                 }
