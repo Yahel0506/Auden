@@ -601,15 +601,7 @@ private fun TextureView.setBottomFade(fraction: Float, bounds: IntSize, endPx: F
         setRenderEffect(null)
         return
     }
-    val gradient = LinearGradient(
-        0f,
-        endY * (1f - fraction.coerceAtMost(1f)),
-        0f,
-        endY,
-        android.graphics.Color.BLACK,
-        android.graphics.Color.TRANSPARENT,
-        Shader.TileMode.CLAMP,
-    )
+    val gradient = heroFadeGradient(endY * (1f - fraction.coerceAtMost(1f)), endY)
     // createOffsetEffect(0, 0) is the identity effect over the node's own
     // content, which is the only way to name "what this view drew" as the
     // destination of a blend.
@@ -621,6 +613,17 @@ private fun TextureView.setBottomFade(fraction: Float, bounds: IntSize, endPx: F
         ),
     )
 }
+
+/** The banner's dissolve as one gradient from [startY] to [endY]: the shared eased [HeroFade] curve. */
+private fun heroFadeGradient(startY: Float, endY: Float) = LinearGradient(
+    0f,
+    startY,
+    0f,
+    endY,
+    IntArray(HeroFade.alphas.size) { android.graphics.Color.argb((HeroFade.alphas[it] * 255f).toInt(), 0, 0, 0) },
+    HeroFade.positions,
+    Shader.TileMode.CLAMP,
+)
 
 /**
  * The pre-[Build.VERSION_CODES.S] bottom fade: the same dissolve
@@ -721,14 +724,9 @@ private class FadingBottomFrame(context: Context) : FrameLayout(context) {
             super.dispatchDraw(canvas)
             return
         }
-        val shader = gradient?.takeIf { gradientHeight == height } ?: LinearGradient(
-            0f,
+        val shader = gradient?.takeIf { gradientHeight == height } ?: heroFadeGradient(
             endY * (1f - fade),
-            0f,
             endY,
-            android.graphics.Color.BLACK,
-            android.graphics.Color.TRANSPARENT,
-            Shader.TileMode.CLAMP,
         ).also {
             gradient = it
             gradientHeight = height

@@ -275,7 +275,7 @@ private val VERSION_PILL_ART_INSET = 12.dp
  * short enough to still be reading as artwork where it ends reads as a picture
  * that was cut off rather than one that ran out.
  */
-private const val HERO_FADE_FRACTION = 0.42f
+private const val HERO_FADE_FRACTION = HeroFade.FRACTION
 /** Kept transparent so the cover remains edge-to-edge, while aiding icon contrast. */
 /** A modest floor while a subview replaces the hero with its artwork-derived mesh. */
 private const val SUBVIEW_STATUS_SCRIM_MIN_ALPHA = 0.40f
@@ -2941,8 +2941,15 @@ fun NowPlayingScreen(
                                     val shown = sleeveShown()
                                     if (shown > 0f) {
                                         drawRect(
+                                            // Eased, and as long as [HeroFade] says; `shown`
+                                            // pulls every stop back towards opaque as the
+                                            // banner collapses into the card's hard edge.
                                             brush = Brush.verticalGradient(
-                                                colors = listOf(Color.Black, Color.Black.copy(alpha = 1f - shown)),
+                                                colorStops = Array(HeroFade.positions.size) { i ->
+                                                    HeroFade.positions[i] to Color.Black.copy(
+                                                        alpha = 1f - shown * (1f - HeroFade.alphas[i]),
+                                                    )
+                                                },
                                                 startY = size.height * (1f - HERO_FADE_FRACTION),
                                                 endY = size.height,
                                             ),
