@@ -120,6 +120,28 @@ fun rememberFullArtworkBlurImage(
 }
 
 /**
+ * [frame] — a small capture off a playing motion cover — blurred the same way as
+ * [rememberFullArtworkBlurImage], so the backdrop can follow the clip.
+ *
+ * Frames arrive at [CANVAS_FRAME_CAPTURE_PX] already, so each pass is a few
+ * milliseconds on a worker thread. The previous result stays up until the next is
+ * ready; only a different [clipKey] starts over, which hands the backdrop back to
+ * the still cover's blur.
+ */
+@Composable
+fun rememberBlurredFrame(frame: ImageBitmap?, clipKey: Any? = null): ImageBitmap? {
+    // Held per clip: a frame that goes missing for a moment (a panel opening, a player
+    // being swapped for another) leaves the last blur in place instead of handing the
+    // backdrop back to the still cover and back again, which read as a blink.
+    var blurred by remember(clipKey) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(frame) {
+        if (frame == null) return@LaunchedEffect
+        blurred = withContext(Dispatchers.Default) { frame.boxBlurred(FULL_BLUR_PASSES) }
+    }
+    return blurred
+}
+
+/**
  * A full-surface, still-art backdrop for player views that do not have an
  * artwork edge to continue from.
  *
@@ -140,31 +162,63 @@ fun rememberFullArtworkBlurImage(
 fun FullArtworkBlurBackdrop(
     image: ImageBitmap?,
     modifier: Modifier = Modifier,
+    /** How long one picture takes to give way to the next; long for a moving cover, so it drifts. */
+    crossfadeMs: Int = 320,
+    /** How much of the legibility scrim to draw, 0..1; read while drawing so it can be animated for free. */
+    scrim: () -> Float = { 1f },
 ) {
-    val imageAlpha by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = if (image != null) 1f else 0f,
-        animationSpec = tween(320, easing = FastOutSlowInEasing),
-        label = "preparedBackdropImage",
-    )
+    // Two layers, never a Crossfade. Crossfade draws the outgoing picture fading out
+    // *and* the incoming one fading in, so halfway both are half transparent and the
+    // dark fallback shows through: every swap dipped to black, which on a motion cover
+    // (a swap a second) read as the backdrop blinking. Here the picture on screen stays
+    // fully opaque and the next one fades in over it, so nothing is ever less than whole.
+    //
+    // And a null image never replaces what is showing. A track change has no blurred
+    // cover for a moment; the previous song's stays until the next is ready.
+    var shown by remember { mutableStateOf(image) }
+    var incoming by remember { mutableStateOf<ImageBitmap?>(null) }
+    val fade = remember { Animatable(1f) }
+    LaunchedEffect(image) {
+        val next = image ?: return@LaunchedEffect
+        if (next === shown || next === incoming) return@LaunchedEffect
+        // A swap interrupted by a newer picture: whatever was fading in becomes the
+        // base, so the new one fades over the latest rather than over a stale frame.
+        incoming?.let { shown = it }
+        incoming = next
+        fade.snapTo(0f)
+        fade.animateTo(1f, tween(crossfadeMs, easing = FastOutSlowInEasing))
+        shown = next
+        incoming = null
+    }
     Box(modifier = modifier.fillMaxSize().background(FallbackBackdrop)) {
-        image?.let { bitmap ->
+        shown?.let { bitmap ->
             val painter = remember(bitmap) { BitmapPainter(bitmap) }
             Image(
                 painter = painter,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = imageAlpha },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        incoming?.let { bitmap ->
+            val painter = remember(bitmap) { BitmapPainter(bitmap) }
+            Image(
+                painter = painter,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = fade.value },
             )
         }
 
         // Lyrics and queue are dense white foregrounds. Preserve the cover's
         // colour and layout, but keep bright sleeves from lowering contrast.
         Canvas(Modifier.fillMaxSize()) {
+            val k = scrim().coerceIn(0f, 1f)
             drawRect(
                 brush = Brush.verticalGradient(
-                    0f to Color.Black.copy(alpha = 0.34f),
-                    0.55f to Color.Black.copy(alpha = 0.48f),
-                    1f to Color.Black.copy(alpha = 0.64f),
+                    0f to Color.Black.copy(alpha = 0.34f * k),
+                    0.55f to Color.Black.copy(alpha = 0.48f * k),
+                    1f to Color.Black.copy(alpha = 0.64f * k),
                 ),
             )
         }

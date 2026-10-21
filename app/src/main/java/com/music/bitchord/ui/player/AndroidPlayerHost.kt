@@ -61,7 +61,6 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val hideVolumeBar get() = AppSettings.hideVolumeBar
         override val hideStatusBar get() = AppSettings.hideStatusBarInPlayer
         override val lastPlayerScreen get() = AppSettings.lastPlayerScreen
-        override val legacyMeshGradient get() = AppSettings.legacyMeshGradient
         override val lyricsBlur get() = AppSettings.lyricsBlur
         override val lyricsOffsetMs get() = dev.auden.library.lyrics.SongLyricsOffset.effective
         override val lyricsOffsetPerSong get() = dev.auden.library.lyrics.SongLyricsOffset.perSong

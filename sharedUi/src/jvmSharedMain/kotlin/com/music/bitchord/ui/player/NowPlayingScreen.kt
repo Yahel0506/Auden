@@ -261,6 +261,16 @@ private const val QUEUE_FLICK_VELOCITY = 450f
 private val DISMISS_STRIP_HEIGHT = 32.dp
 /** The breathing room above the sleeve, needed twice: once to apply, once to measure past. */
 private val ART_BOX_TOP_PAD = 8.dp
+
+/** Between the credits row and the lyric strip and scrubber under it. */
+private val ART_BOX_BOTTOM_PAD = 4.dp
+
+/**
+ * How far the card may run into the player's side gutter on each side. The card is the width of
+ * the content column otherwise, so any height the controls give back could only go to empty space;
+ * this lets it take that height, up to a margin of PLAYER_GUTTER minus this.
+ */
+private val CARD_GUTTER_BLEED = 16.dp
 /**
  * How far below the sleeve's top edge the video/audio pill floats.
  *
@@ -275,7 +285,7 @@ private val VERSION_PILL_ART_INSET = 12.dp
  * short enough to still be reading as artwork where it ends reads as a picture
  * that was cut off rather than one that ran out.
  */
-private const val HERO_FADE_FRACTION = 0.42f
+private const val HERO_FADE_FRACTION = HeroFade.FRACTION
 /** Kept transparent so the cover remains edge-to-edge, while aiding icon contrast. */
 /** A modest floor while a subview replaces the hero with its artwork-derived mesh. */
 private const val SUBVIEW_STATUS_SCRIM_MIN_ALPHA = 0.40f
@@ -290,6 +300,18 @@ private const val SUBVIEW_STATUS_SCRIM_MIN_ALPHA = 0.40f
  * over well inside the gap, which leaves the backdrop still for most of it.
  */
 private const val MESH_REFRESH_MS = 3_000L
+
+/**
+ * How often the full-cover backdrop reads a frame off a playing motion cover.
+ * Each read is the same 128px capture as the mesh's, so the cost is the readback
+ * alone; the fade below runs a little longer than the gap, which keeps the
+ * backdrop in constant slow motion rather than stepping from frame to frame.
+ */
+private const val BACKDROP_REFRESH_MS = 1_000L
+private const val BACKDROP_FRAME_FADE_MS = 950
+
+/** The scrim's strength behind the main player, against 1 for lyrics and queue: a little brighter. */
+private const val MAIN_PLAYER_SCRIM = 0.6f
 
 /** The player's side margin. Scrollable panels reach back across it. */
 internal val PLAYER_GUTTER = 30.dp
@@ -349,15 +371,9 @@ private const val ARTWORK_DRAG_SHRINK_SCALE = 0.94f
 private val ArtworkScaleEasing = CubicBezierEasing(0.215f, 0.61f, 0.355f, 1f)
 private const val ARTWORK_SCALE_DURATION_MS = 500
 
-/**
- * How far a tall screen is allowed to push the transport from the blocks either
- * side of it.
- *
- * The spare height has to land somewhere, and above and below the play button is
- * where it reads as room rather than as a hole. Past this it stops reading as one
- * group of controls, so the rest goes back to the artwork block.
- */
-private val CONTROL_GAP_SPREAD_MAX = 24.dp
+/** The gaps either side of the transport row, which sits close to the scrubber and the volume bar. */
+private val TRANSPORT_GAP_ABOVE = 2.dp
+private val TRANSPORT_GAP_BELOW = 4.dp
 /**
  * The spread [NowPlayingScreen] settled on the last time it was laid out.
  *
@@ -821,6 +837,8 @@ fun NowPlayingScreen(
     val canvasRenderedState = remember(canvas?.url) { mutableStateOf(false) }
     var canvasRendered by canvasRenderedState
     var canvasFrame by remember(canvas?.url) { mutableStateOf<ImageBitmap?>(null) }
+    // The banner's playhead, for the thumbnail's player to pick up from — see where it is mounted.
+    val heroPlayhead = remember(canvas?.url) { mutableStateOf<(() -> Long)?>(null) }
     // Spotify's phone presentation starts with the full control deck over its
     // video. It leaves on a Canvas tap, or after the optional idle timeout.
     var spotifyCanvasControlsOpen by remember(canvas?.url) { mutableStateOf(true) }
@@ -834,8 +852,6 @@ fun NowPlayingScreen(
     // frame of the fade, and the still art it governs is an AsyncImage whose
     // request is rebuilt on each pass and so would not be skipped.
     val canvasCover = remember(canvas?.url) { mutableFloatStateOf(0f) }
-    // v1.5's backdrop, kept behind a switch — see [PlayerSettings.legacyMeshGradient].
-    val legacyMesh by PlayerSettings.legacyMeshGradient.collectAsStateWithLifecycle()
     // The backdrop's colours, taken off the artwork's own arrangement rather
     // than quantised out of it — see [ArtworkMesh].
     //
@@ -1290,8 +1306,17 @@ fun NowPlayingScreen(
     // [heroClip], which has gone by the time it is still lingering: re-read
     // off that, its last few frames would resize the view and rebuild its
     // fade for a picture nobody can see.
+    // A "video" is what Spotify calls a Canvas, or any clip that is taller than it is wide;
+    // an animated cover is the rest (Apple's motion artwork). The aspect is remembered for
+    // the clip, because the player reports zero as it is unmounted.
+    var knownClipAspect by remember(canvas?.url) { mutableFloatStateOf(0f) }
+    if (canvasAspect > 0f && canvasAspect != knownClipAspect) knownClipAspect = canvasAspect
+    val clipIsVideo = canvas != null &&
+        (canvas.source == CanvasSource.SPOTIFY || (knownClipAspect > 0f && knownClipAspect < 1f))
     val heroClipMounted = canvas?.takeIf {
-        heroMode && (!(lyricsOpen || queueOpen) || !collapseDone)
+        // A video stays mounted through the lyrics and the queue (held, and invisible): coming
+        // back, it has a frame ready to fade in as the cover returns to its place.
+        heroMode && (!(lyricsOpen || queueOpen) || !collapseDone || clipIsVideo)
     }
     val clipFullscreen = spotifyCanvasOnPhone &&
         heroClipMounted?.source == CanvasSource.SPOTIFY
@@ -1336,7 +1361,20 @@ fun NowPlayingScreen(
     }
     // Portrait clips always use the existing artwork mesh, even if the user
     // selected the legacy backdrop for ordinary artwork.
-    val artMesh = if (legacyMesh && !canvasFirstPortrait) null else
+    //
+    // A clip that fills the screen, or stands in a portrait frame, is a video and
+    // keeps the mesh. Still artwork and a landscape motion cover get the same
+    // full-cover blur as the lyrics and the queue — see [stillBackdrop].
+    //
+    // Worked out from the clip itself rather than from what is mounted at this moment:
+    // opening the lyrics unmounts the banner, and a classification that followed it
+    // flipped the backdrop between its two treatments mid-transition — the blink.
+    val videoBackdrop = clipIsVideo || spotifyCanvasPresentation || clipFullscreen || canvasFirstPortrait
+    val stillBackdrop = !videoBackdrop
+    // Only an animated cover is followed: a video has the mesh in the player and the still
+    // cover's blur in the lyrics and the queue, and its thumbnail is the still cover.
+    val followsFrames = stillBackdrop
+    val artMesh = if (stillBackdrop) null else
         key(song.videoId) { rememberArtworkMesh(remoteArt, canvasFrame, ART_PX) }
     // Whether the banner is the presentation at all: full-bleed is on, and there
     // is something to blow out. The collapse is deliberately *not* part of this:
@@ -1601,16 +1639,33 @@ fun NowPlayingScreen(
         imageUrl = remoteArt,
         artPx = ART_PX,
         prepare = landscape || tabletArtworkBackdrop || lyricsOpen || queueOpen ||
-            playerPrewarmStage >= 1,
+            stillBackdrop || playerPrewarmStage >= 1,
     )
+    // While a motion cover plays, the backdrop follows its frames; otherwise (and
+    // until the first frame arrives) it is the still cover's blur.
+    val liveBlurImage = rememberBlurredFrame(canvasFrame, clipKey = canvas?.url)
+        .takeIf { followsFrames }
+    val backdropImage = liveBlurImage ?: fullArtworkBlurImage
     // One movable Image node, not two backdrop call sites. Compose carries it
     // between the portrait and landscape players; only the cached bitmap
     // changes when the artwork preparation above completes for another song.
-    val currentFullArtworkBlurImage = rememberUpdatedState(fullArtworkBlurImage)
+    val currentFullArtworkBlurImage = rememberUpdatedState(backdropImage)
+    // The main player stands on a lighter blur than the lyrics and the queue, which
+    // are dense white text and want the full scrim; it deepens as either opens.
+    val backdropScrimTarget = if (lyricsOpen || queueOpen || !stillBackdrop) 1f else MAIN_PLAYER_SCRIM
+    val backdropScrim by animateFloatAsState(
+        targetValue = backdropScrimTarget,
+        animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+        label = "backdropScrim",
+    )
+    val backdropScrimRead: () -> Float = { backdropScrim }
+    val backdropCrossfadeMs = if (liveBlurImage != null) BACKDROP_FRAME_FADE_MS else 320
     val fullArtworkBlurContent = remember {
-        movableContentOf<Modifier> { backdropModifier ->
+        movableContentOf<Modifier, Int, () -> Float> { backdropModifier, fadeMs, scrim ->
             FullArtworkBlurBackdrop(
                 image = currentFullArtworkBlurImage.value,
+                crossfadeMs = fadeMs,
+                scrim = scrim,
                 modifier = backdropModifier,
             )
         }
@@ -1796,7 +1851,7 @@ fun NowPlayingScreen(
                     background = { backgroundModifier ->
                         // The whole screen is the sheets' frost source: there is
                         // no full-bleed banner here to be it instead.
-                        fullArtworkBlurContent(backgroundModifier.hazeSource(playerHaze))
+                        fullArtworkBlurContent(backgroundModifier.hazeSource(playerHaze), backdropCrossfadeMs, backdropScrimRead)
                     },
                     artwork = { artworkModifier ->
                         LandscapeArtwork(
@@ -2069,33 +2124,15 @@ fun NowPlayingScreen(
                 // retained layers' alpha changes when a panel opens, so the full-cover
                 // blur is neither rebuilt nor switched in on a hard frame boundary.
                 // The tablet has no mirrored main-player treatment to crossfade from.
-                // Legacy mesh is the whole backdrop on every page, so the lyrics and
-                // queue panels must not crossfade the blurred artwork over it.
-                val legacyMeshBackdrop = !tabletArtworkBackdrop && !spotifyCanvasPresentation &&
-                    legacyMesh && !canvasFirstPortrait
                 val fullArtworkBackdropAlpha by animateFloatAsState(
                     targetValue = if (
-                        !legacyMeshBackdrop &&
-                        (tabletArtworkBackdrop || lyricsOpen || queueOpen) &&
-                        (tabletArtworkBackdrop || fullArtworkBlurImage != null)
+                        (stillBackdrop || tabletArtworkBackdrop || lyricsOpen || queueOpen) &&
+                        (tabletArtworkBackdrop || stillBackdrop || backdropImage != null)
                     ) 1f else 0f,
                     animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
                     label = "fullArtworkBackdropCrossfade",
                 )
-                if (legacyMeshBackdrop) {
-                    // v1.5's backdrop, restored verbatim: no seam, because the blobs
-                    // are not anchored to anything on screen — they fill the player and
-                    // the artwork simply sits on top of them. Keyed on the track, so
-                    // they drift when the player opens and on every skip, then rest.
-                    // Position ticks recompose this screen twice a second and must not
-                    // drag a full-screen blur along with them, which is why the palette
-                    // is passed as one immutable value.
-                    MeshGradientBackground(
-                        palette = rememberArtworkColors(remoteArt, canvasFrame),
-                        trackKey = song.videoId,
-                        modifier = Modifier.graphicsLayer { alpha = 1f - fullArtworkBackdropAlpha },
-                    )
-                } else if (!tabletArtworkBackdrop && !spotifyCanvasPresentation) {
+                if (!tabletArtworkBackdrop && !spotifyCanvasPresentation && !stillBackdrop) {
                     ArtworkMeshBackdrop(
                         mesh = artMesh,
                         seam = if (canvasFirstPortrait) renderedCanvasBottom else if (heroMode) heroHeight else 0.dp,
@@ -2104,6 +2141,8 @@ fun NowPlayingScreen(
                 }
                 fullArtworkBlurContent(
                     Modifier.graphicsLayer { alpha = fullArtworkBackdropAlpha },
+                    backdropCrossfadeMs,
+                    backdropScrimRead,
                 )
 
                 // Mount once, behind the controls. A known portrait aspect changes the
@@ -2141,21 +2180,29 @@ fun NowPlayingScreen(
                             // And with the rest of the player as it docks: a
                             // TextureView doesn't reliably take the fade from a
                             // Compose layer around it.
-                            presentationAlpha = { (1f - 2f * p()).coerceIn(0f, 1f) * dockFade() },
+                            // A video comes in with the cover's return, in proportion to how far
+                            // it has come, rather than appearing at the half.
+                            presentationAlpha = {
+                                (if (clipIsVideo) 1f - p() else 1f - 2f * p()).coerceIn(0f, 1f) * dockFade()
+                            },
                             onRenderedChanged = { canvasRendered = it },
+                            offerPosition = { heroPlayhead.value = it },
                             onFrameCaptured = {
-                                if (!clipFullscreen && !tabletArtworkBackdrop &&
-                                    !lyricsOpen && !queueOpen && !queueDragging
-                                ) canvasFrame = it
+                                if (!clipFullscreen && !lyricsOpen && !queueOpen && !queueDragging) {
+                                    canvasFrame = it
+                                }
+                                // (Once the panels are up the thumbnail's own clip feeds this.)
                             },
                             // The full-screen Spotify video has no mesh to re-tint.
                             // Keeping this null also removes the old three-second GPU
                             // readback cadence from this provider alone.
                             refreshFrameEveryMs = if (
-                                clipFullscreen || tabletArtworkBackdrop || lyricsOpen || queueOpen ||
+                                clipFullscreen || lyricsOpen || queueOpen ||
                                 queueDragging || dockMoving
                             ) {
                                 null
+                            } else if (stillBackdrop) {
+                                BACKDROP_REFRESH_MS
                             } else {
                                 meshRefreshMs
                             },
@@ -2512,7 +2559,7 @@ fun NowPlayingScreen(
                             .weight(1f)
                             .widthIn(max = PLAYER_MAX_WIDTH)
                             .fillMaxWidth()
-                            .padding(top = ART_BOX_TOP_PAD, bottom = 18.dp),
+                            .padding(top = ART_BOX_TOP_PAD, bottom = ART_BOX_BOTTOM_PAD),
                     ) {
                         if (spotifyCanvasPresentation && playerDeckSettledOpen &&
                             maxHeight != spotifyCanvasExpandedTopHeight
@@ -2542,7 +2589,7 @@ fun NowPlayingScreen(
                         // over once the credits row and the gap above it have had
                         // theirs. Sizing it off the width alone is what pushed the
                         // credits down across the scrubber on anything but a phone.
-                        val wantArt = minOf(maxWidth, roomy - ART_TITLE_GAP - HEADER_HEIGHT)
+                        val wantArt = minOf(maxWidth + CARD_GUTTER_BLEED * 2, roomy - ART_TITLE_GAP - HEADER_HEIGHT)
                         // Held to what the box has actually got, for the single frame it
                         // takes the gaps below to catch up with a change in their own
                         // height: a sleeve a few dp under for one frame is a better
@@ -2594,12 +2641,11 @@ fun NowPlayingScreen(
                         // listened for here at all.
                         if (!lyricsOpen && !queueOpen && !queueDragging && collapseAtRest && controlDeckIsMeasured) {
                             val target = with(density) {
-                                val half = slack
-                                    .coerceAtMost(CONTROL_GAP_SPREAD_MAX * 2)
-                                    .toPx()
-                                    .div(2f)
-                                    .roundToInt()
-                                (half * 2).toDp()
+                                // Nothing is granted to the gaps any more: the transport
+                                // sits close to the scrubber and the volume bar on every
+                                // screen, and whatever height is left goes above the cover
+                                // (see [groupTop]).
+                                0.dp
                             }
                             // Stepped towards [target] rather than jumped there in one
                             // grant, so a late cancellation (see above) decays instead of
@@ -2624,7 +2670,7 @@ fun NowPlayingScreen(
                         // the controls couldn't take, which on all but the tallest
                         // screens is nothing.
                         val groupTop = (maxHeight - fullArt - ART_TITLE_GAP - HEADER_HEIGHT)
-                            .coerceAtLeast(0.dp) / 2
+                            .coerceAtLeast(0.dp)
                         // Functions of the collapse, called at placement and measure
                         // — see [p]. Composition never reads them.
                         fun artSize(): Dp = lerp(fullArt, THUMB_SIZE, p())
@@ -2859,7 +2905,17 @@ fun NowPlayingScreen(
                                     // is no clip mounted to hand it to. The clip is gone
                                     // by the collapse's half, so the sleeve is whole
                                     // again by the time it unmounts.
-                                    alpha = if (heroClip != null) 1f - canvasCover.floatValue else 1f
+                                    alpha = if (clipIsVideo && heroClipMounted != null) {
+                                        // The still cover stays whole while the video comes up
+                                        // to half, then gives way as it takes the rest: both at
+                                        // once, each half see-through, would dip the picture.
+                                        val cover = canvasCover.floatValue
+                                        1f - ((cover - 0.5f) * 2f).coerceIn(0f, 1f)
+                                    } else if (heroClip != null) {
+                                        1f - canvasCover.floatValue
+                                    } else {
+                                        1f
+                                    }
                                 }
                                 .graphicsLayer {
                                     val shown = sleeveShown()
@@ -2903,8 +2959,15 @@ fun NowPlayingScreen(
                                     val shown = sleeveShown()
                                     if (shown > 0f) {
                                         drawRect(
+                                            // Eased, and as long as [HeroFade] says; `shown`
+                                            // pulls every stop back towards opaque as the
+                                            // banner collapses into the card's hard edge.
                                             brush = Brush.verticalGradient(
-                                                colors = listOf(Color.Black, Color.Black.copy(alpha = 1f - shown)),
+                                                colorStops = Array(HeroFade.positions.size) { i ->
+                                                    HeroFade.positions[i] to Color.Black.copy(
+                                                        alpha = 1f - shown * (1f - HeroFade.alphas[i]),
+                                                    )
+                                                },
                                                 startY = size.height * (1f - HERO_FADE_FRACTION),
                                                 endY = size.height,
                                             ),
@@ -3016,31 +3079,45 @@ fun NowPlayingScreen(
                                     .drawWithContent { if (art.loaded || !canvasRendered) drawContent() },
                             )
 
-                            // Where the clip plays when it can't have the banner:
-                            // inside the same clip as the still art, taking the
-                            // sleeve's corners, shadow and paused shrink for free.
-                            if (!heroMode && canvas != null) {
-                                WhileShown({ !collapsePastHalf }) {
-                                    CanvasArtworkPlayer(
-                                        canvas = canvas,
-                                        isPlaying = isPlaying,
-                                        // The panels first: a collapse the tap asked
-                                        // for is paused from the tap, and then never
-                                        // asks after its first frame of movement.
-                                        pausedForTransition = lyricsOpen || queueOpen || queueDragging ||
-                                            collapseStarted || dockMoving,
-                                        onRenderedChanged = { canvasRendered = it },
-                                        onFrameCaptured = {
-                                            if (!tabletArtworkBackdrop && !lyricsOpen && !queueOpen) {
-                                                canvasFrame = it
-                                            }
-                                        },
-                                        refreshFrameEveryMs = if (
-                                            tabletArtworkBackdrop || lyricsOpen || queueOpen || dockMoving
-                                        ) null else meshRefreshMs,
-                                        modifier = Modifier.fillMaxSize(),
-                                    )
-                                }
+                            // Where the clip plays when it can't have the banner — and, in
+                            // full-bleed mode, the player the banner hands over to when the
+                            // lyrics or the queue take the screen: the sleeve is the banner's
+                            // own rectangle at rest, then shrinks into the thumbnail, so this
+                            // is the same animated cover carried through the collapse rather
+                            // than a still one standing in until a clip starts again.
+                            //
+                            // Under the banner it is prepared but held, so it has a first
+                            // frame ready (it is hidden by the banner's own opacity there);
+                            // it starts, from the banner's playhead, as the collapse begins.
+                            // Inside the same clip as the still art, taking the sleeve's
+                            // corners, shadow and paused shrink for free.
+                            // A video — a Canvas, or a tall clip — is the player's own and does
+                            // not come down to the thumbnail: there it is the still cover.
+                            if (canvas != null && (!clipIsVideo || (!heroMode && !collapsePastHalf))) {
+                                val thumbActive = !heroMode || lyricsOpen || queueOpen || queueDragging ||
+                                    collapseStarted
+                                CanvasArtworkPlayer(
+                                    canvas = canvas,
+                                    isPlaying = isPlaying,
+                                    pausedForTransition = if (clipIsVideo) {
+                                        lyricsOpen || queueOpen || queueDragging || collapseStarted || dockMoving
+                                    } else {
+                                        !thumbActive || dockMoving
+                                    },
+                                    onRenderedChanged = { if (!heroMode) canvasRendered = it },
+                                    onFrameCaptured = {
+                                        if (!clipIsVideo && thumbActive && !queueDragging) canvasFrame = it
+                                    },
+                                    refreshFrameEveryMs = if (clipIsVideo || !thumbActive || dockMoving || queueDragging) {
+                                        null
+                                    } else if (followsFrames) {
+                                        BACKDROP_REFRESH_MS
+                                    } else {
+                                        meshRefreshMs
+                                    },
+                                    syncTo = if (heroMode) ({ heroPlayhead.value?.invoke() ?: 0L }) else null,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
                             }
                         }
 
@@ -3610,7 +3687,7 @@ fun NowPlayingScreen(
                     // which sit close enough together to read as one. Both of its own
                     // gaps take half the spread, so on a tall screen it holds the
                     // centre rather than drifting up under the seek bar.
-                    Spacer(Modifier.height(8.dp + controlSpread / 2))
+                    Spacer(Modifier.height(TRANSPORT_GAP_ABOVE + controlSpread / 2))
 
                     TransportRow(
                         isPlaying = isPlaying,
@@ -3627,7 +3704,7 @@ fun NowPlayingScreen(
                     // hidden. Removing the slot itself shortened the controls by 50dp
                     // and moved every control below it. A display preference should not
                     // change the half-player's geometry.
-                    Spacer(Modifier.height(12.dp + controlSpread / 2))
+                    Spacer(Modifier.height(TRANSPORT_GAP_BELOW + controlSpread / 2))
 
                     if (!hideVolumeBar) {
                         VolumeRow(

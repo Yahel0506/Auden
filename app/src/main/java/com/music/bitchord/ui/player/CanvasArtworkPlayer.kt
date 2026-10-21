@@ -161,6 +161,8 @@ internal fun AndroidCanvasArtworkPlayer(
      * while paused, so there is nothing to fade back in once it lifts.
      */
     pausedForTransition: Boolean = false,
+    offerPosition: ((() -> Long)?) -> Unit = {},
+    syncTo: (() -> Long)? = null,
 ) {
     val context = LocalContext.current
 
@@ -263,8 +265,20 @@ internal fun AndroidCanvasArtworkPlayer(
     // regardless of playback state, so coming back from background always has
     // a surface ready and `onRenderedFirstFrame()` fires naturally.
     val foreground = rememberIsForeground()
+    val currentSyncTo by rememberUpdatedState(syncTo)
     LaunchedEffect(foreground, pausedForTransition) {
-        player.playWhenReady = foreground && !pausedForTransition
+        val playing = foreground && !pausedForTransition
+        // Taking over from another player of the same clip: start from its playhead, so the
+        // hand-over is the same picture moving on rather than a loop restarting.
+        if (playing && !player.playWhenReady) {
+            currentSyncTo?.invoke()?.takeIf { it > 0L }?.let { player.seekTo(it) }
+        }
+        player.playWhenReady = playing
+    }
+    val currentOffer by rememberUpdatedState(offerPosition)
+    DisposableEffect(player) {
+        currentOffer { player.currentPosition }
+        onDispose { currentOffer(null) }
     }
 
     // Repaint onto a surface that has just been handed back. A TextureView's
@@ -601,15 +615,7 @@ private fun TextureView.setBottomFade(fraction: Float, bounds: IntSize, endPx: F
         setRenderEffect(null)
         return
     }
-    val gradient = LinearGradient(
-        0f,
-        endY * (1f - fraction.coerceAtMost(1f)),
-        0f,
-        endY,
-        android.graphics.Color.BLACK,
-        android.graphics.Color.TRANSPARENT,
-        Shader.TileMode.CLAMP,
-    )
+    val gradient = heroFadeGradient(endY * (1f - fraction.coerceAtMost(1f)), endY)
     // createOffsetEffect(0, 0) is the identity effect over the node's own
     // content, which is the only way to name "what this view drew" as the
     // destination of a blend.
@@ -621,6 +627,17 @@ private fun TextureView.setBottomFade(fraction: Float, bounds: IntSize, endPx: F
         ),
     )
 }
+
+/** The banner's dissolve as one gradient from [startY] to [endY]: the shared eased [HeroFade] curve. */
+private fun heroFadeGradient(startY: Float, endY: Float) = LinearGradient(
+    0f,
+    startY,
+    0f,
+    endY,
+    IntArray(HeroFade.alphas.size) { android.graphics.Color.argb((HeroFade.alphas[it] * 255f).toInt(), 0, 0, 0) },
+    HeroFade.positions,
+    Shader.TileMode.CLAMP,
+)
 
 /**
  * The pre-[Build.VERSION_CODES.S] bottom fade: the same dissolve
@@ -721,14 +738,9 @@ private class FadingBottomFrame(context: Context) : FrameLayout(context) {
             super.dispatchDraw(canvas)
             return
         }
-        val shader = gradient?.takeIf { gradientHeight == height } ?: LinearGradient(
-            0f,
+        val shader = gradient?.takeIf { gradientHeight == height } ?: heroFadeGradient(
             endY * (1f - fade),
-            0f,
             endY,
-            android.graphics.Color.BLACK,
-            android.graphics.Color.TRANSPARENT,
-            Shader.TileMode.CLAMP,
         ).also {
             gradient = it
             gradientHeight = height
@@ -774,6 +786,8 @@ internal fun AndroidCanvasVideo(spec: CanvasVideoSpec, modifier: Modifier) {
         bottomFade = spec.bottomFade,
         bottomFadeEndPx = spec.bottomFadeEndPx,
         pausedForTransition = spec.pausedForTransition,
+        offerPosition = spec.offerPosition,
+        syncTo = spec.syncTo,
     )
 }
 

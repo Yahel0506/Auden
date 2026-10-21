@@ -939,9 +939,7 @@
 
     <string name="eq_preset_custom">Custom</string>
 
-    <string name="legacy_mesh_gradient">Legacy mesh gradient</string>
 
-    <string name="legacy_mesh_gradient_subtitle">Brings back the drifting colour blobs behind the player from v1.5</string>
 
     <string name="add_addon">Add an addon</string>
 

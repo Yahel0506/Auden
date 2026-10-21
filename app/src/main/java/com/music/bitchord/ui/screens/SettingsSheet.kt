@@ -54,7 +54,6 @@ import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.FilterAlt
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Fullscreen
-import androidx.compose.material.icons.rounded.Gradient
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.History
@@ -221,7 +220,6 @@ fun SettingsScreen(
     val signatureApiEnabled by AppSettings.signatureApiEnabled.collectAsStateWithLifecycle()
     val signatureApiUrl by AppSettings.signatureApiUrl.collectAsStateWithLifecycle()
     val fullBleedArtwork by AppSettings.fullBleedArtwork.collectAsStateWithLifecycle()
-    val legacyMeshGradient by AppSettings.legacyMeshGradient.collectAsStateWithLifecycle()
     val syncedLyrics by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
     val lyricsSources by AppSettings.lyricsSources.collectAsStateWithLifecycle()
     val translationLanguage by AppSettings.translationLanguage.collectAsStateWithLifecycle()
@@ -975,25 +973,6 @@ fun SettingsScreen(
                         onClick = { AppSettings.setFullBleedArtwork(!fullBleedArtwork) },
                     )
                 }
-            }
-            val legacyMeshGradientTitle = stringResource(R.string.legacy_mesh_gradient)
-            row(legacyMeshGradientTitle, "background", "player") {
-                SettingsRow(
-                    icon = Icons.Rounded.Gradient,
-                    title = legacyMeshGradientTitle,
-                    subtitle = stringResource(R.string.legacy_mesh_gradient_subtitle),
-                    trailing = {
-                        Switch(
-                            checked = legacyMeshGradient,
-                            onCheckedChange = AppSettings::setLegacyMeshGradient,
-                            colors = SwitchDefaults.colors(
-                                checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                checkedBorderColor = MaterialTheme.colorScheme.primary,
-                            ),
-                        )
-                    },
-                    onClick = { AppSettings.setLegacyMeshGradient(!legacyMeshGradient) },
-                )
             }
             val animatedCoverArtTitle = stringResource(R.string.animated_cover_art)
             // Carries the keywords of the rows that only appear once it is on,

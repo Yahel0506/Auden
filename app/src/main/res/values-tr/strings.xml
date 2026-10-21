@@ -844,9 +844,7 @@
 
     <string name="export_compatible_downloads">Uyumlu indirmeleri dışa aktar</string>
 
-    <string name="legacy_mesh_gradient">Klasik ağ gradyanı</string>
 
-    <string name="legacy_mesh_gradient_subtitle">v1.5\'teki oynatıcı arkasındaki akıcı renk geçişlerini geri getirir</string>
 
     <string name="lyrics_debug_logs">Şarkı sözü hata ayıklama günlükleri</string>
 

@@ -453,7 +453,7 @@ internal fun TransportRow(
     compact: Boolean = false,
 ) {
     val playSize = if (compact) 58.dp else 74.dp
-    val playTouch = if (compact) 76.dp else 92.dp
+    val playTouch = if (compact) 76.dp else 84.dp
     val skipSize = if (compact) 44.dp else PLAYER_SKIP_ICON_SIZE
     Row(
         modifier = Modifier.fillMaxWidth(),
