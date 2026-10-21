@@ -1362,15 +1362,19 @@ fun NowPlayingScreen(
     // Worked out from the clip itself rather than from what is mounted at this moment:
     // opening the lyrics unmounts the banner, and a classification that followed it
     // flipped the backdrop between its two treatments mid-transition — the blink.
-    val clipIsVideo = canvas != null && heroMode && (
-        (spotifyCanvasOnPhone && canvas.source == CanvasSource.SPOTIFY) ||
-            (canvasAspect > 0f && canvasAspect < 1f)
-        )
+    //
+    // A "video" is what Spotify calls a Canvas, or any clip that is taller than it is wide;
+    // an animated cover is the rest (Apple's motion artwork). The aspect is remembered for
+    // the clip, because the player reports zero as it is unmounted.
+    var knownClipAspect by remember(canvas?.url) { mutableFloatStateOf(0f) }
+    if (canvasAspect > 0f && canvasAspect != knownClipAspect) knownClipAspect = canvasAspect
+    val clipIsVideo = canvas != null &&
+        (canvas.source == CanvasSource.SPOTIFY || (knownClipAspect > 0f && knownClipAspect < 1f))
     val videoBackdrop = clipIsVideo || spotifyCanvasPresentation || clipFullscreen || canvasFirstPortrait
     val stillBackdrop = !videoBackdrop
-    // Lyrics and queue are stood on by the thumbnail's own clip, so there the backdrop
-    // follows the frames whatever kind of clip it is.
-    val followsFrames = stillBackdrop || lyricsOpen || queueOpen
+    // Only an animated cover is followed: a video has the mesh in the player and the still
+    // cover's blur in the lyrics and the queue, and its thumbnail is the still cover.
+    val followsFrames = stillBackdrop
     val artMesh = if (stillBackdrop || (legacyMesh && !canvasFirstPortrait)) null else
         key(song.videoId) { rememberArtworkMesh(remoteArt, canvasFrame, ART_PX) }
     // Whether the banner is the presentation at all: full-bleed is on, and there
@@ -3092,16 +3096,24 @@ fun NowPlayingScreen(
                             // it starts, from the banner's playhead, as the collapse begins.
                             // Inside the same clip as the still art, taking the sleeve's
                             // corners, shadow and paused shrink for free.
-                            if (canvas != null) {
+                            // A video — a Canvas, or a tall clip — is the player's own and does
+                            // not come down to the thumbnail: there it is the still cover.
+                            if (canvas != null && (!clipIsVideo || (!heroMode && !collapsePastHalf))) {
                                 val thumbActive = !heroMode || lyricsOpen || queueOpen || queueDragging ||
                                     collapseStarted
                                 CanvasArtworkPlayer(
                                     canvas = canvas,
                                     isPlaying = isPlaying,
-                                    pausedForTransition = !thumbActive || dockMoving,
+                                    pausedForTransition = if (clipIsVideo) {
+                                        lyricsOpen || queueOpen || queueDragging || collapseStarted || dockMoving
+                                    } else {
+                                        !thumbActive || dockMoving
+                                    },
                                     onRenderedChanged = { if (!heroMode) canvasRendered = it },
-                                    onFrameCaptured = { if (thumbActive && !queueDragging) canvasFrame = it },
-                                    refreshFrameEveryMs = if (!thumbActive || dockMoving || queueDragging) {
+                                    onFrameCaptured = {
+                                        if (!clipIsVideo && thumbActive && !queueDragging) canvasFrame = it
+                                    },
+                                    refreshFrameEveryMs = if (clipIsVideo || !thumbActive || dockMoving || queueDragging) {
                                         null
                                     } else if (followsFrames) {
                                         BACKDROP_REFRESH_MS
