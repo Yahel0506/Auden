@@ -164,6 +164,8 @@ fun FullArtworkBlurBackdrop(
     modifier: Modifier = Modifier,
     /** How long one picture takes to give way to the next; long for a moving cover, so it drifts. */
     crossfadeMs: Int = 320,
+    /** How much of the legibility scrim to draw, 0..1; read while drawing so it can be animated for free. */
+    scrim: () -> Float = { 1f },
 ) {
     Box(modifier = modifier.fillMaxSize().background(FallbackBackdrop)) {
         androidx.compose.animation.Crossfade(
@@ -186,11 +188,12 @@ fun FullArtworkBlurBackdrop(
         // Lyrics and queue are dense white foregrounds. Preserve the cover's
         // colour and layout, but keep bright sleeves from lowering contrast.
         Canvas(Modifier.fillMaxSize()) {
+            val k = scrim().coerceIn(0f, 1f)
             drawRect(
                 brush = Brush.verticalGradient(
-                    0f to Color.Black.copy(alpha = 0.34f),
-                    0.55f to Color.Black.copy(alpha = 0.48f),
-                    1f to Color.Black.copy(alpha = 0.64f),
+                    0f to Color.Black.copy(alpha = 0.34f * k),
+                    0.55f to Color.Black.copy(alpha = 0.48f * k),
+                    1f to Color.Black.copy(alpha = 0.64f * k),
                 ),
             )
         }

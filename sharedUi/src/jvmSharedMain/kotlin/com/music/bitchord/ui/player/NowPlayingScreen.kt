@@ -300,6 +300,9 @@ private const val MESH_REFRESH_MS = 3_000L
 private const val BACKDROP_REFRESH_MS = 1_000L
 private const val BACKDROP_FRAME_FADE_MS = 1_100
 
+/** The scrim's strength behind the main player, against 1 for lyrics and queue: a little brighter. */
+private const val MAIN_PLAYER_SCRIM = 0.6f
+
 /** The player's side margin. Scrollable panels reach back across it. */
 internal val PLAYER_GUTTER = 30.dp
 /**
@@ -1626,12 +1629,22 @@ fun NowPlayingScreen(
     // between the portrait and landscape players; only the cached bitmap
     // changes when the artwork preparation above completes for another song.
     val currentFullArtworkBlurImage = rememberUpdatedState(backdropImage)
+    // The main player stands on a lighter blur than the lyrics and the queue, which
+    // are dense white text and want the full scrim; it deepens as either opens.
+    val backdropScrimTarget = if (lyricsOpen || queueOpen || !stillBackdrop) 1f else MAIN_PLAYER_SCRIM
+    val backdropScrim by animateFloatAsState(
+        targetValue = backdropScrimTarget,
+        animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+        label = "backdropScrim",
+    )
+    val backdropScrimRead: () -> Float = { backdropScrim }
     val backdropCrossfadeMs = if (liveBlurImage != null) BACKDROP_FRAME_FADE_MS else 320
     val fullArtworkBlurContent = remember {
-        movableContentOf<Modifier, Int> { backdropModifier, fadeMs ->
+        movableContentOf<Modifier, Int, () -> Float> { backdropModifier, fadeMs, scrim ->
             FullArtworkBlurBackdrop(
                 image = currentFullArtworkBlurImage.value,
                 crossfadeMs = fadeMs,
+                scrim = scrim,
                 modifier = backdropModifier,
             )
         }
@@ -1817,7 +1830,7 @@ fun NowPlayingScreen(
                     background = { backgroundModifier ->
                         // The whole screen is the sheets' frost source: there is
                         // no full-bleed banner here to be it instead.
-                        fullArtworkBlurContent(backgroundModifier.hazeSource(playerHaze), backdropCrossfadeMs)
+                        fullArtworkBlurContent(backgroundModifier.hazeSource(playerHaze), backdropCrossfadeMs, backdropScrimRead)
                     },
                     artwork = { artworkModifier ->
                         LandscapeArtwork(
@@ -2126,6 +2139,7 @@ fun NowPlayingScreen(
                 fullArtworkBlurContent(
                     Modifier.graphicsLayer { alpha = fullArtworkBackdropAlpha },
                     backdropCrossfadeMs,
+                    backdropScrimRead,
                 )
 
                 // Mount once, behind the controls. A known portrait aspect changes the
