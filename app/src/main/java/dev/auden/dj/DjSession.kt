@@ -15,6 +15,9 @@ import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.stats.ArtistFacts
 import com.music.bitchord.playback.PlaybackService
+import com.music.bitchord.playback.QueueShuffle
+import com.music.bitchord.playback.toggleAutoplay
+import com.music.bitchord.playback.toggleShuffle
 import com.music.bitchord.playback.playSongs
 import com.music.bitchord.playback.toMediaItem
 import dev.auden.dj.voice.DjClip
@@ -199,6 +202,9 @@ object DjSession {
         private var listener: Player.Listener? = null
         private var requestText = requestText
         private var closed = false
+        private var wasShuffled = false
+        private var wasAutoplay = false
+        private var wasRepeat = Player.REPEAT_MODE_OFF
         private lateinit var controller: MediaController
         private lateinit var planner: DjPlanner
         private lateinit var writer: DjWriter
@@ -244,6 +250,15 @@ object DjSession {
             val token = SessionToken(app, ComponentName(app, PlaybackService::class.java))
             controller = withContext(Dispatchers.Main) { MediaController.Builder(app, token).buildAsync().await() }
             withContext(Dispatchers.Main) {
+                // The DJ's order is the whole point, and its queue is its own: shuffle, repeat and AutoPlay
+                // would reorder it, replay it or append to it, so the lines stop matching the songs. They go
+                // off for the session and come back as they were when it ends.
+                wasShuffled = QueueShuffle.enabled.value
+                wasAutoplay = AppSettings.autoplay.value
+                wasRepeat = controller.repeatMode
+                if (wasShuffled) controller.toggleShuffle()
+                if (wasAutoplay) controller.toggleAutoplay()
+                if (wasRepeat != Player.REPEAT_MODE_OFF) controller.repeatMode = Player.REPEAT_MODE_OFF
                 controller.playSongs(order.mapNotNull(::songFor), 0, shuffle = false)
                 listener = object : Player.Listener {
                     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) = entered(mediaItem?.mediaId)
@@ -284,8 +299,12 @@ object DjSession {
 
         /** Asks YouTube Music's radio for songs like the listener's favourites, and offers them to the planner. */
         private suspend fun addDiscoveries(known: List<DjTrack>) {
+            // Seeds drawn at random from the songs the listener plays most, not always the same few: the
+            // discoveries are as varied as the taste they come from.
             val seeds = known.filter { it.plays > 0 && it.localUri == null }
                 .sortedByDescending { it.plays }
+                .take(DISCOVERY_POOL)
+                .shuffled()
                 .take(DISCOVERY_SEEDS)
             val found = ArrayList<DjTrack>()
             for (seed in seeds) {
@@ -449,6 +468,10 @@ object DjSession {
             val c = controller
             scope.launch(Dispatchers.Main) {
                 l?.let(c::removeListener)
+                // Back to how the listener had it.
+                if (wasShuffled && !QueueShuffle.enabled.value) c.toggleShuffle()
+                if (wasAutoplay && !AppSettings.autoplay.value) c.toggleAutoplay()
+                if (wasRepeat != Player.REPEAT_MODE_OFF) c.repeatMode = wasRepeat
                 c.release()
             }
         }
@@ -470,13 +493,17 @@ object DjSession {
             DjTheme.Rediscover -> app.getString(R.string.home_shelf_rediscover)
             DjTheme.Fresh -> app.getString(R.string.home_shelf_recently_added)
             DjTheme.Discover -> app.getString(R.string.dj_theme_discover)
+            is DjTheme.ByPlaylist -> theme.name
         }
     }
 
     private val renderers = ArrayList<DjClipRenderer>()
 
     /** How many of the listener's favourites seed the discoveries. */
-    private const val DISCOVERY_SEEDS = 3
+    private const val DISCOVERY_SEEDS = 4
+
+    /** How many of the most played songs the discovery seeds are drawn from. */
+    private const val DISCOVERY_POOL = 25
 
     /** How many of the listener's artists have their genres asked of Last.fm when a session starts. */
     private const val GENRE_LOOKUPS = 40

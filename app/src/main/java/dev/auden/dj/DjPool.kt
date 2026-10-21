@@ -65,6 +65,28 @@ object DjPool {
                 localUri = entry.id.takeIf { it.startsWith("content://") || it.startsWith("file://") },
             )
         }
+        // The listener's playlists: curated on purpose, so their songs are the DJ's to play even when
+        // they are files kept on the phone or have hardly been played. Each song knows which it is in.
+        dev.auden.library.LocalPlaylists.playlists.value.forEach { playlist ->
+            playlist.songs.forEach { song ->
+                val id = song.videoId.takeIf { it.isNotBlank() } ?: return@forEach
+                val existing = byId[id]
+                if (existing != null) {
+                    byId[id] = existing.copy(playlists = existing.playlists + playlist.title)
+                } else {
+                    val entry = heard[id]
+                    byId[id] = DjTrack(
+                        id = id, title = song.title, artist = song.artist, album = song.albumName,
+                        art = song.thumbnailUrl, localUri = song.localUri,
+                        plays = entry?.plays ?: 0,
+                        plays30 = entry?.days?.filterKeys { it >= cutoff }?.values?.sumOf { it.plays } ?: 0,
+                        lastPlayedAt = entry?.last ?: 0L,
+                        playlists = listOf(playlist.title),
+                    )
+                    songs.putIfAbsent(id, song)
+                }
+            }
+        }
         val capped = byId.values.sortedByDescending { it.plays * 2 + it.plays30 * 3 + (if (it.localUri != null) 1 else 0) }.take(CAP)
         Loaded(capped, songs)
     }

@@ -22,6 +22,8 @@ data class DjTrack(
     val bpm: Double? = null,
     /** Found by the DJ on YouTube Music's radio of something the listener knows: new to them, and on-theme. */
     val discovery: Boolean = false,
+    /** The listener's playlists this song is in: the DJ draws on them, not only on what was played most. */
+    val playlists: List<String> = emptyList(),
 ) {
     /** The lead of a credit: "A & B", "A, B" and "A feat. B" are all A's. */
     val leadArtist: String by lazy { leadOf(artist) }
@@ -59,6 +61,7 @@ sealed interface DjTheme {
     }
     data object Favorites : DjTheme { override val key get() = "favorites" }
     data object Rediscover : DjTheme { override val key get() = "rediscover" }
+    data class ByPlaylist(val name: String) : DjTheme { override val key get() = "playlist:${name.lowercase(Locale.ROOT)}" }
     data object Fresh : DjTheme { override val key get() = "fresh" }
     data object Discover : DjTheme { override val key get() = "discover" }
 

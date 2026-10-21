@@ -149,6 +149,9 @@ class DjPlanner(
             out += DjTheme.Rediscover
             out += DjTheme.Fresh
             if (pool.any { it.discovery }) out += DjTheme.Discover
+            // The listener's own playlists: a wide, personal source that is not just what they played most.
+            scope.flatMap { it.playlists }.groupingBy { it }.eachCount()
+                .forEach { (name, n) -> if (n >= MIN_BLOCK) out += DjTheme.ByPlaylist(name) }
         } else {
             scope.groupBy { it.leadArtist.lowercase(Locale.ROOT) }.forEach { (_, ts) ->
                 if (ts.size >= MIN_BLOCK) out += DjTheme.ByArtist(ts.first().leadArtist)
@@ -179,14 +182,18 @@ class DjPlanner(
         DjTheme.Rediscover -> t.plays >= REDISCOVER_MIN_PLAYS && t.lastPlayedAt in 1 until now - REDISCOVER_AFTER_MS
         DjTheme.Fresh -> t.addedAt > 0 && now - t.addedAt <= FRESH_MS && t.localUri != null
         DjTheme.Discover -> t.discovery
+        is DjTheme.ByPlaylist -> t.playlists.any { it.equals(theme.name, ignoreCase = true) }
     }
 
     /** The songs of [theme] still free to play; a surprise also leaves out artists of the last sets. */
     private fun eligible(theme: DjTheme, surprise: Boolean, allowResting: Boolean): List<DjTrack> {
-        val open = scope.filter {
+        val base = scope.filter {
             it.id !in used && it.leadArtist.lowercase(Locale.ROOT) !in avoidedArtists && matches(theme, it)
         }
-        if (!surprise) return open
+        if (!surprise) return base
+        // What the DJ played lately is left out while the theme has plenty else; with little, it stays in.
+        val fresher = base.filter { it.id !in recently }
+        val open = if (distinctArtists(fresher) >= 2 * MIN_BLOCK) fresher else base
         // A surprise rests its artists: two sets back if the theme can still make a varied set from
         // the rest, else one set back. With [allowResting] off, a theme that cannot is left out.
         val sets = recentArtists.toList()
@@ -231,6 +238,7 @@ class DjPlanner(
             DjTheme.Rediscover -> if (evening || hour !in 5..11) 0.9 else 0.4
             DjTheme.Fresh -> 0.6
             DjTheme.Discover -> 0.7
+            is DjTheme.ByPlaylist -> 0.9
             else -> 0.5
         }
     }
@@ -271,7 +279,7 @@ class DjPlanner(
             is DjTheme.ByDecade -> if (r.decade == theme.decade) 1.0 else 0.0
             is DjTheme.ByGenre -> if (r.genre == theme.genre) 1.0 else 0.0
             is DjTheme.ByMood -> if (r.mood == theme.mood) 1.0 else 0.0
-            is DjTheme.ByAlbum, DjTheme.Discover -> 0.0
+            is DjTheme.ByAlbum, DjTheme.Discover, is DjTheme.ByPlaylist -> 0.0
         }
     }
 
@@ -303,7 +311,7 @@ class DjPlanner(
         // Well-known songs are favoured, not guaranteed: a wide random spread keeps the top of the list from
         // being every set's answer, and songs heard lately sink.
         val ranked = eligible
-            .map { it to 0.7 * fit(it) + 1.1 * rng.nextGaussian() - (if (it.id in recently) RECENT_PENALTY else 0.0) }
+            .map { it to 0.35 * fit(it) + 1.2 * rng.nextGaussian() - (if (it.id in recently) RECENT_PENALTY else 0.0) }
             .sortedByDescending { it.second }.map { it.first }
         val familiar = ranked.filter { !it.discovery && it.plays > 0 }
         val newer = ranked.filter { it.discovery || it.plays == 0 }

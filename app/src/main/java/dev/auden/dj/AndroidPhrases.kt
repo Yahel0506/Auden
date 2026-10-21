@@ -42,6 +42,7 @@ class AndroidPhrases(context: Context, language: String) : DjPhrases {
         "note_plain" to R.array.dj_note_plain,
         "signoff" to R.array.dj_signoff,
         "intro_discover" to R.array.dj_intro_discover,
+        "intro_playlist" to R.array.dj_intro_playlist,
         "motive_moment" to R.array.dj_motive_moment,
         "motive_top" to R.array.dj_motive_top,
         "moment_morning" to R.array.dj_moment_morning,

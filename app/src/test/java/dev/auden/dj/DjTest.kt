@@ -42,6 +42,7 @@ class DjTest {
                         DjTheme.Rediscover -> track.plays >= 5
                         DjTheme.Fresh -> track.localUri != null
                         DjTheme.Discover -> track.discovery
+                        is DjTheme.ByPlaylist -> track.playlists.isNotEmpty()
                     }
                     assertTrue("$track in ${block.theme}", ok)
                 }
@@ -302,5 +303,27 @@ class DjTest {
             overlapPlain += generateSequence { plain.next() }.take(3).flatMap { it.tracks }.count { it.id in played }
         }
         assertTrue("fresh $overlapFresh vs plain $overlapPlain", overlapFresh < overlapPlain)
+    }
+
+    @Test
+    fun aSurpriseDrawsOnThePlaylistsToo() {
+        // Songs never played, but in two playlists: the only reason the DJ can know them.
+        val curated = (1..2).flatMap { p ->
+            (1..8).map { n -> t("p$p-$n", "Singer${p}_$n", plays = 0).copy(playlists = listOf("Mix$p")) }
+        }
+        val planner = DjPlanner(curated, now, seed = 3, blockSize = 5)
+        val block = planner.next()
+        assertNotNull(block)
+        assertTrue(block!!.theme is DjTheme.ByPlaylist)
+        assertEquals(5, block.tracks.map { it.leadArtist }.toSet().size)
+    }
+
+    @Test
+    fun sessionsOpenOnDifferentSongsEvenWhenTheFavouritesAreTheSame() {
+        val openers = (1..30).map { seed ->
+            DjPlanner(varied, now, seed = seed.toLong(), blockSize = 5).next()!!.tracks.map { it.id }.toSet()
+        }
+        // Thirty sessions over forty-eight songs should not all draw the same five.
+        assertTrue(openers.toSet().size > 15)
     }
 }

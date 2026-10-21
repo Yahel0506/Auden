@@ -101,6 +101,7 @@ class DjWriter(
             DjTheme.Favorites -> pick("intro_favorites", "count" to count, "title" to opener?.title, "artist" to opener?.artist)
             DjTheme.Rediscover -> pick("intro_rediscover", "count" to count, "title" to opener?.title, "artist" to opener?.artist)
             DjTheme.Fresh -> pick("intro_fresh", "count" to count, "title" to opener?.title, "artist" to opener?.artist)
+            is DjTheme.ByPlaylist -> pick("intro_playlist", "playlist" to theme.name, "count" to count, "title" to opener?.title, "artist" to opener?.artist)
             DjTheme.Discover -> pick("intro_discover", "count" to count, "title" to opener?.title, "artist" to opener?.artist)
         }
         return line

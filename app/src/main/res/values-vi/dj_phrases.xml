@@ -121,4 +121,5 @@
         <string-array name="dj_moment_weekend"><item>cuối tuần, {moment}</item></string-array>
         <string-array name="dj_motive_moment"><item>Bây giờ là {moment}, nên tôi chọn bài hợp với lúc này.</item><item>Vì đang là {moment}, tôi thấy hợp lý.</item></string-array>
         <string-array name="dj_motive_top"><item>Dạo này bạn nghe {artist} rất nhiều, nên tôi đi theo hướng đó.</item><item>Dạo này {artist} lặp lại liên tục với bạn, nên tôi chọn như vậy.</item></string-array>
+    <string-array name="dj_intro_playlist"><item>Một set từ playlist {playlist} của bạn: {count} bài, bắt đầu với {title}.</item><item>Cùng khám phá {playlist}. Trước hết là {title} của {artist}.</item><item>Từ playlist {playlist} của bạn, bắt đầu với {title}.</item></string-array>
 </resources>

@@ -121,4 +121,5 @@
         <string-array name="dj_moment_weekend"><item>fim de semana, {moment}</item></string-array>
         <string-array name="dj_motive_moment"><item>É {moment}, então escolhi algo que combina.</item><item>Como é {moment}, achei que fazia sentido.</item></string-array>
         <string-array name="dj_motive_top"><item>Você tem ouvido muito {artist} ultimamente, então sigo por aí.</item><item>Ultimamente {artist} está no repeat para você, então fui nessa.</item></string-array>
+    <string-array name="dj_intro_playlist"><item>Um set da sua playlist {playlist}: {count} músicas, começando com {title}.</item><item>Vamos mergulhar em {playlist}. Primeiro, {title} de {artist}.</item><item>Da sua playlist {playlist}, começando com {title}.</item></string-array>
 </resources>
