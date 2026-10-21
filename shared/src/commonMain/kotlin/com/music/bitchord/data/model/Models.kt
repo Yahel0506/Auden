@@ -407,6 +407,8 @@ data class ShelfItem(
     val thumbnailUrl: String?,
     val videoId: String?,
     val browseId: String?,
+    /** A file on this device, for a card Home built from the local library. */
+    val localUri: String? = null,
 )
 
 /** The signed-in Google account, as YouTube Music reports it. */

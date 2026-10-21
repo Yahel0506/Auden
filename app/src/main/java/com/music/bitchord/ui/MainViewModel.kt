@@ -83,6 +83,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -118,6 +119,48 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     private val _home = MutableStateFlow<UiState<List<HomeShelf>>>(UiState.Loading)
     val home: StateFlow<UiState<List<HomeShelf>>> = _home.asStateFlow()
+
+    /** Home's shelves built from the device: listening history, library and playlists. */
+    private val _localHomeShelves = MutableStateFlow<List<dev.auden.home.LocalShelf>>(emptyList())
+
+    /** The titles of the shelves above, so a tap on one of their songs plays the shelf. */
+    val localShelfTitles: StateFlow<Set<String>> = _localHomeShelves
+        .map { shelves -> shelves.map { it.title }.toSet() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+
+    /**
+     * What Home shows: YouTube Music's feed and the local shelves merged by
+     * [dev.auden.home.HomeComposer]. With nothing local to add — or offline with nothing local —
+     * it is the feed's own state, untouched, so a loading or failed feed still reads as one.
+     */
+    val homeComposed: StateFlow<UiState<List<HomeShelf>>> = combine(
+        _home,
+        _localHomeShelves,
+        AppSettings.homeLocalShelves,
+        AppSettings.homeLocalWeight,
+        AppSettings.meteredConnection,
+    ) { remote, local, kinds, weight, metered ->
+        val settings = dev.auden.home.HomeSettings(
+            enabled = kinds.mapNotNull { runCatching { dev.auden.home.LocalShelfKind.valueOf(it) }.getOrNull() }.toSet(),
+            localWeight = weight,
+        )
+        val composed = dev.auden.home.HomeComposer.compose(
+            remote = (remote as? UiState.Success)?.data.orEmpty(),
+            local = local,
+            settings = settings,
+            // No active network reads as null here; see AppSettings.meteredConnection.
+            online = metered != null,
+        )
+        if (composed.isNotEmpty()) UiState.Success(composed) else remote
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, UiState.Loading)
+
+    /** Rebuilds the local shelves; cheap, and run whenever Home comes into view. */
+    fun refreshLocalHome() {
+        viewModelScope.launch {
+            runCatching { dev.auden.home.HomeLocal.load(getApplication()) }
+                .onSuccess { _localHomeShelves.value = it }
+        }
+    }
 
     /**
      * Token for the next page of Home shelves; null once there's nothing
@@ -1741,6 +1784,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     init {
+        refreshLocalHome()
+        // A playlist made, renamed or emptied changes the playlists shelf.
+        viewModelScope.launch {
+            dev.auden.library.LocalPlaylists.playlists.drop(1).collect { refreshLocalHome() }
+        }
         startSearchPipeline()
         startSuggestPipeline()
         startTypeaheadMediaPipeline()
@@ -1812,6 +1860,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Call when the home tab becomes visible. */
     fun onHomeShown() {
+        refreshLocalHome()
         if (!homeStale) return
         homeStale = false
         // A first load already in flight will pick the new play up by itself.

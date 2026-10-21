@@ -1495,4 +1495,22 @@
     <string name="autosync_setting">Gespeicherte Playlists aktuell halten</string>
     <string name="autosync_setting_subtitle">Fügt neue Titel von Spotify und YouTube Music deinen Kopien hinzu. Bei diesen Diensten wird nie etwas geändert.</string>
     <string name="autosync_mobile">Auch über mobile Daten</string>
+    <string name="home_shelf_loop">Auf Dauerschleife</string>
+    <string name="home_shelf_loop_subtitle">Was du diesen Monat am meisten gehört hast</string>
+    <string name="home_shelf_rediscover">Wiederentdecken</string>
+    <string name="home_shelf_rediscover_subtitle">Songs, die du geliebt und lange nicht gehört hast</string>
+    <string name="home_shelf_recently_added">Kürzlich hinzugefügt</string>
+    <string name="home_shelf_recently_added_subtitle">Neu in deiner Bibliothek und bei den Downloads</string>
+    <string name="home_shelf_playlists">Deine Playlists</string>
+    <string name="home_shelf_playlists_subtitle">Auf diesem Gerät gespeichert</string>
+    <string name="home_shelf_artist_mix">Mix: %1$s</string>
+    <string name="home_shelf_artist_mix_subtitle">Aus deiner Bibliothek und deinem Verlauf</string>
+    <string name="home_shelf_library">Aus deiner Bibliothek</string>
+    <string name="home_shelf_library_subtitle">Spielt ohne Verbindung</string>
+    <string name="home_mix_title">Startseiten-Mix</string>
+    <string name="home_mix_subtitle">Von ganz YouTube Music bis überwiegend deine eigene Musik</string>
+    <string name="home_mix_value">%1$d%% deins</string>
+    <string name="home_shelves_title">Startseiten-Regale</string>
+    <string name="home_shelves_subtitle">Wähle, welche eigenen Regale erscheinen</string>
+    <string name="home_shelf_artist_mix_toggle">Künstler-Mix</string>
 </resources>

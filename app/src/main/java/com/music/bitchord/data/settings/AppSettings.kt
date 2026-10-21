@@ -485,6 +485,12 @@ object AppSettings {
      */
     val fullBleedArtwork = MutableStateFlow(true)
 
+    /** Which of Home's local shelves are on, by [dev.auden.home.LocalShelfKind] name. All, until chosen. */
+    val homeLocalShelves = MutableStateFlow(dev.auden.home.LocalShelfKind.entries.map { it.name }.toSet())
+
+    /** How much of Home is the listener's own, 0 (all YouTube Music) to 100 (all local); see [dev.auden.home.HomeComposer]. */
+    val homeLocalWeight = MutableStateFlow(dev.auden.home.HomeSettings.DEFAULT_WEIGHT)
+
     /** Restores the expanded player to the surface the listener left open. */
     val lastPlayerScreen = MutableStateFlow(LastPlayerScreen.MAIN)
 
@@ -887,6 +893,9 @@ object AppSettings {
         signatureApiEnabled.value = prefs.getBoolean(KEY_SIGNATURE_API_ENABLED, false)
         signatureApiUrl.value = normalizeSignatureApiUrl(prefs.getString(KEY_SIGNATURE_API_URL, "").orEmpty())
         fullBleedArtwork.value = prefs.getBoolean(KEY_FULL_BLEED_ARTWORK, true)
+        homeLocalShelves.value = prefs.getStringSet(KEY_HOME_LOCAL_SHELVES, null)?.toSet()
+            ?: dev.auden.home.LocalShelfKind.entries.map { it.name }.toSet()
+        homeLocalWeight.value = prefs.getInt(KEY_HOME_LOCAL_WEIGHT, dev.auden.home.HomeSettings.DEFAULT_WEIGHT).coerceIn(0, 100)
         lastPlayerScreen.value = runCatching {
             LastPlayerScreen.valueOf(
                 prefs.getString(KEY_LAST_PLAYER_SCREEN, null) ?: LastPlayerScreen.MAIN.name,
@@ -1465,6 +1474,18 @@ object AppSettings {
         val normalized = normalizeSignatureApiUrl(value)
         signatureApiUrl.value = normalized
         prefs.edit().putString(KEY_SIGNATURE_API_URL, normalized).apply()
+    }
+
+    fun setHomeLocalShelf(kind: dev.auden.home.LocalShelfKind, on: Boolean) {
+        val next = if (on) homeLocalShelves.value + kind.name else homeLocalShelves.value - kind.name
+        homeLocalShelves.value = next
+        prefs.edit().putStringSet(KEY_HOME_LOCAL_SHELVES, next).apply()
+    }
+
+    fun setHomeLocalWeight(value: Int) {
+        val clean = value.coerceIn(0, 100)
+        homeLocalWeight.value = clean
+        prefs.edit().putInt(KEY_HOME_LOCAL_WEIGHT, clean).apply()
     }
 
     fun setFullBleedArtwork(value: Boolean) {
@@ -2073,6 +2094,8 @@ object AppSettings {
     private const val KEY_SIGNATURE_API_ENABLED = "signature_api_enabled"
     private const val KEY_SIGNATURE_API_URL = "signature_api_url"
     private const val KEY_FULL_BLEED_ARTWORK = "full_bleed_artwork"
+    private const val KEY_HOME_LOCAL_SHELVES = "home_local_shelves"
+    private const val KEY_HOME_LOCAL_WEIGHT = "home_local_weight"
     private const val KEY_LAST_PLAYER_SCREEN = "last_player_screen"
     private const val KEY_SYNCED_LYRICS = "synced_lyrics"
     private const val KEY_LYRICS_SOURCES = "lyrics_sources"

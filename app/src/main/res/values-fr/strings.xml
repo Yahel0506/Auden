@@ -1496,4 +1496,22 @@
     <string name="autosync_setting">Garder les playlists enregistrées à jour</string>
     <string name="autosync_setting_subtitle">Ajoute à vos copies les nouveaux titres de Spotify et YouTube Music. Rien n’est jamais modifié sur ces services.</string>
     <string name="autosync_mobile">Aussi en données mobiles</string>
+    <string name="home_shelf_loop">En boucle</string>
+    <string name="home_shelf_loop_subtitle">Ce que vous écoutez le plus ce mois-ci</string>
+    <string name="home_shelf_rediscover">Redécouvrez</string>
+    <string name="home_shelf_rediscover_subtitle">Des titres que vous aimiez et n’avez pas écoutés depuis longtemps</string>
+    <string name="home_shelf_recently_added">Ajouté récemment</string>
+    <string name="home_shelf_recently_added_subtitle">Nouveautés de votre bibliothèque et de vos téléchargements</string>
+    <string name="home_shelf_playlists">Vos playlists</string>
+    <string name="home_shelf_playlists_subtitle">Enregistrées sur cet appareil</string>
+    <string name="home_shelf_artist_mix">Mix : %1$s</string>
+    <string name="home_shelf_artist_mix_subtitle">De votre bibliothèque et de votre historique</string>
+    <string name="home_shelf_library">De votre bibliothèque</string>
+    <string name="home_shelf_library_subtitle">Fonctionne sans connexion</string>
+    <string name="home_mix_title">Mélange de l’accueil</string>
+    <string name="home_mix_subtitle">De tout YouTube Music à surtout votre musique</string>
+    <string name="home_mix_value">%1$d%% à vous</string>
+    <string name="home_shelves_title">Étagères de l’accueil</string>
+    <string name="home_shelves_subtitle">Choisissez quelles étagères s’affichent</string>
+    <string name="home_shelf_artist_mix_toggle">Mix d’artiste</string>
 </resources>

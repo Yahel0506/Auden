@@ -728,7 +728,8 @@ private fun BitChordApp(
         dark = !darkTheme && !showNowPlaying && route != AppRoute.Replay && replayStory == null && !onboardingVisible,
     )
 
-    val homeState by viewModel.home.collectAsStateWithLifecycle()
+    val homeState by viewModel.homeComposed.collectAsStateWithLifecycle()
+    val localHomeTitles by viewModel.localShelfTitles.collectAsStateWithLifecycle()
     val homeLoadingMore by viewModel.homeLoadingMore.collectAsStateWithLifecycle()
     val homeRecentlyPlayedLoading by viewModel.homeRecentlyPlayedLoading.collectAsStateWithLifecycle()
 
@@ -1935,6 +1936,7 @@ private fun BitChordApp(
                 title = item.title,
                 artist = InnertubeParser.artistFromSubtitle(item.subtitle),
                 thumbnailUrl = item.thumbnailUrl,
+                localUri = item.localUri,
             )
         }
     }
@@ -3153,7 +3155,21 @@ private fun BitChordApp(
                                     // Kotlin will not smart-cast a public nullable
                                     // property declared in another module.
                                     val browseId = item.browseId
+                                    // A song on one of the shelves built from the device plays that
+                                    // shelf, from the song tapped: a station off a file or a mix would
+                                    // not be the thing the shelf promised.
+                                    val localShelfSongs = if (shelfTitle in localHomeTitles && song != null) {
+                                        (homeState as? UiState.Success)?.data
+                                            ?.firstOrNull { it.title == shelfTitle }
+                                            ?.items?.mapNotNull(shelfSong)
+                                    } else null
+                                    val localIndex = localShelfSongs?.indexOfFirst { it.videoId == song?.videoId } ?: -1
                                     when {
+                                        localShelfSongs != null && localIndex >= 0 -> playFrom(
+                                            localShelfSongs,
+                                            localIndex,
+                                            QueueSource(shelfTitle, PlaybackSourceType.HOME),
+                                        )
                                         song != null -> playRadio(
                                             song,
                                             QueueSource(shelfTitle, PlaybackSourceType.HOME),

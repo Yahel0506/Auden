@@ -54,6 +54,11 @@ import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.FilterAlt
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.material.icons.rounded.ViewCarousel
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material.icons.automirrored.rounded.PlaylistPlay
+import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.History
@@ -220,6 +225,8 @@ fun SettingsScreen(
     val signatureApiEnabled by AppSettings.signatureApiEnabled.collectAsStateWithLifecycle()
     val signatureApiUrl by AppSettings.signatureApiUrl.collectAsStateWithLifecycle()
     val fullBleedArtwork by AppSettings.fullBleedArtwork.collectAsStateWithLifecycle()
+    val homeShelfKinds by AppSettings.homeLocalShelves.collectAsStateWithLifecycle()
+    val homeWeight by AppSettings.homeLocalWeight.collectAsStateWithLifecycle()
     val syncedLyrics by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
     val lyricsSources by AppSettings.lyricsSources.collectAsStateWithLifecycle()
     val translationLanguage by AppSettings.translationLanguage.collectAsStateWithLifecycle()
@@ -971,6 +978,64 @@ fun SettingsScreen(
                             )
                         },
                         onClick = { AppSettings.setFullBleedArtwork(!fullBleedArtwork) },
+                    )
+                }
+            }
+            val homeMixTitle = stringResource(R.string.home_mix_title)
+            row(homeMixTitle, "home", "local", "library", "algorithm", "shelves") {
+                SliderRow(
+                    icon = Icons.Rounded.Home,
+                    title = homeMixTitle,
+                    subtitle = stringResource(R.string.home_mix_subtitle),
+                    value = stringResource(R.string.home_mix_value, homeWeight),
+                    sliderValue = homeWeight.toFloat(),
+                    onSliderValue = { AppSettings.setHomeLocalWeight((it / 5f).roundToInt() * 5) },
+                    valueRange = 0f..100f,
+                    steps = 19,
+                )
+            }
+            val homeShelvesTitle = stringResource(R.string.home_shelves_title)
+            row(homeShelvesTitle, "home", "shelves", "mix", "playlists", "rediscover", "repeat") {
+                SettingsRow(
+                    icon = Icons.Rounded.ViewCarousel,
+                    title = homeShelvesTitle,
+                    subtitle = stringResource(R.string.home_shelves_subtitle),
+                )
+            }
+            dev.auden.home.LocalShelfKind.entries.forEach { kind ->
+                val kindTitle = stringResource(
+                    when (kind) {
+                        dev.auden.home.LocalShelfKind.LOOP -> R.string.home_shelf_loop
+                        dev.auden.home.LocalShelfKind.REDISCOVER -> R.string.home_shelf_rediscover
+                        dev.auden.home.LocalShelfKind.RECENTLY_ADDED -> R.string.home_shelf_recently_added
+                        dev.auden.home.LocalShelfKind.PLAYLISTS -> R.string.home_shelf_playlists
+                        dev.auden.home.LocalShelfKind.ARTIST_MIX -> R.string.home_shelf_artist_mix_toggle
+                        dev.auden.home.LocalShelfKind.LIBRARY_SHUFFLE -> R.string.home_shelf_library
+                    },
+                )
+                val on = kind.name in homeShelfKinds
+                row(kindTitle, "home", "shelf") {
+                    SettingsRow(
+                        icon = when (kind) {
+                            dev.auden.home.LocalShelfKind.LOOP -> Icons.Rounded.Repeat
+                            dev.auden.home.LocalShelfKind.REDISCOVER -> Icons.Rounded.History
+                            dev.auden.home.LocalShelfKind.RECENTLY_ADDED -> Icons.Rounded.Download
+                            dev.auden.home.LocalShelfKind.PLAYLISTS -> Icons.AutoMirrored.Rounded.PlaylistPlay
+                            dev.auden.home.LocalShelfKind.ARTIST_MIX -> Icons.Rounded.Person
+                            dev.auden.home.LocalShelfKind.LIBRARY_SHUFFLE -> Icons.Rounded.Shuffle
+                        },
+                        title = kindTitle,
+                        trailing = {
+                            Switch(
+                                checked = on,
+                                onCheckedChange = { AppSettings.setHomeLocalShelf(kind, it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            )
+                        },
+                        onClick = { AppSettings.setHomeLocalShelf(kind, !on) },
                     )
                 }
             }
