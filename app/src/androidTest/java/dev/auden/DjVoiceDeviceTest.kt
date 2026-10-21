@@ -19,16 +19,16 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class DjVoiceDeviceTest {
     @Test
-    fun rendersASpanishLineOnThePhone() {
+    fun rendersAnEnglishLineOnThePhone() {
         val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
-        val pack = dev.auden.dj.voice.VoicePacks.forLanguage("es")
+        val pack = dev.auden.dj.voice.VoicePacks.forLanguage("en")
         assertNotNull(pack)
         val folder = java.io.File(context.filesDir, "dj/voices/${pack!!.id}")
         assumeTrue("voice pack not on the device", java.io.File(folder, ".installed").exists())
         val clip = runBlocking {
             DjClipRenderer(context).render(
-                "es",
-                "Buenas noches. Vamos con algo tranquilo, de los noventa.",
+                "en",
+                "Good evening. Let's go with something easy, from the nineties.",
                 seed = 42,
             )
         }

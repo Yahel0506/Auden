@@ -48,6 +48,10 @@ object VoicePackStore {
 
     fun init(context: Context) {
         root = File(context.filesDir, "dj/voices").apply { mkdirs() }
+        // Voices of languages the DJ no longer speaks (it is English only) are only taking room.
+        scope.launch {
+            root.listFiles()?.filter { dir -> VoicePacks.all.none { it.id == dir.name } }?.forEach { it.deleteRecursively() }
+        }
         _states.value = VoicePacks.all.associate { it.id to if (isReady(it)) State.Ready else State.Missing }
     }
 

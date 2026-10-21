@@ -159,9 +159,9 @@ object DjSession {
         VoicePackStore.download(pack)
     }
 
-    private fun language(context: Context): String =
-        AppCompatDelegate.getApplicationLocales().get(0)?.language
-            ?: Locale.getDefault().language
+    /** The DJ always speaks English: it is the one language with a voice that sounds natural. */
+    @Suppress("UNUSED_PARAMETER")
+    private fun language(context: Context): String = "en"
 
     /** Where the voice stands for [language]: unavailable, to download, or ready. */
     private fun voiceFor(language: String): DjUiState.Voice {
