@@ -298,7 +298,7 @@ private const val MESH_REFRESH_MS = 3_000L
  * backdrop in constant slow motion rather than stepping from frame to frame.
  */
 private const val BACKDROP_REFRESH_MS = 1_000L
-private const val BACKDROP_FRAME_FADE_MS = 1_100
+private const val BACKDROP_FRAME_FADE_MS = 950
 
 /** The scrim's strength behind the main player, against 1 for lyrics and queue: a little brighter. */
 private const val MAIN_PLAYER_SCRIM = 0.6f
@@ -2111,7 +2111,7 @@ fun NowPlayingScreen(
                     targetValue = if (
                         !legacyMeshBackdrop &&
                         (stillBackdrop || tabletArtworkBackdrop || lyricsOpen || queueOpen) &&
-                        (tabletArtworkBackdrop || backdropImage != null)
+                        (tabletArtworkBackdrop || stillBackdrop || backdropImage != null)
                     ) 1f else 0f,
                     animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
                     label = "fullArtworkBackdropCrossfade",

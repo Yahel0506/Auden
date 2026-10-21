@@ -167,22 +167,47 @@ fun FullArtworkBlurBackdrop(
     /** How much of the legibility scrim to draw, 0..1; read while drawing so it can be animated for free. */
     scrim: () -> Float = { 1f },
 ) {
+    // Two layers, never a Crossfade. Crossfade draws the outgoing picture fading out
+    // *and* the incoming one fading in, so halfway both are half transparent and the
+    // dark fallback shows through: every swap dipped to black, which on a motion cover
+    // (a swap a second) read as the backdrop blinking. Here the picture on screen stays
+    // fully opaque and the next one fades in over it, so nothing is ever less than whole.
+    //
+    // And a null image never replaces what is showing. A track change has no blurred
+    // cover for a moment; the previous song's stays until the next is ready.
+    var shown by remember { mutableStateOf(image) }
+    var incoming by remember { mutableStateOf<ImageBitmap?>(null) }
+    val fade = remember { Animatable(1f) }
+    LaunchedEffect(image) {
+        val next = image ?: return@LaunchedEffect
+        if (next === shown || next === incoming) return@LaunchedEffect
+        // A swap interrupted by a newer picture: whatever was fading in becomes the
+        // base, so the new one fades over the latest rather than over a stale frame.
+        incoming?.let { shown = it }
+        incoming = next
+        fade.snapTo(0f)
+        fade.animateTo(1f, tween(crossfadeMs, easing = FastOutSlowInEasing))
+        shown = next
+        incoming = null
+    }
     Box(modifier = modifier.fillMaxSize().background(FallbackBackdrop)) {
-        androidx.compose.animation.Crossfade(
-            targetState = image,
-            animationSpec = tween(crossfadeMs, easing = FastOutSlowInEasing),
-            label = "preparedBackdropImage",
-            modifier = Modifier.fillMaxSize(),
-        ) { bitmap ->
-            if (bitmap != null) {
-                val painter = remember(bitmap) { BitmapPainter(bitmap) }
-                Image(
-                    painter = painter,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+        shown?.let { bitmap ->
+            val painter = remember(bitmap) { BitmapPainter(bitmap) }
+            Image(
+                painter = painter,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        incoming?.let { bitmap ->
+            val painter = remember(bitmap) { BitmapPainter(bitmap) }
+            Image(
+                painter = painter,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = fade.value },
+            )
         }
 
         // Lyrics and queue are dense white foregrounds. Preserve the cover's
