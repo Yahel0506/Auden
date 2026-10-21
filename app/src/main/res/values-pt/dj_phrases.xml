@@ -30,18 +30,6 @@
         <item>Não entendi bem, então escolho por você.</item>
         <item>Não sei bem o que queria, então vou surpreender você.</item>
     </string-array>
-    <string-array name="dj_note_year">
-        <item>Esta é {title}, de {artist}, de {year}.</item>
-        <item>{title}, {artist}, {year}.</item>
-    </string-array>
-    <string-array name="dj_note_album">
-        <item>Esta é {title}, do álbum {album}.</item>
-        <item>{title}, do {album}.</item>
-    </string-array>
-    <string-array name="dj_note_plain">
-        <item>Esta é {title}, de {artist}.</item>
-        <item>{title}, de {artist}.</item>
-    </string-array>
     <string-array name="dj_signoff">
         <item>Deixo a música com você. Até a próxima.</item>
         <item>Por aqui é só. Aproveite o resto.</item>
@@ -81,4 +69,7 @@
     <string-array name="dj_ago_months"><item>{n} meses</item></string-array>
     <string-array name="dj_ago_year"><item>mais de um ano</item></string-array>
     <string-array name="dj_by_artist"><item>{title}, de {artist}</item></string-array>
+    <string-array name="dj_note_repeat"><item>{title} é uma das que você mais repetiu este mês: {n} vezes.</item></string-array>
+    <string-array name="dj_note_playlist"><item>{title} vem da sua playlist {playlist}.</item></string-array>
+    <string-array name="dj_note_album_year"><item>{title} é do álbum {album}, de {year}.</item></string-array>
 </resources>

@@ -394,22 +394,29 @@ object DjSession {
             }
         }
 
-        /** Renders a short remark about the song two places ahead and queues it right after the current one. */
+        /**
+         * Renders a remark about a song later in the set that has something worth saying (how often it
+         * was played, its playlist, its album and year) and queues it right before that song. A song with
+         * nothing to say gets no remark: the title and artist alone are not one.
+         */
         private fun commentOnNext(set: Int) {
             queueing += scope.launch {
-                val upcoming = sets[set].tracks.getOrNull(2) ?: return@launch
-                val line = writer.trackNote(upcoming) ?: return@launch
+                val upcoming = sets[set].tracks.drop(2).firstNotNullOfOrNull { t -> writer.trackNote(t)?.let { t to it } }
+                    ?: return@launch
+                val (track, line) = upcoming
                 val clip = renderLine(line, seed = now + 7L * set) ?: return@launch
                 if (closed) return@launch
                 withContext(Dispatchers.Main) {
                     if (closed) return@withContext
-                    val index = runCatching { controller.currentMediaItemIndex }.getOrNull() ?: return@withContext
+                    val current = runCatching { controller.currentMediaItemIndex }.getOrNull() ?: return@withContext
                     if (controller.mediaItemCount != order.size) return@withContext
+                    val at = order.indexOf(track.id)
+                    if (at <= current) return@withContext
                     val id = djSong(clip)
                     place[id] = set to -1
-                    controller.addMediaItem(index + 1, songFor(id)!!.toMediaItem())
-                    order.add(index + 1, id)
-                    for (i in setStart.indices) if (setStart[i] > index) setStart[i] = setStart[i] + 1
+                    controller.addMediaItem(at, songFor(id)!!.toMediaItem())
+                    order.add(at, id)
+                    for (i in setStart.indices) if (setStart[i] >= at && i > set) setStart[i] = setStart[i] + 1
                 }
             }
         }

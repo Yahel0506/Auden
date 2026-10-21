@@ -1268,8 +1268,8 @@ fun SettingsScreen(
                     value = djBlockSize.toString(),
                     sliderValue = djBlockSize.toFloat(),
                     onSliderValue = { AppSettings.setDjBlockSize(it.roundToInt()) },
-                    valueRange = 4f..8f,
-                    steps = 3,
+                    valueRange = 5f..12f,
+                    steps = 6,
                 )
             }
             val djVoiceState by dev.auden.dj.DjSession.state.collectAsStateWithLifecycle()

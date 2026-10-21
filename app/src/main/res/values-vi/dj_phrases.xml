@@ -30,18 +30,6 @@
         <item>Tôi chưa hiểu rõ, nên tôi sẽ chọn giúp bạn.</item>
         <item>Tôi chưa chắc bạn muốn gì, tôi sẽ làm bạn bất ngờ.</item>
     </string-array>
-    <string-array name="dj_note_year">
-        <item>Đây là {title} của {artist}, năm {year}.</item>
-        <item>{title}, {artist}, {year}.</item>
-    </string-array>
-    <string-array name="dj_note_album">
-        <item>Đây là {title}, trong album {album}.</item>
-        <item>{title}, từ {album}.</item>
-    </string-array>
-    <string-array name="dj_note_plain">
-        <item>Đây là {title} của {artist}.</item>
-        <item>{title}, của {artist}.</item>
-    </string-array>
     <string-array name="dj_signoff">
         <item>Tôi để âm nhạc lại cho bạn. Hẹn gặp lại.</item>
         <item>Đến đây là hết. Chúc bạn nghe vui vẻ.</item>
@@ -81,4 +69,7 @@
     <string-array name="dj_ago_months"><item>{n} tháng</item></string-array>
     <string-array name="dj_ago_year"><item>hơn một năm</item></string-array>
     <string-array name="dj_by_artist"><item>{title} của {artist}</item></string-array>
+    <string-array name="dj_note_repeat"><item>{title} là một trong những bài bạn lặp lại nhiều nhất tháng này: {n} lần.</item></string-array>
+    <string-array name="dj_note_playlist"><item>{title} đến từ playlist {playlist} của bạn.</item></string-array>
+    <string-array name="dj_note_album_year"><item>{title} nằm trong album {album}, năm {year}.</item></string-array>
 </resources>

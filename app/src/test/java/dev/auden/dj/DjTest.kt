@@ -360,4 +360,17 @@ class DjTest {
         // Thirty sessions over forty-eight songs should not all draw the same five.
         assertTrue(openers.toSet().size > 15)
     }
+
+    @Test
+    fun aSongWithNothingToSayGetsNoRemark() {
+        val table = mapOf(
+            "note_repeat" to listOf("{title}: {n} times."),
+            "note_playlist" to listOf("{title} from {playlist}."),
+            "note_album_year" to listOf("{title}, {album}, {year}."),
+        )
+        val w = DjWriter(object : DjPhrases { override fun templates(key: String) = table[key].orEmpty() }, "en", 1)
+        assertNull(w.trackNote(t("bare", "Ana")))
+        assertEquals("Trep: 4 times.", w.trackNote(t("r", "Ana", title = "Trep", plays30 = 4)))
+        assertEquals("Tp from Road.", w.trackNote(t("p", "Ana", title = "Tp").copy(playlists = listOf("Road"))))
+    }
 }

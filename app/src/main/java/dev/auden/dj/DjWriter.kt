@@ -55,11 +55,17 @@ class DjWriter(
     /** Said as a new set begins: why these songs, and the one it starts with. */
     fun blockIntro(block: DjBlock, @Suppress("UNUSED_PARAMETER") previous: DjBlock?): String = introduce(block).orEmpty()
 
-    /** A short remark on a song in the middle of a block, when there is something true to say about it. */
+    /**
+     * A remark on a song, only when there is something about it worth saying: how often the listener has
+     * played it, which playlist it is from, its album and year. A song with nothing to say gets nothing:
+     * the title and artist alone are not a remark.
+     */
     fun trackNote(track: DjTrack): String? = listOfNotNull(
-        pick("note_year", "title" to track.title, "artist" to track.artist, "year" to track.year?.toString()),
-        pick("note_album", "title" to track.title, "album" to track.album, "artist" to track.artist),
-        pick("note_plain", "title" to track.title, "artist" to track.artist),
+        track.plays30.takeIf { it >= 3 }?.let { pick("note_repeat", "title" to track.title, "n" to it.toString()) },
+        track.playlists.firstOrNull()?.let { pick("note_playlist", "title" to track.title, "playlist" to it) },
+        if (track.year != null && !track.album.isNullOrBlank()) {
+            pick("note_album_year", "title" to track.title, "album" to track.album, "year" to track.year.toString())
+        } else null,
     ).let { options -> if (options.isEmpty()) null else options[rng.nextInt(options.size)] }
 
     fun signOff(): String = pick("signoff") ?: ""

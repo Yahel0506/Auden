@@ -412,7 +412,7 @@ class DjPlanner(
     }
 
     companion object {
-        const val DEFAULT_BLOCK_SIZE = 5
+        const val DEFAULT_BLOCK_SIZE = 8
         const val MIN_BLOCK = 4
         private const val RECENT_THEMES = 4
         private const val ARTIST_COOLDOWN_SETS = 2

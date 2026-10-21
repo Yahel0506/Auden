@@ -34,18 +34,6 @@
         <item>I didn’t quite catch that, so I’ll choose for you.</item>
         <item>Not sure what you meant, so I’ll surprise you.</item>
     </string-array>
-    <string-array name="dj_note_year">
-        <item>This is {title} by {artist}, from {year}.</item>
-        <item>{title}, {artist}, {year}.</item>
-    </string-array>
-    <string-array name="dj_note_album">
-        <item>This is {title}, from the album {album}.</item>
-        <item>{title}, off {album}.</item>
-    </string-array>
-    <string-array name="dj_note_plain">
-        <item>This is {title} by {artist}.</item>
-        <item>{title}, by {artist}.</item>
-    </string-array>
     <string-array name="dj_signoff">
         <item>I’ll leave the music with you. See you next time.</item>
         <item>That’s it from me. Enjoy the rest.</item>
@@ -85,4 +73,7 @@
     <string-array name="dj_ago_months"><item>{n} months</item></string-array>
     <string-array name="dj_ago_year"><item>over a year</item></string-array>
     <string-array name="dj_by_artist"><item>{title} by {artist}</item></string-array>
+    <string-array name="dj_note_repeat"><item>{title} is one of the songs you’ve repeated most this month: {n} times.</item></string-array>
+    <string-array name="dj_note_playlist"><item>{title} comes from your playlist {playlist}.</item></string-array>
+    <string-array name="dj_note_album_year"><item>{title} is from the album {album}, {year}.</item></string-array>
 </resources>
