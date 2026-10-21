@@ -39,4 +39,23 @@ class DjVoiceDeviceTest {
         java.io.File(context.getExternalFilesDir(null), "dj-test.wav").apply { parentFile?.mkdirs() }
             .also { clip.file.copyTo(it, overwrite = true) }
     }
+
+    @Test
+    fun marksEnglishNamesInASpanishLine() {
+        val context: Context = InstrumentationRegistry.getInstrumentation().targetContext
+        val pack = dev.auden.dj.voice.VoicePacks.forLanguage("es")!!
+        assumeTrue("voice pack not on the device", java.io.File(context.filesDir, "dj/voices/${pack.id}/.installed").exists())
+        val renderer = DjClipRenderer(context)
+        val lines = mapOf(
+            "plain" to "Veo que has escuchado mucho a Bad Bunny últimamente, así que vámonos con DANCE CRIP, de Trueno.",
+            "en-es" to "Veo que has escuchado mucho a (en)Bad Bunny(es) últimamente, así que vámonos con (en)DANCE CRIP(es), de Trueno.",
+            "en-es419" to "Veo que has escuchado mucho a (en)Bad Bunny(es-419) últimamente, así que vámonos con (en)DANCE CRIP(es-419), de Trueno.",
+        )
+        lines.forEach { (name, text) ->
+            val clip = runBlocking { renderer.render("es", text, seed = 7) }
+            assertNotNull(clip)
+            clip!!.file.copyTo(java.io.File(context.getExternalFilesDir(null), "dj-$name.wav"), overwrite = true)
+            android.util.Log.d("DjVoiceTest", "$name ${clip.durationMs} ms")
+        }
+    }
 }

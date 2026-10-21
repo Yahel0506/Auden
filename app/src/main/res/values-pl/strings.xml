@@ -1590,4 +1590,7 @@
     <string name="dj_voice_prompt_skip">Kontynuuj bez głosu</string>
     <string name="dj_voice_failed">Pobieranie nie powiodło się: %1$s. Spróbuj ponownie.</string>
     <string name="dj_speech_error">DJ nie mógł mówić: %1$s</string>
+    <string name="dj_setting_english">Angielskie nazwy</string>
+    <string name="dj_english_download">Pobierz angielski głos (%1$s), by poprawnie wymawiać angielskie tytuły i artystów</string>
+    <string name="dj_english_ready">Angielskie tytuły i artyści są wymawiani po angielsku</string>
 </resources>

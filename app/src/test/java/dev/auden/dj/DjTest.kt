@@ -374,3 +374,20 @@ class DjTest {
         assertEquals("Tp from Road.", w.trackNote(t("p", "Ana", title = "Tp").copy(playlists = listOf("Road"))))
     }
 }
+
+class DjEnglishNamesTest {
+    @Test fun spotsEnglishNames() {
+        assertTrue(DjSpeech.looksEnglish("Bad Bunny"))
+        assertTrue(DjSpeech.looksEnglish("DANCE CRIP"))
+        assertTrue(DjSpeech.looksEnglish("Blinding Lights"))
+        assertFalse(DjSpeech.looksEnglish("Trueno"))
+        assertFalse(DjSpeech.looksEnglish("La Bamba"))
+        assertFalse(DjSpeech.looksEnglish("Corazón"))
+    }
+
+    @Test fun cutsALineAroundTheNames() {
+        val spans = DjSpeech.splitNames("Vámonos con DANCE CRIP, de Trueno.", listOf("dance crip"))
+        assertEquals(listOf("Vámonos con ", "DANCE CRIP", ", de Trueno."), spans.map { it.text })
+        assertEquals(listOf(false, true, false), spans.map { it.english })
+    }
+}

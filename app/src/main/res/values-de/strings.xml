@@ -1550,4 +1550,7 @@
     <string name="dj_voice_prompt_skip">Ohne Stimme fortfahren</string>
     <string name="dj_voice_failed">Der Download ist fehlgeschlagen: %1$s. Versuche es erneut.</string>
     <string name="dj_speech_error">Der DJ konnte nicht sprechen: %1$s</string>
+    <string name="dj_setting_english">Englische Namen</string>
+    <string name="dj_english_download">Englische Stimme laden (%1$s), damit englische Titel und Künstler richtig klingen</string>
+    <string name="dj_english_ready">Englische Titel und Künstler werden englisch gesprochen</string>
 </resources>

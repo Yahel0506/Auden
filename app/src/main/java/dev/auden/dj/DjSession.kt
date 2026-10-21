@@ -159,6 +159,14 @@ object DjSession {
         VoicePackStore.download(pack)
     }
 
+    /** Starts the download of the English voice, which says English names inside lines in other languages. */
+    fun downloadEnglishVoice() {
+        VoicePacks.forLanguage("en")?.let(VoicePackStore::download)
+    }
+
+    /** The app's language, as the DJ speaks it. */
+    fun languageOf(context: Context): String = language(context.applicationContext)
+
     private fun language(context: Context): String =
         AppCompatDelegate.getApplicationLocales().get(0)?.language
             ?: Locale.getDefault().language
@@ -342,9 +350,16 @@ object DjSession {
             return id
         }
 
+        /** The titles and artists of this run that the line names and that are English, to be spoken as such. */
+        private fun englishNamesIn(line: String): List<String> {
+            if (lang == "en") return emptyList()
+            val names = tracks.values.flatMap { listOf(it.title, it.artist, it.album.orEmpty()) }
+            return names.filter { it.length > 2 && line.contains(it, ignoreCase = true) && DjSpeech.looksEnglish(it) }.distinct()
+        }
+
         private suspend fun renderLine(line: String, seed: Long): DjClip? {
             if (!speakable() || line.isBlank()) return null
-            return runCatching { renderer.render(lang, line, seed) }
+            return runCatching { renderer.render(lang, line, seed, englishNamesIn(line)) }
                 .onFailure {
                     Log.w(TAG, "line not spoken", it)
                     _state.value = _state.value.copy(speechError = it.message ?: it.javaClass.simpleName)

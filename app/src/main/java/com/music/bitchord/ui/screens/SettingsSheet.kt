@@ -1290,6 +1290,27 @@ fun SettingsScreen(
                     } else null,
                 )
             }
+            val djEnglishTitle = stringResource(R.string.dj_setting_english)
+            val djEnglishPack = dev.auden.dj.voice.VoicePacks.forLanguage("en")
+            val djPackStates by dev.auden.dj.voice.VoicePackStore.states.collectAsStateWithLifecycle()
+            if (djEnglishPack != null && dev.auden.dj.DjSession.languageOf(context) != "en") {
+                row(djEnglishTitle, "dj", "english", "names", "voice") {
+                    val installed = dev.auden.dj.voice.VoicePackStore.isReady(djEnglishPack)
+                    val downloading = djPackStates[djEnglishPack.id] as? dev.auden.dj.voice.VoicePackStore.State.Downloading
+                    SettingsRow(
+                        icon = Icons.Rounded.GraphicEq,
+                        title = djEnglishTitle,
+                        subtitle = when {
+                            installed -> stringResource(R.string.dj_english_ready)
+                            downloading != null -> stringResource(R.string.dj_voice_downloading, (downloading.fraction * 100).toInt())
+                            else -> stringResource(R.string.dj_english_download, "%.0f MB".format(djEnglishPack.sizeBytes / 1_000_000.0))
+                        },
+                        onClick = if (!installed && downloading == null) {
+                            { dev.auden.dj.DjSession.downloadEnglishVoice() }
+                        } else null,
+                    )
+                }
+            }
         }
 
         SearchableSettingsGroup(search, header = stringResource(R.string.performance)) {
