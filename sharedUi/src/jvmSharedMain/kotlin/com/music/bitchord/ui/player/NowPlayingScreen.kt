@@ -1106,7 +1106,8 @@ fun NowPlayingScreen(
     val swipeHintShown by remember(swipeThreshold) {
         derivedStateOf { abs(swipeSettle.value) / swipeThreshold > 0.01f }
     }
-    val swipeHintNext by remember { derivedStateOf { swipeSettle.value > 0f } }
+    // A leftward drag (negative offset) is the one that skips forward.
+    val swipeHintNext by remember { derivedStateOf { swipeSettle.value < 0f } }
 
     // Signature Apple Music touch: the sleeve shrinks back while paused.
     val artScale by animateFloatAsState(
@@ -3274,7 +3275,7 @@ fun NowPlayingScreen(
                             if (signedIn && song.localUri == null) {
                                 val liked = likeStatus == LikeStatus.LIKE
                                 CircleGlyph(
-                                    icon = if (liked) BitChordIcons.HeartFilled else BitChordIcons.Heart,
+                                    icon = if (liked) BitChordIcons.StarFilled else BitChordIcons.Star,
                                     contentDescription = stringResource(
                                         if (liked) Res.string.remove_from_liked else Res.string.like,
                                     ),
