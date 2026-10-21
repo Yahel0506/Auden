@@ -876,9 +876,7 @@
 
     <string name="export_compatible_downloads">Экспорт совместимых загрузок</string>
 
-    <string name="legacy_mesh_gradient">Классический сетчатый градиент</string>
 
-    <string name="legacy_mesh_gradient_subtitle">Возвращает мягкие анимированные цветные пятна из v1.5</string>
 
     <string name="liquid_glass">Жидкое стекло</string>
 
