@@ -33,28 +33,15 @@ class DjClipRenderer(context: Context) {
     fun canSpeak(language: String): Boolean =
         VoicePacks.forLanguage(language)?.let(VoicePackStore::isReady) == true
 
-    /**
-     * [englishNames] are titles and artists that should sound English inside a line in another
-     * language; they are spoken by the English voice when it is installed, and by the line's own
-     * voice otherwise.
-     */
-    suspend fun render(language: String, line: String, seed: Long, englishNames: List<String> = emptyList()): DjClip? {
+    suspend fun render(language: String, line: String, seed: Long): DjClip? {
         if (line.isBlank()) return null
         val pack = VoicePacks.forLanguage(language)?.takeIf(VoicePackStore::isReady) ?: return null
         return withContext(Dispatchers.Default) {
             mutex.withLock {
                 val voice = voiceFor(pack)
-                val english = if (language == "en" || englishNames.isEmpty()) null else englishVoice()
                 val pieces = ArrayList<FloatArray>()
                 for (part in DjSpeech.shape(line, seed)) {
-                    if (english == null) {
-                        pieces += voice.say(part.text, part.rate)
-                    } else {
-                        for ((text, isEnglish) in DjSpeech.splitNames(part.text, englishNames)) {
-                            if (isEnglish) pieces += resample(english.say(text, part.rate), english.sampleRate, voice.sampleRate)
-                            else if (text.any(Char::isLetterOrDigit)) pieces += voice.say(text, part.rate)
-                        }
-                    }
+                    pieces += voice.say(part.text, part.rate)
                     if (part.pauseAfterMs > 0) pieces += FloatArray((voice.sampleRate * part.pauseAfterMs / 1000).toInt())
                 }
                 val pcm = concat(pieces)
@@ -82,29 +69,6 @@ class DjClipRenderer(context: Context) {
     fun release() {
         loaded?.second?.close()
         loaded = null
-        englishLoaded?.close()
-        englishLoaded = null
-    }
-
-    private var englishLoaded: SherpaVoice? = null
-
-    /** The English voice, if the listener has it installed; names stay in the line's voice without it. */
-    private fun englishVoice(): SherpaVoice? {
-        englishLoaded?.let { return it }
-        val pack = VoicePacks.forLanguage("en")?.takeIf(VoicePackStore::isReady) ?: return null
-        return runCatching { SherpaVoice.open(VoicePackStore.folderOf(pack)) }.getOrNull()?.also { englishLoaded = it }
-    }
-
-    private fun resample(pcm: FloatArray, from: Int, to: Int): FloatArray {
-        if (from == to || pcm.isEmpty()) return pcm
-        val out = FloatArray((pcm.size.toLong() * to / from).toInt())
-        for (i in out.indices) {
-            val at = i.toDouble() * from / to
-            val a = at.toInt().coerceAtMost(pcm.lastIndex)
-            val b = (a + 1).coerceAtMost(pcm.lastIndex)
-            out[i] = pcm[a] + (pcm[b] - pcm[a]) * (at - a).toFloat()
-        }
-        return out
     }
 
     private fun voiceFor(pack: VoicePacks.Pack): SherpaVoice {

@@ -1468,7 +1468,4 @@
     <string name="dj_voice_prompt_skip">Tiếp tục không giọng</string>
     <string name="dj_voice_failed">Tải về thất bại: %1$s. Hãy thử lại.</string>
     <string name="dj_speech_error">DJ không thể nói: %1$s</string>
-    <string name="dj_setting_english">Tên tiếng Anh</string>
-    <string name="dj_english_download">Tải giọng tiếng Anh (%1$s) để đọc đúng tên bài hát và nghệ sĩ tiếng Anh</string>
-    <string name="dj_english_ready">Tên tiếng Anh được đọc bằng tiếng Anh</string>
 </resources>

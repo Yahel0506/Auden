@@ -1555,7 +1555,4 @@
     <string name="dj_voice_prompt_skip">Continuar sem voz</string>
     <string name="dj_voice_failed">O download falhou: %1$s. Tente de novo.</string>
     <string name="dj_speech_error">O DJ não conseguiu falar: %1$s</string>
-    <string name="dj_setting_english">Nomes em inglês</string>
-    <string name="dj_english_download">Baixar a voz em inglês (%1$s) para dizer bem títulos e artistas em inglês</string>
-    <string name="dj_english_ready">Títulos e artistas em inglês são ditos em inglês</string>
 </resources>
