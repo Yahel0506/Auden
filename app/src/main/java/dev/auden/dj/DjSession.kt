@@ -229,11 +229,14 @@ object DjSession {
             // once here and kept for the session. Surprises only; a request names its songs itself.
             if (parsed == null) queueing += scope.launch { addDiscoveries(loaded.tracks) }
             val time = java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault())
+            val plays = loaded.tracks.groupBy { it.leadArtist.lowercase() }
+                .mapValues { (_, ts) -> ts.sumOf { it.plays30 } to ts.sumOf { it.plays } }
             writer = DjWriter(
                 AndroidPhrases(app, lang), lang, seed = now,
                 hour = time.hour,
                 weekend = time.dayOfWeek.value >= 6,
-                topArtist = topArtistThisMonth(loaded.tracks),
+                nowMs = now,
+                artistPlays = { plays[it.lowercase()] },
             )
             renderer = DjClipRenderer(app).also { renderers += it }
 
@@ -313,7 +316,7 @@ object DjSession {
                     if (song.videoId == seed.id || song.videoId.isBlank() || song.videoId in tracks) continue
                     val track = DjTrack(
                         id = song.videoId, title = song.title, artist = song.artist, album = song.albumName,
-                        art = song.thumbnailUrl, discovery = true,
+                        art = song.thumbnailUrl, discovery = true, because = seed.leadArtist,
                     )
                     tracks[track.id] = track
                     songs[track.id] = song
@@ -422,6 +425,7 @@ object DjSession {
             scope.launch {
                 val parsed = text.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, tracks.values.toList()) }
                 planner.setRequest(parsed)
+                writer.request = parsed
                 val current = runCatching { withContext(Dispatchers.Main) { controller.currentMediaItemIndex } }.getOrNull() ?: 0
                 val playing = order.getOrNull(current)?.let(place::get)?.first ?: 0
                 cutAfter(current, playing)

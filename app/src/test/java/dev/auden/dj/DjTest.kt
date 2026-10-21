@@ -145,35 +145,103 @@ class DjTest {
     private val phrases = object : DjPhrases {
         private val table = mapOf(
             "greeting_night" to listOf("Late one."),
-            "intro_artist" to listOf("{count} from {artist}, starting with {title}.", "{artist} next."),
-            "intro_decade" to listOf("Back to {decade}, with {title}."),
-            "connector" to listOf("And now,"),
+            "unrecognized" to listOf("Didn’t catch that."),
+            "intro_artist_recent" to listOf("You’ve played a lot of {artist} lately, so: {opener}."),
+            "intro_artist_always" to listOf("{artist} is one of your regulars, so: {opener}."),
+            "intro_artist_saved" to listOf("You saved a few by {artist}, so: {opener}."),
+            "intro_favorites" to listOf("Songs you repeat, like {opener}."),
+            "intro_rediscover" to listOf("It’s been {ago} since you played these: {opener}."),
+            "intro_rediscover_plain" to listOf("You used to play these: {opener}."),
+            "intro_discover" to listOf("You play a lot of {seed}, so something new: {opener}."),
+            "intro_discover_plain" to listOf("Something new: {opener}."),
+            "intro_playlist" to listOf("From your playlist {playlist}: {opener}."),
+            "intro_mood_chill" to listOf("{moment_cap} calls for something easy: {opener}."),
+            "intro_request_match" to listOf("You asked for {what}: {opener}."),
+            "intro_theme" to listOf("{what}: {opener}."),
+            "what_artist" to listOf("music by {artist}"),
+            "mood_word_chill" to listOf("something calm"),
+            "moment_night" to listOf("tonight"),
+            "ago_months" to listOf("{n} months"),
+            "ago_year" to listOf("over a year"),
+            "by_artist" to listOf("{title} by {artist}"),
             "note_year" to listOf("{title} from {year}."),
             "note_plain" to listOf("{title}, {artist}."),
-            "unrecognized" to listOf("Didn’t catch that."),
         )
         override fun templates(key: String) = table[key].orEmpty()
     }
 
+    private fun writer(plays: Map<String, Pair<Int, Int>> = emptyMap()) =
+        DjWriter(phrases, "en", seed = 1, hour = 23, nowMs = now, artistPlays = { plays[it] })
+
+    private fun block(theme: DjTheme, tracks: List<DjTrack>) = DjBlock(theme, tracks)
+
     @Test
-    fun aLineOnlyStatesFactsTheBlockHas() {
-        val writer = DjWriter(phrases, "en", seed = 1)
-        val block = DjBlock(DjTheme.ByArtist("Ana"), library.filter { it.artist == "Ana" }.take(4))
-        repeat(10) {
-            val line = writer.blockIntro(block, previous = null)
-            assertTrue(line, line.contains("Ana"))
-            assertFalse(line, line.contains("{") || line.contains("}"))
-        }
+    fun anArtistSetGivesTheReasonBeforeTheSong() {
+        val ana = library.filter { it.artist == "Ana" }.take(4)
+        val recent = writer(mapOf("Ana" to (9 to 40))).blockIntro(block(DjTheme.ByArtist("Ana"), ana), null)
+        assertTrue(recent, recent.startsWith("You’ve played a lot of Ana lately"))
+        val regular = writer(mapOf("Ana" to (1 to 40))).blockIntro(block(DjTheme.ByArtist("Ana"), ana), null)
+        assertTrue(regular, regular.contains("one of your regulars"))
+        val saved = writer(mapOf("Ana" to (0 to 3))).blockIntro(block(DjTheme.ByArtist("Ana"), ana), null)
+        assertTrue(saved, saved.contains("saved a few"))
+        // The song closes the sentence, and carries no artist when the set is already theirs.
+        assertTrue(recent, recent.endsWith("${ana.first().title}."))
     }
 
     @Test
-    fun aTemplateWithAMissingFactIsSkippedNotFilledWithAGuess() {
-        val writer = DjWriter(phrases, "en", seed = 1)
-        assertNull(writer.fill("From {year}.", mapOf("year" to null)))
-        assertEquals("From 1999.", writer.fill("From {year}.", mapOf("year" to "1999")))
-        // A track with no year gets the plain note, never the year one.
-        val note = writer.trackNote(t("z", year = null))
-        assertEquals("Tz, Ana.", note)
+    fun anotherArtistsSongNamesItsArtist() {
+        val mixed = library.filter { it.artist == "Bo" }.take(4)
+        val line = writer().blockIntro(block(DjTheme.Favorites, mixed), null)
+        assertTrue(line, line.contains("${mixed.first().title} by Bo"))
+    }
+
+    @Test
+    fun aRediscoverSetSaysHowLongItHasBeen() {
+        val old = library.filter { it.artist == "Cy" }.take(4).map { it.copy(lastPlayedAt = now - 120 * day) }
+        val line = writer().blockIntro(block(DjTheme.Rediscover, old), null)
+        assertTrue(line, line.contains("4 months"))
+        val unknown = writer().blockIntro(block(DjTheme.Rediscover, old.map { it.copy(lastPlayedAt = 0) }), null)
+        assertTrue(unknown, unknown.contains("You used to play these"))
+    }
+
+    @Test
+    fun aDiscoveryNamesTheArtistItWasFoundFrom() {
+        val found = (1..4).map { t("n$it", "Stranger$it").copy(discovery = true, because = "Ana") }
+        val line = writer().blockIntro(block(DjTheme.Discover, found), null)
+        assertTrue(line, line.contains("You play a lot of Ana"))
+        val plain = writer().blockIntro(block(DjTheme.Discover, found.map { it.copy(because = null) }), null)
+        assertTrue(plain, plain.startsWith("Something new"))
+    }
+
+    @Test
+    fun aMoodSetNamesTheMoment() {
+        val line = writer().blockIntro(block(DjTheme.ByMood(DjMood.CHILL), library.take(4)), null)
+        assertTrue(line, line.startsWith("Tonight calls for something easy"))
+    }
+
+    @Test
+    fun youAskedForIsSaidOnlyWhenTheListenerDid() {
+        val ana = library.filter { it.artist == "Ana" }.take(4)
+        val asked = writer().apply { request = DjRequest(text = "Ana", artist = "Ana") }
+            .blockIntro(block(DjTheme.ByArtist("Ana"), ana), null)
+        assertTrue(asked, asked.startsWith("You asked for music by Ana"))
+        val surprise = writer().blockIntro(block(DjTheme.ByArtist("Ana"), ana), null)
+        assertFalse(surprise, surprise.contains("You asked for"))
+    }
+
+    @Test
+    fun aPlaylistSetNamesThePlaylist() {
+        val tracks = (1..4).map { t("pl$it", "Singer$it").copy(playlists = listOf("Road trip")) }
+        val line = writer().blockIntro(block(DjTheme.ByPlaylist("Road trip"), tracks), null)
+        assertTrue(line, line.contains("Road trip"))
+    }
+
+    @Test
+    fun noLineLeavesASlotUnfilled() {
+        listOf(DjTheme.Favorites, DjTheme.Rediscover, DjTheme.Fresh, DjTheme.Discover, DjTheme.ByMood(DjMood.CHILL)).forEach { theme ->
+            val line = writer().blockIntro(block(theme, library.take(4)), null)
+            assertFalse(line, line.contains("{") || line.contains("}"))
+        }
     }
 
     @Test
@@ -185,22 +253,10 @@ class DjTest {
     }
 
     @Test
-    fun theOpeningSaysWhenItDidNotUnderstand() {
-        val writer = DjWriter(phrases, "en", seed = 1)
-        val block = DjBlock(DjTheme.ByArtist("Ana"), library.take(4))
-        val line = writer.opening(2, block, DjRequest(text = "blah"), relaxed = false)
-        assertTrue(line, line.contains("Didn’t catch that."))
-        assertTrue(line, line.startsWith("Late one."))
-    }
-
-    @Test
-    fun theSameLineDoesNotComeRoundTwiceRunning() {
-        val writer = DjWriter(object : DjPhrases {
-            override fun templates(key: String) = if (key == "connector") listOf("A", "B", "C") else emptyList()
-        }, "en", seed = 4)
-        val picks = (1..30).map { writer.blockIntro(DjBlock(DjTheme.Favorites, library.take(4)), library.let { DjBlock(DjTheme.Fresh, it.take(4)) }) }
-        // Introductions have no template here, so only the connector remains; it never repeats back to back.
-        picks.filter { it.isNotBlank() }.zipWithNext().forEach { (a, b) -> assertTrue("$a $b", a != b) }
+    fun theOpeningGreetsThenSaysWhenItDidNotUnderstand() {
+        val ana = library.filter { it.artist == "Ana" }.take(4)
+        val line = writer().opening(23, block(DjTheme.ByArtist("Ana"), ana), DjRequest(text = "blah"), relaxed = false)
+        assertTrue(line, line.startsWith("Late one. Didn’t catch that."))
     }
 
     @Test
@@ -266,28 +322,6 @@ class DjTest {
         planner.addDiscoveries(found)
         val tracks = generateSequence { planner.next() }.take(12).flatMap { it.tracks }.toList()
         assertTrue(tracks.any { it.discovery })
-    }
-
-    @Test
-    fun theDjOnlyNamesTheFavouriteArtistWhenTheSetHoldsThem() {
-        val table = mapOf(
-            "greeting_night" to listOf("Late."),
-            "intro_favorites" to listOf("Favourites."),
-            "motive_top" to listOf("A lot of {artist} lately."),
-            "motive_moment" to listOf("Fits the {moment}."),
-            "moment_night" to listOf("night"),
-        )
-        val phrases = object : DjPhrases { override fun templates(key: String) = table[key].orEmpty() }
-        val without = DjBlock(DjTheme.Favorites, library.filter { it.artist == "Bo" }.take(4))
-        val with = DjBlock(DjTheme.Favorites, library.filter { it.artist == "Ana" }.take(4))
-        repeat(20) { seed ->
-            val a = DjWriter(phrases, "en", seed.toLong(), hour = 23, topArtist = "Ana").opening(23, without, null, false)
-            assertFalse(a, a.contains("Ana"))
-        }
-        val named = (0 until 40).any { seed ->
-            DjWriter(phrases, "en", seed.toLong(), hour = 23, topArtist = "Ana").opening(23, with, null, false).contains("Ana")
-        }
-        assertTrue(named)
     }
 
     @Test

@@ -24,6 +24,8 @@ data class DjTrack(
     val discovery: Boolean = false,
     /** The listener's playlists this song is in: the DJ draws on them, not only on what was played most. */
     val playlists: List<String> = emptyList(),
+    /** For a discovery: the artist of the song it was found from, the reason it was chosen. */
+    val because: String? = null,
 ) {
     /** The lead of a credit: "A & B", "A, B" and "A feat. B" are all A's. */
     val leadArtist: String by lazy { leadOf(artist) }

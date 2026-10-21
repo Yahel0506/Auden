@@ -26,12 +26,6 @@
         <item>Noche larga. Hagamos que valga la pena.</item>
         <item>Es una hora tranquila. Pongamos algo.</item>
     </string-array>
-    <string-array name="dj_request_ack">
-        <item>Entendido: {request}.</item>
-        <item>Va, {request}. Me pongo en ello.</item>
-        <item>{request}. Me gusta.</item>
-        <item>Pediste {request}. Veamos.</item>
-    </string-array>
     <string-array name="dj_relaxed">
         <item>No hay suficiente de eso en tu biblioteca, así que te traigo algo parecido.</item>
         <item>Tengo poco de eso en el dispositivo, así que lo estiro un poco.</item>
@@ -39,71 +33,6 @@
     <string-array name="dj_unrecognized">
         <item>No te entendí del todo, así que elijo yo.</item>
         <item>No estoy seguro de qué pediste, así que te sorprendo.</item>
-    </string-array>
-    <string-array name="dj_connector">
-        <item>Y ahora,</item>
-        <item>Lo siguiente:</item>
-        <item>Cambiemos un poco el ambiente.</item>
-        <item>Muy bien,</item>
-        <item>Vamos con otra cosa.</item>
-    </string-array>
-    <string-array name="dj_intro_artist">
-        <item>Van {count} de {artist}, empezando con {title}.</item>
-        <item>Toca {artist}: {count} canciones, y abrimos con {title}.</item>
-        <item>{artist} por un rato. Primero, {title}.</item>
-        <item>Pasemos unas canciones con {artist}, empezando por {title}.</item>
-    </string-array>
-    <string-array name="dj_intro_decade">
-        <item>Un viaje a {decade}: {count} canciones, empezando con {title} de {artist}.</item>
-        <item>Volvamos a {decade}. Primero, {title}.</item>
-        <item>Unas canciones de {decade}, empezando con {title}.</item>
-        <item>Ahora, {decade}. Abre {artist}.</item>
-    </string-array>
-    <string-array name="dj_intro_genre">
-        <item>Un poco de {genre}, empezando con {title}.</item>
-        <item>Algo de {genre}. Primero, {title} de {artist}.</item>
-        <item>{count} canciones de {genre} seguidas, empezando con {title}.</item>
-        <item>Quedémonos en {genre} un rato. Primero, {artist}.</item>
-    </string-array>
-    <string-array name="dj_intro_mood_focus">
-        <item>Algo para concentrarse: {count} canciones, empezando con {title}.</item>
-        <item>Vamos con algo constante un rato. Primero, {title}.</item>
-        <item>Música para trabajar, empezando con {artist}.</item>
-    </string-array>
-    <string-array name="dj_intro_mood_chill">
-        <item>Bajemos el ritmo. Primero, {title} de {artist}.</item>
-        <item>Algo suave por un rato, empezando con {title}.</item>
-        <item>Con calma: {count} canciones relajadas, empezando con {artist}.</item>
-    </string-array>
-    <string-array name="dj_intro_mood_energy">
-        <item>Subamos el ritmo con {title}.</item>
-        <item>Hora de energía. Abre {artist}.</item>
-        <item>{count} canciones para moverse, empezando con {title}.</item>
-    </string-array>
-    <string-array name="dj_intro_mood_acoustic">
-        <item>Algo acústico ahora, empezando con {title}.</item>
-        <item>Quitemos un poco de capas. Primero, {artist}.</item>
-        <item>{count} canciones desenchufadas, empezando con {title}.</item>
-    </string-array>
-    <string-array name="dj_intro_album">
-        <item>Un álbum completo: {album}, de {artist}, desde el principio.</item>
-        <item>Escuchemos {album}. {count} canciones, en orden.</item>
-        <item>{album}, de {artist}. Desde el inicio.</item>
-    </string-array>
-    <string-array name="dj_intro_favorites">
-        <item>Estas son de las que más escuchas: {count} canciones, empezando con {title}.</item>
-        <item>Algunas de las que más repites. Primero, {title} de {artist}.</item>
-        <item>Tus favoritas por un rato, empezando con {title}.</item>
-    </string-array>
-    <string-array name="dj_intro_rediscover">
-        <item>Hace tiempo que no las escuchas. Primero, {title} de {artist}.</item>
-        <item>Desempolvemos unas viejas favoritas, empezando con {title}.</item>
-        <item>Canciones que escuchabas mucho y hace rato no. Primero, {artist}.</item>
-    </string-array>
-    <string-array name="dj_intro_fresh">
-        <item>Novedades en tu biblioteca: {count} canciones, empezando con {title}.</item>
-        <item>Lo último que añadiste, empezando con {title} de {artist}.</item>
-        <item>Cosas que agregaste hace poco. Primero, {title}.</item>
     </string-array>
     <string-array name="dj_note_year">
         <item>Esta es {title}, de {artist}, del {year}.</item>
@@ -122,13 +51,38 @@
         <item>Hasta aquí yo. Disfruta lo que queda.</item>
         <item>Me hago a un lado y dejo que suene la música.</item>
     </string-array>
-        <string-array name="dj_intro_discover"><item>Algo nuevo para ti, cerca de lo que ya te gusta: {count} canciones, empezando con {title}.</item><item>Esto aún no lo has escuchado, empezando con {title} de {artist}.</item><item>Nuevo para ti y cerca de lo que te encanta. Primero, {title}.</item></string-array>
         <string-array name="dj_moment_morning"><item>esta mañana</item></string-array>
         <string-array name="dj_moment_afternoon"><item>esta tarde</item></string-array>
         <string-array name="dj_moment_evening"><item>esta noche</item></string-array>
         <string-array name="dj_moment_night"><item>esta noche</item></string-array>
-        <string-array name="dj_moment_weekend"><item>fin de semana, {moment}</item></string-array>
-        <string-array name="dj_motive_moment"><item>Es {moment}, así que elegí algo que encaja.</item><item>Como es {moment}, me pareció buena idea.</item></string-array>
-        <string-array name="dj_motive_top"><item>Últimamente escuchas mucho a {artist}, así que sigo por ahí.</item><item>Te has pasado con {artist} estos días, así que va más de eso.</item></string-array>
-    <string-array name="dj_intro_playlist"><item>Un set de tu playlist {playlist}: {count} canciones, empezando con {title}.</item><item>Metámonos en {playlist}. Primero, {title} de {artist}.</item><item>De tu playlist {playlist}, empezando con {title}.</item></string-array>
+    <string-array name="dj_intro_artist_recent"><item>Veo que has escuchado mucho a {artist} últimamente, así que sigamos con su música. Empezamos con {opener}.</item><item>{artist} ha estado en repetición este mes, así que va un set suyo, empezando con {opener}.</item><item>Parece que {artist} es lo tuyo estos días, así que vámonos con {opener}.</item></string-array>
+    <string-array name="dj_intro_artist_always"><item>{artist} es de tus artistas de siempre, así que se merece un set. Empezamos con {opener}.</item><item>Siempre vuelves a {artist}, así que aquí va lo mejor, empezando con {opener}.</item></string-array>
+    <string-array name="dj_intro_artist_saved"><item>Tienes bastantes canciones de {artist} guardadas, así que les damos su momento, empezando con {opener}.</item><item>Un set de {artist}, de lo que tienes guardado. Empezamos con {opener}.</item></string-array>
+    <string-array name="dj_intro_favorites"><item>Estas son canciones que repites una y otra vez, como {opener}. Un set de tus favoritas.</item><item>Vamos con lo que más vuelves a poner, empezando con {opener}.</item></string-array>
+    <string-array name="dj_intro_rediscover"><item>Hace {ago} que no escuchas estas y antes las ponías mucho. Empezamos con {opener}.</item><item>Llevas {ago} sin escuchar estas, y antes sonaban todo el tiempo. Empezamos con {opener}.</item></string-array>
+    <string-array name="dj_intro_rediscover_plain"><item>Antes ponías mucho estas canciones y hace tiempo que no suenan. Empezamos con {opener}.</item></string-array>
+    <string-array name="dj_intro_fresh"><item>Acabas de añadir estas a tu biblioteca y todavía no las has escuchado mucho, así que empezamos con {opener}.</item><item>Algunas de tus últimas incorporaciones, empezando con {opener}.</item></string-array>
+    <string-array name="dj_intro_discover"><item>Escuchas mucho a {seed}, así que te traigo algo nuevo en esa línea, empezando con {opener}.</item><item>Esto es nuevo para ti, pero va con {seed}, que escuchas bastante. Empezamos con {opener}.</item></string-array>
+    <string-array name="dj_intro_discover_plain"><item>Algo nuevo para ti, cerca de lo que ya escuchas. Empezamos con {opener}.</item></string-array>
+    <string-array name="dj_intro_playlist"><item>Saquemos algo de tu playlist {playlist}, empezando con {opener}.</item><item>Tu playlist {playlist} se merece un rato. Empezamos con {opener}.</item></string-array>
+    <string-array name="dj_intro_mood_focus"><item>{moment_cap} pide algo constante para concentrarse, así que empezamos con {opener}.</item><item>Para {moment}, música que no estorbe: {opener}.</item></string-array>
+    <string-array name="dj_intro_mood_chill"><item>{moment_cap} pide algo tranquilo, así que bajemos el ritmo con {opener}.</item><item>Para {moment}, algo suave. Empezamos con {opener}.</item></string-array>
+    <string-array name="dj_intro_mood_energy"><item>{moment_cap} pide algo de energía, así que subamos el ritmo con {opener}.</item><item>Para {moment}, algo con más ritmo. Empezamos con {opener}.</item></string-array>
+    <string-array name="dj_intro_mood_acoustic"><item>{moment_cap} va bien con algo más desnudo, así que algo acústico, empezando con {opener}.</item><item>Para {moment}, algo acústico. Empezamos con {opener}.</item></string-array>
+    <string-array name="dj_intro_request_match"><item>Pediste {what}, así que este set va justo de eso. Empezamos con {opener}.</item><item>{what_cap}: aquí tienes un set así, empezando con {opener}.</item></string-array>
+    <string-array name="dj_intro_theme"><item>Vamos con {what}, empezando con {opener}.</item></string-array>
+    <string-array name="dj_what_artist"><item>música de {artist}</item></string-array>
+    <string-array name="dj_what_decade"><item>música de {decade}</item></string-array>
+    <string-array name="dj_what_genre"><item>algo de {genre}</item></string-array>
+    <string-array name="dj_what_album"><item>{album}, de {artist}</item></string-array>
+    <string-array name="dj_what_favorites"><item>tus favoritas</item></string-array>
+    <string-array name="dj_what_fresh"><item>algo nuevo</item></string-array>
+    <string-array name="dj_what_rediscover"><item>algo que tenías olvidado</item></string-array>
+    <string-array name="dj_mood_word_focus"><item>algo para concentrarte</item></string-array>
+    <string-array name="dj_mood_word_chill"><item>algo tranquilo</item></string-array>
+    <string-array name="dj_mood_word_energy"><item>algo con energía</item></string-array>
+    <string-array name="dj_mood_word_acoustic"><item>algo acústico</item></string-array>
+    <string-array name="dj_ago_months"><item>{n} meses</item></string-array>
+    <string-array name="dj_ago_year"><item>más de un año</item></string-array>
+    <string-array name="dj_by_artist"><item>{title}, de {artist}</item></string-array>
 </resources>
