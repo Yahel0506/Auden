@@ -1308,8 +1308,17 @@ fun NowPlayingScreen(
     // [heroClip], which has gone by the time it is still lingering: re-read
     // off that, its last few frames would resize the view and rebuild its
     // fade for a picture nobody can see.
+    // A "video" is what Spotify calls a Canvas, or any clip that is taller than it is wide;
+    // an animated cover is the rest (Apple's motion artwork). The aspect is remembered for
+    // the clip, because the player reports zero as it is unmounted.
+    var knownClipAspect by remember(canvas?.url) { mutableFloatStateOf(0f) }
+    if (canvasAspect > 0f && canvasAspect != knownClipAspect) knownClipAspect = canvasAspect
+    val clipIsVideo = canvas != null &&
+        (canvas.source == CanvasSource.SPOTIFY || (knownClipAspect > 0f && knownClipAspect < 1f))
     val heroClipMounted = canvas?.takeIf {
-        heroMode && (!(lyricsOpen || queueOpen) || !collapseDone)
+        // A video stays mounted through the lyrics and the queue (held, and invisible): coming
+        // back, it has a frame ready to fade in as the cover returns to its place.
+        heroMode && (!(lyricsOpen || queueOpen) || !collapseDone || clipIsVideo)
     }
     val clipFullscreen = spotifyCanvasOnPhone &&
         heroClipMounted?.source == CanvasSource.SPOTIFY
@@ -1362,14 +1371,6 @@ fun NowPlayingScreen(
     // Worked out from the clip itself rather than from what is mounted at this moment:
     // opening the lyrics unmounts the banner, and a classification that followed it
     // flipped the backdrop between its two treatments mid-transition — the blink.
-    //
-    // A "video" is what Spotify calls a Canvas, or any clip that is taller than it is wide;
-    // an animated cover is the rest (Apple's motion artwork). The aspect is remembered for
-    // the clip, because the player reports zero as it is unmounted.
-    var knownClipAspect by remember(canvas?.url) { mutableFloatStateOf(0f) }
-    if (canvasAspect > 0f && canvasAspect != knownClipAspect) knownClipAspect = canvasAspect
-    val clipIsVideo = canvas != null &&
-        (canvas.source == CanvasSource.SPOTIFY || (knownClipAspect > 0f && knownClipAspect < 1f))
     val videoBackdrop = clipIsVideo || spotifyCanvasPresentation || clipFullscreen || canvasFirstPortrait
     val stillBackdrop = !videoBackdrop
     // Only an animated cover is followed: a video has the mesh in the player and the still
@@ -2199,7 +2200,11 @@ fun NowPlayingScreen(
                             // And with the rest of the player as it docks: a
                             // TextureView doesn't reliably take the fade from a
                             // Compose layer around it.
-                            presentationAlpha = { (1f - 2f * p()).coerceIn(0f, 1f) * dockFade() },
+                            // A video comes in with the cover's return, in proportion to how far
+                            // it has come, rather than appearing at the half.
+                            presentationAlpha = {
+                                (if (clipIsVideo) 1f - p() else 1f - 2f * p()).coerceIn(0f, 1f) * dockFade()
+                            },
                             onRenderedChanged = { canvasRendered = it },
                             offerPosition = { heroPlayhead.value = it },
                             onFrameCaptured = {
@@ -2920,7 +2925,17 @@ fun NowPlayingScreen(
                                     // is no clip mounted to hand it to. The clip is gone
                                     // by the collapse's half, so the sleeve is whole
                                     // again by the time it unmounts.
-                                    alpha = if (heroClip != null) 1f - canvasCover.floatValue else 1f
+                                    alpha = if (clipIsVideo && heroClipMounted != null) {
+                                        // The still cover stays whole while the video comes up
+                                        // to half, then gives way as it takes the rest: both at
+                                        // once, each half see-through, would dip the picture.
+                                        val cover = canvasCover.floatValue
+                                        1f - ((cover - 0.5f) * 2f).coerceIn(0f, 1f)
+                                    } else if (heroClip != null) {
+                                        1f - canvasCover.floatValue
+                                    } else {
+                                        1f
+                                    }
                                 }
                                 .graphicsLayer {
                                     val shown = sleeveShown()
