@@ -427,6 +427,27 @@ object ListeningStats {
 
     // ── Backup ──────────────────────────────────────────────────────────────
 
+    /**
+     * Every track ever heard, merged across the months on disk: what Home's local shelves are made
+     * from. Copies, so merging never touches what a bucket holds.
+     */
+    suspend fun heardTracks(): List<TrackEntry> = withContext(Dispatchers.IO) {
+        if (!ready) return@withContext emptyList()
+        flushAndAwait()
+        val merged = LinkedHashMap<String, TrackEntry>()
+        months().forEach { month ->
+            read(month.toString())?.tracks?.forEach { track ->
+                merged.getOrPut(track.id) {
+                    TrackEntry(
+                        id = track.id, title = track.title, artist = track.artist, album = track.album,
+                        albumId = track.albumId, artistId = track.artistId, art = track.art,
+                    )
+                }.absorb(track)
+            }
+        }
+        merged.values.toList()
+    }
+
     /** Every bucket, for [Backup]. */
     suspend fun exportAll(): List<StoredBucket> {
         if (!ready) return emptyList()

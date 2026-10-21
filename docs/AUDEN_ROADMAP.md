@@ -211,6 +211,8 @@ Después de la Fase 1:
 
 ## Fase 6 — Inicio híbrido (algoritmo + local)
 
+> **Estado:** implementada en `feat/auden-home`. El historial sale de `ListeningStats` (ya guarda reproducciones por día, también de archivos locales), no de `play_event`, que sigue sin escribirse. Código en `dev/auden/home/` (`LocalShelves`, `HomeComposer`, `HomeLocal`); ajustes en Ajustes → apariencia.
+
 - Nuevo `HomeComposer` que mezcla shelves de YT Music (las de ahora) con shelves
   locales calculadas desde `play_event` y `track`:
   - *En bucle* (reproducción local de los últimos 30 días)

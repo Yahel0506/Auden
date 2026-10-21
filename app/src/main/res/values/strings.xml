@@ -1337,4 +1337,22 @@
     <string name="autosync_setting">Keep saved playlists up to date</string>
     <string name="autosync_setting_subtitle">Adds new songs from Spotify and YouTube Music to your copies. Nothing is ever changed on those services.</string>
     <string name="autosync_mobile">Also on mobile data</string>
+    <string name="home_shelf_loop">On repeat</string>
+    <string name="home_shelf_loop_subtitle">What you have played most this month</string>
+    <string name="home_shelf_rediscover">Rediscover</string>
+    <string name="home_shelf_rediscover_subtitle">Songs you loved and haven’t heard in a while</string>
+    <string name="home_shelf_recently_added">Recently added</string>
+    <string name="home_shelf_recently_added_subtitle">New in your library and downloads</string>
+    <string name="home_shelf_playlists">Your playlists</string>
+    <string name="home_shelf_playlists_subtitle">Saved on this device</string>
+    <string name="home_shelf_artist_mix">Mix: %1$s</string>
+    <string name="home_shelf_artist_mix_subtitle">From your library and your history</string>
+    <string name="home_shelf_library">From your library</string>
+    <string name="home_shelf_library_subtitle">Plays with no connection</string>
+    <string name="home_mix_title">Home mix</string>
+    <string name="home_mix_subtitle">From all YouTube Music to mostly your own music</string>
+    <string name="home_mix_value">%1$d%% yours</string>
+    <string name="home_shelves_title">Home shelves</string>
+    <string name="home_shelves_subtitle">Choose which of your own shelves appear</string>
+    <string name="home_shelf_artist_mix_toggle">Artist mix</string>
 </resources>
