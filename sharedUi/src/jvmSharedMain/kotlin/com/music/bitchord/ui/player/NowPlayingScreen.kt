@@ -261,6 +261,16 @@ private const val QUEUE_FLICK_VELOCITY = 450f
 private val DISMISS_STRIP_HEIGHT = 32.dp
 /** The breathing room above the sleeve, needed twice: once to apply, once to measure past. */
 private val ART_BOX_TOP_PAD = 8.dp
+
+/** Between the credits row and the lyric strip and scrubber under it. */
+private val ART_BOX_BOTTOM_PAD = 4.dp
+
+/**
+ * How far the card may run into the player's side gutter on each side. The card is the width of
+ * the content column otherwise, so any height the controls give back could only go to empty space;
+ * this lets it take that height, up to a margin of PLAYER_GUTTER minus this.
+ */
+private val CARD_GUTTER_BLEED = 16.dp
 /**
  * How far below the sleeve's top edge the video/audio pill floats.
  *
@@ -2544,7 +2554,7 @@ fun NowPlayingScreen(
                             .weight(1f)
                             .widthIn(max = PLAYER_MAX_WIDTH)
                             .fillMaxWidth()
-                            .padding(top = ART_BOX_TOP_PAD, bottom = 18.dp),
+                            .padding(top = ART_BOX_TOP_PAD, bottom = ART_BOX_BOTTOM_PAD),
                     ) {
                         if (spotifyCanvasPresentation && playerDeckSettledOpen &&
                             maxHeight != spotifyCanvasExpandedTopHeight
@@ -2574,7 +2584,7 @@ fun NowPlayingScreen(
                         // over once the credits row and the gap above it have had
                         // theirs. Sizing it off the width alone is what pushed the
                         // credits down across the scrubber on anything but a phone.
-                        val wantArt = minOf(maxWidth, roomy - ART_TITLE_GAP - HEADER_HEIGHT)
+                        val wantArt = minOf(maxWidth + CARD_GUTTER_BLEED * 2, roomy - ART_TITLE_GAP - HEADER_HEIGHT)
                         // Held to what the box has actually got, for the single frame it
                         // takes the gaps below to catch up with a change in their own
                         // height: a sleeve a few dp under for one frame is a better
