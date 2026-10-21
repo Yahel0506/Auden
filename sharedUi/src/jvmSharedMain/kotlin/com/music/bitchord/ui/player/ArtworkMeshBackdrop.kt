@@ -125,17 +125,17 @@ fun rememberFullArtworkBlurImage(
  *
  * Frames arrive at [CANVAS_FRAME_CAPTURE_PX] already, so each pass is a few
  * milliseconds on a worker thread. The previous result stays up until the next is
- * ready, and null in means null out (a different clip, or none), which hands the
- * backdrop back to the still cover's blur.
+ * ready; only a different [clipKey] starts over, which hands the backdrop back to
+ * the still cover's blur.
  */
 @Composable
-fun rememberBlurredFrame(frame: ImageBitmap?): ImageBitmap? {
-    var blurred by remember { mutableStateOf<ImageBitmap?>(null) }
+fun rememberBlurredFrame(frame: ImageBitmap?, clipKey: Any? = null): ImageBitmap? {
+    // Held per clip: a frame that goes missing for a moment (a panel opening, a player
+    // being swapped for another) leaves the last blur in place instead of handing the
+    // backdrop back to the still cover and back again, which read as a blink.
+    var blurred by remember(clipKey) { mutableStateOf<ImageBitmap?>(null) }
     LaunchedEffect(frame) {
-        if (frame == null) {
-            blurred = null
-            return@LaunchedEffect
-        }
+        if (frame == null) return@LaunchedEffect
         blurred = withContext(Dispatchers.Default) { frame.boxBlurred(FULL_BLUR_PASSES) }
     }
     return blurred

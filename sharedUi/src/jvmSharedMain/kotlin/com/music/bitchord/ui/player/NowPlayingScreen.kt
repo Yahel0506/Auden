@@ -1356,8 +1356,19 @@ fun NowPlayingScreen(
     // A clip that fills the screen, or stands in a portrait frame, is a video and
     // keeps the mesh. Still artwork and a landscape motion cover get the same
     // full-cover blur as the lyrics and the queue — see [stillBackdrop].
-    val videoBackdrop = spotifyCanvasPresentation || clipFullscreen || canvasFirstPortrait
+    //
+    // Worked out from the clip itself rather than from what is mounted at this moment:
+    // opening the lyrics unmounts the banner, and a classification that followed it
+    // flipped the backdrop between its two treatments mid-transition — the blink.
+    val clipIsVideo = canvas != null && heroMode && (
+        (spotifyCanvasOnPhone && canvas.source == CanvasSource.SPOTIFY) ||
+            (canvasAspect > 0f && canvasAspect < 1f)
+        )
+    val videoBackdrop = clipIsVideo || spotifyCanvasPresentation || clipFullscreen || canvasFirstPortrait
     val stillBackdrop = !videoBackdrop
+    // Lyrics and queue are stood on by the thumbnail's own clip, so there the backdrop
+    // follows the frames whatever kind of clip it is.
+    val followsFrames = stillBackdrop || lyricsOpen || queueOpen
     val artMesh = if (stillBackdrop || (legacyMesh && !canvasFirstPortrait)) null else
         key(song.videoId) { rememberArtworkMesh(remoteArt, canvasFrame, ART_PX) }
     // Whether the banner is the presentation at all: full-bleed is on, and there
@@ -1627,7 +1638,8 @@ fun NowPlayingScreen(
     )
     // While a motion cover plays, the backdrop follows its frames; otherwise (and
     // until the first frame arrives) it is the still cover's blur.
-    val liveBlurImage = rememberBlurredFrame(if (stillBackdrop) canvasFrame else null)
+    val liveBlurImage = rememberBlurredFrame(canvasFrame, clipKey = canvas?.url)
+        .takeIf { followsFrames }
     val backdropImage = liveBlurImage ?: fullArtworkBlurImage
     // One movable Image node, not two backdrop call sites. Compose carries it
     // between the portrait and landscape players; only the cached bitmap
@@ -2187,6 +2199,7 @@ fun NowPlayingScreen(
                                 if (!clipFullscreen && !lyricsOpen && !queueOpen && !queueDragging) {
                                     canvasFrame = it
                                 }
+                                // (Once the panels are up the thumbnail's own clip feeds this.)
                             },
                             // The full-screen Spotify video has no mesh to re-tint.
                             // Keeping this null also removes the old three-second GPU
@@ -3064,29 +3077,28 @@ fun NowPlayingScreen(
                                     .drawWithContent { if (art.loaded || !canvasRendered) drawContent() },
                             )
 
-                            // Where the clip plays when it can't have the banner:
-                            // inside the same clip as the still art, taking the
-                            // sleeve's corners, shadow and paused shrink for free.
-                            if (!heroMode && canvas != null) {
-                                WhileShown({ !collapsePastHalf }) {
-                                    CanvasArtworkPlayer(
-                                        canvas = canvas,
-                                        isPlaying = isPlaying,
-                                        // The panels first: a collapse the tap asked
-                                        // for is paused from the tap, and then never
-                                        // asks after its first frame of movement.
-                                        pausedForTransition = lyricsOpen || queueOpen || queueDragging ||
-                                            collapseStarted || dockMoving,
-                                        onRenderedChanged = { canvasRendered = it },
-                                        onFrameCaptured = {
-                                            if (!lyricsOpen && !queueOpen) canvasFrame = it
-                                        },
-                                        refreshFrameEveryMs = if (
-                                            lyricsOpen || queueOpen || dockMoving
-                                        ) null else if (stillBackdrop) BACKDROP_REFRESH_MS else meshRefreshMs,
-                                        modifier = Modifier.fillMaxSize(),
-                                    )
-                                }
+                            // Where the clip plays when it can't have the banner — and, in
+                            // the lyrics and the queue, the thumbnail beside the title: the
+                            // banner has gone by then, and the small cover keeps moving.
+                            // Inside the same clip as the still art, taking the sleeve's
+                            // corners, shadow and paused shrink for free.
+                            //
+                            // Still while the sleeve is travelling, as the banner is: a clip
+                            // decoding behind a moving cover is work nobody can see.
+                            if (canvas != null && (!heroMode || collapsePastHalf)) {
+                                CanvasArtworkPlayer(
+                                    canvas = canvas,
+                                    isPlaying = isPlaying,
+                                    pausedForTransition = queueDragging || dockMoving ||
+                                        (collapseStarted && !collapseDone) ||
+                                        ((lyricsOpen || queueOpen) && !collapseDone),
+                                    onRenderedChanged = { if (!heroMode) canvasRendered = it },
+                                    onFrameCaptured = { if (!queueDragging) canvasFrame = it },
+                                    refreshFrameEveryMs = if (
+                                        dockMoving || queueDragging || (collapseStarted && !collapseDone)
+                                    ) null else if (followsFrames) BACKDROP_REFRESH_MS else meshRefreshMs,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
                             }
                         }
 
