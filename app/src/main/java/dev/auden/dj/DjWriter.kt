@@ -44,19 +44,21 @@ class DjWriter(
         },
         introduce(first, previous = null),
         // A surprise can say why it chose this: the moment, or what the listener has been playing.
-        if (request == null) motive(always = true) else null,
+        if (request == null) motive(first, always = true) else null,
     )
 
     /** Said as a new block starts, joining the one before to it. */
     fun blockIntro(block: DjBlock, previous: DjBlock?): String {
         // Decided before picking: a connector chosen and then dropped would still count as used.
         val connector = if (previous != null && rng.nextInt(3) != 0) pick("connector") else null
-        return join(connector, introduce(block, previous), motive(always = false).takeIf { rng.nextInt(3) == 0 })
+        return join(connector, introduce(block, previous), motive(block, always = false).takeIf { rng.nextInt(3) == 0 })
     }
 
     /** Why this moment suits the music: named from the clock, or from the artist the listener keeps coming back to. */
-    private fun motive(always: Boolean): String? {
-        val byArtist = topArtist != null && rng.nextBoolean()
+    private fun motive(block: DjBlock, always: Boolean): String? {
+        // Only claims the set follows the listener's favourite artist when it really holds one of their songs.
+        val holdsTop = topArtist != null && block.tracks.any { it.leadArtist.equals(topArtist, ignoreCase = true) }
+        val byArtist = holdsTop && rng.nextBoolean()
         return if (byArtist) {
             pick("motive_top", "artist" to topArtist)
         } else {

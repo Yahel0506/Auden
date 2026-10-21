@@ -67,11 +67,14 @@ fun DjSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier) {
         focus.clearFocus()
         DjSession.request(context, request)
         request = ""
+        // The change is immediate: back to the player to hear it.
+        onDismiss()
     }
     val surprise: () -> Unit = {
         focus.clearFocus()
         DjSession.request(context, "")
         request = ""
+        onDismiss()
     }
 
     Column(modifier.fillMaxWidth().imePadding()) {

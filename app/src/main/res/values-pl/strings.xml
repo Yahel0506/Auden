@@ -1583,4 +1583,5 @@
     <string name="dj_voice_ready">Głos: %1$s, na tym telefonie</string>
     <string name="dj_theme_discover">Nowe dla ciebie</string>
     <string name="dj_now_playing_short">Teraz: %1$s</string>
+    <string name="dj_setting_pack">Pakiet głosu</string>
 </resources>

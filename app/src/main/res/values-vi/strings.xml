@@ -1461,4 +1461,5 @@
     <string name="dj_voice_ready">Giọng: %1$s, trên máy này</string>
     <string name="dj_theme_discover">Mới cho bạn</string>
     <string name="dj_now_playing_short">Đang phát: %1$s</string>
+    <string name="dj_setting_pack">Gói giọng</string>
 </resources>

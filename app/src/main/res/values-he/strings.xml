@@ -1548,4 +1548,5 @@
     <string name="dj_voice_ready">Voice: %1$s, on this phone</string>
     <string name="dj_theme_discover">New for you</string>
     <string name="dj_now_playing_short">Now: %1$s</string>
+    <string name="dj_setting_pack">Voice pack</string>
 </resources>

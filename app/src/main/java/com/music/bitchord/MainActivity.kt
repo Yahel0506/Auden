@@ -732,6 +732,17 @@ private fun BitChordApp(
     )
 
     var showDj by remember { mutableStateOf(false) }
+    // Set when the listener starts the DJ from Home: the player opens as soon as it is on.
+    var djOpenPlayerWhenReady by remember { mutableStateOf(false) }
+    val djStarted by DjSession.state.collectAsStateWithLifecycle()
+    LaunchedEffect(djStarted.running, djStarted.problem) {
+        if (djStarted.running && djOpenPlayerWhenReady) {
+            showNowPlaying = true
+            djOpenPlayerWhenReady = false
+        } else if (djStarted.problem != null) {
+            djOpenPlayerWhenReady = false
+        }
+    }
     val homeState by viewModel.homeComposed.collectAsStateWithLifecycle()
     val localHomeTitles by viewModel.localShelfTitles.collectAsStateWithLifecycle()
     val homeLoadingMore by viewModel.homeLoadingMore.collectAsStateWithLifecycle()
@@ -2368,6 +2379,7 @@ private fun BitChordApp(
             val clip = DjSession.clipOf(displayedSong.videoId)
             DjNowPlayingScreen(
                 words = clip?.text,
+                theme = djRunning.theme,
                 envelope = clip?.envelope ?: FloatArray(0),
                 isPlaying = player.isPlaying,
                 position = player.position,
@@ -2487,7 +2499,8 @@ private fun BitChordApp(
             // The enriched copy, not player.song — otherwise the menu
             // hides the album and artist rows even once their browse
             // ids have been resolved.
-            onOpenDj = { showDj = true },
+            // The DJ's button only exists while the DJ is on, where it takes the queue's place.
+            onOpenDj = if (djRunning.running) ({ showDj = true }) else null,
             onOpenMenu = {
                 menuFromPlayer = true
                 songMenuOrigin = null
@@ -3203,7 +3216,16 @@ private fun BitChordApp(
                                 },
                                 onItemLongPress = onShelfLongPress,
                                 onRetry = viewModel::loadHome,
-                                onOpenDj = { showDj = true },
+                                onOpenDj = {
+                                    // The DJ opens straight into its player, on a surprise: no menu to get past.
+                                    if (DjSession.state.value.running) {
+                                        showNowPlaying = true
+                                    } else {
+                                        djOpenPlayerWhenReady = true
+                                        showQueueNotice(context.getString(R.string.dj_starting))
+                                        DjSession.start(context, "")
+                                    }
+                                },
                                 refreshing = MainViewModel.Feed.HOME in refreshing,
                                 onRefresh = { viewModel.refresh(MainViewModel.Feed.HOME) },
                                 pullState = homePull,

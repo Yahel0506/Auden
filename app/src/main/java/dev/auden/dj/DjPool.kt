@@ -13,6 +13,9 @@ object DjPool {
     /** Enough variety for any theme, and cheap enough to group on a phone in a few milliseconds. */
     const val CAP = 3_000
 
+    /** Plays that make a file kept only on the phone part of the listener's rotation, and so the DJ's to play. */
+    const val LOCAL_MIN_PLAYS = 5
+
     class Loaded(val tracks: List<DjTrack>, val songs: Map<String, Song>)
 
     suspend fun load(context: Context): Loaded = withContext(Dispatchers.IO) {
@@ -25,6 +28,9 @@ object DjPool {
         AudenDb.get(app).tracks().all().forEach { row ->
             val id = row.videoId ?: row.localUri ?: return@forEach
             val entry = heard[id]
+            // A file that is only on the phone is the listener's own business, not the DJ's: it plays only
+            // when it is something they keep coming back to.
+            if (row.videoId == null && (entry?.plays ?: 0) < LOCAL_MIN_PLAYS) return@forEach
             byId[id] = DjTrack(
                 id = id, title = row.title, artist = row.artist, album = row.album, genre = row.genre,
                 year = row.year, trackNumber = row.trackNumber, art = row.thumbnailUrl, localUri = row.localUri,
@@ -44,6 +50,8 @@ object DjPool {
         // favourites or rediscover block, and nothing that needs a year or a genre.
         heard.values.forEach { entry ->
             if (entry.id in byId || entry.title.isBlank() || entry.artist.isBlank()) return@forEach
+            val isFile = entry.id.startsWith("content://") || entry.id.startsWith("file://")
+            if (isFile && entry.plays < LOCAL_MIN_PLAYS) return@forEach
             byId[entry.id] = DjTrack(
                 id = entry.id, title = entry.title, artist = entry.artist, album = entry.album, art = entry.art,
                 localUri = entry.id.takeIf { it.startsWith("content://") || it.startsWith("file://") },

@@ -1543,4 +1543,5 @@
     <string name="dj_voice_ready">Stimme: %1$s, auf diesem Telefon</string>
     <string name="dj_theme_discover">Neu für dich</string>
     <string name="dj_now_playing_short">Gerade: %1$s</string>
+    <string name="dj_setting_pack">Stimmpaket</string>
 </resources>

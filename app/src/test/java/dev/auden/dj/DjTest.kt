@@ -266,4 +266,26 @@ class DjTest {
         val tracks = generateSequence { planner.next() }.take(12).flatMap { it.tracks }.toList()
         assertTrue(tracks.any { it.discovery })
     }
+
+    @Test
+    fun theDjOnlyNamesTheFavouriteArtistWhenTheSetHoldsThem() {
+        val table = mapOf(
+            "greeting_night" to listOf("Late."),
+            "intro_favorites" to listOf("Favourites."),
+            "motive_top" to listOf("A lot of {artist} lately."),
+            "motive_moment" to listOf("Fits the {moment}."),
+            "moment_night" to listOf("night"),
+        )
+        val phrases = object : DjPhrases { override fun templates(key: String) = table[key].orEmpty() }
+        val without = DjBlock(DjTheme.Favorites, library.filter { it.artist == "Bo" }.take(4))
+        val with = DjBlock(DjTheme.Favorites, library.filter { it.artist == "Ana" }.take(4))
+        repeat(20) { seed ->
+            val a = DjWriter(phrases, "en", seed.toLong(), hour = 23, topArtist = "Ana").opening(23, without, null, false)
+            assertFalse(a, a.contains("Ana"))
+        }
+        val named = (0 until 40).any { seed ->
+            DjWriter(phrases, "en", seed.toLong(), hour = 23, topArtist = "Ana").opening(23, with, null, false).contains("Ana")
+        }
+        assertTrue(named)
+    }
 }

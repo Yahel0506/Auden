@@ -226,11 +226,11 @@ object DjSession {
             )
             renderer = DjClipRenderer(app).also { renderers += it }
 
-            val first = planner.next() ?: throw NotEnoughMusic()
+            val first = planner.next()?.let(::playable) ?: throw NotEnoughMusic()
             val opening = writer.opening(LocalTime.now().hour, first, parsed, planner.relaxed)
             val openingClip = renderLine(opening, seed = now)
             appendSet(first, openingClip)
-            val second = planner.next()
+            val second = planner.next()?.let(::playable)
             if (second != null) {
                 val clip = renderLine(writer.blockIntro(second, first), seed = now + 1)
                 appendSet(second, clip)
@@ -262,27 +262,13 @@ object DjSession {
             }
         }
 
-        /** Removes the last set from the queue, the one planned but not yet reached. */
-        private suspend fun dropLastSet() {
-            if (sets.isEmpty()) return
-            val from = setStart.last()
-            val last = sets.lastIndex
-            val ids = order.subList(from, order.size).toList()
-            withContext(Dispatchers.Main) {
-                if (controller.mediaItemCount == order.size && from < order.size) controller.removeMediaItems(from, order.size)
-            }
-            ids.forEach { id ->
-                place.remove(id)
-                clipSongs.remove(id)
-                synchronized(clips) { clips.remove(id) }
-            }
-            order.subList(from, order.size).clear()
-            setStart.removeAt(setStart.lastIndex)
-            planner.release(sets[last].tracks.map { it.id })
-            sets.removeAt(last)
-        }
-
         private fun songFor(id: String): Song? = songs[id] ?: clipSongs[id]
+
+        /**
+         * The set with only the songs that can be queued. The words are written from this, so the DJ
+         * never announces a song or an artist that is then missing from the queue.
+         */
+        private fun playable(set: DjBlock): DjBlock = set.copy(tracks = set.tracks.filter { songs.containsKey(it.id) })
 
         /** Asks YouTube Music's radio for songs like the listener's favourites, and offers them to the planner. */
         private suspend fun addDiscoveries(known: List<DjTrack>) {
@@ -349,9 +335,9 @@ object DjSession {
         }
 
         /** Chooses, renders and queues the set after [set]. */
-        private fun planSet(set: Int) {
+        private fun planSet(set: Int, skipToIt: Boolean = false) {
             queueing += scope.launch {
-                val next = planner.next() ?: return@launch
+                val next = planner.next()?.let(::playable) ?: return@launch
                 val clip = renderLine(writer.blockIntro(next, sets[set]), seed = now + set)
                 if (closed) return@launch
                 withContext(Dispatchers.Main) {
@@ -362,6 +348,8 @@ object DjSession {
                     controller.addMediaItems(
                         order.subList(before, order.size).mapNotNull(::songFor).map { it.toMediaItem() },
                     )
+                    // A change the listener asked for does not wait for the song playing: it cuts to the new set.
+                    if (skipToIt && controller.hasNextMediaItem()) controller.seekToNextMediaItem()
                 }
             }
         }
@@ -399,9 +387,30 @@ object DjSession {
                 planner.setRequest(parsed)
                 val current = runCatching { withContext(Dispatchers.Main) { controller.currentMediaItemIndex } }.getOrNull() ?: 0
                 val playing = order.getOrNull(current)?.let(place::get)?.first ?: 0
-                // Drop every set after the one playing, then queue the replacement after it.
-                while (sets.size > playing + 1) dropLastSet()
-                if (sets.size <= playing + 1) planSet(playing)
+                cutAfter(current, playing)
+                // The song playing finishes its phrase while the new set is chosen and spoken; then it cuts in.
+                planSet(playing, skipToIt = true)
+            }
+        }
+
+        /** Takes every queued item after [index] out of the queue and frees its songs for later. */
+        private suspend fun cutAfter(index: Int, playingSet: Int) {
+            withContext(Dispatchers.Main) {
+                if (controller.mediaItemCount == order.size && index + 1 < order.size) {
+                    controller.removeMediaItems(index + 1, order.size)
+                }
+            }
+            val removed = order.subList(index + 1, order.size).toList()
+            removed.forEach { id ->
+                place.remove(id)
+                clipSongs.remove(id)
+                synchronized(clips) { clips.remove(id) }
+            }
+            planner.release(removed.filter { tracks.containsKey(it) })
+            order.subList(index + 1, order.size).clear()
+            while (sets.size > playingSet + 1) {
+                sets.removeAt(sets.lastIndex)
+                setStart.removeAt(setStart.lastIndex)
             }
         }
 
