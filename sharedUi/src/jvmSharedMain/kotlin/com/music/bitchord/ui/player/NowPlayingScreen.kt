@@ -361,15 +361,9 @@ private const val ARTWORK_DRAG_SHRINK_SCALE = 0.94f
 private val ArtworkScaleEasing = CubicBezierEasing(0.215f, 0.61f, 0.355f, 1f)
 private const val ARTWORK_SCALE_DURATION_MS = 500
 
-/**
- * How far a tall screen is allowed to push the transport from the blocks either
- * side of it.
- *
- * The spare height has to land somewhere, and above and below the play button is
- * where it reads as room rather than as a hole. Past this it stops reading as one
- * group of controls, so the rest goes back to the artwork block.
- */
-private val CONTROL_GAP_SPREAD_MAX = 24.dp
+/** The gaps either side of the transport row, which sits close to the scrubber and the volume bar. */
+private val TRANSPORT_GAP_ABOVE = 2.dp
+private val TRANSPORT_GAP_BELOW = 4.dp
 /**
  * The spread [NowPlayingScreen] settled on the last time it was laid out.
  *
@@ -2632,12 +2626,11 @@ fun NowPlayingScreen(
                         // listened for here at all.
                         if (!lyricsOpen && !queueOpen && !queueDragging && collapseAtRest && controlDeckIsMeasured) {
                             val target = with(density) {
-                                val half = slack
-                                    .coerceAtMost(CONTROL_GAP_SPREAD_MAX * 2)
-                                    .toPx()
-                                    .div(2f)
-                                    .roundToInt()
-                                (half * 2).toDp()
+                                // Nothing is granted to the gaps any more: the transport
+                                // sits close to the scrubber and the volume bar on every
+                                // screen, and whatever height is left goes above the cover
+                                // (see [groupTop]).
+                                0.dp
                             }
                             // Stepped towards [target] rather than jumped there in one
                             // grant, so a late cancellation (see above) decays instead of
@@ -2662,7 +2655,7 @@ fun NowPlayingScreen(
                         // the controls couldn't take, which on all but the tallest
                         // screens is nothing.
                         val groupTop = (maxHeight - fullArt - ART_TITLE_GAP - HEADER_HEIGHT)
-                            .coerceAtLeast(0.dp) / 2
+                            .coerceAtLeast(0.dp)
                         // Functions of the collapse, called at placement and measure
                         // — see [p]. Composition never reads them.
                         fun artSize(): Dp = lerp(fullArt, THUMB_SIZE, p())
@@ -3653,7 +3646,7 @@ fun NowPlayingScreen(
                     // which sit close enough together to read as one. Both of its own
                     // gaps take half the spread, so on a tall screen it holds the
                     // centre rather than drifting up under the seek bar.
-                    Spacer(Modifier.height(8.dp + controlSpread / 2))
+                    Spacer(Modifier.height(TRANSPORT_GAP_ABOVE + controlSpread / 2))
 
                     TransportRow(
                         isPlaying = isPlaying,
@@ -3670,7 +3663,7 @@ fun NowPlayingScreen(
                     // hidden. Removing the slot itself shortened the controls by 50dp
                     // and moved every control below it. A display preference should not
                     // change the half-player's geometry.
-                    Spacer(Modifier.height(12.dp + controlSpread / 2))
+                    Spacer(Modifier.height(TRANSPORT_GAP_BELOW + controlSpread / 2))
 
                     if (!hideVolumeBar) {
                         VolumeRow(
