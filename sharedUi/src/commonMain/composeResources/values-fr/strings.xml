@@ -210,4 +210,8 @@
     <string name="lyrics_provider_remove">Retirer le téléchargement</string>
     <string name="dj_title">Auden DJ</string>
     <string name="dj_subtitle">Des sets thématiques de votre musique, avec une voix entre les titres</string>
+    <string name="dj_now_speaking">Auden DJ is speaking</string>
+    <string name="dj_skip_line">Passer</string>
+    <string name="dj_ask">Demander au DJ</string>
+    <string name="dj_no_words">The DJ is speaking</string>
 </resources>

@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -49,11 +50,12 @@ import dev.auden.dj.DjSession
 import dev.auden.dj.DjUiState
 
 /**
- * The DJ's sheet: say what you feel like hearing (or let it choose), and while it plays, steer it.
+ * The DJ's request sheet, the chat of the DJ.
  *
- * Typing is optional. Left empty, "Surprise me" lets the DJ pick its own themes from the music
- * heard and kept; typed, the request is read against the library (see [dev.auden.dj.DjRequestParser])
- * and the DJ says what it understood.
+ * Opened from the player's DJ button, and from the DJ card on Home. Typing says what to hear; "Surprise
+ * me" lets the DJ choose. While the DJ is on, the same sheet steers it: more or less of what is playing,
+ * or a new request from the next set on. The queue is not shown here, nor anywhere during a session:
+ * the DJ decides what comes next, and the listener asks.
  */
 @Composable
 fun DjSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier) {
@@ -61,9 +63,15 @@ fun DjSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     val state by DjSession.state.collectAsStateWithLifecycle()
     var request by remember { mutableStateOf("") }
     val focus = LocalFocusManager.current
-    val start: () -> Unit = {
+    val send: () -> Unit = {
         focus.clearFocus()
-        DjSession.start(context, request)
+        DjSession.request(context, request)
+        request = ""
+    }
+    val surprise: () -> Unit = {
+        focus.clearFocus()
+        DjSession.request(context, "")
+        request = ""
     }
 
     Column(modifier.fillMaxWidth().imePadding()) {
@@ -81,7 +89,7 @@ fun DjSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier) {
             Column(Modifier.weight(1f)) {
                 Text(stringResource(R.string.dj_title), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
                 Text(
-                    stringResource(R.string.dj_subtitle),
+                    stringResource(if (state.running) R.string.dj_now_playing_short else R.string.dj_subtitle, state.theme.orEmpty()),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -89,101 +97,91 @@ fun DjSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier) {
         }
         HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
 
-        when {
-            state.starting -> Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 28.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
-                Spacer(Modifier.size(14.dp))
-                Text(stringResource(R.string.dj_starting), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 16.dp)) {
+            if (state.starting) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
+                    Spacer(Modifier.size(14.dp))
+                    Text(stringResource(R.string.dj_starting), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
 
-            state.running -> Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 16.dp)) {
-                state.theme?.let {
-                    Text(
-                        stringResource(R.string.dj_now_playing, it),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
+            // The request, always: typed here it steers the DJ from the next set on.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(11.dp))
+                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.weight(1f)) {
+                    if (request.isEmpty()) {
+                        Text(stringResource(R.string.dj_request_hint), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    BasicTextField(
+                        value = request,
+                        onValueChange = { request = it },
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onBackground),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                        keyboardActions = KeyboardActions(onGo = { if (request.isNotBlank()) send() }),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
-                if (state.voiceUnavailable) {
-                    Text(
-                        stringResource(R.string.dj_voice_unavailable),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 6.dp),
-                    )
+                if (request.isNotEmpty()) {
+                    Box(Modifier.size(28.dp).clip(CircleShape).clickable { request = "" }, contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.Close, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+                    }
                 }
-                Spacer(Modifier.height(16.dp))
+            }
+            Text(
+                stringResource(R.string.dj_request_examples),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+
+            state.problem?.let {
+                Text(
+                    stringResource(if (it == DjUiState.Problem.TOO_FEW_SONGS) R.string.dj_too_few else R.string.dj_no_player),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
+            }
+
+            Spacer(Modifier.height(16.dp))
+            if (state.running) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     SteerPill(Icons.Rounded.ThumbUp, stringResource(R.string.dj_more_like_this), Modifier.weight(1f)) { DjSession.more() }
                     SteerPill(Icons.Rounded.ThumbDown, stringResource(R.string.dj_less_like_this), Modifier.weight(1f)) { DjSession.less() }
                 }
-                Spacer(Modifier.height(16.dp))
-                OutlinedButton(
-                    onClick = { DjSession.stop(); onDismiss() },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.dj_stop)) }
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(12.dp))
             }
-
-            else -> Column(Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 22.dp, vertical = 16.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(11.dp))
-                        .padding(horizontal = 12.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = if (request.isNotBlank()) send else surprise,
+                    modifier = Modifier.weight(1f),
                 ) {
-                    Box(Modifier.weight(1f)) {
-                        if (request.isEmpty()) {
-                            Text(stringResource(R.string.dj_request_hint), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        BasicTextField(
-                            value = request,
-                            onValueChange = { request = it },
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onBackground),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                            keyboardActions = KeyboardActions(onGo = { start() }),
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
-                    if (request.isNotEmpty()) {
-                        Box(Modifier.size(28.dp).clip(CircleShape).clickable { request = "" }, contentAlignment = Alignment.Center) {
-                            Icon(Icons.Rounded.Close, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-                        }
-                    }
+                    Text(stringResource(if (request.isNotBlank()) R.string.dj_start else R.string.dj_surprise))
                 }
-                Text(
-                    stringResource(R.string.dj_request_examples),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 22.dp),
-                )
-                state.problem?.let {
-                    Text(
-                        stringResource(if (it == DjUiState.Problem.TOO_FEW_SONGS) R.string.dj_too_few else R.string.dj_no_player),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(start = 22.dp, end = 22.dp, top = 12.dp),
-                    )
+                if (state.running) {
+                    OutlinedButton(onClick = { DjSession.stop(); onDismiss() }) { Text(stringResource(R.string.dj_stop)) }
                 }
-                Spacer(Modifier.height(20.dp))
-                Button(onClick = start, modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp)) {
-                    Text(stringResource(if (request.isBlank()) R.string.dj_surprise else R.string.dj_start))
-                }
-                Spacer(Modifier.height(28.dp))
             }
+            Spacer(Modifier.height(10.dp))
+            VoiceLine(state.voice)
+            Spacer(Modifier.height(18.dp))
         }
     }
 }
 
 @Composable
-private fun SteerPill(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
+private fun SteerPill(icon: ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
@@ -198,3 +196,23 @@ private fun SteerPill(icon: androidx.compose.ui.graphics.vector.ImageVector, lab
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onBackground)
     }
 }
+
+/** The DJ's voice, as the sheet states it: none for this language, a download to do, or ready. */
+@Composable
+private fun VoiceLine(voice: DjUiState.Voice) {
+    val text = when (voice) {
+        DjUiState.Voice.Unavailable -> stringResource(R.string.dj_voice_none)
+        is DjUiState.Voice.NotInstalled -> stringResource(R.string.dj_voice_download, voice.pack.sizeLabel())
+        is DjUiState.Voice.Downloading -> stringResource(R.string.dj_voice_downloading, (voice.fraction * 100).toInt())
+        is DjUiState.Voice.Ready -> stringResource(R.string.dj_voice_ready, voice.pack.voice)
+    }
+    val context = LocalContext.current
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.clickable(enabled = voice is DjUiState.Voice.NotInstalled) { DjSession.downloadVoice(context) },
+    )
+}
+
+private fun dev.auden.dj.voice.VoicePacks.Pack.sizeLabel(): String = "%.0f MB".format(sizeBytes / 1_000_000.0)

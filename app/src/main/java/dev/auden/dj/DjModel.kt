@@ -20,6 +20,8 @@ data class DjTrack(
     val addedAt: Long = 0L,
     /** Known only for tracks the analyzer has already seen; never computed for the DJ's sake. */
     val bpm: Double? = null,
+    /** Found by the DJ on YouTube Music's radio of something the listener knows: new to them, and on-theme. */
+    val discovery: Boolean = false,
 ) {
     /** The lead of a credit: "A & B", "A, B" and "A feat. B" are all A's. */
     val leadArtist: String by lazy { leadOf(artist) }
@@ -37,10 +39,10 @@ data class DjTrack(
 }
 
 enum class DjMood(val keywords: Set<String>) {
-    FOCUS(setOf("instrumental", "ambient", "piano", "classical", "clásica", "clasica", "lo-fi", "lofi", "study", "focus", "minimal", "post-rock")),
-    CHILL(setOf("chill", "lounge", "downtempo", "bossa", "soft", "jazz", "r&b", "soul", "trip hop", "easy listening")),
-    ENERGY(setOf("rock", "metal", "punk", "dance", "edm", "electro", "house", "techno", "hip hop", "hip-hop", "rap", "reggaeton", "trap", "workout", "hard", "drum")),
-    ACOUSTIC(setOf("acoustic", "acústico", "acustico", "unplugged", "folk", "singer-songwriter", "country")),
+    FOCUS(setOf("instrumental", "ambient", "piano", "classical", "clásica", "clasica", "lo-fi", "lofi", "study", "focus", "minimal", "post-rock", "soundtrack")),
+    CHILL(setOf("chill", "lounge", "downtempo", "bossa", "soft", "jazz", "r&b", "soul", "trip hop", "easy listening", "dream pop", "indie pop")),
+    ENERGY(setOf("rock", "metal", "punk", "dance", "edm", "electro", "house", "techno", "hip hop", "hip-hop", "rap", "reggaeton", "trap", "workout", "hard", "drum", "pop", "funk")),
+    ACOUSTIC(setOf("acoustic", "acústico", "acustico", "unplugged", "folk", "singer-songwriter", "country", "bluegrass")),
 }
 
 /** What a block of songs has in common: the thing the DJ says out loud, and the rule the songs obey. */
@@ -58,6 +60,7 @@ sealed interface DjTheme {
     data object Favorites : DjTheme { override val key get() = "favorites" }
     data object Rediscover : DjTheme { override val key get() = "rediscover" }
     data object Fresh : DjTheme { override val key get() = "fresh" }
+    data object Discover : DjTheme { override val key get() = "discover" }
 
     /** The family a theme belongs to; two blocks in a row are never of the same one unless asked for. */
     val kind: String get() = key.substringBefore(':')

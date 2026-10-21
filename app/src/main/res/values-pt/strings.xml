@@ -1542,4 +1542,10 @@
     <string name="dj_setting_chatty">O DJ comenta as faixas</string>
     <string name="dj_setting_chatty_subtitle">Uma frase sobre uma faixa no meio de um set</string>
     <string name="dj_setting_block">Faixas por set</string>
+    <string name="dj_voice_none">O DJ ainda não tem voz para este idioma: você vai ler as frases dele.</string>
+    <string name="dj_voice_download">Baixar voz · %1</string>
+    <string name="dj_voice_downloading">Baixando a voz… %1%%</string>
+    <string name="dj_voice_ready">Voz: %1, neste celular</string>
+    <string name="dj_theme_discover">Novo para você</string>
+    <string name="dj_now_playing_short">Agora: %1</string>
 </resources>

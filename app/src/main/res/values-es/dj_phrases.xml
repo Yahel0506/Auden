@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- What the DJ says. One list per situation; {slots} are filled from the block being introduced. -->
 <resources>
+    <string name="dj_phrases_language" translatable="false">es</string>
     <string-array name="dj_greeting_morning">
         <item>Buenos días.</item>
         <item>Buen día. Vamos a arrancar con calma.</item>
@@ -121,4 +122,12 @@
         <item>Hasta aquí yo. Disfruta lo que queda.</item>
         <item>Me hago a un lado y dejo que suene la música.</item>
     </string-array>
+        <string-array name="dj_intro_discover"><item>Algo nuevo para ti, cerca de lo que ya te gusta: {count} canciones, empezando con {title}.</item><item>Esto aún no lo has escuchado, empezando con {title} de {artist}.</item><item>Nuevo para ti y cerca de lo que te encanta. Primero, {title}.</item></string-array>
+        <string-array name="dj_moment_morning"><item>esta mañana</item></string-array>
+        <string-array name="dj_moment_afternoon"><item>esta tarde</item></string-array>
+        <string-array name="dj_moment_evening"><item>esta noche</item></string-array>
+        <string-array name="dj_moment_night"><item>esta noche</item></string-array>
+        <string-array name="dj_moment_weekend"><item>fin de semana, {moment}</item></string-array>
+        <string-array name="dj_motive_moment"><item>Es {moment}, así que elegí algo que encaja.</item><item>Como es {moment}, me pareció buena idea.</item></string-array>
+        <string-array name="dj_motive_top"><item>Últimamente escuchas mucho a {artist}, así que sigo por ahí.</item><item>Te has pasado con {artist} estos días, así que va más de eso.</item></string-array>
 </resources>

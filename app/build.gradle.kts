@@ -1,6 +1,7 @@
 import java.util.Properties
 import java.security.MessageDigest
 import java.io.FileInputStream
+import java.net.URL
 
 plugins {
     id("com.android.application")
@@ -60,6 +61,35 @@ val betaSuffix = rootProject.extra["bitchordBetaSuffix"] as String
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
+
+// ---- Auden DJ voice engine: sherpa-onnx, fetched at build time and checked by hash ----
+// Not on Maven Central; the release asset is pinned by version and SHA-256 so a
+// changed file can never be built in silently. The static-link flavour carries its
+// own ONNX Runtime inside libsherpa-onnx-jni.so, so it does not collide with the
+// onnxruntime-android artifact the Automix model uses.
+val sherpaVersion = "1.13.8"
+val sherpaSha256 = "b22c3fc1b6a45666d28892bb2f7694beeb77a8362d7ebd77c1a5431ec9435471"
+val sherpaAarName = "sherpa-onnx-static-link-onnxruntime-$sherpaVersion"
+val sherpaDir = layout.buildDirectory.dir("sherpa")
+
+fun sha256Of(file: File): String =
+    MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") { "%02x".format(it) }
+
+val fetchSherpa by tasks.registering {
+    val out = sherpaDir.map { it.file("$sherpaAarName.aar").asFile }
+    outputs.file(out)
+    doLast {
+        val file = out.get()
+        if (file.exists() && sha256Of(file) == sherpaSha256) return@doLast
+        file.parentFile.mkdirs()
+        val url = "https://github.com/k2-fsa/sherpa-onnx/releases/download/v$sherpaVersion/$sherpaAarName.aar"
+        URL(url).openStream().use { input -> file.outputStream().use { input.copyTo(it) } }
+        val actual = sha256Of(file)
+        check(actual == sherpaSha256) { "sherpa-onnx AAR hash mismatch: $actual" }
+    }
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(fetchSherpa) }
 
 android {
     namespace = "com.music.bitchord"
@@ -204,6 +234,11 @@ android {
             // The three BouncyCastle jars (bcprov, bcutil, bcpkix) ship one licence between them.
             pickFirsts += setOf("META-INF/LICENSE.md", "META-INF/LICENSE.txt", "META-INF/NOTICE.md")
         }
+        jniLibs {
+            // The sherpa-onnx AAR and the Automix model's runtime both ship an x86 ONNX Runtime. Only
+            // emulators run x86; the phones this app targets load the arm copies, which do not collide.
+            pickFirsts += setOf("lib/x86/libonnxruntime.so")
+        }
     }
     buildFeatures {
         compose = true
@@ -247,6 +282,11 @@ val newPipeExtractorRaw: Configuration by configurations.creating {
     isCanBeConsumed = false
 }
 dependencies {
+    // ---- Auden DJ: offline neural speech (sherpa-onnx, Piper voices) ----
+    implementation(mapOf("name" to sherpaAarName, "ext" to "aar"))
+    // Reads the .tar.bz2 voice packs a listener downloads once; Android has no tar or bzip2.
+    implementation("org.apache.commons:commons-compress:1.27.1")
+
     newPipeExtractorRaw("com.github.TeamNewPipe:NewPipeExtractor:v0.26.3")
 }
 val newPipeExtractorStripped = tasks.register<org.gradle.api.tasks.bundling.Jar>(

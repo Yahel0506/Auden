@@ -2,6 +2,7 @@ package dev.auden.dj
 
 import android.content.ComponentName
 import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.media3.common.MediaItem
@@ -9,16 +10,21 @@ import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.music.bitchord.R
+import com.music.bitchord.data.model.PlaybackSourceType
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.data.stats.ArtistFacts
 import com.music.bitchord.playback.PlaybackService
 import com.music.bitchord.playback.playSongs
 import com.music.bitchord.playback.toMediaItem
+import dev.auden.dj.voice.DjClip
+import dev.auden.dj.voice.DjClipRenderer
+import dev.auden.dj.voice.VoicePackStore
+import dev.auden.dj.voice.VoicePacks
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,28 +34,41 @@ import kotlinx.coroutines.withContext
 import java.time.LocalTime
 import java.util.Locale
 
-/** What the DJ sheet shows. */
+/** What the DJ's sheet and the player show about the session. */
 data class DjUiState(
     val running: Boolean = false,
     val starting: Boolean = false,
-    /** What the current block is about, in words ("Radiohead", "los 90", "Chill"). */
+    /** What the current block is about, in words ("Radiohead", "Tranquilo", "Los 90"). */
     val theme: String? = null,
-    /** The speech engine could not be reached or has no voice for the language; the DJ plays on, silently. */
-    val voiceUnavailable: Boolean = false,
+    /** Whether the DJ can speak in this language, and the pack's state if it can. */
+    val voice: Voice = Voice.Unavailable,
     /** Why the last start did not happen, if it did not. */
     val problem: Problem? = null,
 ) {
+    sealed interface Voice {
+        /** No voice exists for the app's language: the DJ plays, and the words are on screen. */
+        data object Unavailable : Voice
+        /** A voice exists and has to be downloaded first. */
+        data class NotInstalled(val pack: VoicePacks.Pack) : Voice
+        data class Downloading(val pack: VoicePacks.Pack, val fraction: Float) : Voice
+        data class Ready(val pack: VoicePacks.Pack) : Voice
+    }
+
     enum class Problem { TOO_FEW_SONGS, NO_PLAYER }
 }
 
 /**
- * One DJ session: themed blocks of songs, a line of speech between them.
+ * One DJ session: themed sets of songs, each introduced by something the DJ says.
  *
- * The session lives in the process, not in the screen that started it, and drives the player
- * through its own controller: with the phone locked and the activity gone the DJ goes on. It keeps
- * two blocks queued ahead of what is playing and plans the next as one is entered, so the queue is
- * never longer than it needs to be and never runs dry. If the listener rebuilds the queue — plays
- * something else — the session notices a song it did not queue and steps aside.
+ * The DJ is queued like music. A line is rendered into a clip and placed in the queue before the
+ * set it introduces, so the player moves from the last song of a set to the DJ, and from the DJ to
+ * the first song of the next set, as it would between any two tracks. Sets are planned one ahead:
+ * when a set starts, the one after it is chosen, its line is rendered, and both are queued, so the
+ * queue is never empty and the voice is never waiting for a song to end.
+ *
+ * The session lives in the process, not in a screen, and drives the player through its own
+ * controller: it goes on with the phone locked. If the listener takes the queue somewhere else, the
+ * session steps aside rather than fighting for it.
  */
 object DjSession {
     private const val TAG = "AudenDj"
@@ -59,144 +78,318 @@ object DjSession {
     val state: StateFlow<DjUiState> = _state.asStateFlow()
 
     private var run: Run? = null
-    private var voice: DjVoice? = null
 
-    /** Starts a session, from a typed [request] or on the DJ's own choice when it is null or blank. */
+    /** The rendered lines of the running session, by the clip's media id. */
+    private val clips = HashMap<String, DjClip>()
+
+    /** The words of a DJ clip on screen while it plays; null for any other song. */
+    fun clipOf(mediaId: String?): DjClip? = mediaId?.let { synchronized(clips) { clips[it] } }
+
+    fun init(context: Context) {
+        VoicePackStore.init(context)
+    }
+
+    /** Starts a session: from a typed [request], or on the DJ's own choice when it is blank. */
     fun start(context: Context, request: String?) {
         if (_state.value.starting) return
         stop()
         val app = context.applicationContext
-        _state.value = DjUiState(starting = true)
+        _state.value = DjUiState(starting = true, voice = voiceFor(language(app)))
         scope.launch {
-            val session = runCatching { Run(app, request?.trim().orEmpty()).also { it.begin() } }
-                .onFailure { Log.w(TAG, "could not start", it) }
-                .getOrElse {
-                    _state.value = DjUiState(
-                        problem = if (it is NotEnough) DjUiState.Problem.TOO_FEW_SONGS else DjUiState.Problem.NO_PLAYER,
-                    )
-                    return@launch
-                }
+            val session = Run(app, request?.trim().orEmpty())
             run = session
+            runCatching { session.begin() }
+                .onFailure { error ->
+                    Log.w(TAG, "could not start", error)
+                    run = null
+                    _state.value = DjUiState(
+                        problem = if (error is NotEnoughMusic) DjUiState.Problem.TOO_FEW_SONGS else DjUiState.Problem.NO_PLAYER,
+                        voice = voiceFor(language(app)),
+                    )
+                }
         }
+    }
+
+    /**
+     * Changes what the DJ is asked for. Takes effect from the next set: the one already queued is
+     * replaced, the one playing is left alone. A blank request is a surprise again.
+     */
+    fun request(context: Context, text: String) {
+        val session = run ?: return start(context, text)
+        session.steer(text)
     }
 
     fun stop() {
         run?.finish()
         run = null
-        voice?.stop()
+        synchronized(clips) { clips.clear() }
+        renderers.forEach { it.clearClips(); it.release() }
+        renderers.clear()
         _state.value = DjUiState()
     }
 
     /** More like the song playing now. */
     fun more() { run?.more() }
 
-    /** Less like the song playing now: its artist is out for the session, and playback moves on. */
+    /** Less like the song playing now: its artist leaves the session, and the set moves on. */
     fun less() { run?.less() }
 
-    private class NotEnough : Exception()
+    /** Starts the download of the voice for the app's language, if it has one and it is not here. */
+    fun downloadVoice(context: Context) {
+        val pack = VoicePacks.forLanguage(language(context.applicationContext)) ?: return
+        VoicePackStore.download(pack)
+    }
 
-    private class Run(private val app: Context, private val requestText: String) {
-        private val settings = Settings()
+    private fun language(context: Context): String =
+        AppCompatDelegate.getApplicationLocales().get(0)?.language
+            ?: Locale.getDefault().language
+
+    /** Where the voice stands for [language]: unavailable, to download, or ready. */
+    private fun voiceFor(language: String): DjUiState.Voice {
+        val pack = VoicePacks.forLanguage(language) ?: return DjUiState.Voice.Unavailable
+        val states = VoicePackStore.states.value
+        return when (val s = states[pack.id]) {
+            is VoicePackStore.State.Downloading -> DjUiState.Voice.Downloading(pack, s.fraction)
+            VoicePackStore.State.Ready -> DjUiState.Voice.Ready(pack)
+            else -> if (VoicePackStore.isReady(pack)) DjUiState.Voice.Ready(pack) else DjUiState.Voice.NotInstalled(pack)
+        }
+    }
+
+
+    /**
+     * One running session. Planning and rendering run on [scope]; every player call runs on the main
+     * thread. The queue is kept as [order], one media id per item, and [place] says which set each id
+     * belongs to. A set is a clip (its line, when there is a voice for it) followed by its songs.
+     */
+    private class Run(private val app: Context, requestText: String) {
+        private val lang = language(app)
+        private val blockSize = AppSettings.djBlockSize.value
+        private val speakable = AppSettings.djVoice.value &&
+            VoicePacks.forLanguage(lang)?.let(VoicePackStore::isReady) == true &&
+            DjPhrasesCheck.supports(app, lang)
+        private val chatty = AppSettings.djChatty.value && speakable
+        private val now = System.currentTimeMillis()
+        private val songs = HashMap<String, Song>()
+        private val tracks = HashMap<String, DjTrack>()
+        private val clipSongs = HashMap<String, Song>()
+        private val order = ArrayList<String>()
+        private val place = HashMap<String, Pair<Int, Int>>()
+        private val setStart = ArrayList<Int>()
+        private val sets = ArrayList<DjBlock>()
+        private val noted = HashSet<Int>()
+        private val queueing = ArrayList<Job>()
+        private var listener: Player.Listener? = null
+        private var requestText = requestText
+        private var closed = false
         private lateinit var controller: MediaController
         private lateinit var planner: DjPlanner
         private lateinit var writer: DjWriter
-        private val blocks = ArrayList<DjBlock>()
-        private val intros = ArrayList<String>()
-        private val songs = HashMap<String, Song>()
-        private val tracks = HashMap<String, DjTrack>()
-        /** Where each queued song sits: its block and its place in it. */
-        private val place = HashMap<String, Pair<Int, Int>>()
-        /** The queue as the DJ built it, in order. */
-        private val order = ArrayList<String>()
-        private val spoken = HashSet<Int>()
-        private var talk: Job? = null
-        private var listener: Player.Listener? = null
-        private var closed = false
-        private val language = Locale.getDefault().language.takeIf { it == "es" } ?: "en"
-
-        private data class Settings(
-            val voice: Boolean = AppSettings.djVoice.value,
-            val chatty: Boolean = AppSettings.djChatty.value,
-            val blockSize: Int = AppSettings.djBlockSize.value,
-        )
+        private lateinit var renderer: DjClipRenderer
 
         suspend fun begin() {
             val loaded = DjPool.load(app)
-            val now = System.currentTimeMillis()
-            val parsed = requestText.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, loaded.tracks) }
-            planner = DjPlanner(loaded.tracks, now, seed = now, blockSize = settings.blockSize, request = parsed)
-            writer = DjWriter(AndroidPhrases(app, language), language, seed = now)
+            if (loaded.tracks.size < DjPlanner.MIN_BLOCK) throw NotEnoughMusic()
+            tracks.putAll(loaded.tracks.associateBy { it.id })
             songs.putAll(loaded.songs)
-            loaded.tracks.forEach { tracks[it.id] = it }
-
-            val first = planner.next() ?: throw NotEnough()
-            blocks += first
-            intros += writer.opening(LocalTime.now().hour, first, parsed, planner.relaxed)
-            planner.next()?.let { next ->
-                blocks += next
-                intros += writer.blockIntro(next, first)
+            val parsed = requestText.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, loaded.tracks) }
+            planner = DjPlanner(loaded.tracks, now, seed = now, blockSize = blockSize, request = parsed, genresOf = ArtistFacts::genresForDj)
+            // The Last.fm genres of the artists the listener plays most, asked for once and kept: they
+            // give a track its mood. Off the main thread, and the sets already chosen do not wait for it.
+            queueing += scope.launch(Dispatchers.IO) {
+                loaded.tracks.groupBy { it.leadArtist }
+                    .entries.sortedByDescending { e -> e.value.sumOf { it.plays } }
+                    .take(GENRE_LOOKUPS)
+                    .forEach { ArtistFacts.fetchForDj(it.key) }
             }
-            blocks.forEachIndexed { b, block -> block.tracks.forEachIndexed { p, t -> place[t.id] = b to p; order += t.id } }
+            // New to the listener but on the taste they show: the radio of what they know, fetched
+            // once here and kept for the session. Surprises only; a request names its songs itself.
+            if (parsed == null) queueing += scope.launch { addDiscoveries(loaded.tracks) }
+            val time = java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault())
+            writer = DjWriter(
+                AndroidPhrases(app, lang), lang, seed = now,
+                hour = time.hour,
+                weekend = time.dayOfWeek.value >= 6,
+                topArtist = topArtistThisMonth(loaded.tracks),
+            )
+            renderer = DjClipRenderer(app).also { renderers += it }
+
+            val first = planner.next() ?: throw NotEnoughMusic()
+            val opening = writer.opening(LocalTime.now().hour, first, parsed, planner.relaxed)
+            val openingClip = renderLine(opening, seed = now)
+            appendSet(first, openingClip)
+            val second = planner.next()
+            if (second != null) {
+                val clip = renderLine(writer.blockIntro(second, first), seed = now + 1)
+                appendSet(second, clip)
+            }
 
             val token = SessionToken(app, ComponentName(app, PlaybackService::class.java))
             controller = withContext(Dispatchers.Main) { MediaController.Builder(app, token).buildAsync().await() }
             withContext(Dispatchers.Main) {
-                controller.playSongs(blocks.flatMap { it.tracks }.mapNotNull { songs[it.id] }, 0, shuffle = false)
+                controller.playSongs(order.mapNotNull(::songFor), 0, shuffle = false)
                 listener = object : Player.Listener {
                     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) = entered(mediaItem?.mediaId)
-                    override fun onPlaybackStateChanged(state: Int) { if (state == Player.STATE_ENDED) end() }
                 }.also(controller::addListener)
             }
-            _state.value = DjUiState(running = true, theme = label(first.theme))
-            if (settings.voice) {
-                val voice = (voice ?: DjVoice(app).also { voice = it })
-                val ok = voice.prepare(Locale.getDefault().let { if (it.language == language) it else Locale(language) })
-                if (!ok) _state.value = _state.value.copy(voiceUnavailable = true)
-            }
-            withContext(Dispatchers.Main) { entered(controller.currentMediaItem?.mediaId) }
+            _state.value = DjUiState(running = true, theme = label(first.theme), voice = voiceFor(lang))
+            entered(order.firstOrNull())
         }
 
-        /** A song started. Plans ahead when a block is entered, and says the line that belongs to it. */
+        /** Appends a set to the end of the queue: its clip (if any), then its songs. */
+        private fun appendSet(set: DjBlock, clip: DjClip?) {
+            val index = sets.size
+            sets += set
+            setStart += order.size
+            clip?.let { order += djSong(it); place[order.last()] = index to -1 }
+            set.tracks.forEachIndexed { p, t ->
+                if (songs.containsKey(t.id)) {
+                    order += t.id
+                    place[t.id] = index to p
+                }
+            }
+        }
+
+        /** Removes the last set from the queue, the one planned but not yet reached. */
+        private suspend fun dropLastSet() {
+            if (sets.isEmpty()) return
+            val from = setStart.last()
+            val last = sets.lastIndex
+            val ids = order.subList(from, order.size).toList()
+            withContext(Dispatchers.Main) {
+                if (controller.mediaItemCount == order.size && from < order.size) controller.removeMediaItems(from, order.size)
+            }
+            ids.forEach { id ->
+                place.remove(id)
+                clipSongs.remove(id)
+                synchronized(clips) { clips.remove(id) }
+            }
+            order.subList(from, order.size).clear()
+            setStart.removeAt(setStart.lastIndex)
+            planner.release(sets[last].tracks.map { it.id })
+            sets.removeAt(last)
+        }
+
+        private fun songFor(id: String): Song? = songs[id] ?: clipSongs[id]
+
+        /** Asks YouTube Music's radio for songs like the listener's favourites, and offers them to the planner. */
+        private suspend fun addDiscoveries(known: List<DjTrack>) {
+            val seeds = known.filter { it.plays > 0 && it.localUri == null }
+                .sortedByDescending { it.plays }
+                .take(DISCOVERY_SEEDS)
+            val found = ArrayList<DjTrack>()
+            for (seed in seeds) {
+                val radio = com.music.bitchord.data.YtMusicRepository.radio(seed.id).getOrNull() ?: continue
+                for (song in radio) {
+                    if (song.videoId == seed.id || song.videoId.isBlank() || song.videoId in tracks) continue
+                    val track = DjTrack(
+                        id = song.videoId, title = song.title, artist = song.artist, album = song.albumName,
+                        art = song.thumbnailUrl, discovery = true,
+                    )
+                    tracks[track.id] = track
+                    songs[track.id] = song
+                    found += track
+                }
+            }
+            if (found.isNotEmpty() && !closed) planner.addDiscoveries(found)
+        }
+
+        private fun djSong(clip: DjClip): String {
+            val id = "dj:${clip.id}"
+            clipSongs[id] = Song(
+                videoId = id,
+                title = app.getString(R.string.dj_title),
+                artist = app.getString(R.string.dj_title),
+                thumbnailUrl = null,
+                durationText = "%d:%02d".format(clip.durationMs / 60_000, clip.durationMs / 1000 % 60),
+                localUri = Uri.fromFile(clip.file).toString(),
+                playbackSourceType = PlaybackSourceType.QUEUE,
+                playbackSource = app.getString(R.string.dj_title),
+            )
+            synchronized(clips) { clips[id] = clip }
+            return id
+        }
+
+        private suspend fun renderLine(line: String, seed: Long): DjClip? {
+            if (!speakable || line.isBlank()) return null
+            return runCatching { renderer.render(lang, line, seed) }
+                .onFailure { Log.w(TAG, "line not spoken", it) }
+                .getOrNull()
+        }
+
+        /** A song started: a set's first song plans the one after; the planned sets stay one ahead. */
         private fun entered(mediaId: String?) {
             if (closed || mediaId == null) return
-            // By id, and when the service has swapped the id (a version switch keeps the queue the
-            // same length but renames the entry) by position. Anything else is the listener's own queue.
-            val at = place[mediaId] ?: order.getOrNull(controller.currentMediaItemIndex)
-                ?.takeIf { controller.mediaItemCount == order.size }?.let(place::get)
-            if (at == null) { end(); return }
-            val (b, p) = at
-            _state.value = _state.value.copy(theme = label(blocks[b].theme))
-            talk?.cancel()
-            if (p == 0 && spoken.add(b)) {
-                say(mediaId, intros.getOrNull(b))
-                if (b >= blocks.size - 1) scope.launch { planAhead() }
-            } else if (p == 2 && settings.chatty && b !in noted) {
-                noted += b
-                tracks[mediaId]?.let { say(mediaId, writer.trackNote(it)) }
+            val at = place[mediaId] ?: run {
+                // A version switch can rename the entry; by position it is still ours.
+                val i = runCatching { controller.currentMediaItemIndex }.getOrNull() ?: -1
+                order.getOrNull(i)?.let(place::get)
             }
-        }
-        private val noted = HashSet<Int>()
-
-        /** Talks over the opening of the song: a moment in, so the song is heard before the voice. */
-        private fun say(mediaId: String, line: String?) {
-            if (!settings.voice || line.isNullOrBlank() || _state.value.voiceUnavailable) return
-            val voice = voice ?: return
-            talk = scope.launch {
-                delay(TALK_AFTER_MS)
-                val stillHere = withContext(Dispatchers.Main) { controller.currentMediaItem?.mediaId == mediaId && controller.isPlaying }
-                if (stillHere) voice.speak(line)
+            if (at == null) {
+                // Something else was queued by the listener: the session steps aside.
+                scope.launch(Dispatchers.Main) { if (run === this@Run) stop() }
+                return
             }
+            val (set, pos) = at
+            _state.value = _state.value.copy(theme = label(sets[set].theme))
+            if (pos == 0 && sets.size <= set + 1) planSet(set)
+            if (pos == 1 && chatty && noted.add(set)) commentOnNext(set)
         }
 
-        private suspend fun planAhead() {
-            val last = blocks.lastOrNull() ?: return
-            val next = planner.next() ?: return
-            val b = blocks.size
-            blocks += next
-            intros += writer.blockIntro(next, last)
-            next.tracks.forEachIndexed { p, t -> place[t.id] = b to p; order += t.id }
-            val items = next.tracks.mapNotNull { songs[it.id] }.map { it.toMediaItem() }
-            withContext(Dispatchers.Main) { if (!closed) controller.addMediaItems(items) }
+        /** Chooses, renders and queues the set after [set]. */
+        private fun planSet(set: Int) {
+            queueing += scope.launch {
+                val next = planner.next() ?: return@launch
+                val clip = renderLine(writer.blockIntro(next, sets[set]), seed = now + set)
+                if (closed) return@launch
+                withContext(Dispatchers.Main) {
+                    if (closed) return@withContext
+                    if (controller.mediaItemCount != order.size) return@withContext
+                    val before = order.size
+                    appendSet(next, clip)
+                    controller.addMediaItems(
+                        order.subList(before, order.size).mapNotNull(::songFor).map { it.toMediaItem() },
+                    )
+                }
+            }
+        }
+
+        /** Renders a short remark about the song two places ahead and queues it right after the current one. */
+        private fun commentOnNext(set: Int) {
+            queueing += scope.launch {
+                val upcoming = sets[set].tracks.getOrNull(2) ?: return@launch
+                val line = writer.trackNote(upcoming) ?: return@launch
+                val clip = renderLine(line, seed = now + 7L * set) ?: return@launch
+                if (closed) return@launch
+                withContext(Dispatchers.Main) {
+                    if (closed) return@withContext
+                    val index = runCatching { controller.currentMediaItemIndex }.getOrNull() ?: return@withContext
+                    if (controller.mediaItemCount != order.size) return@withContext
+                    val id = djSong(clip)
+                    place[id] = set to -1
+                    controller.addMediaItem(index + 1, songFor(id)!!.toMediaItem())
+                    order.add(index + 1, id)
+                    for (i in setStart.indices) if (setStart[i] > index) setStart[i] = setStart[i] + 1
+                }
+            }
+        }
+
+        /**
+         * The listener changed what they want: the set not yet reached is replaced by one that
+         * follows the new request. The set playing now is left alone.
+         */
+        fun steer(text: String) {
+            requestText = text
+            queueing.forEach { it.cancel() }
+            queueing.clear()
+            scope.launch {
+                val parsed = text.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, tracks.values.toList()) }
+                planner.setRequest(parsed)
+                val current = runCatching { withContext(Dispatchers.Main) { controller.currentMediaItemIndex } }.getOrNull() ?: 0
+                val playing = order.getOrNull(current)?.let(place::get)?.first ?: 0
+                // Drop every set after the one playing, then queue the replacement after it.
+                while (sets.size > playing + 1) dropLastSet()
+                if (sets.size <= playing + 1) planSet(playing)
+            }
         }
 
         fun more() { current()?.let(planner::more) }
@@ -208,16 +401,12 @@ object DjSession {
 
         private fun current(): DjTrack? = tracks[runCatching { controller.currentMediaItem?.mediaId }.getOrNull()]
 
-        private fun end() {
-            if (closed) return
-            scope.launch { if (run === this@Run) stop() }
-        }
-
         fun finish() {
             closed = true
-            talk?.cancel()
+            queueing.forEach { it.cancel() }
             val l = listener
-            val c = if (this::controller.isInitialized) controller else return
+            if (!this::controller.isInitialized) return
+            val c = controller
             scope.launch(Dispatchers.Main) {
                 l?.let(c::removeListener)
                 c.release()
@@ -240,9 +429,27 @@ object DjSession {
             DjTheme.Favorites -> app.getString(R.string.dj_theme_favorites)
             DjTheme.Rediscover -> app.getString(R.string.home_shelf_rediscover)
             DjTheme.Fresh -> app.getString(R.string.home_shelf_recently_added)
+            DjTheme.Discover -> app.getString(R.string.dj_theme_discover)
         }
     }
 
-    /** How long a song plays before the DJ speaks over it. */
-    private const val TALK_AFTER_MS = 1_400L
+    private val renderers = ArrayList<DjClipRenderer>()
+
+    /** How many of the listener's favourites seed the discoveries. */
+    private const val DISCOVERY_SEEDS = 3
+
+    /** How many of the listener's artists have their genres asked of Last.fm when a session starts. */
+    private const val GENRE_LOOKUPS = 40
+
+    private class NotEnoughMusic : Exception()
+
+    /** The artist with the most plays in the last month, when they clearly lead the others. */
+    private fun topArtistThisMonth(tracks: List<DjTrack>): String? {
+        val byArtist = tracks.filter { it.plays30 > 0 }.groupBy { it.leadArtist }
+            .mapValues { (_, ts) -> ts.sumOf { it.plays30 } }
+            .entries.sortedByDescending { it.value }
+        val top = byArtist.firstOrNull() ?: return null
+        val second = byArtist.getOrNull(1)?.value ?: 0
+        return top.key.takeIf { top.value >= 5 && top.value >= 2 * second }
+    }
 }

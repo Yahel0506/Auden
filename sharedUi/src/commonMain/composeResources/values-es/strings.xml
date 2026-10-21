@@ -210,4 +210,8 @@
     <string name="lyrics_provider_remove">Quitar descarga</string>
     <string name="dj_title">Auden DJ</string>
     <string name="dj_subtitle">Sets con tema de tu propia música, con una voz entre canciones</string>
+    <string name="dj_now_speaking">El DJ está hablando</string>
+    <string name="dj_skip_line">Saltar</string>
+    <string name="dj_ask">Pídele algo al DJ</string>
+    <string name="dj_no_words">El DJ está hablando</string>
 </resources>

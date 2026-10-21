@@ -1537,4 +1537,10 @@
     <string name="dj_setting_chatty">DJ comments on songs</string>
     <string name="dj_setting_chatty_subtitle">A word about a song in the middle of a set</string>
     <string name="dj_setting_block">Songs per set</string>
+    <string name="dj_voice_none">The DJ has no voice for this language yet: you will read its lines instead.</string>
+    <string name="dj_voice_download">Download voice · %1</string>
+    <string name="dj_voice_downloading">Downloading the voice… %1%%</string>
+    <string name="dj_voice_ready">Voice: %1, on this phone</string>
+    <string name="dj_theme_discover">New for you</string>
+    <string name="dj_now_playing_short">Now: %1</string>
 </resources>

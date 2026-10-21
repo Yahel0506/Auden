@@ -24,6 +24,11 @@ class DjWriter(
     private val phrases: DjPhrases,
     private val language: String,
     seed: Long,
+    /** The hour and whether it is a weekend, for the moment the DJ can name. */
+    private val hour: Int = 12,
+    private val weekend: Boolean = false,
+    /** The artist the listener has played most this month, if one clearly stands out. */
+    private val topArtist: String? = null,
 ) {
     private val rng = Random(seed)
     private val lastUsed = HashMap<String, ArrayDeque<Int>>()
@@ -38,13 +43,36 @@ class DjWriter(
             else -> null
         },
         introduce(first, previous = null),
+        // A surprise can say why it chose this: the moment, or what the listener has been playing.
+        if (request == null) motive(always = true) else null,
     )
 
     /** Said as a new block starts, joining the one before to it. */
     fun blockIntro(block: DjBlock, previous: DjBlock?): String {
         // Decided before picking: a connector chosen and then dropped would still count as used.
         val connector = if (previous != null && rng.nextInt(3) != 0) pick("connector") else null
-        return join(connector, introduce(block, previous))
+        return join(connector, introduce(block, previous), motive(always = false).takeIf { rng.nextInt(3) == 0 })
+    }
+
+    /** Why this moment suits the music: named from the clock, or from the artist the listener keeps coming back to. */
+    private fun motive(always: Boolean): String? {
+        val byArtist = topArtist != null && rng.nextBoolean()
+        return if (byArtist) {
+            pick("motive_top", "artist" to topArtist)
+        } else {
+            val moment = pick(momentKey()) ?: return null
+            pick("motive_moment", "moment" to moment)
+        }?.takeIf { always || it.isNotBlank() }
+    }
+
+    private fun momentKey(): String {
+        val base = when (hour) {
+            in 5..11 -> "moment_morning"
+            in 12..18 -> "moment_afternoon"
+            in 19..22 -> "moment_evening"
+            else -> "moment_night"
+        }
+        return if (weekend) "moment_weekend" else base
     }
 
     /** A short remark on a song in the middle of a block, when there is something true to say about it. */
@@ -71,6 +99,7 @@ class DjWriter(
             DjTheme.Favorites -> pick("intro_favorites", "count" to count, "title" to opener?.title, "artist" to opener?.artist)
             DjTheme.Rediscover -> pick("intro_rediscover", "count" to count, "title" to opener?.title, "artist" to opener?.artist)
             DjTheme.Fresh -> pick("intro_fresh", "count" to count, "title" to opener?.title, "artist" to opener?.artist)
+            DjTheme.Discover -> pick("intro_discover", "count" to count, "title" to opener?.title, "artist" to opener?.artist)
         }
         return line
     }

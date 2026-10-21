@@ -226,6 +226,8 @@ import com.music.bitchord.ui.components.BrowseActionsSheet
 import com.music.bitchord.ui.components.BrowseTarget
 import com.music.bitchord.ui.components.ConfirmationAlert
 import com.music.bitchord.ui.components.DjSheet
+import dev.auden.dj.DjSession
+import com.music.bitchord.ui.player.DjNowPlayingScreen
 import com.music.bitchord.ui.components.DownloadManagerSheet
 import com.music.bitchord.ui.components.PlaylistPickerSheet
 import com.music.bitchord.ui.components.ReorderPlaylistPage
@@ -2360,7 +2362,21 @@ private fun BitChordApp(
                         it.memberId == playback.startedBy
                     }?.displayName?.takeIf(String::isNotBlank)
             }
-        NowPlayingScreen(
+        // The DJ's own player while it speaks: its line, its waveform, and the way to ask for more.
+        val djRunning by DjSession.state.collectAsStateWithLifecycle()
+        if (displayedSong.isDjClip) {
+            val clip = DjSession.clipOf(displayedSong.videoId)
+            DjNowPlayingScreen(
+                words = clip?.text,
+                envelope = clip?.envelope ?: FloatArray(0),
+                isPlaying = player.isPlaying,
+                position = player.position,
+                durationMs = player.durationMs,
+                onPlayPause = { togglePlayPause() },
+                onSkip = { controller?.seekToNextMediaItem() },
+                onAsk = { showDj = true },
+            )
+        } else NowPlayingScreen(
             song = displayedSong,
             playedBy = playedBy,
             accountName = account?.name,
@@ -2419,7 +2435,7 @@ private fun BitChordApp(
                     )
                 }
             },
-            queue = player.queue,
+            queue = if (djRunning.running) emptyList() else player.queue,
             queueIndex = player.queueIndex,
             hasPrevious = player.hasPrevious,
             hasNext = player.hasNext,
@@ -2471,6 +2487,7 @@ private fun BitChordApp(
             // The enriched copy, not player.song — otherwise the menu
             // hides the album and artist rows even once their browse
             // ids have been resolved.
+            onOpenDj = { showDj = true },
             onOpenMenu = {
                 menuFromPlayer = true
                 songMenuOrigin = null

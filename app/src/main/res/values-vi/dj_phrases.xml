@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the DJ says in this language, translated and read by a native speaker is still to come. -->
+<resources>
+    <string name="dj_phrases_language" translatable="false">vi</string>
+    <string-array name="dj_greeting_morning">
+        <item>Chào buổi sáng.</item>
+        <item>Chào buổi sáng. Bắt đầu nhẹ nhàng nhé.</item>
+        <item>Chào buổi sáng. Có gì đó để khởi đầu ngày mới.</item>
+    </string-array>
+    <string-array name="dj_greeting_afternoon">
+        <item>Chào buổi chiều.</item>
+        <item>Chào bạn, buổi chiều vui vẻ.</item>
+        <item>Chào buổi chiều. Tiếp tục với âm nhạc nhé.</item>
+    </string-array>
+    <string-array name="dj_greeting_evening">
+        <item>Chào buổi tối.</item>
+        <item>Chào buổi tối. Thư giãn nào.</item>
+        <item>Chào buổi tối. Để tôi chọn vài bài.</item>
+    </string-array>
+    <string-array name="dj_greeting_night">
+        <item>Đã khuya rồi. Giữ nhẹ nhàng nhé.</item>
+        <item>Vẫn còn thức à? Đây là thứ cho những giờ muộn.</item>
+        <item>Đêm dài. Làm cho nó thật đẹp nhé.</item>
+    </string-array>
+    <string-array name="dj_request_ack">
+        <item>Tôi hiểu rồi: {request}.</item>
+        <item>Được, {request}. Tôi sẽ lo.</item>
+        <item>{request}. Hay đấy.</item>
+    </string-array>
+    <string-array name="dj_relaxed">
+        <item>Thư viện của bạn không có đủ loại đó, nên đây là thứ gần giống.</item>
+        <item>Trên máy có ít loại đó, tôi sẽ mở rộng thêm một chút.</item>
+    </string-array>
+    <string-array name="dj_unrecognized">
+        <item>Tôi chưa hiểu rõ, nên tôi sẽ chọn giúp bạn.</item>
+        <item>Tôi chưa chắc bạn muốn gì, tôi sẽ làm bạn bất ngờ.</item>
+    </string-array>
+    <string-array name="dj_connector">
+        <item>Và bây giờ,</item>
+        <item>Tiếp theo,</item>
+        <item>Đổi không khí một chút nhé.</item>
+        <item>Được rồi,</item>
+    </string-array>
+    <string-array name="dj_intro_artist">
+        <item>Đây là {count} bài của {artist}, bắt đầu với {title}.</item>
+        <item>Đến lượt {artist}: {count} bài, mở đầu bằng {title}.</item>
+        <item>{artist} một lúc. Trước hết là {title}.</item>
+    </string-array>
+    <string-array name="dj_intro_decade">
+        <item>Một chuyến về thập niên {decade}: {count} bài, bắt đầu với {title} của {artist}.</item>
+        <item>Quay lại thập niên {decade}. Trước hết là {title}.</item>
+        <item>Vài bài của thập niên {decade}, bắt đầu với {title}.</item>
+    </string-array>
+    <string-array name="dj_intro_genre">
+        <item>Một chút {genre}, bắt đầu với {title}.</item>
+        <item>Thêm chút {genre}. Trước hết là {title} của {artist}.</item>
+        <item>{count} bài {genre} liên tiếp, bắt đầu với {title}.</item>
+    </string-array>
+    <string-array name="dj_intro_mood_focus">
+        <item>Để tập trung: {count} bài, bắt đầu với {title}.</item>
+        <item>Giữ nhịp đều một lúc. Trước hết là {title}.</item>
+        <item>Nhạc để làm việc, bắt đầu với {artist}.</item>
+    </string-array>
+    <string-array name="dj_intro_mood_chill">
+        <item>Chậm lại nào. Trước hết là {title} của {artist}.</item>
+        <item>Nhẹ nhàng một lúc, bắt đầu với {title}.</item>
+        <item>Thư thả: {count} bài thư giãn, bắt đầu với {artist}.</item>
+    </string-array>
+    <string-array name="dj_intro_mood_energy">
+        <item>Tăng nhịp độ với {title}.</item>
+        <item>Đến lúc có năng lượng. {artist} mở màn.</item>
+        <item>{count} bài để cùng nhún nhảy, bắt đầu với {title}.</item>
+    </string-array>
+    <string-array name="dj_intro_mood_acoustic">
+        <item>Bây giờ là acoustic, bắt đầu với {title}.</item>
+        <item>Bớt lớp âm thanh một chút. Trước hết là {artist}.</item>
+        <item>{count} bài acoustic, bắt đầu với {title}.</item>
+    </string-array>
+    <string-array name="dj_intro_album">
+        <item>Cả một album: {album} của {artist}, từ đầu.</item>
+        <item>Nghe {album} nào. {count} bài, theo thứ tự.</item>
+        <item>{album}, của {artist}. Từ đầu đến cuối.</item>
+    </string-array>
+    <string-array name="dj_intro_favorites">
+        <item>Đây là những bài bạn nghe nhiều nhất: {count} bài, bắt đầu với {title}.</item>
+        <item>Vài bài bạn hay quay lại. Trước hết là {title} của {artist}.</item>
+        <item>Những bài yêu thích một lúc, bắt đầu với {title}.</item>
+    </string-array>
+    <string-array name="dj_intro_rediscover">
+        <item>Đã lâu bạn chưa nghe những bài này. Trước hết là {title} của {artist}.</item>
+        <item>Lau bụi vài bài yêu thích cũ, bắt đầu với {title}.</item>
+        <item>Những bài bạn từng nghe nhiều mà lâu rồi chưa nghe. Trước hết là {artist}.</item>
+    </string-array>
+    <string-array name="dj_intro_fresh">
+        <item>Mới trong thư viện của bạn: {count} bài, bắt đầu với {title}.</item>
+        <item>Những bài thêm gần đây, bắt đầu với {title} của {artist}.</item>
+        <item>Những thứ bạn vừa thêm. Trước hết là {title}.</item>
+    </string-array>
+    <string-array name="dj_note_year">
+        <item>Đây là {title} của {artist}, năm {year}.</item>
+        <item>{title}, {artist}, {year}.</item>
+    </string-array>
+    <string-array name="dj_note_album">
+        <item>Đây là {title}, trong album {album}.</item>
+        <item>{title}, từ {album}.</item>
+    </string-array>
+    <string-array name="dj_note_plain">
+        <item>Đây là {title} của {artist}.</item>
+        <item>{title}, của {artist}.</item>
+    </string-array>
+    <string-array name="dj_signoff">
+        <item>Tôi để âm nhạc lại cho bạn. Hẹn gặp lại.</item>
+        <item>Đến đây là hết. Chúc bạn nghe vui vẻ.</item>
+        <item>Tôi lùi lại và để nhạc tiếp tục.</item>
+    </string-array>
+        <string-array name="dj_intro_discover"><item>Điều mới cho bạn, gần với những gì bạn thích: {count} bài, bắt đầu với {title}.</item><item>Bạn chưa nghe bài này, bắt đầu với {title} của {artist}.</item><item>Mới với bạn và gần với điều bạn yêu thích. Trước hết là {title}.</item></string-array>
+        <string-array name="dj_moment_morning"><item>sáng nay</item></string-array>
+        <string-array name="dj_moment_afternoon"><item>chiều nay</item></string-array>
+        <string-array name="dj_moment_evening"><item>tối nay</item></string-array>
+        <string-array name="dj_moment_night"><item>đêm nay</item></string-array>
+        <string-array name="dj_moment_weekend"><item>cuối tuần, {moment}</item></string-array>
+        <string-array name="dj_motive_moment"><item>Bây giờ là {moment}, nên tôi chọn bài hợp với lúc này.</item><item>Vì đang là {moment}, tôi thấy hợp lý.</item></string-array>
+        <string-array name="dj_motive_top"><item>Dạo này bạn nghe {artist} rất nhiều, nên tôi đi theo hướng đó.</item><item>Dạo này {artist} lặp lại liên tục với bạn, nên tôi chọn như vậy.</item></string-array>
+</resources>

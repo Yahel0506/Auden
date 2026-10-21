@@ -5,10 +5,14 @@ import android.content.res.Configuration
 import com.music.bitchord.R
 import java.util.Locale
 
-/** The DJ's templates, read from the app's resources in the language the DJ speaks. */
+/**
+ * The DJ's lines, from the app's resources in the language the DJ speaks.
+ *
+ * A language is spoken only when its own translation exists (see [DjPhrasesCheck]): reading English
+ * lines in a Portuguese voice would be worse than saying nothing.
+ */
 class AndroidPhrases(context: Context, language: String) : DjPhrases {
     private val resources = context.applicationContext.let { app ->
-        // Resolved for the DJ's language even when the app's own is another: the voice and the words must agree.
         val config = Configuration(app.resources.configuration).apply { setLocale(Locale(language)) }
         app.createConfigurationContext(config).resources
     }
@@ -37,8 +41,25 @@ class AndroidPhrases(context: Context, language: String) : DjPhrases {
         "note_album" to R.array.dj_note_album,
         "note_plain" to R.array.dj_note_plain,
         "signoff" to R.array.dj_signoff,
+        "intro_discover" to R.array.dj_intro_discover,
+        "motive_moment" to R.array.dj_motive_moment,
+        "motive_top" to R.array.dj_motive_top,
+        "moment_morning" to R.array.dj_moment_morning,
+        "moment_afternoon" to R.array.dj_moment_afternoon,
+        "moment_evening" to R.array.dj_moment_evening,
+        "moment_night" to R.array.dj_moment_night,
+        "moment_weekend" to R.array.dj_moment_weekend,
     )
 
     override fun templates(key: String): List<String> =
         ids[key]?.let { resources.getStringArray(it).toList() }.orEmpty()
+}
+
+/** Whether the DJ has its own lines in [language]: a translation file that declares that language. */
+object DjPhrasesCheck {
+    fun supports(context: Context, language: String): Boolean {
+        val config = Configuration(context.applicationContext.resources.configuration).apply { setLocale(Locale(language)) }
+        val declared = context.applicationContext.createConfigurationContext(config).getString(R.string.dj_phrases_language)
+        return declared == language
+    }
 }

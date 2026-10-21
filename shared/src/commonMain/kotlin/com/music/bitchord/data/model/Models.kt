@@ -147,6 +147,12 @@ data class Song(
     /** Legacy derived property: true if and only if [queueTier] is [QueueTier.AUTOPLAY]. */
     val fromAutoplay: Boolean get() = queueTier == QueueTier.AUTOPLAY
 
+    /**
+     * The DJ's spoken lines, queued like music. Not a song: nothing about it is listening, so
+     * scrobbling, presence, lyrics and the listening record all leave it out.
+     */
+    val isDjClip: Boolean get() = videoId.startsWith(DJ_CLIP_PREFIX)
+
     /** Backward-compatibility constructor for callers passing legacy [fromAutoplay]. */
     constructor(
         videoId: String,
@@ -684,3 +690,6 @@ sealed interface UiState<out T> {
     data class Success<T>(val data: T) : UiState<T>
     data class Error(val message: String) : UiState<Nothing>
 }
+
+/** The media id prefix of a DJ clip. See [Song.isDjClip]. */
+const val DJ_CLIP_PREFIX = "dj:"

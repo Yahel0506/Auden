@@ -41,6 +41,7 @@ class DjTest {
                         DjTheme.Favorites -> track.plays >= 3
                         DjTheme.Rediscover -> track.plays >= 5
                         DjTheme.Fresh -> track.localUri != null
+                        DjTheme.Discover -> track.discovery
                     }
                     assertTrue("$track in ${block.theme}", ok)
                 }
@@ -50,13 +51,13 @@ class DjTest {
 
     @Test
     fun aSongIsNeverPlayedTwiceInASession() {
-        val planner = DjPlanner(library, now, seed = 7)
+        val planner = DjPlanner(varied, now, seed = 7)
         val seen = HashSet<String>()
         while (true) {
             val block = planner.next() ?: break
             block.tracks.forEach { assertTrue("${it.id} repeated", seen.add(it.id)) }
         }
-        assertTrue(seen.size >= 8)
+        assertTrue("only ${seen.size} songs in a session", seen.size >= 8)
     }
 
     @Test
@@ -201,33 +202,6 @@ class DjTest {
         picks.filter { it.isNotBlank() }.zipWithNext().forEach { (a, b) -> assertTrue("$a $b", a != b) }
     }
 
-    // ── The voice ───────────────────────────────────────────────────────────
-
-    private fun v(name: String, tag: String, q: Int, net: Boolean = false, latency: Int = 300, missing: Boolean = false) =
-        VoiceInfo(name, tag, q, latency, net, missing)
-
-    @Test
-    fun theBestInstalledVoiceOfTheRightLanguageWins() {
-        val voices = listOf(
-            v("es-low", "es-ES", 200), v("es-mx-high", "es-MX", 400), v("es-us-very", "es-US", 500),
-            v("en-very", "en-US", 500), v("es-mx-missing", "es-MX", 500, missing = true),
-        )
-        assertEquals("es-mx-high", DjVoiceChooser.best(voices, "es-MX", online = false)?.name)
-        assertEquals("es-us-very", DjVoiceChooser.best(voices, "es-AR", online = false)?.name)
-    }
-
-    @Test
-    fun aNetworkVoiceIsUsedOnlyWhileConnected() {
-        val voices = listOf(v("local", "es-ES", 400), v("network", "es-ES", 400, net = true))
-        assertEquals("network", DjVoiceChooser.best(voices, "es-ES", online = true)?.name)
-        assertEquals("local", DjVoiceChooser.best(voices, "es-ES", online = false)?.name)
-    }
-
-    @Test
-    fun noVoiceForTheLanguageIsNoVoice() {
-        assertNull(DjVoiceChooser.best(listOf(v("en", "en-US", 500)), "es-MX", online = true))
-    }
-
     @Test
     fun aLineIsSpokenAsSentencesWithBreathsBetweenThem() {
         val parts = DjSpeech.shape("Good evening. Here we go: four songs, starting with this one!", seed = 3)
@@ -237,5 +211,59 @@ class DjTest {
         assertTrue(parts.all { it.rate in 0.9f..1.0f })
         // Never the same twice.
         assertTrue(parts.map { it.rate }.toSet().size > 1)
+    }
+
+    // ── Surprises are for listening, not for repetition ─────────────────────
+
+    /** Six artists, two albums each, plenty of plays: enough for a varied surprise. */
+    private val varied: List<DjTrack> = (1..6).flatMap { a ->
+        (1..8).map { n ->
+            t("v$a-$n", "Artist$a", album = "Album$a-${n % 2}", genre = listOf("Rock", "Jazz", "Pop")[a % 3], year = 1990 + a, plays = 4 + n, plays30 = 1)
+                .copy(trackNumber = n)
+        }
+    }
+
+    @Test
+    fun aSurpriseHasOneSongPerArtistAndNoAlbumTwiceInARow() {
+        repeat(10) { seed ->
+            val planner = DjPlanner(varied, now, seed.toLong(), blockSize = 5, request = null)
+            repeat(3) {
+                val block = planner.next() ?: return@repeat
+                val artists = block.tracks.map { it.leadArtist }
+                assertEquals("artists in ${block.theme}", artists.size, artists.toSet().size)
+                assertTrue(block.tracks.zipWithNext().none { (a, b) -> a.album == b.album && a.album != null })
+            }
+        }
+    }
+
+    @Test
+    fun anArtistRestsAfterAPlaceWhenTheThemeAllows() {
+        val wide = (1..12).flatMap { a ->
+            (1..6).map { n -> t("w$a-$n", "Artist$a", album = "Album$a", genre = listOf("Rock", "Jazz", "Pop")[a % 3], year = 1990 + a, plays = 4 + n) }
+        }
+        val planner = DjPlanner(wide, now, seed = 21, blockSize = 4, request = null)
+        val sets = generateSequence { planner.next() }.take(4).toList()
+        assertTrue(sets.size >= 2)
+        for (i in 1 until sets.size) {
+            val recent = sets[i - 1].tracks.map { it.leadArtist }.toSet()
+            val now = sets[i].tracks.map { it.leadArtist }
+            assertTrue("set $i repeats the artist of the set before", now.none { it in recent })
+        }
+    }
+
+    @Test
+    fun aRequestMayRepeatTheArtistItNames() {
+        val planner = DjPlanner(varied, now, seed = 4, blockSize = 5, request = DjRequest(text = "Artist3", artist = "Artist3"))
+        val block = planner.next() ?: return
+        assertTrue(block.tracks.all { it.leadArtist == "Artist3" })
+    }
+
+    @Test
+    fun discoveriesJoinASurprise() {
+        val planner = DjPlanner(varied, now, seed = 9, blockSize = 5, request = null)
+        val found = (1..6).map { t("new$it", "Stranger$it", genre = "Rock", year = 1995, plays = 0).copy(discovery = true) }
+        planner.addDiscoveries(found)
+        val tracks = generateSequence { planner.next() }.take(12).flatMap { it.tracks }.toList()
+        assertTrue(tracks.any { it.discovery })
     }
 }
