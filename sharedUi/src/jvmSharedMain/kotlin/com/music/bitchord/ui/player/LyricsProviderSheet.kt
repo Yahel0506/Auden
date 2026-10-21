@@ -116,7 +116,8 @@ private fun LyricsProviderRow(
     val haptics = rememberHaptics()
     // A running automatic request can still be selected: it is marked as the
     // requested source and applied when that same in-flight call completes.
-    val enabled = !current && state != LyricsProviderState.NOT_FOUND
+    // Downloaded lyrics need no lookup, so they can be chosen whatever the online state says.
+    val enabled = !current && (state != LyricsProviderState.NOT_FOUND || stored)
     val status = when {
         current && stored -> stringResource(Res.string.lyrics_provider_current) + " · " + stringResource(Res.string.lyrics_provider_downloaded)
         current -> stringResource(Res.string.lyrics_provider_current)

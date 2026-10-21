@@ -506,23 +506,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /**
      * Selects a provider from the player drawer. Completed hits are applied
      * from memory; misses are inert; only an untouched provider goes online.
+     *
+     * Selecting is looking, not keeping: the lyrics shown are saved only by the provider's own
+     * download button. A provider whose lyrics are already downloaded is the exception in the other
+     * direction — it needs no network, and choosing it is the song's choice from then on.
      */
     fun selectLyricsProvider(source: LyricsSource) {
         val request = currentLyricsRequest ?: return
-        // Picking one is a decision about this song, and it is kept — see [rememberChoice].
-        rememberChoice(request.videoId, source)
+        if (source in dev.auden.library.lyrics.CurrentLyrics.stored.value) {
+            selectedLyricsSource = source
+            // The store announces the change and the collector above puts the downloaded text up.
+            rememberChoice(request.videoId, source)
+            return
+        }
         when (_lyricsProviderStates.value[source]) {
             LyricsProviderState.FOUND -> {
                 selectedLyricsSource = source
-                lyricsProviderResults[source]?.let { result ->
-                    showLyricsResult(result)
-                    // Already found by the race, but picking it by hand is what makes it worth keeping.
-                    result.artifact?.let { artifact ->
-                        viewModelScope.launch {
-                            dev.auden.library.lyrics.LyricsStore.save(getApplication(), request.videoId, artifact, makeActive = true)
-                        }
-                    }
-                }
+                lyricsProviderResults[source]?.let { result -> showLyricsResult(result) }
             }
             LyricsProviderState.FETCHING -> {
                 // Apply it as soon as the already-running automatic attempt completes.
@@ -566,10 +566,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _lyricsProviderStates.update { it + (source to LyricsProviderState.FETCHING) }
     }
 
-    /**
-     * Keeps [source] as the lyrics for [videoId] from now on. Its text is saved once it arrives (see
-     * [providerFinished]), so the choice also works with no connection.
-     */
     /** Tells the provider sheet which providers have downloaded lyrics for the song on screen. */
     private fun refreshStoredProviders(videoId: String) {
         viewModelScope.launch {
@@ -596,8 +592,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     source,
                 )
                 if (artifact != null) {
-                    dev.auden.library.lyrics.LyricsStore.save(getApplication(), request.videoId, artifact)
-                    // Showing it is a separate choice; a download only keeps it.
+                    // What is on screen becomes the song's choice when it is downloaded; any
+                    // other provider is only kept, and showing it is a separate choice.
+                    dev.auden.library.lyrics.LyricsStore.save(
+                        getApplication(), request.videoId, artifact,
+                        makeActive = selectedLyricsSource == source ||
+                            (selectedLyricsSource == null && _lyricsSource.value == source),
+                    )
                     if (dev.auden.library.lyrics.LyricsStore.activeProvider(getApplication(), request.videoId) == source) {
                         com.music.bitchord.download.Downloads.applyLyricsToFiles(
                             getApplication(),
@@ -634,17 +635,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
         lyricsProviderResults[source] = result
         _lyricsProviderStates.update { it + (source to LyricsProviderState.FOUND) }
-        if (selectedLyricsSource == source) {
-            showLyricsResult(result)
-            // Chosen by hand, so it is worth keeping for offline.
-            val request = currentLyricsRequest
-            val artifact = result.artifact
-            if (request != null && artifact != null) {
-                viewModelScope.launch {
-                    dev.auden.library.lyrics.LyricsStore.save(getApplication(), request.videoId, artifact, makeActive = true)
-                }
-            }
-        }
+        // Shown, not kept: downloading is the provider's own button.
+        if (selectedLyricsSource == source) showLyricsResult(result)
     }
 
     private fun providerCancelled(generation: Long, source: LyricsSource) {
