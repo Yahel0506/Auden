@@ -178,6 +178,14 @@ fun DjSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.height(10.dp))
             VoiceLine(state.voice)
+            state.speechError?.let {
+                Text(
+                    text = stringResource(R.string.dj_speech_error, it),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
             Spacer(Modifier.height(18.dp))
         }
     }
@@ -216,6 +224,14 @@ private fun VoiceLine(voice: DjUiState.Voice) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.clickable(enabled = voice is DjUiState.Voice.NotInstalled) { DjSession.downloadVoice(context) },
     )
+    val failure = (voice as? DjUiState.Voice.NotInstalled)?.failure
+    if (failure != null) {
+        Text(
+            text = stringResource(R.string.dj_voice_failed, failure),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
 }
 
 private fun dev.auden.dj.voice.VoicePacks.Pack.sizeLabel(): String = "%.0f MB".format(sizeBytes / 1_000_000.0)

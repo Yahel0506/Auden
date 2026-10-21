@@ -24,89 +24,155 @@ class DjWriter(
     private val phrases: DjPhrases,
     private val language: String,
     seed: Long,
-    /** The hour and whether it is a weekend, for the moment the DJ can name. */
+    /** The hour, for naming the moment ("esta noche") in a set's reason. */
     private val hour: Int = 12,
-    private val weekend: Boolean = false,
-    /** The artist the listener has played most this month, if one clearly stands out. */
-    private val topArtist: String? = null,
+    @Suppress("unused") private val weekend: Boolean = false,
+    /** Now, to say how long ago a song was last played. */
+    private val nowMs: Long = 0L,
+    /** What the listener has played of an artist: this month, and ever. Null when unknown. */
+    private val artistPlays: (String) -> Pair<Int, Int>? = { null },
 ) {
     private val rng = Random(seed)
     private val lastUsed = HashMap<String, ArrayDeque<Int>>()
 
-    /** Said once, as the session starts: the time of day, then the first block. */
-    fun opening(hour: Int, first: DjBlock, request: DjRequest?, relaxed: Boolean): String = join(
-        pick(greetingKey(hour)),
-        when {
-            request != null && !request.understood && request.text.isNotBlank() -> pick("unrecognized")
-            relaxed -> pick("relaxed")
-            request != null && request.understood -> pick("request_ack", "request" to request.text)
-            else -> null
-        },
-        introduce(first, previous = null),
-        // A surprise can say why it chose this: the moment, or what the listener has been playing.
-        if (request == null) motive(first, always = true) else null,
-    )
+    /** What the listener last asked for, if anything: a set that matches it says so. */
+    var request: DjRequest? = null
 
-    /** Said as a new block starts, joining the one before to it. */
-    fun blockIntro(block: DjBlock, previous: DjBlock?): String {
-        // Decided before picking: a connector chosen and then dropped would still count as used.
-        val connector = if (previous != null && rng.nextInt(3) != 0) pick("connector") else null
-        return join(connector, introduce(block, previous), motive(block, always = false).takeIf { rng.nextInt(3) == 0 })
+    /** Said once, as the session starts: a greeting, then why the first set is what it is. */
+    fun opening(@Suppress("UNUSED_PARAMETER") hour: Int, first: DjBlock, request: DjRequest?, relaxed: Boolean): String {
+        this.request = request
+        return join(
+            pick(greetingKey(this.hour)),
+            when {
+                request != null && !request.understood && request.text.isNotBlank() -> pick("unrecognized")
+                relaxed -> pick("relaxed")
+                else -> null
+            },
+            introduce(first),
+        )
     }
 
-    /** Why this moment suits the music: named from the clock, or from the artist the listener keeps coming back to. */
-    private fun motive(block: DjBlock, always: Boolean): String? {
-        // Only claims the set follows the listener's favourite artist when it really holds one of their songs.
-        val holdsTop = topArtist != null && block.tracks.any { it.leadArtist.equals(topArtist, ignoreCase = true) }
-        val byArtist = holdsTop && rng.nextBoolean()
-        return if (byArtist) {
-            pick("motive_top", "artist" to topArtist)
-        } else {
-            val moment = pick(momentKey()) ?: return null
-            pick("motive_moment", "moment" to moment)
-        }?.takeIf { always || it.isNotBlank() }
-    }
+    /** Said as a new set begins: why these songs, and the one it starts with. */
+    fun blockIntro(block: DjBlock, @Suppress("UNUSED_PARAMETER") previous: DjBlock?): String = introduce(block).orEmpty()
 
-    private fun momentKey(): String {
-        val base = when (hour) {
-            in 5..11 -> "moment_morning"
-            in 12..18 -> "moment_afternoon"
-            in 19..22 -> "moment_evening"
-            else -> "moment_night"
-        }
-        return if (weekend) "moment_weekend" else base
-    }
-
-    /** A short remark on a song in the middle of a block, when there is something true to say about it. */
+    /**
+     * A remark on a song, only when there is something about it worth saying: how often the listener has
+     * played it, which playlist it is from, its album and year. A song with nothing to say gets nothing:
+     * the title and artist alone are not a remark.
+     */
     fun trackNote(track: DjTrack): String? = listOfNotNull(
-        pick("note_year", "title" to track.title, "artist" to track.artist, "year" to track.year?.toString()),
-        pick("note_album", "title" to track.title, "album" to track.album, "artist" to track.artist),
-        pick("note_plain", "title" to track.title, "artist" to track.artist),
+        track.plays30.takeIf { it >= 3 }?.let { pick("note_repeat", "title" to track.title, "n" to it.toString()) },
+        track.playlists.firstOrNull()?.let { pick("note_playlist", "title" to track.title, "playlist" to it) },
+        if (track.year != null && !track.album.isNullOrBlank()) {
+            pick("note_album_year", "title" to track.title, "album" to track.album, "year" to track.year.toString())
+        } else null,
     ).let { options -> if (options.isEmpty()) null else options[rng.nextInt(options.size)] }
 
     fun signOff(): String = pick("signoff") ?: ""
 
-    // ── Introducing a block ─────────────────────────────────────────────────
+    // ── Introducing a set: the reason first, the first song second ─────────
 
-    private fun introduce(block: DjBlock, previous: DjBlock?): String? {
-        val opener = block.tracks.firstOrNull()
-        val count = spell(block.tracks.size)
+    /**
+     * Why the set is what it is, in a sentence about the listener, and then the song it opens on. The
+     * reason is a fact the planner and the listening history both support: what they asked for, how much
+     * they have been playing an artist, how long since they heard a song, which playlist, what time of
+     * day it is. The opening song only closes the sentence; it is never the announcement.
+     */
+    private fun introduce(block: DjBlock): String? {
+        val first = block.tracks.firstOrNull() ?: return null
         val theme = block.theme
-        val line = when (theme) {
-            is DjTheme.ByArtist -> pick("intro_artist", "artist" to theme.artist, "count" to count, "title" to opener?.title)
-            is DjTheme.ByDecade -> pick("intro_decade", "decade" to decadeLabel(theme.decade), "count" to count, "title" to opener?.title, "artist" to opener?.artist)
-            is DjTheme.ByGenre -> pick("intro_genre", "genre" to theme.genre, "count" to count, "title" to opener?.title, "artist" to opener?.artist)
-            is DjTheme.ByMood -> pick("intro_mood_${theme.mood.name.lowercase(Locale.ROOT)}", "count" to count, "title" to opener?.title, "artist" to opener?.artist)
-            is DjTheme.ByAlbum -> pick("intro_album", "album" to theme.album, "artist" to theme.artist, "count" to count)
-            DjTheme.Favorites -> pick("intro_favorites", "count" to count, "title" to opener?.title, "artist" to opener?.artist)
-            DjTheme.Rediscover -> pick("intro_rediscover", "count" to count, "title" to opener?.title, "artist" to opener?.artist)
-            DjTheme.Fresh -> pick("intro_fresh", "count" to count, "title" to opener?.title, "artist" to opener?.artist)
-            DjTheme.Discover -> pick("intro_discover", "count" to count, "title" to opener?.title, "artist" to opener?.artist)
+        val opener = openerText(first, theme)
+        if (matchesRequest(theme)) {
+            val what = what(theme)
+            return pick("intro_request_match", "what" to what, "what_cap" to what?.cap(), "opener" to opener)
         }
-        return line
+        return when (theme) {
+            is DjTheme.ByArtist -> {
+                val (month, ever) = artistPlays(theme.artist) ?: (0 to 0)
+                val key = when {
+                    month >= RECENT_ARTIST_PLAYS -> "intro_artist_recent"
+                    ever >= REGULAR_ARTIST_PLAYS -> "intro_artist_always"
+                    else -> "intro_artist_saved"
+                }
+                pick(key, "artist" to theme.artist, "opener" to opener)
+            }
+            is DjTheme.ByMood -> {
+                val moment = pick(momentKey())
+                pick(
+                    "intro_mood_${theme.mood.name.lowercase(Locale.ROOT)}",
+                    "moment" to moment, "moment_cap" to moment?.cap(), "opener" to opener,
+                )
+            }
+            DjTheme.Favorites -> pick("intro_favorites", "opener" to opener)
+            DjTheme.Rediscover -> {
+                val ago = agoText(first.lastPlayedAt)
+                pick("intro_rediscover", "ago" to ago, "opener" to opener) ?: pick("intro_rediscover_plain", "opener" to opener)
+            }
+            DjTheme.Fresh -> pick("intro_fresh", "opener" to opener)
+            DjTheme.Discover -> {
+                val seed = block.tracks.firstNotNullOfOrNull { it.because }
+                pick("intro_discover", "seed" to seed, "opener" to opener) ?: pick("intro_discover_plain", "opener" to opener)
+            }
+            is DjTheme.ByPlaylist -> pick("intro_playlist", "playlist" to theme.name, "opener" to opener)
+            is DjTheme.ByDecade, is DjTheme.ByGenre, is DjTheme.ByAlbum -> pick("intro_theme", "what" to what(theme), "opener" to opener)
+        }
     }
 
-    /** The theme as a noun phrase — what it would be called after "after …". */
+    /** "Song, by Artist"; just the title when the set is already that artist's. */
+    private fun openerText(track: DjTrack, theme: DjTheme): String {
+        if (theme is DjTheme.ByArtist) return track.title
+        return pick("by_artist", "title" to track.title, "artist" to track.artist) ?: track.title
+    }
+
+    /** The set as a thing the listener could have asked for: "music by X", "something calm"… */
+    private fun what(theme: DjTheme): String? = when (theme) {
+        is DjTheme.ByArtist -> pick("what_artist", "artist" to theme.artist)
+        is DjTheme.ByDecade -> pick("what_decade", "decade" to decadeLabel(theme.decade))
+        is DjTheme.ByGenre -> pick("what_genre", "genre" to theme.genre)
+        is DjTheme.ByAlbum -> pick("what_album", "album" to theme.album, "artist" to theme.artist)
+        is DjTheme.ByMood -> pick("mood_word_${theme.mood.name.lowercase(Locale.ROOT)}")
+        DjTheme.Favorites -> pick("what_favorites")
+        DjTheme.Fresh -> pick("what_fresh")
+        DjTheme.Rediscover -> pick("what_rediscover")
+        else -> null
+    }
+
+    /** Whether [theme] is what the listener asked for: the one case where "you asked for" is true. */
+    private fun matchesRequest(theme: DjTheme): Boolean {
+        val r = request?.takeIf { it.understood } ?: return false
+        return when (theme) {
+            is DjTheme.ByArtist -> r.artist.equals(theme.artist, ignoreCase = true)
+            is DjTheme.ByDecade -> r.decade == theme.decade
+            is DjTheme.ByGenre -> r.genre == theme.genre
+            is DjTheme.ByMood -> r.mood == theme.mood
+            DjTheme.Favorites -> r.favorites
+            DjTheme.Fresh -> r.fresh
+            DjTheme.Rediscover -> r.rediscover
+            else -> false
+        }
+    }
+
+    /** How long ago, in the unit a person would use; null when the song has no history. */
+    private fun agoText(lastPlayedAt: Long): String? {
+        if (lastPlayedAt <= 0L || nowMs <= 0L) return null
+        val months = ((nowMs - lastPlayedAt) / (30L * 24 * 60 * 60 * 1000)).toInt()
+        return when {
+            months >= 12 -> pick("ago_year")
+            months >= 2 -> pick("ago_months", "n" to months.toString())
+            else -> null
+        }
+    }
+
+    private fun momentKey(): String = when (hour) {
+        in 5..11 -> "moment_morning"
+        in 12..18 -> "moment_afternoon"
+        in 19..22 -> "moment_evening"
+        else -> "moment_night"
+    }
+
+    private fun String.cap(): String = replaceFirstChar { it.uppercase() }
+
+    /** The theme as a noun phrase, for places that need to name it. */
     fun describe(theme: DjTheme): String? = when (theme) {
         is DjTheme.ByArtist -> theme.artist
         is DjTheme.ByDecade -> decadeLabel(theme.decade)
@@ -181,5 +247,11 @@ class DjWriter(
             "it" -> if (decade >= 2000) "gli anni $decade" else "gli anni $short"
             else -> "the $plural"
         }
+    }
+
+    private companion object {
+        /** Plays this month that make an artist "lately"; plays ever that make them a regular. */
+        const val RECENT_ARTIST_PLAYS = 5
+        const val REGULAR_ARTIST_PLAYS = 20
     }
 }

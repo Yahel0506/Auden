@@ -1549,4 +1549,10 @@
     <string name="dj_theme_discover">Novo para você</string>
     <string name="dj_now_playing_short">Agora: %1$s</string>
     <string name="dj_setting_pack">Pacote de voz</string>
+    <string name="dj_voice_prompt_title">Baixar a voz do DJ?</string>
+    <string name="dj_voice_prompt_message">O DJ fala com uma voz que fica no seu celular: %1$s, baixada uma vez, funciona offline. Sem ela, o DJ toca e você lê o que ele diz.</string>
+    <string name="dj_voice_prompt_download">Baixar</string>
+    <string name="dj_voice_prompt_skip">Continuar sem voz</string>
+    <string name="dj_voice_failed">O download falhou: %1$s. Tente de novo.</string>
+    <string name="dj_speech_error">O DJ não conseguiu falar: %1$s</string>
 </resources>

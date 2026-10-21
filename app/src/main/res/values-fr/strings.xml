@@ -1545,4 +1545,10 @@
     <string name="dj_theme_discover">Nouveau pour vous</string>
     <string name="dj_now_playing_short">En cours : %1$s</string>
     <string name="dj_setting_pack">Pack de voix</string>
+    <string name="dj_voice_prompt_title">Télécharger la voix du DJ ?</string>
+    <string name="dj_voice_prompt_message">Le DJ parle avec une voix stockée sur votre téléphone : %1$s, téléchargée une fois, utilisable hors ligne. Sans elle, le DJ joue et vous lisez ce qu’il dit.</string>
+    <string name="dj_voice_prompt_download">Télécharger</string>
+    <string name="dj_voice_prompt_skip">Continuer sans voix</string>
+    <string name="dj_voice_failed">Le téléchargement a échoué : %1$s. Réessayez.</string>
+    <string name="dj_speech_error">Le DJ n’a pas pu parler : %1$s</string>
 </resources>

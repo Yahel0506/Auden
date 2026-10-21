@@ -495,8 +495,8 @@ object AppSettings {
     /** Whether the DJ also says a word about a song partway through a block. */
     val djChatty = MutableStateFlow(false)
 
-    /** Songs per DJ block, 4 to 8. */
-    val djBlockSize = MutableStateFlow(5)
+    /** Songs per DJ set, 5 to 12. */
+    val djBlockSize = MutableStateFlow(8)
 
     val homeLocalWeight = MutableStateFlow(dev.auden.home.HomeSettings.DEFAULT_WEIGHT)
 
@@ -906,7 +906,7 @@ object AppSettings {
             ?: dev.auden.home.LocalShelfKind.entries.map { it.name }.toSet()
         djVoice.value = prefs.getBoolean(KEY_DJ_VOICE, true)
         djChatty.value = prefs.getBoolean(KEY_DJ_CHATTY, false)
-        djBlockSize.value = prefs.getInt(KEY_DJ_BLOCK_SIZE, 5).coerceIn(4, 8)
+        djBlockSize.value = prefs.getInt(KEY_DJ_BLOCK_SIZE, 8).coerceIn(5, 12)
         homeLocalWeight.value = prefs.getInt(KEY_HOME_LOCAL_WEIGHT, dev.auden.home.HomeSettings.DEFAULT_WEIGHT).coerceIn(0, 100)
         lastPlayerScreen.value = runCatching {
             LastPlayerScreen.valueOf(
@@ -1505,7 +1505,7 @@ object AppSettings {
     }
 
     fun setDjBlockSize(value: Int) {
-        val clean = value.coerceIn(4, 8)
+        val clean = value.coerceIn(5, 12)
         djBlockSize.value = clean
         prefs.edit().putInt(KEY_DJ_BLOCK_SIZE, clean).apply()
     }

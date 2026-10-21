@@ -83,6 +83,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Surface
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -227,6 +228,7 @@ import com.music.bitchord.ui.components.BrowseTarget
 import com.music.bitchord.ui.components.ConfirmationAlert
 import com.music.bitchord.ui.components.DjSheet
 import dev.auden.dj.DjSession
+import dev.auden.dj.DjUiState
 import com.music.bitchord.ui.player.DjNowPlayingScreen
 import com.music.bitchord.ui.components.DownloadManagerSheet
 import com.music.bitchord.ui.components.PlaylistPickerSheet
@@ -734,6 +736,7 @@ private fun BitChordApp(
     var showDj by remember { mutableStateOf(false) }
     // Set when the listener starts the DJ from Home: the player opens as soon as it is on.
     var djOpenPlayerWhenReady by remember { mutableStateOf(false) }
+    var djVoicePrompt by remember { mutableStateOf(false) }
     val djStarted by DjSession.state.collectAsStateWithLifecycle()
     LaunchedEffect(djStarted.running, djStarted.problem) {
         if (djStarted.running && djOpenPlayerWhenReady) {
@@ -966,6 +969,11 @@ private fun BitChordApp(
     val showQueueNotice: (String) -> Unit = { message ->
         queueNoticeId += 1
         queueNotice = QueueActionNotice(queueNoticeId, message)
+    }
+    val startDj: () -> Unit = {
+        djOpenPlayerWhenReady = true
+        showQueueNotice(context.getString(R.string.dj_starting))
+        DjSession.start(context, "")
     }
     LaunchedEffect(queueNotice?.id) {
         val shown = queueNotice ?: return@LaunchedEffect
@@ -3217,13 +3225,14 @@ private fun BitChordApp(
                                 onItemLongPress = onShelfLongPress,
                                 onRetry = viewModel::loadHome,
                                 onOpenDj = {
-                                    // The DJ opens straight into its player, on a surprise: no menu to get past.
-                                    if (DjSession.state.value.running) {
-                                        showNowPlaying = true
-                                    } else {
-                                        djOpenPlayerWhenReady = true
-                                        showQueueNotice(context.getString(R.string.dj_starting))
-                                        DjSession.start(context, "")
+                                    // The DJ opens straight into its player, on a surprise: no menu to get past. The
+                                    // one thing asked first is the voice, whenever there is one to download.
+                                    val st = DjSession.state.value
+                                    when {
+                                        st.running -> showNowPlaying = true
+                                        st.voice is DjUiState.Voice.NotInstalled || st.voice is DjUiState.Voice.Downloading ->
+                                            djVoicePrompt = true
+                                        else -> startDj()
                                     }
                                 },
                                 refreshing = MainViewModel.Feed.HOME in refreshing,
@@ -4587,6 +4596,52 @@ private fun BitChordApp(
             ) {
                 DownloadManagerSheet(onDismiss = closeDownloadManager)
             }
+        }
+
+        // ---- The DJ: its voice, asked before it starts whenever it is not on the phone ----
+        if (djVoicePrompt) {
+            val voice = djStarted.voice
+            // Once the voice is there (or the language has none), the DJ starts by itself.
+            LaunchedEffect(voice) {
+                if (voice is DjUiState.Voice.Ready || voice is DjUiState.Voice.Unavailable) {
+                    djVoicePrompt = false
+                    startDj()
+                }
+            }
+            AlertDialog(
+                onDismissRequest = { djVoicePrompt = false },
+                title = { Text(stringResource(R.string.dj_voice_prompt_title)) },
+                text = {
+                    Text(
+                        when (voice) {
+                            is DjUiState.Voice.Downloading ->
+                                stringResource(R.string.dj_voice_downloading, (voice.fraction * 100).toInt())
+                            is DjUiState.Voice.NotInstalled -> buildString {
+                                append(
+                                    stringResource(
+                                        R.string.dj_voice_prompt_message,
+                                        "%s · %.0f MB".format(voice.pack.voice, voice.pack.sizeBytes / 1_000_000.0),
+                                    ),
+                                )
+                                voice.failure?.let { append("\n\n").append(stringResource(R.string.dj_voice_failed, it)) }
+                            }
+                            else -> ""
+                        },
+                    )
+                },
+                confirmButton = {
+                    if (voice is DjUiState.Voice.NotInstalled) {
+                        TextButton(onClick = { DjSession.downloadVoice(context) }) {
+                            Text(stringResource(R.string.dj_voice_prompt_download))
+                        }
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { djVoicePrompt = false; startDj() }) {
+                        Text(stringResource(R.string.dj_voice_prompt_skip))
+                    }
+                },
+            )
         }
 
         // ---- The DJ ----

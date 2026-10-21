@@ -15,6 +15,9 @@ import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.stats.ArtistFacts
 import com.music.bitchord.playback.PlaybackService
+import com.music.bitchord.playback.QueueShuffle
+import com.music.bitchord.playback.toggleAutoplay
+import com.music.bitchord.playback.toggleShuffle
 import com.music.bitchord.playback.playSongs
 import com.music.bitchord.playback.toMediaItem
 import dev.auden.dj.voice.DjClip
@@ -44,12 +47,15 @@ data class DjUiState(
     val voice: Voice = Voice.Unavailable,
     /** Why the last start did not happen, if it did not. */
     val problem: Problem? = null,
+    /** Why a line could not be spoken, when one could not: shown, so it can be told and fixed. */
+    val speechError: String? = null,
 ) {
     sealed interface Voice {
         /** No voice exists for the app's language: the DJ plays, and the words are on screen. */
         data object Unavailable : Voice
         /** A voice exists and has to be downloaded first. */
-        data class NotInstalled(val pack: VoicePacks.Pack) : Voice
+        /** A voice exists and has to be downloaded first; [failure] says why the last try did not finish. */
+        data class NotInstalled(val pack: VoicePacks.Pack, val failure: String? = null) : Voice
         data class Downloading(val pack: VoicePacks.Pack, val fraction: Float) : Voice
         data class Ready(val pack: VoicePacks.Pack) : Voice
     }
@@ -153,9 +159,9 @@ object DjSession {
         VoicePackStore.download(pack)
     }
 
-    private fun language(context: Context): String =
-        AppCompatDelegate.getApplicationLocales().get(0)?.language
-            ?: Locale.getDefault().language
+    /** The DJ always speaks English: it is the one language with a voice that sounds natural. */
+    @Suppress("UNUSED_PARAMETER")
+    private fun language(context: Context): String = "en"
 
     /** Where the voice stands for [language]: unavailable, to download, or ready. */
     private fun voiceFor(language: String): DjUiState.Voice {
@@ -164,6 +170,7 @@ object DjSession {
         return when (val s = states[pack.id]) {
             is VoicePackStore.State.Downloading -> DjUiState.Voice.Downloading(pack, s.fraction)
             VoicePackStore.State.Ready -> DjUiState.Voice.Ready(pack)
+            is VoicePackStore.State.Failed -> if (VoicePackStore.isReady(pack)) DjUiState.Voice.Ready(pack) else DjUiState.Voice.NotInstalled(pack, s.message)
             else -> if (VoicePackStore.isReady(pack)) DjUiState.Voice.Ready(pack) else DjUiState.Voice.NotInstalled(pack)
         }
     }
@@ -177,10 +184,11 @@ object DjSession {
     private class Run(private val app: Context, requestText: String) {
         private val lang = language(app)
         private val blockSize = AppSettings.djBlockSize.value
-        private val speakable = AppSettings.djVoice.value &&
+        // Asked each time, not once: a voice downloaded while the DJ is on starts speaking at the next line.
+        private fun speakable() = AppSettings.djVoice.value &&
             VoicePacks.forLanguage(lang)?.let(VoicePackStore::isReady) == true &&
             DjPhrasesCheck.supports(app, lang)
-        private val chatty = AppSettings.djChatty.value && speakable
+        private fun chatty() = AppSettings.djChatty.value && speakable()
         private val now = System.currentTimeMillis()
         private val songs = HashMap<String, Song>()
         private val tracks = HashMap<String, DjTrack>()
@@ -194,6 +202,9 @@ object DjSession {
         private var listener: Player.Listener? = null
         private var requestText = requestText
         private var closed = false
+        private var wasShuffled = false
+        private var wasAutoplay = false
+        private var wasRepeat = Player.REPEAT_MODE_OFF
         private lateinit var controller: MediaController
         private lateinit var planner: DjPlanner
         private lateinit var writer: DjWriter
@@ -205,7 +216,7 @@ object DjSession {
             tracks.putAll(loaded.tracks.associateBy { it.id })
             songs.putAll(loaded.songs)
             val parsed = requestText.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, loaded.tracks) }
-            planner = DjPlanner(loaded.tracks, now, seed = now, blockSize = blockSize, request = parsed, genresOf = ArtistFacts::genresForDj)
+            planner = DjPlanner(loaded.tracks, now, seed = now, blockSize = blockSize, request = parsed, genresOf = ArtistFacts::genresForDj, recently = DjHistory.recent(app))
             // The Last.fm genres of the artists the listener plays most, asked for once and kept: they
             // give a track its mood. Off the main thread, and the sets already chosen do not wait for it.
             queueing += scope.launch(Dispatchers.IO) {
@@ -218,11 +229,14 @@ object DjSession {
             // once here and kept for the session. Surprises only; a request names its songs itself.
             if (parsed == null) queueing += scope.launch { addDiscoveries(loaded.tracks) }
             val time = java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault())
+            val plays = loaded.tracks.groupBy { it.leadArtist.lowercase() }
+                .mapValues { (_, ts) -> ts.sumOf { it.plays30 } to ts.sumOf { it.plays } }
             writer = DjWriter(
                 AndroidPhrases(app, lang), lang, seed = now,
                 hour = time.hour,
                 weekend = time.dayOfWeek.value >= 6,
-                topArtist = topArtistThisMonth(loaded.tracks),
+                nowMs = now,
+                artistPlays = { plays[it.lowercase()] },
             )
             renderer = DjClipRenderer(app).also { renderers += it }
 
@@ -239,9 +253,25 @@ object DjSession {
             val token = SessionToken(app, ComponentName(app, PlaybackService::class.java))
             controller = withContext(Dispatchers.Main) { MediaController.Builder(app, token).buildAsync().await() }
             withContext(Dispatchers.Main) {
+                // The DJ's order is the whole point, and its queue is its own: shuffle, repeat and AutoPlay
+                // would reorder it, replay it or append to it, so the lines stop matching the songs. They go
+                // off for the session and come back as they were when it ends.
+                wasShuffled = QueueShuffle.enabled.value
+                wasAutoplay = AppSettings.autoplay.value
+                wasRepeat = controller.repeatMode
+                if (wasShuffled) controller.toggleShuffle()
+                if (wasAutoplay) controller.toggleAutoplay()
+                if (wasRepeat != Player.REPEAT_MODE_OFF) controller.repeatMode = Player.REPEAT_MODE_OFF
                 controller.playSongs(order.mapNotNull(::songFor), 0, shuffle = false)
                 listener = object : Player.Listener {
                     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) = entered(mediaItem?.mediaId)
+                    // A line the player cannot play is not silent: the cause is shown, so it can be fixed.
+                    override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                        if (controller.currentMediaItem?.mediaId?.startsWith(com.music.bitchord.data.model.DJ_CLIP_PREFIX) == true) {
+                            Log.w(TAG, "clip failed to play", error)
+                            _state.value = _state.value.copy(speechError = error.errorCodeName)
+                        }
+                    }
                 }.also(controller::addListener)
             }
             _state.value = DjUiState(running = true, theme = label(first.theme), voice = voiceFor(lang))
@@ -272,8 +302,12 @@ object DjSession {
 
         /** Asks YouTube Music's radio for songs like the listener's favourites, and offers them to the planner. */
         private suspend fun addDiscoveries(known: List<DjTrack>) {
+            // Seeds drawn at random from the songs the listener plays most, not always the same few: the
+            // discoveries are as varied as the taste they come from.
             val seeds = known.filter { it.plays > 0 && it.localUri == null }
                 .sortedByDescending { it.plays }
+                .take(DISCOVERY_POOL)
+                .shuffled()
                 .take(DISCOVERY_SEEDS)
             val found = ArrayList<DjTrack>()
             for (seed in seeds) {
@@ -282,7 +316,7 @@ object DjSession {
                     if (song.videoId == seed.id || song.videoId.isBlank() || song.videoId in tracks) continue
                     val track = DjTrack(
                         id = song.videoId, title = song.title, artist = song.artist, album = song.albumName,
-                        art = song.thumbnailUrl, discovery = true,
+                        art = song.thumbnailUrl, discovery = true, because = seed.leadArtist,
                     )
                     tracks[track.id] = track
                     songs[track.id] = song
@@ -309,9 +343,13 @@ object DjSession {
         }
 
         private suspend fun renderLine(line: String, seed: Long): DjClip? {
-            if (!speakable || line.isBlank()) return null
+            if (!speakable() || line.isBlank()) return null
             return runCatching { renderer.render(lang, line, seed) }
-                .onFailure { Log.w(TAG, "line not spoken", it) }
+                .onFailure {
+                    Log.w(TAG, "line not spoken", it)
+                    _state.value = _state.value.copy(speechError = it.message ?: it.javaClass.simpleName)
+                }
+                .onSuccess { if (it != null) _state.value = _state.value.copy(speechError = null) }
                 .getOrNull()
         }
 
@@ -329,9 +367,11 @@ object DjSession {
                 return
             }
             val (set, pos) = at
+            // A song, not the DJ's own voice, goes in the memory that keeps the next session fresh.
+            if (pos >= 0) DjHistory.record(app, mediaId)
             _state.value = _state.value.copy(theme = label(sets[set].theme))
             if (pos == 0 && sets.size <= set + 1) planSet(set)
-            if (pos == 1 && chatty && noted.add(set)) commentOnNext(set)
+            if (pos == 1 && chatty() && noted.add(set)) commentOnNext(set)
         }
 
         /** Chooses, renders and queues the set after [set]. */
@@ -354,22 +394,29 @@ object DjSession {
             }
         }
 
-        /** Renders a short remark about the song two places ahead and queues it right after the current one. */
+        /**
+         * Renders a remark about a song later in the set that has something worth saying (how often it
+         * was played, its playlist, its album and year) and queues it right before that song. A song with
+         * nothing to say gets no remark: the title and artist alone are not one.
+         */
         private fun commentOnNext(set: Int) {
             queueing += scope.launch {
-                val upcoming = sets[set].tracks.getOrNull(2) ?: return@launch
-                val line = writer.trackNote(upcoming) ?: return@launch
+                val upcoming = sets[set].tracks.drop(2).firstNotNullOfOrNull { t -> writer.trackNote(t)?.let { t to it } }
+                    ?: return@launch
+                val (track, line) = upcoming
                 val clip = renderLine(line, seed = now + 7L * set) ?: return@launch
                 if (closed) return@launch
                 withContext(Dispatchers.Main) {
                     if (closed) return@withContext
-                    val index = runCatching { controller.currentMediaItemIndex }.getOrNull() ?: return@withContext
+                    val current = runCatching { controller.currentMediaItemIndex }.getOrNull() ?: return@withContext
                     if (controller.mediaItemCount != order.size) return@withContext
+                    val at = order.indexOf(track.id)
+                    if (at <= current) return@withContext
                     val id = djSong(clip)
                     place[id] = set to -1
-                    controller.addMediaItem(index + 1, songFor(id)!!.toMediaItem())
-                    order.add(index + 1, id)
-                    for (i in setStart.indices) if (setStart[i] > index) setStart[i] = setStart[i] + 1
+                    controller.addMediaItem(at, songFor(id)!!.toMediaItem())
+                    order.add(at, id)
+                    for (i in setStart.indices) if (setStart[i] >= at && i > set) setStart[i] = setStart[i] + 1
                 }
             }
         }
@@ -385,6 +432,7 @@ object DjSession {
             scope.launch {
                 val parsed = text.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, tracks.values.toList()) }
                 planner.setRequest(parsed)
+                writer.request = parsed
                 val current = runCatching { withContext(Dispatchers.Main) { controller.currentMediaItemIndex } }.getOrNull() ?: 0
                 val playing = order.getOrNull(current)?.let(place::get)?.first ?: 0
                 cutAfter(current, playing)
@@ -431,6 +479,10 @@ object DjSession {
             val c = controller
             scope.launch(Dispatchers.Main) {
                 l?.let(c::removeListener)
+                // Back to how the listener had it.
+                if (wasShuffled && !QueueShuffle.enabled.value) c.toggleShuffle()
+                if (wasAutoplay && !AppSettings.autoplay.value) c.toggleAutoplay()
+                if (wasRepeat != Player.REPEAT_MODE_OFF) c.repeatMode = wasRepeat
                 c.release()
             }
         }
@@ -452,13 +504,17 @@ object DjSession {
             DjTheme.Rediscover -> app.getString(R.string.home_shelf_rediscover)
             DjTheme.Fresh -> app.getString(R.string.home_shelf_recently_added)
             DjTheme.Discover -> app.getString(R.string.dj_theme_discover)
+            is DjTheme.ByPlaylist -> theme.name
         }
     }
 
     private val renderers = ArrayList<DjClipRenderer>()
 
     /** How many of the listener's favourites seed the discoveries. */
-    private const val DISCOVERY_SEEDS = 3
+    private const val DISCOVERY_SEEDS = 4
+
+    /** How many of the most played songs the discovery seeds are drawn from. */
+    private const val DISCOVERY_POOL = 25
 
     /** How many of the listener's artists have their genres asked of Last.fm when a session starts. */
     private const val GENRE_LOOKUPS = 40

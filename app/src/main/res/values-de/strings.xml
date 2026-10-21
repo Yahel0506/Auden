@@ -1544,4 +1544,10 @@
     <string name="dj_theme_discover">Neu für dich</string>
     <string name="dj_now_playing_short">Gerade: %1$s</string>
     <string name="dj_setting_pack">Stimmpaket</string>
+    <string name="dj_voice_prompt_title">Stimme des DJs herunterladen?</string>
+    <string name="dj_voice_prompt_message">Der DJ spricht mit einer Stimme auf deinem Telefon: %1$s, einmal geladen, auch offline nutzbar. Ohne sie spielt der DJ und du liest, was er sagt.</string>
+    <string name="dj_voice_prompt_download">Herunterladen</string>
+    <string name="dj_voice_prompt_skip">Ohne Stimme fortfahren</string>
+    <string name="dj_voice_failed">Der Download ist fehlgeschlagen: %1$s. Versuche es erneut.</string>
+    <string name="dj_speech_error">Der DJ konnte nicht sprechen: %1$s</string>
 </resources>

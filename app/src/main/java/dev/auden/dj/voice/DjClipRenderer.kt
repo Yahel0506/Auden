@@ -47,7 +47,9 @@ class DjClipRenderer(context: Context) {
                 val pcm = concat(pieces)
                 val id = "clip-${seed.toString(36)}-${++counter}"
                 val file = File(dir, "$id.wav")
+                check(pcm.isNotEmpty()) { "the voice produced no sound" }
                 ClipWriter.writeWav(file, pcm, voice.sampleRate)
+                check(file.length() > 44) { "the clip was not written" }
                 DjClip(
                     id = id,
                     file = file,

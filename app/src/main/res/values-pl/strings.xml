@@ -1584,4 +1584,10 @@
     <string name="dj_theme_discover">Nowe dla ciebie</string>
     <string name="dj_now_playing_short">Teraz: %1$s</string>
     <string name="dj_setting_pack">Pakiet głosu</string>
+    <string name="dj_voice_prompt_title">Pobrać głos DJ-a?</string>
+    <string name="dj_voice_prompt_message">DJ mówi głosem zapisanym w telefonie: %1$s, pobieranym raz, działa offline. Bez niego DJ gra, a ty czytasz, co mówi.</string>
+    <string name="dj_voice_prompt_download">Pobierz</string>
+    <string name="dj_voice_prompt_skip">Kontynuuj bez głosu</string>
+    <string name="dj_voice_failed">Pobieranie nie powiodło się: %1$s. Spróbuj ponownie.</string>
+    <string name="dj_speech_error">DJ nie mógł mówić: %1$s</string>
 </resources>

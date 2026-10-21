@@ -1462,4 +1462,10 @@
     <string name="dj_theme_discover">Mới cho bạn</string>
     <string name="dj_now_playing_short">Đang phát: %1$s</string>
     <string name="dj_setting_pack">Gói giọng</string>
+    <string name="dj_voice_prompt_title">Tải giọng của DJ?</string>
+    <string name="dj_voice_prompt_message">DJ nói bằng giọng lưu trên điện thoại: %1$s, tải một lần và dùng được ngoại tuyến. Không có, DJ vẫn phát nhạc và bạn đọc lời của DJ.</string>
+    <string name="dj_voice_prompt_download">Tải về</string>
+    <string name="dj_voice_prompt_skip">Tiếp tục không giọng</string>
+    <string name="dj_voice_failed">Tải về thất bại: %1$s. Hãy thử lại.</string>
+    <string name="dj_speech_error">DJ không thể nói: %1$s</string>
 </resources>
