@@ -225,6 +225,7 @@ import com.music.bitchord.download.Downloads
 import com.music.bitchord.ui.components.BrowseActionsSheet
 import com.music.bitchord.ui.components.BrowseTarget
 import com.music.bitchord.ui.components.ConfirmationAlert
+import com.music.bitchord.ui.components.DjSheet
 import com.music.bitchord.ui.components.DownloadManagerSheet
 import com.music.bitchord.ui.components.PlaylistPickerSheet
 import com.music.bitchord.ui.components.ReorderPlaylistPage
@@ -728,6 +729,7 @@ private fun BitChordApp(
         dark = !darkTheme && !showNowPlaying && route != AppRoute.Replay && replayStory == null && !onboardingVisible,
     )
 
+    var showDj by remember { mutableStateOf(false) }
     val homeState by viewModel.homeComposed.collectAsStateWithLifecycle()
     val localHomeTitles by viewModel.localShelfTitles.collectAsStateWithLifecycle()
     val homeLoadingMore by viewModel.homeLoadingMore.collectAsStateWithLifecycle()
@@ -3184,6 +3186,7 @@ private fun BitChordApp(
                                 },
                                 onItemLongPress = onShelfLongPress,
                                 onRetry = viewModel::loadHome,
+                                onOpenDj = { showDj = true },
                                 refreshing = MainViewModel.Feed.HOME in refreshing,
                                 onRefresh = { viewModel.refresh(MainViewModel.Feed.HOME) },
                                 pullState = homePull,
@@ -4544,6 +4547,18 @@ private fun BitChordApp(
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
                 DownloadManagerSheet(onDismiss = closeDownloadManager)
+            }
+        }
+
+        // ---- The DJ ----
+        if (showDj) {
+            val closeDj = { showDj = false }
+            BackHandler(onBack = closeDj)
+            ModalBottomSheet(
+                onDismissRequest = closeDj,
+                containerColor = MaterialTheme.colorScheme.background,
+            ) {
+                DjSheet(onDismiss = closeDj)
             }
         }
 

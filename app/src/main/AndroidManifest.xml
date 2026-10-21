@@ -55,6 +55,13 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
 
+        <!-- The DJ's voice: lets the app see which speech engines are installed, so it can bind to the best one. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
     <application
         android:name=".BitChordApplication"
         android:allowBackup="true"

@@ -208,4 +208,6 @@
     <string name="lyrics_provider_downloaded">Descargada</string>
     <string name="lyrics_provider_download">Descargar esta letra</string>
     <string name="lyrics_provider_remove">Quitar descarga</string>
+    <string name="dj_title">Auden DJ</string>
+    <string name="dj_subtitle">Sets con tema de tu propia música, con una voz entre canciones</string>
 </resources>

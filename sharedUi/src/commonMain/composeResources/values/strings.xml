@@ -215,4 +215,6 @@
     <string name="lyrics_provider_downloaded">Downloaded</string>
     <string name="lyrics_provider_download">Download these lyrics</string>
     <string name="lyrics_provider_remove">Remove download</string>
+    <string name="dj_title">Auden DJ</string>
+    <string name="dj_subtitle">Themed sets from your own music, with a voice in between</string>
 </resources>

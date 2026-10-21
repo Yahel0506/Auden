@@ -227,6 +227,9 @@ fun SettingsScreen(
     val fullBleedArtwork by AppSettings.fullBleedArtwork.collectAsStateWithLifecycle()
     val homeShelfKinds by AppSettings.homeLocalShelves.collectAsStateWithLifecycle()
     val homeWeight by AppSettings.homeLocalWeight.collectAsStateWithLifecycle()
+    val djVoice by AppSettings.djVoice.collectAsStateWithLifecycle()
+    val djChatty by AppSettings.djChatty.collectAsStateWithLifecycle()
+    val djBlockSize by AppSettings.djBlockSize.collectAsStateWithLifecycle()
     val syncedLyrics by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
     val lyricsSources by AppSettings.lyricsSources.collectAsStateWithLifecycle()
     val translationLanguage by AppSettings.translationLanguage.collectAsStateWithLifecycle()
@@ -1038,6 +1041,58 @@ fun SettingsScreen(
                         onClick = { AppSettings.setHomeLocalShelf(kind, !on) },
                     )
                 }
+            }
+            val djVoiceTitle = stringResource(R.string.dj_setting_voice)
+            row(djVoiceTitle, "dj", "voice", "speech", "talk") {
+                SettingsRow(
+                    icon = Icons.Rounded.GraphicEq,
+                    title = djVoiceTitle,
+                    subtitle = stringResource(R.string.dj_setting_voice_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = djVoice,
+                            onCheckedChange = AppSettings::setDjVoice,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setDjVoice(!djVoice) },
+                )
+            }
+            val djChattyTitle = stringResource(R.string.dj_setting_chatty)
+            row(djChattyTitle, "dj", "comments", "talk") {
+                SettingsRow(
+                    icon = Icons.Rounded.GraphicEq,
+                    title = djChattyTitle,
+                    subtitle = stringResource(R.string.dj_setting_chatty_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = djChatty,
+                            onCheckedChange = AppSettings::setDjChatty,
+                            enabled = djVoice,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    enabled = djVoice,
+                    onClick = { AppSettings.setDjChatty(!djChatty) },
+                )
+            }
+            val djBlockTitle = stringResource(R.string.dj_setting_block)
+            row(djBlockTitle, "dj", "set", "block", "songs") {
+                SliderRow(
+                    icon = Icons.Rounded.GraphicEq,
+                    title = djBlockTitle,
+                    value = djBlockSize.toString(),
+                    sliderValue = djBlockSize.toFloat(),
+                    onSliderValue = { AppSettings.setDjBlockSize(it.roundToInt()) },
+                    valueRange = 4f..8f,
+                    steps = 3,
+                )
             }
             val animatedCoverArtTitle = stringResource(R.string.animated_cover_art)
             // Carries the keywords of the rows that only appear once it is on,

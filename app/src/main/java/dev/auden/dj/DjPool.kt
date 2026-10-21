@@ -1,0 +1,63 @@
+package dev.auden.dj
+
+import android.content.Context
+import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.stats.ListeningStats
+import dev.auden.library.db.AudenDb
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.time.LocalDate
+
+/** The songs the DJ can choose from: the library, and everything ever heard. */
+object DjPool {
+    /** Enough variety for any theme, and cheap enough to group on a phone in a few milliseconds. */
+    const val CAP = 3_000
+
+    class Loaded(val tracks: List<DjTrack>, val songs: Map<String, Song>)
+
+    suspend fun load(context: Context): Loaded = withContext(Dispatchers.IO) {
+        val app = context.applicationContext
+        val cutoff = LocalDate.now().minusDays(30).toString()
+        val heard = ListeningStats.heardTracks().associateBy { it.id }
+        val songs = HashMap<String, Song>()
+        val byId = LinkedHashMap<String, DjTrack>()
+
+        AudenDb.get(app).tracks().all().forEach { row ->
+            val id = row.videoId ?: row.localUri ?: return@forEach
+            val entry = heard[id]
+            byId[id] = DjTrack(
+                id = id, title = row.title, artist = row.artist, album = row.album, genre = row.genre,
+                year = row.year, trackNumber = row.trackNumber, art = row.thumbnailUrl, localUri = row.localUri,
+                plays = entry?.plays ?: 0,
+                plays30 = entry?.days?.filterKeys { it >= cutoff }?.values?.sumOf { it.plays } ?: 0,
+                lastPlayedAt = entry?.last ?: 0L,
+                addedAt = row.addedAt,
+            )
+            songs[id] = Song(
+                videoId = id, title = row.title, artist = row.artist, thumbnailUrl = row.thumbnailUrl,
+                durationText = row.durationText, artistId = row.artistId, albumId = row.albumId,
+                albumName = row.album, localUri = row.localUri, localPath = row.path,
+                localGenre = row.genre, trackNumber = row.trackNumber, spotifyId = row.spotifyId,
+            )
+        }
+        // Heard but never added: a streamed favourite. It has no tags, so it can serve an artist,
+        // favourites or rediscover block, and nothing that needs a year or a genre.
+        heard.values.forEach { entry ->
+            if (entry.id in byId || entry.title.isBlank() || entry.artist.isBlank()) return@forEach
+            byId[entry.id] = DjTrack(
+                id = entry.id, title = entry.title, artist = entry.artist, album = entry.album, art = entry.art,
+                localUri = entry.id.takeIf { it.startsWith("content://") || it.startsWith("file://") },
+                plays = entry.plays,
+                plays30 = entry.days.filterKeys { it >= cutoff }.values.sumOf { it.plays },
+                lastPlayedAt = entry.last,
+            )
+            songs[entry.id] = Song(
+                videoId = entry.id, title = entry.title, artist = entry.artist, thumbnailUrl = entry.art,
+                albumName = entry.album, artistId = entry.artistId,
+                localUri = entry.id.takeIf { it.startsWith("content://") || it.startsWith("file://") },
+            )
+        }
+        val capped = byId.values.sortedByDescending { it.plays * 2 + it.plays30 * 3 + (if (it.localUri != null) 1 else 0) }.take(CAP)
+        Loaded(capped, songs)
+    }
+}

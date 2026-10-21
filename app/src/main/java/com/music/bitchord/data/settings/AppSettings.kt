@@ -489,6 +489,15 @@ object AppSettings {
     val homeLocalShelves = MutableStateFlow(dev.auden.home.LocalShelfKind.entries.map { it.name }.toSet())
 
     /** How much of Home is the listener's own, 0 (all YouTube Music) to 100 (all local); see [dev.auden.home.HomeComposer]. */
+    /** Whether the DJ talks between blocks; off, it still chooses and queues. */
+    val djVoice = MutableStateFlow(true)
+
+    /** Whether the DJ also says a word about a song partway through a block. */
+    val djChatty = MutableStateFlow(false)
+
+    /** Songs per DJ block, 4 to 8. */
+    val djBlockSize = MutableStateFlow(5)
+
     val homeLocalWeight = MutableStateFlow(dev.auden.home.HomeSettings.DEFAULT_WEIGHT)
 
     /** Restores the expanded player to the surface the listener left open. */
@@ -895,6 +904,9 @@ object AppSettings {
         fullBleedArtwork.value = prefs.getBoolean(KEY_FULL_BLEED_ARTWORK, true)
         homeLocalShelves.value = prefs.getStringSet(KEY_HOME_LOCAL_SHELVES, null)?.toSet()
             ?: dev.auden.home.LocalShelfKind.entries.map { it.name }.toSet()
+        djVoice.value = prefs.getBoolean(KEY_DJ_VOICE, true)
+        djChatty.value = prefs.getBoolean(KEY_DJ_CHATTY, false)
+        djBlockSize.value = prefs.getInt(KEY_DJ_BLOCK_SIZE, 5).coerceIn(4, 8)
         homeLocalWeight.value = prefs.getInt(KEY_HOME_LOCAL_WEIGHT, dev.auden.home.HomeSettings.DEFAULT_WEIGHT).coerceIn(0, 100)
         lastPlayerScreen.value = runCatching {
             LastPlayerScreen.valueOf(
@@ -1480,6 +1492,22 @@ object AppSettings {
         val next = if (on) homeLocalShelves.value + kind.name else homeLocalShelves.value - kind.name
         homeLocalShelves.value = next
         prefs.edit().putStringSet(KEY_HOME_LOCAL_SHELVES, next).apply()
+    }
+
+    fun setDjVoice(value: Boolean) {
+        djVoice.value = value
+        prefs.edit().putBoolean(KEY_DJ_VOICE, value).apply()
+    }
+
+    fun setDjChatty(value: Boolean) {
+        djChatty.value = value
+        prefs.edit().putBoolean(KEY_DJ_CHATTY, value).apply()
+    }
+
+    fun setDjBlockSize(value: Int) {
+        val clean = value.coerceIn(4, 8)
+        djBlockSize.value = clean
+        prefs.edit().putInt(KEY_DJ_BLOCK_SIZE, clean).apply()
     }
 
     fun setHomeLocalWeight(value: Int) {
@@ -2096,6 +2124,9 @@ object AppSettings {
     private const val KEY_FULL_BLEED_ARTWORK = "full_bleed_artwork"
     private const val KEY_HOME_LOCAL_SHELVES = "home_local_shelves"
     private const val KEY_HOME_LOCAL_WEIGHT = "home_local_weight"
+    private const val KEY_DJ_VOICE = "dj_voice"
+    private const val KEY_DJ_CHATTY = "dj_chatty"
+    private const val KEY_DJ_BLOCK_SIZE = "dj_block_size"
     private const val KEY_LAST_PLAYER_SCREEN = "last_player_screen"
     private const val KEY_SYNCED_LYRICS = "synced_lyrics"
     private const val KEY_LYRICS_SOURCES = "lyrics_sources"

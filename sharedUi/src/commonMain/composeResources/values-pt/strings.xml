@@ -208,4 +208,6 @@
     <string name="lyrics_provider_downloaded">Transferidas</string>
     <string name="lyrics_provider_download">Transferir esta letra</string>
     <string name="lyrics_provider_remove">Remover transferência</string>
+    <string name="dj_title">Auden DJ</string>
+    <string name="dj_subtitle">Sets temáticos da sua própria música, com uma voz entre as faixas</string>
 </resources>
