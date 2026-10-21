@@ -235,6 +235,10 @@ android {
             // SMBJ's BouncyCastle and jspecify both ship this descriptor.
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
+        jniLibs {
+            // sherpa-onnx and the Automix model's runtime both ship an x86 ONNX Runtime; only emulators run x86.
+            pickFirsts += setOf("lib/x86/libonnxruntime.so")
+        }
     }
     buildFeatures {
         compose = true
@@ -278,6 +282,11 @@ val newPipeExtractorRaw: Configuration by configurations.creating {
     isCanBeConsumed = false
 }
 dependencies {
+    // The phone app's sources are compiled in here, the DJ with them: its voice engine and the unpacker
+    // for its voice packs. The AAR is fetched and hash-checked by the app module (fetchSherpa).
+    implementation(mapOf("name" to "sherpa-onnx-static-link-onnxruntime-1.13.8", "ext" to "aar"))
+    implementation("org.apache.commons:commons-compress:1.27.1")
+
     newPipeExtractorRaw("com.github.TeamNewPipe:NewPipeExtractor:v0.26.3")
 }
 val newPipeExtractorStripped = tasks.register<org.gradle.api.tasks.bundling.Jar>(
@@ -503,3 +512,5 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
         el.file.startsWith(phoneJava) && el.relativePath.pathString in replacedByTv
     }
 }
+
+tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(":app:fetchSherpa") }
