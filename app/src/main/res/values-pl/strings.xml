@@ -1578,9 +1578,9 @@
     <string name="dj_setting_chatty_subtitle">A word about a song in the middle of a set</string>
     <string name="dj_setting_block">Songs per set</string>
     <string name="dj_voice_none">DJ nie ma jeszcze głosu w tym języku: będziesz czytać jego kwestie.</string>
-    <string name="dj_voice_download">Pobierz głos · %1</string>
-    <string name="dj_voice_downloading">Pobieranie głosu… %1%%</string>
-    <string name="dj_voice_ready">Głos: %1, na tym telefonie</string>
+    <string name="dj_voice_download">Pobierz głos · %1$s</string>
+    <string name="dj_voice_downloading">Pobieranie głosu… %1$d%%</string>
+    <string name="dj_voice_ready">Głos: %1$s, na tym telefonie</string>
     <string name="dj_theme_discover">Nowe dla ciebie</string>
-    <string name="dj_now_playing_short">Teraz: %1</string>
+    <string name="dj_now_playing_short">Teraz: %1$s</string>
 </resources>

@@ -1510,9 +1510,9 @@
     <string name="dj_setting_chatty_subtitle">Una frase sobre una canción a mitad de un set</string>
     <string name="dj_setting_block">Canciones por set</string>
     <string name="dj_voice_none">El DJ aún no tiene voz para este idioma: leerás sus frases.</string>
-    <string name="dj_voice_download">Descargar voz · %1</string>
-    <string name="dj_voice_downloading">Descargando la voz… %1%%</string>
-    <string name="dj_voice_ready">Voz: %1, en este teléfono</string>
+    <string name="dj_voice_download">Descargar voz · %1$s</string>
+    <string name="dj_voice_downloading">Descargando la voz… %1$d%%</string>
+    <string name="dj_voice_ready">Voz: %1$s, en este teléfono</string>
     <string name="dj_theme_discover">Nuevo para ti</string>
-    <string name="dj_now_playing_short">Ahora: %1</string>
+    <string name="dj_now_playing_short">Ahora: %1$s</string>
 </resources>

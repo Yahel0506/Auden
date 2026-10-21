@@ -85,8 +85,20 @@ object DjSession {
     /** The words of a DJ clip on screen while it plays; null for any other song. */
     fun clipOf(mediaId: String?): DjClip? = mediaId?.let { synchronized(clips) { clips[it] } }
 
+    private var appContext: Context? = null
+
     fun init(context: Context) {
-        VoicePackStore.init(context)
+        val app = context.applicationContext
+        appContext = app
+        VoicePackStore.init(app)
+        _state.value = DjUiState(voice = voiceFor(language(app)))
+        // The sheet shows the voice's download as it runs, whether or not a session is on.
+        scope.launch { VoicePackStore.states.collect { refreshVoice() } }
+    }
+
+    private fun refreshVoice() {
+        val app = appContext ?: return
+        _state.value = _state.value.copy(voice = voiceFor(language(app)))
     }
 
     /** Starts a session: from a typed [request], or on the DJ's own choice when it is blank. */
@@ -125,7 +137,8 @@ object DjSession {
         synchronized(clips) { clips.clear() }
         renderers.forEach { it.clearClips(); it.release() }
         renderers.clear()
-        _state.value = DjUiState()
+        refreshVoice()
+        _state.value = _state.value.copy(running = false, starting = false, theme = null, problem = null)
     }
 
     /** More like the song playing now. */

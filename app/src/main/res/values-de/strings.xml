@@ -1538,9 +1538,9 @@
     <string name="dj_setting_chatty_subtitle">Ein Wort zu einem Song mitten im Set</string>
     <string name="dj_setting_block">Songs pro Set</string>
     <string name="dj_voice_none">Der DJ hat für diese Sprache noch keine Stimme: Du liest seine Sätze.</string>
-    <string name="dj_voice_download">Stimme herunterladen · %1</string>
-    <string name="dj_voice_downloading">Stimme wird geladen… %1 %%</string>
-    <string name="dj_voice_ready">Stimme: %1, auf diesem Telefon</string>
+    <string name="dj_voice_download">Stimme herunterladen · %1$s</string>
+    <string name="dj_voice_downloading">Stimme wird geladen… %1$d %%</string>
+    <string name="dj_voice_ready">Stimme: %1$s, auf diesem Telefon</string>
     <string name="dj_theme_discover">Neu für dich</string>
-    <string name="dj_now_playing_short">Gerade: %1</string>
+    <string name="dj_now_playing_short">Gerade: %1$s</string>
 </resources>
