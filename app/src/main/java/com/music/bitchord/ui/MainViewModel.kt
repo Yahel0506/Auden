@@ -15,6 +15,7 @@ import com.music.bitchord.data.AppUpdateChecker
 import com.music.bitchord.data.LocalMediaRepository
 import com.music.bitchord.data.LikeState
 import com.music.bitchord.data.YtMusicRepository
+import com.music.bitchord.data.model.DJ_CLIP_PREFIX
 import com.music.bitchord.data.model.SPOTIFY_MISSING_PREFIX
 import com.music.bitchord.data.model.SPOTIFY_PENDING_PREFIX
 import com.music.bitchord.data.spotify.SPOTIFY_PAGE_PREFIX
@@ -435,6 +436,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         localLyricsSource: String? = null,
         localLyricsFormat: String? = null,
     ) {
+        // The DJ's own lines are speech, not a song: nothing to look up.
+        if (videoId.startsWith(DJ_CLIP_PREFIX)) return
         val sources = if (AppSettings.syncedLyrics.value) {
             AppSettings.lyricsSources.value
         } else {

@@ -227,6 +227,9 @@ fun SettingsScreen(
     val fullBleedArtwork by AppSettings.fullBleedArtwork.collectAsStateWithLifecycle()
     val homeShelfKinds by AppSettings.homeLocalShelves.collectAsStateWithLifecycle()
     val homeWeight by AppSettings.homeLocalWeight.collectAsStateWithLifecycle()
+    val djVoice by AppSettings.djVoice.collectAsStateWithLifecycle()
+    val djChatty by AppSettings.djChatty.collectAsStateWithLifecycle()
+    val djBlockSize by AppSettings.djBlockSize.collectAsStateWithLifecycle()
     val syncedLyrics by AppSettings.syncedLyrics.collectAsStateWithLifecycle()
     val lyricsSources by AppSettings.lyricsSources.collectAsStateWithLifecycle()
     val translationLanguage by AppSettings.translationLanguage.collectAsStateWithLifecycle()
@@ -1213,6 +1216,79 @@ fun SettingsScreen(
                         onClick = onTranslationLanguage,
                     )
                 }
+            }
+        }
+
+        SearchableSettingsGroup(search, header = stringResource(R.string.dj_title)) {
+            val djVoiceTitle = stringResource(R.string.dj_setting_voice)
+            row(djVoiceTitle, "dj", "voice", "speech", "talk") {
+                SettingsRow(
+                    icon = Icons.Rounded.GraphicEq,
+                    title = djVoiceTitle,
+                    subtitle = stringResource(R.string.dj_setting_voice_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = djVoice,
+                            onCheckedChange = AppSettings::setDjVoice,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    onClick = { AppSettings.setDjVoice(!djVoice) },
+                )
+            }
+            val djChattyTitle = stringResource(R.string.dj_setting_chatty)
+            row(djChattyTitle, "dj", "comments", "talk") {
+                SettingsRow(
+                    icon = Icons.Rounded.GraphicEq,
+                    title = djChattyTitle,
+                    subtitle = stringResource(R.string.dj_setting_chatty_subtitle),
+                    trailing = {
+                        Switch(
+                            checked = djChatty,
+                            onCheckedChange = AppSettings::setDjChatty,
+                            enabled = djVoice,
+                            colors = SwitchDefaults.colors(
+                                checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                checkedBorderColor = MaterialTheme.colorScheme.primary,
+                            ),
+                        )
+                    },
+                    enabled = djVoice,
+                    onClick = { AppSettings.setDjChatty(!djChatty) },
+                )
+            }
+            val djBlockTitle = stringResource(R.string.dj_setting_block)
+            row(djBlockTitle, "dj", "set", "block", "songs") {
+                SliderRow(
+                    icon = Icons.Rounded.GraphicEq,
+                    title = djBlockTitle,
+                    value = djBlockSize.toString(),
+                    sliderValue = djBlockSize.toFloat(),
+                    onSliderValue = { AppSettings.setDjBlockSize(it.roundToInt()) },
+                    valueRange = 4f..8f,
+                    steps = 3,
+                )
+            }
+            val djVoiceState by dev.auden.dj.DjSession.state.collectAsStateWithLifecycle()
+            val djPackTitle = stringResource(R.string.dj_setting_pack)
+            row(djPackTitle, "dj", "voice", "download", "pack") {
+                val voice = djVoiceState.voice
+                SettingsRow(
+                    icon = Icons.Rounded.GraphicEq,
+                    title = djPackTitle,
+                    subtitle = when (voice) {
+                        dev.auden.dj.DjUiState.Voice.Unavailable -> stringResource(R.string.dj_voice_none)
+                        is dev.auden.dj.DjUiState.Voice.NotInstalled -> stringResource(R.string.dj_voice_download, "%.0f MB".format(voice.pack.sizeBytes / 1_000_000.0))
+                        is dev.auden.dj.DjUiState.Voice.Downloading -> stringResource(R.string.dj_voice_downloading, (voice.fraction * 100).toInt())
+                        is dev.auden.dj.DjUiState.Voice.Ready -> stringResource(R.string.dj_voice_ready, voice.pack.voice)
+                    },
+                    onClick = if (voice is dev.auden.dj.DjUiState.Voice.NotInstalled) {
+                        { dev.auden.dj.DjSession.downloadVoice(context) }
+                    } else null,
+                )
             }
         }
 

@@ -208,4 +208,10 @@
     <string name="lyrics_provider_downloaded">Scaricati</string>
     <string name="lyrics_provider_download">Scarica questo testo</string>
     <string name="lyrics_provider_remove">Rimuovi download</string>
+    <string name="dj_title">Auden DJ</string>
+    <string name="dj_subtitle">Set a tema dalla tua musica, con una voce tra i brani</string>
+    <string name="dj_now_speaking">Auden DJ is speaking</string>
+    <string name="dj_skip_line">Salta</string>
+    <string name="dj_ask">Chiedi al DJ</string>
+    <string name="dj_no_words">The DJ is speaking</string>
 </resources>

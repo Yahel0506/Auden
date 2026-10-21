@@ -137,6 +137,23 @@ object ArtistFacts {
         return known[key(artist)]?.genres.orEmpty()
     }
 
+    /**
+     * The artist's Last.fm genres for the DJ's moods: whatever is known, whatever the Replay switch says.
+     * The DJ asks for them itself (see [fetchForDj]); Replay's own setting still governs only Replay.
+     */
+    fun genresForDj(artist: String): List<String> = known[key(artist)]?.genres.orEmpty()
+
+    /**
+     * Asks Last.fm for an artist's genres, for the DJ, unless they are already known. A network call:
+     * off the main thread. Quiet on failure, like every other lookup here.
+     */
+    fun fetchForDj(artist: String) {
+        if (BuildConfig.LASTFM_API_KEY.isBlank() || !ready) return
+        if ((known[key(artist)]?.genresAt ?: 0L) > 0L) return
+        runCatching { fetchGenres(artist) }
+            .onFailure { android.util.Log.w("ArtistFacts", "no genres for $artist", it) }
+    }
+
     /** A picture of the artist, or null to fall back to whatever the row has. */
     fun imageFor(artist: String): String? = known[key(artist)]?.image
 

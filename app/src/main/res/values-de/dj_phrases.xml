@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What the DJ says in this language, translated and read by a native speaker is still to come. -->
+<resources>
+    <string name="dj_phrases_language" translatable="false">de</string>
+    <string-array name="dj_greeting_morning">
+        <item>Guten Morgen.</item>
+        <item>Guten Morgen. Wir fangen ruhig an.</item>
+        <item>Guten Morgen. Etwas für den Start in den Tag.</item>
+    </string-array>
+    <string-array name="dj_greeting_afternoon">
+        <item>Guten Tag.</item>
+        <item>Hallo, schönen Nachmittag.</item>
+        <item>Guten Nachmittag. Weiter geht’s mit Musik.</item>
+    </string-array>
+    <string-array name="dj_greeting_evening">
+        <item>Guten Abend.</item>
+        <item>Guten Abend. Machen wir es uns gemütlich.</item>
+        <item>Guten Abend. Lass mich etwas aussuchen.</item>
+    </string-array>
+    <string-array name="dj_greeting_night">
+        <item>Es ist spät. Wir bleiben ruhig.</item>
+        <item>Noch wach? Hier ist etwas für die späten Stunden.</item>
+        <item>Ein langer Abend. Machen wir ihn schön.</item>
+    </string-array>
+    <string-array name="dj_request_ack">
+        <item>Verstanden: {request}.</item>
+        <item>Gut, {request}. Ich kümmere mich darum.</item>
+        <item>{request}. Gute Idee.</item>
+    </string-array>
+    <string-array name="dj_relaxed">
+        <item>Davon gibt es in deiner Bibliothek nicht genug, also hier etwas Ähnliches.</item>
+        <item>Davon ist auf dem Gerät wenig, ich dehne es etwas aus.</item>
+    </string-array>
+    <string-array name="dj_unrecognized">
+        <item>Ich habe das nicht ganz verstanden, also wähle ich für dich.</item>
+        <item>Ich weiß nicht genau, was du wolltest, ich überrasche dich.</item>
+    </string-array>
+    <string-array name="dj_connector">
+        <item>Und jetzt,</item>
+        <item>Als Nächstes,</item>
+        <item>Ändern wir die Stimmung ein wenig.</item>
+        <item>Also,</item>
+    </string-array>
+    <string-array name="dj_intro_artist">
+        <item>Hier sind {count} Songs von {artist}, angefangen mit {title}.</item>
+        <item>Zeit für {artist}: {count} Songs, wir starten mit {title}.</item>
+        <item>{artist} für eine Weile. Zuerst {title}.</item>
+    </string-array>
+    <string-array name="dj_intro_decade">
+        <item>Eine Reise in die {decade}: {count} Songs, angefangen mit {title} von {artist}.</item>
+        <item>Zurück in die {decade}. Zuerst {title}.</item>
+        <item>Ein paar Songs aus den {decade}, angefangen mit {title}.</item>
+    </string-array>
+    <string-array name="dj_intro_genre">
+        <item>Jetzt etwas {genre}, angefangen mit {title}.</item>
+        <item>Ein bisschen {genre}. Zuerst {title} von {artist}.</item>
+        <item>{count} {genre}-Songs hintereinander, angefangen mit {title}.</item>
+    </string-array>
+    <string-array name="dj_intro_mood_focus">
+        <item>Etwas zum Konzentrieren: {count} Songs, angefangen mit {title}.</item>
+        <item>Bleiben wir eine Weile ruhig. Zuerst {title}.</item>
+        <item>Musik zum Arbeiten, angefangen mit {artist}.</item>
+    </string-array>
+    <string-array name="dj_intro_mood_chill">
+        <item>Wir werden langsamer. Zuerst {title} von {artist}.</item>
+        <item>Eine Weile etwas Sanftes, angefangen mit {title}.</item>
+        <item>Ganz ruhig: {count} entspannte Songs, angefangen mit {artist}.</item>
+    </string-array>
+    <string-array name="dj_intro_mood_energy">
+        <item>Wir ziehen das Tempo an mit {title}.</item>
+        <item>Zeit für Energie. {artist} eröffnet.</item>
+        <item>{count} Songs zum Bewegen, angefangen mit {title}.</item>
+    </string-array>
+    <string-array name="dj_intro_mood_acoustic">
+        <item>Jetzt etwas Akustisches, angefangen mit {title}.</item>
+        <item>Wir nehmen ein wenig weg. Zuerst {artist}.</item>
+        <item>{count} Songs ungeplugged, angefangen mit {title}.</item>
+    </string-array>
+    <string-array name="dj_intro_album">
+        <item>Ein ganzes Album: {album} von {artist}, von vorn.</item>
+        <item>Hören wir {album}. {count} Songs, in Reihenfolge.</item>
+        <item>{album}, von {artist}. Vom Anfang an.</item>
+    </string-array>
+    <string-array name="dj_intro_favorites">
+        <item>Das sind deine meistgehörten: {count} Songs, angefangen mit {title}.</item>
+        <item>Ein paar, zu denen du oft zurückkommst. Zuerst {title} von {artist}.</item>
+        <item>Deine Favoriten eine Weile, angefangen mit {title}.</item>
+    </string-array>
+    <string-array name="dj_intro_rediscover">
+        <item>Lange nicht mehr gehört. Zuerst {title} von {artist}.</item>
+        <item>Holen wir alte Favoriten hervor, angefangen mit {title}.</item>
+        <item>Songs, die du früher oft gehört hast und seit einer Weile nicht mehr. Zuerst {artist}.</item>
+    </string-array>
+    <string-array name="dj_intro_fresh">
+        <item>Neues in deiner Bibliothek: {count} Songs, angefangen mit {title}.</item>
+        <item>Die letzten Ergänzungen, angefangen mit {title} von {artist}.</item>
+        <item>Kürzlich Hinzugefügtes. Zuerst {title}.</item>
+    </string-array>
+    <string-array name="dj_note_year">
+        <item>Das ist {title} von {artist}, aus {year}.</item>
+        <item>{title}, {artist}, {year}.</item>
+    </string-array>
+    <string-array name="dj_note_album">
+        <item>Das ist {title}, vom Album {album}.</item>
+        <item>{title}, von {album}.</item>
+    </string-array>
+    <string-array name="dj_note_plain">
+        <item>Das ist {title} von {artist}.</item>
+        <item>{title}, von {artist}.</item>
+    </string-array>
+    <string-array name="dj_signoff">
+        <item>Ich überlasse dir die Musik. Bis zum nächsten Mal.</item>
+        <item>Das war’s von mir. Viel Spaß beim Rest.</item>
+        <item>Ich trete zurück und lasse die Musik spielen.</item>
+    </string-array>
+        <string-array name="dj_intro_discover"><item>Etwas Neues für dich, nah an dem, was du magst: {count} Songs, angefangen mit {title}.</item><item>Das hast du noch nicht gehört, angefangen mit {title} von {artist}.</item><item>Neu für dich und nah an deinen Vorlieben. Zuerst {title}.</item></string-array>
+        <string-array name="dj_moment_morning"><item>heute Morgen</item></string-array>
+        <string-array name="dj_moment_afternoon"><item>heute Nachmittag</item></string-array>
+        <string-array name="dj_moment_evening"><item>heute Abend</item></string-array>
+        <string-array name="dj_moment_night"><item>heute Nacht</item></string-array>
+        <string-array name="dj_moment_weekend"><item>am Wochenende, {moment}</item></string-array>
+        <string-array name="dj_motive_moment"><item>Es ist {moment}, also habe ich etwas Passendes gewählt.</item><item>Weil gerade {moment} ist, schien mir das richtig.</item></string-array>
+        <string-array name="dj_motive_top"><item>Du hörst in letzter Zeit viel {artist}, also bleibe ich dabei.</item><item>In letzter Zeit läuft bei dir {artist} in Dauerschleife, also bin ich dem gefolgt.</item></string-array>
+</resources>

@@ -6083,7 +6083,7 @@ class PlaybackService : MediaLibraryService() {
                     // reading the position. This loop is the only place in the app
                     // that ticks exactly while audio is coming out, which is what
                     // makes it the right place to count from.
-                    player.currentMediaItem?.toSong()?.let {
+                    player.currentMediaItem?.toSong()?.takeUnless { it.isDjClip }?.let {
                         ListeningRecorder.onSample(it, player.duration)
                     }
                     // Only two primitive preference values. Queue JSON is
@@ -7080,6 +7080,8 @@ class PlaybackService : MediaLibraryService() {
     private fun pushDiscordPresence(exoPlayer: ExoPlayer) {
         val rpc = discordRpc ?: return
         val song = exoPlayer.currentMediaItem?.toSong() ?: return
+        // The DJ's lines are not something the listener is playing: presence stays on the last song.
+        if (song.isDjClip) return
         // Read on the main thread, before the push is handed to IO: by the time
         // a coroutine gets to run, the queue may have moved on, and ExoPlayer's
         // state is only legal to read from the thread it was built on.
@@ -7143,6 +7145,7 @@ class PlaybackService : MediaLibraryService() {
      * stays a no-op whenever ListenBrainz is switched off.
      */
     private fun submitListenBrainzFinished(song: Song, startMs: Long, durationMs: Long?) {
+        if (song.isDjClip) return
         val lbEnabled = AppSettings.scrobblingAvailable && AppSettings.listenBrainzEnabled.value
         val lbToken = AppSettings.listenBrainzToken.value
         if (!lbEnabled || lbToken.isBlank()) return
@@ -7154,6 +7157,7 @@ class PlaybackService : MediaLibraryService() {
 
     /** Sends a ListenBrainz "now playing" update for the current track. */
     private fun submitListenBrainzPlayingNow(song: Song, positionMs: Long, durationMs: Long?) {
+        if (song.isDjClip) return
         val lbEnabled = AppSettings.scrobblingAvailable && AppSettings.listenBrainzEnabled.value
         val lbToken = AppSettings.listenBrainzToken.value
         if (!lbEnabled || lbToken.isBlank()) return

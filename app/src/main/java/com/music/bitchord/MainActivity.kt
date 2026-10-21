@@ -225,6 +225,9 @@ import com.music.bitchord.download.Downloads
 import com.music.bitchord.ui.components.BrowseActionsSheet
 import com.music.bitchord.ui.components.BrowseTarget
 import com.music.bitchord.ui.components.ConfirmationAlert
+import com.music.bitchord.ui.components.DjSheet
+import dev.auden.dj.DjSession
+import com.music.bitchord.ui.player.DjNowPlayingScreen
 import com.music.bitchord.ui.components.DownloadManagerSheet
 import com.music.bitchord.ui.components.PlaylistPickerSheet
 import com.music.bitchord.ui.components.ReorderPlaylistPage
@@ -728,6 +731,18 @@ private fun BitChordApp(
         dark = !darkTheme && !showNowPlaying && route != AppRoute.Replay && replayStory == null && !onboardingVisible,
     )
 
+    var showDj by remember { mutableStateOf(false) }
+    // Set when the listener starts the DJ from Home: the player opens as soon as it is on.
+    var djOpenPlayerWhenReady by remember { mutableStateOf(false) }
+    val djStarted by DjSession.state.collectAsStateWithLifecycle()
+    LaunchedEffect(djStarted.running, djStarted.problem) {
+        if (djStarted.running && djOpenPlayerWhenReady) {
+            showNowPlaying = true
+            djOpenPlayerWhenReady = false
+        } else if (djStarted.problem != null) {
+            djOpenPlayerWhenReady = false
+        }
+    }
     val homeState by viewModel.homeComposed.collectAsStateWithLifecycle()
     val localHomeTitles by viewModel.localShelfTitles.collectAsStateWithLifecycle()
     val homeLoadingMore by viewModel.homeLoadingMore.collectAsStateWithLifecycle()
@@ -2358,7 +2373,22 @@ private fun BitChordApp(
                         it.memberId == playback.startedBy
                     }?.displayName?.takeIf(String::isNotBlank)
             }
-        NowPlayingScreen(
+        // The DJ's own player while it speaks: its line, its waveform, and the way to ask for more.
+        val djRunning by DjSession.state.collectAsStateWithLifecycle()
+        if (displayedSong.isDjClip) {
+            val clip = DjSession.clipOf(displayedSong.videoId)
+            DjNowPlayingScreen(
+                words = clip?.text,
+                theme = djRunning.theme,
+                envelope = clip?.envelope ?: FloatArray(0),
+                isPlaying = player.isPlaying,
+                position = player.position,
+                durationMs = player.durationMs,
+                onPlayPause = { togglePlayPause() },
+                onSkip = { controller?.seekToNextMediaItem() },
+                onAsk = { showDj = true },
+            )
+        } else NowPlayingScreen(
             song = displayedSong,
             playedBy = playedBy,
             accountName = account?.name,
@@ -2417,7 +2447,7 @@ private fun BitChordApp(
                     )
                 }
             },
-            queue = player.queue,
+            queue = if (djRunning.running) emptyList() else player.queue,
             queueIndex = player.queueIndex,
             hasPrevious = player.hasPrevious,
             hasNext = player.hasNext,
@@ -2469,6 +2499,8 @@ private fun BitChordApp(
             // The enriched copy, not player.song — otherwise the menu
             // hides the album and artist rows even once their browse
             // ids have been resolved.
+            // The DJ's button only exists while the DJ is on, where it takes the queue's place.
+            onOpenDj = if (djRunning.running) ({ showDj = true }) else null,
             onOpenMenu = {
                 menuFromPlayer = true
                 songMenuOrigin = null
@@ -3184,6 +3216,16 @@ private fun BitChordApp(
                                 },
                                 onItemLongPress = onShelfLongPress,
                                 onRetry = viewModel::loadHome,
+                                onOpenDj = {
+                                    // The DJ opens straight into its player, on a surprise: no menu to get past.
+                                    if (DjSession.state.value.running) {
+                                        showNowPlaying = true
+                                    } else {
+                                        djOpenPlayerWhenReady = true
+                                        showQueueNotice(context.getString(R.string.dj_starting))
+                                        DjSession.start(context, "")
+                                    }
+                                },
                                 refreshing = MainViewModel.Feed.HOME in refreshing,
                                 onRefresh = { viewModel.refresh(MainViewModel.Feed.HOME) },
                                 pullState = homePull,
@@ -4544,6 +4586,18 @@ private fun BitChordApp(
                 containerColor = MaterialTheme.colorScheme.background,
             ) {
                 DownloadManagerSheet(onDismiss = closeDownloadManager)
+            }
+        }
+
+        // ---- The DJ ----
+        if (showDj) {
+            val closeDj = { showDj = false }
+            BackHandler(onBack = closeDj)
+            ModalBottomSheet(
+                onDismissRequest = closeDj,
+                containerColor = MaterialTheme.colorScheme.background,
+            ) {
+                DjSheet(onDismiss = closeDj)
             }
         }
 

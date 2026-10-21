@@ -39,6 +39,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -572,6 +573,8 @@ internal fun PlayerActionRow(
     onListenTogether: () -> Unit,
     /** Opens [ListenTogetherMembersSheet] rather than settings directly. */
     onOpenListenTogetherMembers: () -> Unit,
+    /** Set while the DJ is on: its button takes the queue's place, because the DJ has no queue to open. */
+    onOpenDj: (() -> Unit)? = null,
 ) {
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         // Sized for the wider of the two capsules — the three-up one — in both
@@ -688,13 +691,23 @@ internal fun PlayerActionRow(
                 }
             }
             Box(Modifier.align(Alignment.CenterEnd)) {
-                BottomGlyph(
-                    icon = BitChordIcons.Queue,
-                    contentDescription = stringResource(Res.string.up_next),
-                    onClick = onToggleQueue,
-                    highlighted = queueOpen,
-                    haptic = if (queueOpen) Haptic.Tap else Haptic.Expand,
-                )
+                if (onOpenDj != null) {
+                    BottomGlyph(
+                        icon = Icons.Rounded.GraphicEq,
+                        contentDescription = stringResource(Res.string.dj_ask),
+                        onClick = onOpenDj,
+                        highlighted = false,
+                        haptic = Haptic.Expand,
+                    )
+                } else {
+                    BottomGlyph(
+                        icon = BitChordIcons.Queue,
+                        contentDescription = stringResource(Res.string.up_next),
+                        onClick = onToggleQueue,
+                        highlighted = queueOpen,
+                        haptic = if (queueOpen) Haptic.Tap else Haptic.Expand,
+                    )
+                }
             }
         }
     }
@@ -1204,7 +1217,7 @@ private fun rememberPartyBadge(): PartyBadge {
 }
 
 @Composable
-private fun BottomGlyph(
+internal fun BottomGlyph(
     icon: ImageVector?,
     contentDescription: String,
     onClick: () -> Unit,

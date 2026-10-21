@@ -880,7 +880,12 @@ fun mediaIdIn(uri: Uri): String? = if (uri.authority == "source") {
  * starts. Built off the main thread and handed to the player back on it, which
  * is where Media3 requires the call to be made.
  */
-suspend fun MediaController.playSongs(songs: List<Song>, startIndex: Int) {
+suspend fun MediaController.playSongs(
+    songs: List<Song>,
+    startIndex: Int,
+    /** Whether the queue goes in shuffled; the DJ passes false, because its order is the point. */
+    shuffle: Boolean = QueueShuffle.enabled.value,
+) {
     if (songs.isEmpty()) return
     sendCustomCommand(
         SessionCommand(ACTION_CLEAR_BOUNDED_CONTEXT, Bundle.EMPTY),
@@ -889,7 +894,7 @@ suspend fun MediaController.playSongs(songs: List<Song>, startIndex: Int) {
     // A queue started while shuffle is on goes in shuffled rather than being
     // played out of order — see [QueueShuffle]. The track the user picked still
     // leads, so it ends up at the top instead of at [startIndex].
-    val shuffled = QueueShuffle.enabled.value
+    val shuffled = shuffle
     val items = withContext(Dispatchers.Default) {
         val songsWithIds = songs.map { song ->
             if (song.queueEntryId == null) song.copy(queueEntryId = java.util.UUID.randomUUID().toString()) else song

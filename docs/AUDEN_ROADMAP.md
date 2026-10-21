@@ -229,6 +229,8 @@ Después de la Fase 1:
 
 ## Fase 7 — DJ con IA local ligera
 
+> **Estado:** implementada en `feat/auden-dj` (`dev/auden/dj/`): selector por temas (sin LLM), diálogos por plantillas ancladas a hechos (es/en), voz del sistema con la mejor voz instalada y *ducking* por foco de audio, y peticiones en lenguaje natural por reglas. Pendiente: BPM/energía en el selector, voz neuronal o LLM bajo demanda, plantillas fr/de/pt/it.
+
 Por capas, cada una útil por sí sola:
 
 1. **Selector (sin LLM):** puntuación por similitud (artista, álbum,

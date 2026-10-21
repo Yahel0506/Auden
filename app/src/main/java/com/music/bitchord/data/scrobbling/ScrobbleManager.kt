@@ -36,7 +36,7 @@ class ScrobbleManager(
         song: Song?,
         durationMs: Long? = null,
     ) {
-        if (song == null) return
+        if (song == null || song.isDjClip) return
         songStartedAt = System.currentTimeMillis() / 1000
         songStarted = true
         startScrobbleTimer(song, durationMs)
@@ -46,6 +46,7 @@ class ScrobbleManager(
     }
 
     fun onSongResume(song: Song) {
+        if (song.isDjClip) return
         resumeScrobbleTimer(song)
     }
 
