@@ -173,3 +173,45 @@ interface SpotifyMatchDao {
     @Query("DELETE FROM spotify_match WHERE spotifyId = :id")
     suspend fun delete(id: String)
 }
+
+/**
+ * Everything a backup carries, read whole and written back whole. Restoring is a replace, in one
+ * transaction: a library half from the file and half from the device would be worse than either.
+ */
+@Dao
+interface BackupDao {
+    @Query("SELECT * FROM track ORDER BY id") suspend fun tracks(): List<TrackEntity>
+    @Query("SELECT * FROM playlist ORDER BY createdAt") suspend fun playlists(): List<PlaylistEntity>
+    @Query("SELECT * FROM playlist_entry ORDER BY entryId") suspend fun entries(): List<PlaylistEntryEntity>
+    @Query("SELECT * FROM lyrics_variant") suspend fun lyricsVariants(): List<LyricsVariantEntity>
+    @Query("SELECT * FROM song_lyrics_pref") suspend fun lyricsPrefs(): List<SongLyricsPrefEntity>
+    @Query("SELECT * FROM spotify_match") suspend fun spotifyMatches(): List<SpotifyMatchEntity>
+
+    @Query("DELETE FROM playlist_entry") suspend fun clearEntries()
+    @Query("DELETE FROM playlist") suspend fun clearPlaylists()
+    @Query("DELETE FROM lyrics_variant") suspend fun clearLyricsVariants()
+    @Query("DELETE FROM song_lyrics_pref") suspend fun clearLyricsPrefs()
+    @Query("DELETE FROM spotify_match") suspend fun clearSpotifyMatches()
+    @Query("DELETE FROM track") suspend fun clearTracks()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putTracks(rows: List<TrackEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putPlaylists(rows: List<PlaylistEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putEntries(rows: List<PlaylistEntryEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putLyricsVariants(rows: List<LyricsVariantEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putLyricsPrefs(rows: List<SongLyricsPrefEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putSpotifyMatches(rows: List<SpotifyMatchEntity>)
+
+    @Transaction
+    suspend fun replaceAll(
+        tracks: List<TrackEntity>,
+        playlists: List<PlaylistEntity>,
+        entries: List<PlaylistEntryEntity>,
+        lyricsVariants: List<LyricsVariantEntity>,
+        lyricsPrefs: List<SongLyricsPrefEntity>,
+        spotifyMatches: List<SpotifyMatchEntity>,
+    ) {
+        clearEntries(); clearPlaylists(); clearLyricsVariants(); clearLyricsPrefs(); clearSpotifyMatches(); clearTracks()
+        putTracks(tracks); putPlaylists(playlists); putEntries(entries)
+        putLyricsVariants(lyricsVariants); putLyricsPrefs(lyricsPrefs); putSpotifyMatches(spotifyMatches)
+    }
+}

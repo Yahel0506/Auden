@@ -182,9 +182,9 @@
     <string name="replay_subtitle">I tuoi brani, artisti, album e generi più ascoltati</string>
     <string name="work_out_genres">Rileva i generi</string>
     <string name="export_data">Esporta dati</string>
-    <string name="export_data_subtitle">Impostazioni e cronologia di ascolto, in un unico file JSON</string>
+    <string name="export_data_subtitle">Impostazioni, cronologia di ascolto e libreria locale in un file JSON</string>
     <string name="import_data">Importa dati</string>
-    <string name="import_data_subtitle">Sostituisce impostazioni e cronologia su questo dispositivo</string>
+    <string name="import_data_subtitle">Sostituisce impostazioni, cronologia e libreria locale su questo dispositivo</string>
     <string name="import_backup_title">Importare un backup?</string>
     <string name="choose_file">Scegli file</string>
     <string name="top_artists">Artisti più ascoltati</string>
@@ -692,7 +692,7 @@
     <string name="replay_genres_disabled_subtitle">Il grafico dei generi del Replay resta nascosto finché questa opzione è disattivata</string>
     <string name="swipe_plays_next">Scorrere un brano lo riproduce come successivo</string>
     <string name="swipe_adds_to_queue">Quando disattivato, scorrere aggiunge il brano alla fine della coda</string>
-    <string name="import_backup_warning">Questo sostituisce le impostazioni e la cronologia di ascolto di questo dispositivo con il contenuto del file. Esporta prima i dati attuali se vuoi conservarli.</string>
+    <string name="import_backup_warning">Questo sostituisce impostazioni, cronologia di ascolto, playlist e libreria locale di questo dispositivo con il contenuto del file. Esporta prima i dati attuali se vuoi conservarli.</string>
     <string name="youtube_music_account">Account YouTube Music</string>
     <string name="tap_to_sign_in_google">Tocca per accedere con Google</string>
     <string name="export_succeeded">Impostazioni e %1$s esportati</string>

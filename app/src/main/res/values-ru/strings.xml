@@ -161,9 +161,9 @@
     <string name="replay_subtitle">Ваши любимые песни, исполнители, альбомы и жанры</string>
     <string name="work_out_genres">Определять жанры</string>
     <string name="export_data">Экспорт данных</string>
-    <string name="export_data_subtitle">Настройки и история прослушивания в одном файле JSON</string>
+    <string name="export_data_subtitle">Settings, listening history and the local library, as one JSON file</string>
     <string name="import_data">Импорт данных</string>
-    <string name="import_data_subtitle">Заменяет настройки и историю на этом устройстве</string>
+    <string name="import_data_subtitle">Replaces the settings, history and local library on this device</string>
     <string name="import_backup_title">Импортировать резервную копию?</string>
     <string name="choose_file">Выбрать файл</string>
     <string name="top_artists">Топ исполнителей</string>
@@ -669,7 +669,7 @@
     <string name="replay_genres_disabled_subtitle">Пока это отключено, график жанров в Replay остаётся скрытым</string>
     <string name="swipe_plays_next">Свайп песни ставит её следующей</string>
     <string name="swipe_adds_to_queue">Если отключено, свайп добавляет песню в конец очереди</string>
-    <string name="import_backup_warning">Это заменит настройки и историю прослушивания на этом устройстве содержимым файла. Сначала экспортируйте текущие данные, если хотите их сохранить.</string>
+    <string name="import_backup_warning">This replaces this device’s settings, listening history, playlists and local library with the contents of the file. Export the current data first if you want to keep it.</string>
     <string name="youtube_music_account">Аккаунт YouTube Music</string>
     <string name="tap_to_sign_in_google">Нажмите, чтобы войти через Google</string>
     <string name="export_succeeded">Экспортированы настройки и %1$s</string>

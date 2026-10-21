@@ -151,9 +151,9 @@
     <string name="replay_subtitle">Deine meistgehörten Songs, Künstler, Alben und Genres</string>
     <string name="work_out_genres">Genres ermitteln</string>
     <string name="export_data">Daten exportieren</string>
-    <string name="export_data_subtitle">Einstellungen und Hörverlauf als eine JSON-Datei</string>
+    <string name="export_data_subtitle">Einstellungen, Hörverlauf und lokale Bibliothek in einer JSON-Datei</string>
     <string name="import_data">Daten importieren</string>
-    <string name="import_data_subtitle">Ersetzt die Einstellungen und den Verlauf auf diesem Gerät</string>
+    <string name="import_data_subtitle">Ersetzt Einstellungen, Verlauf und lokale Bibliothek auf diesem Gerät</string>
     <string name="import_backup_title">Backup importieren?</string>
     <string name="choose_file">Datei auswählen</string>
     <string name="top_artists">Meistgehörte Künstler</string>
@@ -644,7 +644,7 @@
     <string name="replay_genres_disabled_subtitle">Das Replay-Genre-Diagramm bleibt ausgeblendet, solange dies deaktiviert ist</string>
     <string name="swipe_plays_next">Ein gewischter Song wird als Nächstes gespielt</string>
     <string name="swipe_adds_to_queue">Wenn deaktiviert, fügt Wischen den Song ans Ende der Warteschlange hinzu</string>
-    <string name="import_backup_warning">Dies ersetzt die Einstellungen und den Hörverlauf dieses Geräts durch den Inhalt der Datei. Exportiere zuerst die aktuellen Daten, wenn du sie behalten möchtest.</string>
+    <string name="import_backup_warning">Dadurch werden Einstellungen, Hörverlauf, Playlists und lokale Bibliothek dieses Geräts durch den Inhalt der Datei ersetzt. Exportiere zuerst die aktuellen Daten, wenn du sie behalten möchtest.</string>
     <string name="youtube_music_account">YouTube-Music-Konto</string>
     <string name="tap_to_sign_in_google">Tippen, um sich mit Google anzumelden</string>
     <string name="export_succeeded">Einstellungen und %1$s exportiert</string>

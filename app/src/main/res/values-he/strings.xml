@@ -153,9 +153,9 @@
     <string name="replay_subtitle">השירים, האמנים, האלבומים והז\'אנרים המובילים שלך</string>
     <string name="work_out_genres">חישוב ז\'אנרים</string>
     <string name="export_data">ייצוא נתונים</string>
-    <string name="export_data_subtitle">הגדרות והיסטוריית האזנה, כקובץ JSON אחד</string>
+    <string name="export_data_subtitle">Settings, listening history and the local library, as one JSON file</string>
     <string name="import_data">ייבוא נתונים</string>
-    <string name="import_data_subtitle">מחליף את ההגדרות וההיסטוריה במכשיר זה</string>
+    <string name="import_data_subtitle">Replaces the settings, history and local library on this device</string>
     <string name="import_backup_title">לייבא גיבוי?</string>
     <string name="choose_file">בחירת קובץ</string>
     <string name="top_artists">האמנים המובילים</string>
@@ -596,7 +596,7 @@
     <string name="replay_genres_disabled_subtitle">תרשים הז\'אנרים של Replay נשאר מוסתר כל עוד זה כבוי</string>
     <string name="swipe_plays_next">החלקה של שיר מנגנת אותו בהמשך</string>
     <string name="swipe_adds_to_queue">כאשר מושבת, החלקה מוסיפה את השיר לסוף התור</string>
-    <string name="import_backup_warning">זה מחליף את ההגדרות והיסטוריית ההאזנה של מכשיר זה בתוכן הקובץ. ייצא את הנתונים הנוכחיים תחילה אם תרצה לשמור אותם.</string>
+    <string name="import_backup_warning">This replaces this device’s settings, listening history, playlists and local library with the contents of the file. Export the current data first if you want to keep it.</string>
     <string name="youtube_music_account">חשבון YouTube Music</string>
     <string name="tap_to_sign_in_google">הקש כדי להתחבר עם גוגל</string>
     <string name="export_succeeded">הגדרות ו-%1$s יוצאו בהצלחה</string>

@@ -152,9 +152,9 @@
     <string name="replay_subtitle">Vos meilleures chansons, artistes, albums et genres</string>
     <string name="work_out_genres">Déterminer les genres</string>
     <string name="export_data">Exporter les données</string>
-    <string name="export_data_subtitle">Paramètres et historique d\'écoute, en un fichier JSON</string>
+    <string name="export_data_subtitle">Réglages, historique d’écoute et bibliothèque locale dans un fichier JSON</string>
     <string name="import_data">Importer des données</string>
-    <string name="import_data_subtitle">Remplace les paramètres et l\'historique sur cet appareil</string>
+    <string name="import_data_subtitle">Remplace les réglages, l’historique et la bibliothèque locale de cet appareil</string>
     <string name="import_backup_title">Importer une sauvegarde ?</string>
     <string name="choose_file">Choisir un fichier</string>
     <string name="top_artists">Meilleurs artistes</string>
@@ -645,7 +645,7 @@
     <string name="replay_genres_disabled_subtitle">Le graphique des genres de Replay reste masqué tant que cette option est désactivée</string>
     <string name="swipe_plays_next">Glisser une chanson la fait jouer ensuite</string>
     <string name="swipe_adds_to_queue">Lorsque c\'est désactivé, glisser ajoute la chanson à la fin de la file d\'attente</string>
-    <string name="import_backup_warning">Cela remplace les paramètres et l\'historique d\'écoute de cet appareil par le contenu du fichier. Exportez d\'abord les données actuelles si vous voulez les conserver.</string>
+    <string name="import_backup_warning">Cela remplace les réglages, l’historique d’écoute, les playlists et la bibliothèque locale de cet appareil par le contenu du fichier. Exportez d’abord les données actuelles si vous voulez les garder.</string>
     <string name="youtube_music_account">Compte YouTube Music</string>
     <string name="tap_to_sign_in_google">Appuyez pour vous connecter avec Google</string>
     <string name="export_succeeded">Paramètres et %1$s exportés</string>

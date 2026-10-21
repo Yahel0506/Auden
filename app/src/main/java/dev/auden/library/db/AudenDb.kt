@@ -32,6 +32,7 @@ abstract class AudenDb : RoomDatabase() {
     abstract fun playlistWrites(): PlaylistWriteDao
     abstract fun lyrics(): LyricsDao
     abstract fun spotifyMatches(): SpotifyMatchDao
+    abstract fun backup(): BackupDao
 
     companion object {
         @Volatile private var instance: AudenDb? = null

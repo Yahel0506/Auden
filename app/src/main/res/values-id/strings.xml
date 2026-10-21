@@ -146,9 +146,9 @@
     <string name="replay_subtitle">Lagu, artis, album, dan genre teratas Anda</string>
     <string name="work_out_genres">Hitung genre</string>
     <string name="export_data">Ekspor data</string>
-    <string name="export_data_subtitle">Pengaturan dan riwayat mendengarkan, sebagai satu file JSON</string>
+    <string name="export_data_subtitle">Settings, listening history and the local library, as one JSON file</string>
     <string name="import_data">Impor data</string>
-    <string name="import_data_subtitle">Mengganti pengaturan dan riwayat di perangkat ini</string>
+    <string name="import_data_subtitle">Replaces the settings, history and local library on this device</string>
     <string name="import_backup_title">Impor cadangan?</string>
     <string name="choose_file">Pilih file</string>
     <string name="top_artists">Artis teratas</string>
@@ -625,7 +625,7 @@
     <string name="replay_genres_disabled_subtitle">Grafik genre Replay tetap tersembunyi selama ini nonaktif</string>
     <string name="swipe_plays_next">Menggeser lagu memutarnya berikutnya</string>
     <string name="swipe_adds_to_queue">Saat dinonaktifkan, menggeser menambahkan lagu ke akhir antrean</string>
-    <string name="import_backup_warning">Ini akan mengganti pengaturan dan riwayat mendengarkan perangkat ini dengan isi file tersebut. Ekspor data saat ini terlebih dahulu jika ingin menyimpannya.</string>
+    <string name="import_backup_warning">This replaces this device’s settings, listening history, playlists and local library with the contents of the file. Export the current data first if you want to keep it.</string>
     <string name="youtube_music_account">Akun YouTube Music</string>
     <string name="tap_to_sign_in_google">Ketuk untuk masuk dengan Google</string>
     <string name="export_succeeded">Berhasil mengekspor pengaturan dan %1$s</string>

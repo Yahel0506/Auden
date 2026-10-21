@@ -5,6 +5,14 @@ import android.net.Uri
 import com.music.bitchord.BuildConfig
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.SearchHistory
+import dev.auden.library.LocalPlaylists
+import dev.auden.library.db.AudenDb
+import dev.auden.library.db.LyricsVariantEntity
+import dev.auden.library.db.PlaylistEntity
+import dev.auden.library.db.PlaylistEntryEntity
+import dev.auden.library.db.SongLyricsPrefEntity
+import dev.auden.library.db.SpotifyMatchEntity
+import dev.auden.library.db.TrackEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -14,7 +22,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
- * The whole of what this app knows about you, as one JSON file you own.
+ * The whole of what Auden knows about you, as one JSON file you own.
  *
  * Two errands, and they are the same errand: moving to a new phone, and being
  * able to see what is being kept. Everything Replay counts lives only on this
@@ -23,10 +31,17 @@ import java.time.format.DateTimeFormatter
  *
  * ## What is in it
  *
- * Every preference except credentials (see [AppSettings.exportPrefs]), and every
- * month of listening. Not the audio cache, the downloads or the artwork: those
- * are megabytes that re-fetch themselves, and a backup that is mostly cache is
- * one nobody keeps.
+ * Every preference except credentials (see [AppSettings.exportPrefs]), every
+ * month of listening, and the local library: the songs it knows (with how they
+ * were identified and matched), the playlists and their order, the lyrics kept
+ * for each song with the chosen provider and timing, and the remembered Spotify
+ * matches. Not the audio cache, the downloaded files or the artwork: those are
+ * megabytes that re-fetch themselves, and a backup that is mostly cache is one
+ * nobody keeps. Rows that point at a file keep their pointer; the library
+ * indexer drops those that no longer resolve on the device it is restored to.
+ *
+ * Files written by BitChord (schema 1, no library) still import: their
+ * settings and listening are restored and the library is left alone.
  *
  * ## Typed values rather than a JSON object
  *
@@ -48,7 +63,7 @@ object Backup {
 
     /** A suggested filename, dated so successive exports don't collide. */
     fun suggestedName(): String =
-        "bitchord-backup-${DateTimeFormatter.ofPattern("yyyy-MM-dd").format(
+        "auden-backup-${DateTimeFormatter.ofPattern("yyyy-MM-dd").format(
             Instant.now().atZone(ZoneId.systemDefault()),
         )}.json"
 
@@ -63,6 +78,15 @@ object Backup {
     suspend fun exportTo(context: Context, target: Uri): Result<Int> = withContext(Dispatchers.IO) {
         runCatching {
             val buckets = ListeningStats.exportAll()
+            val db = AudenDb.get(context).backup()
+            val library = LibraryData(
+                tracks = db.tracks(),
+                playlists = db.playlists(),
+                entries = db.entries(),
+                lyricsVariants = db.lyricsVariants(),
+                lyricsPrefs = db.lyricsPrefs(),
+                spotifyMatches = db.spotifyMatches(),
+            )
             val file = BackupFile(
                 versionName = BuildConfig.VERSION_NAME,
                 exportedAt = Instant.now().toString(),
@@ -70,6 +94,7 @@ object Backup {
                     PrefValue.of(value)?.let { key to it }
                 }.toMap(),
                 listening = buckets,
+                library = library,
             )
             val text = json.encodeToString(BackupFile.serializer(), file)
             context.contentResolver.openOutputStream(target, "wt")
@@ -93,12 +118,19 @@ object Backup {
                 ?.use { it.readBytes().decodeToString() }
                 ?: error("Couldn't open that file")
             val file = runCatching { json.decodeFromString(BackupFile.serializer(), text) }
-                .getOrElse { error("That doesn't look like a BitChord backup") }
-            require(file.app == APP_TAG) { "That backup is from another app" }
+                .getOrElse { error("That doesn't look like an Auden backup") }
+            require(file.app == APP_TAG || file.app == LEGACY_APP_TAG) { "That backup is from another app" }
             require(file.version <= SCHEMA_VERSION) {
-                "That backup was written by a newer version of BitChord"
+                "That backup was written by a newer version of Auden"
             }
 
+            // The library goes first and as one transaction: if it is refused nothing else has changed.
+            file.library?.let { lib ->
+                AudenDb.get(context).backup().replaceAll(
+                    lib.tracks, lib.playlists, lib.entries, lib.lyricsVariants, lib.lyricsPrefs, lib.spotifyMatches,
+                )
+                LocalPlaylists.reload()
+            }
             ListeningStats.importAll(file.listening)
             AppSettings.importPrefs(file.settings.mapValues { it.value.decoded() })
             // Shares AppSettings' preference file, so it has already been
@@ -109,6 +141,8 @@ object Backup {
                 settings = file.settings.size,
                 from = file.versionName,
                 at = file.exportedAt,
+                playlists = file.library?.playlists?.size ?: 0,
+                songs = file.library?.tracks?.size ?: 0,
             )
         }
     }
@@ -119,16 +153,21 @@ object Backup {
         val settings: Int,
         val from: String,
         val at: String,
+        val playlists: Int = 0,
+        val songs: Int = 0,
     )
 
-    private const val APP_TAG = "bitchord"
+    private const val APP_TAG = "auden"
+
+    /** What BitChord wrote in the same field; its files still import. */
+    private const val LEGACY_APP_TAG = "bitchord"
 
     /**
      * Bump when the shape below stops being readable by an older build. A file
      * from a *newer* schema is refused rather than partially read; one from an
      * older schema is read as-is, since every field has a default.
      */
-    private const val SCHEMA_VERSION = 1
+    private const val SCHEMA_VERSION = 2
 
     @Serializable
     data class BackupFile(
@@ -139,6 +178,19 @@ object Backup {
         val exportedAt: String = "",
         val settings: Map<String, PrefValue> = emptyMap(),
         val listening: List<StoredBucket> = emptyList(),
+        /** Null in a file from before the local library existed; the import then leaves the library alone. */
+        val library: LibraryData? = null,
+    )
+
+    /** Auden's own database, row for row. Track ids are kept so playlist entries still point at their songs. */
+    @Serializable
+    data class LibraryData(
+        val tracks: List<TrackEntity> = emptyList(),
+        val playlists: List<PlaylistEntity> = emptyList(),
+        val entries: List<PlaylistEntryEntity> = emptyList(),
+        val lyricsVariants: List<LyricsVariantEntity> = emptyList(),
+        val lyricsPrefs: List<SongLyricsPrefEntity> = emptyList(),
+        val spotifyMatches: List<SpotifyMatchEntity> = emptyList(),
     )
 
     /** One preference, with the type it has to be restored as. */

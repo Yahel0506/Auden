@@ -146,9 +146,9 @@
     <string name="replay_subtitle">你的熱門歌曲、藝人、專輯和流派</string>
     <string name="work_out_genres">推算流派</string>
     <string name="export_data">匯出資料</string>
-    <string name="export_data_subtitle">將設定和收聽記錄匯出為一個 JSON 檔案</string>
+    <string name="export_data_subtitle">Settings, listening history and the local library, as one JSON file</string>
     <string name="import_data">匯入資料</string>
-    <string name="import_data_subtitle">替換此裝置上的設定和記錄</string>
+    <string name="import_data_subtitle">Replaces the settings, history and local library on this device</string>
     <string name="import_backup_title">要匯入備份嗎？</string>
     <string name="choose_file">選擇檔案</string>
     <string name="top_artists">熱門藝人</string>
@@ -625,7 +625,7 @@
     <string name="replay_genres_disabled_subtitle">關閉此項時，Replay 的流派圖表將保持隱藏</string>
     <string name="swipe_plays_next">滑動歌曲後將其設為下一首播放</string>
     <string name="swipe_adds_to_queue">關閉後，滑動會將歌曲新增到播放佇列末尾</string>
-    <string name="import_backup_warning">這將用檔案中的內容替換此裝置上的設定和收聽記錄。如果想保留當前資料，請先將其匯出。</string>
+    <string name="import_backup_warning">This replaces this device’s settings, listening history, playlists and local library with the contents of the file. Export the current data first if you want to keep it.</string>
     <string name="youtube_music_account">YouTube Music 賬號</string>
     <string name="tap_to_sign_in_google">點按以使用 Google 登入</string>
     <string name="export_succeeded">已匯出設定和%1$s</string>

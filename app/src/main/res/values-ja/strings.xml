@@ -146,9 +146,9 @@
     <string name="replay_subtitle">よく聴いた曲、アーティスト、アルバム、ジャンル</string>
     <string name="work_out_genres">ジャンルを推定</string>
     <string name="export_data">データをエクスポート</string>
-    <string name="export_data_subtitle">設定と再生履歴を1つのJSONファイルとして保存</string>
+    <string name="export_data_subtitle">Settings, listening history and the local library, as one JSON file</string>
     <string name="import_data">データをインポート</string>
-    <string name="import_data_subtitle">このデバイスの設定と履歴を置き換えます</string>
+    <string name="import_data_subtitle">Replaces the settings, history and local library on this device</string>
     <string name="import_backup_title">バックアップをインポートしますか？</string>
     <string name="choose_file">ファイルを選択</string>
     <string name="top_artists">よく聴いたアーティスト</string>
@@ -625,7 +625,7 @@
     <string name="replay_genres_disabled_subtitle">オフの間はReplayのジャンルグラフが表示されません</string>
     <string name="swipe_plays_next">曲をスワイプすると次に再生します</string>
     <string name="swipe_adds_to_queue">オフにすると、スワイプした曲は再生キューの末尾に追加されます</string>
-    <string name="import_backup_warning">これによりこのデバイスの設定と再生履歴がファイルの内容で置き換えられます。保持したい場合は先に現在のデータをエクスポートしてください。</string>
+    <string name="import_backup_warning">This replaces this device’s settings, listening history, playlists and local library with the contents of the file. Export the current data first if you want to keep it.</string>
     <string name="youtube_music_account">YouTube Musicアカウント</string>
     <string name="tap_to_sign_in_google">タップしてGoogleでログイン</string>
     <string name="export_succeeded">設定と%1$sをエクスポートしました</string>

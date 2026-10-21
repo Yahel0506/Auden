@@ -4,6 +4,7 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
 /** Where a [TrackEntity] first came from. */
 object TrackOrigin {
@@ -30,6 +31,7 @@ object TrackOrigin {
         Index("path"),
     ],
 )
+@Serializable
 data class TrackEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val videoId: String? = null,
@@ -88,6 +90,7 @@ object IdentSource {
 }
 
 @Entity(tableName = "playlist")
+@Serializable
 data class PlaylistEntity(
     /** Same id the old `LocalPlaylistStore` used, so existing pages keep resolving. */
     @PrimaryKey val id: String,
@@ -111,6 +114,7 @@ data class PlaylistEntity(
     ],
     indices = [Index("playlistId", "position"), Index("trackId")],
 )
+@Serializable
 data class PlaylistEntryEntity(
     @PrimaryKey(autoGenerate = true) val entryId: Long = 0,
     val playlistId: String,
@@ -126,6 +130,7 @@ data class PlaylistEntryEntity(
  * the lyrics the listener chose to download.
  */
 @Entity(tableName = "lyrics_variant", primaryKeys = ["songKey", "provider"])
+@Serializable
 data class LyricsVariantEntity(
     val songKey: String,
     /** A [com.music.bitchord.data.lyrics.LyricsSource] name. */
@@ -141,6 +146,7 @@ data class LyricsVariantEntity(
  * far its timing is off. Either may be unset.
  */
 @Entity(tableName = "song_lyrics_pref")
+@Serializable
 data class SongLyricsPrefEntity(
     @PrimaryKey val songKey: String,
     val activeProvider: String? = null,
@@ -154,6 +160,7 @@ data class SongLyricsPrefEntity(
     foreignKeys = [ForeignKey(TrackEntity::class, parentColumns = ["id"], childColumns = ["trackId"], onDelete = ForeignKey.CASCADE)],
     indices = [Index("trackId"), Index("startedAt")],
 )
+@Serializable
 data class PlayEventEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val trackId: Long,
@@ -167,6 +174,7 @@ data class PlayEventEntity(
  * and so a correction made by hand is never undone by a later automatic search.
  */
 @Entity(tableName = "spotify_match")
+@Serializable
 data class SpotifyMatchEntity(
     @PrimaryKey val spotifyId: String,
     /** [SpotifyMatchStatus]. */

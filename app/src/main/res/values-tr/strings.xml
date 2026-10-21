@@ -164,9 +164,9 @@
     <string name="replay_subtitle">En çok dinlediğin şarkılar, sanatçılar, albümler ve türler</string>
     <string name="work_out_genres">Türleri belirle</string>
     <string name="export_data">Verileri dışa aktar</string>
-    <string name="export_data_subtitle">Ayarlar ve dinleme geçmişi, tek bir JSON dosyası olarak</string>
+    <string name="export_data_subtitle">Settings, listening history and the local library, as one JSON file</string>
     <string name="import_data">Verileri içe aktar</string>
-    <string name="import_data_subtitle">Bu cihazdaki ayarları ve geçmişi değiştirir</string>
+    <string name="import_data_subtitle">Replaces the settings, history and local library on this device</string>
     <string name="import_backup_title">Bir yedek içe aktarılsın mı?</string>
     <string name="choose_file">Dosya seç</string>
     <string name="top_artists">En çok dinlenen sanatçılar</string>
@@ -674,7 +674,7 @@
     <string name="replay_genres_disabled_subtitle">Bu kapalıyken Replay tür grafiği gizli kalır</string>
     <string name="swipe_plays_next">Bir şarkıyı kaydırmak onu sonraki olarak çalar</string>
     <string name="swipe_adds_to_queue">Kapalıyken kaydırmak şarkıyı sıranın sonuna ekler</string>
-    <string name="import_backup_warning">Bu, dosyanın içeriğiyle bu cihazın ayarlarını ve dinleme geçmişini değiştirir. Korumak istiyorsan önce mevcut verileri dışa aktar.</string>
+    <string name="import_backup_warning">This replaces this device’s settings, listening history, playlists and local library with the contents of the file. Export the current data first if you want to keep it.</string>
     <string name="youtube_music_account">YouTube Music hesabı</string>
     <string name="tap_to_sign_in_google">Google ile giriş yapmak için dokun</string>
     <string name="export_succeeded">Ayarlar ve %1$s dışa aktarıldı</string>

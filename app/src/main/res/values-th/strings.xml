@@ -158,9 +158,9 @@
     <string name="replay_subtitle">เพลง ศิลปิน อัลบั้ม และแนวเพลงยอดนิยมของคุณ</string>
     <string name="work_out_genres">คำนวณแนวเพลง</string>
     <string name="export_data">ส่งออกข้อมูล</string>
-    <string name="export_data_subtitle">การตั้งค่าและประวัติการฟัง เป็นไฟล์ JSON เดียว</string>
+    <string name="export_data_subtitle">Settings, listening history and the local library, as one JSON file</string>
     <string name="import_data">นำเข้าข้อมูล</string>
-    <string name="import_data_subtitle">แทนที่การตั้งค่าและประวัติในอุปกรณ์นี้</string>
+    <string name="import_data_subtitle">Replaces the settings, history and local library on this device</string>
     <string name="import_backup_title">นำเข้าข้อมูลสำรองหรือไม่</string>
     <string name="choose_file">เลือกไฟล์</string>
     <string name="top_artists">ศิลปินยอดนิยม</string>
@@ -654,7 +654,7 @@
     <string name="replay_genres_disabled_subtitle">กราฟแนวเพลงใน Replay จะซ่อนอยู่ตราบใดที่ปิดอยู่</string>
     <string name="swipe_plays_next">การปัดเพลงจะเล่นเพลงนั้นต่อไป</string>
     <string name="swipe_adds_to_queue">เมื่อปิด การปัดจะเพิ่มเพลงไปที่ท้ายคิวแทน</string>
-    <string name="import_backup_warning">การดำเนินการนี้จะแทนที่การตั้งค่าและประวัติการฟังของอุปกรณ์นี้ด้วยเนื้อหาในไฟล์ ส่งออกข้อมูลปัจจุบันก่อนหากต้องการเก็บไว้</string>
+    <string name="import_backup_warning">This replaces this device’s settings, listening history, playlists and local library with the contents of the file. Export the current data first if you want to keep it.</string>
     <string name="youtube_music_account">บัญชี YouTube Music</string>
     <string name="tap_to_sign_in_google">แตะเพื่อลงชื่อเข้าใช้ด้วย Google</string>
     <string name="export_succeeded">ส่งออกการตั้งค่าและ %1$s แล้ว</string>
