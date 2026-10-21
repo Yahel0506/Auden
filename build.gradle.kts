@@ -63,7 +63,7 @@ extra["bitchordVersionName"] = "1.8.1"
  * the phone compares the watch's installed APK with the one it carries, so a
  * beta watch app shows "Update available" as soon as the phone has the release.
  */
-extra["bitchordBetaSuffix"] = "beta2"
+extra["bitchordBetaSuffix"] = ""
 
 plugins {
     id("com.android.application") version "8.10.1" apply false
