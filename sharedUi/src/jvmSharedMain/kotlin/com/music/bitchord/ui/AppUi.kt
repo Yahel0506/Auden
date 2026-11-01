@@ -2,8 +2,8 @@ package com.music.bitchord.ui
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
+import com.music.bitchord.data.canvas.CanvasArtwork
 import com.music.bitchord.data.settings.LibrarySort
-import com.music.bitchord.data.settings.LibraryViewType
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -16,11 +16,6 @@ import kotlinx.coroutines.flow.StateFlow
 interface AppUiHost {
     /** A swipe on a track row plays it next rather than adding it to the end of the queue. */
     val swipeToPlayNext: StateFlow<Boolean>
-
-    /** Home's Recents shelf as a paged list of rows or as a row of cards. */
-    val homeRecentsViewType: StateFlow<LibraryViewType>
-
-    fun setHomeRecentsViewType(value: LibraryViewType)
 
     /** Playlist browse ids pinned to the front of the Library's Playlists shelf, in pin order. */
     val pinnedPlaylists: StateFlow<List<String>>
@@ -35,6 +30,19 @@ interface AppUiHost {
     /** Whether [song] is on this device, by id or because a file already is it. */
     @Composable
     fun isDownloaded(song: com.music.bitchord.data.model.Song): Boolean = song.videoId in downloadedIds()
+
+    /**
+     * A release's motion cover, for Home's Top Picks — the same lookup the
+     * album page makes. Null is the normal answer, and the only one where the
+     * user has animated artwork off or the platform has no lookup.
+     */
+    suspend fun releaseMotion(album: String, artist: String): CanvasArtwork? = null
+
+    /**
+     * Apple Music's looping clip of the YouTube artist [browseId], billed as
+     * [artistName], for Home's Top Picks. Null as for [releaseMotion].
+     */
+    suspend fun artistMotion(browseId: String, artistName: String): CanvasArtwork? = null
 }
 
 object AppUi {

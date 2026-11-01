@@ -83,7 +83,15 @@ object LocalGroups {
 
     /** What kind of page [browseId] is, or null if it isn't a grouping. */
     fun typeOf(browseId: String): BrowseType? =
-        parse(browseId)?.let { if (it.kind == ALBUM) BrowseType.ALBUM else BrowseType.OTHER }
+        parse(browseId)?.let {
+            when (it.kind) {
+                ALBUM -> BrowseType.ALBUM
+                // A directory is a list somebody put together by hand, which is
+                // what a playlist is too — and it plays like one.
+                FOLDER -> BrowseType.PLAYLIST
+                else -> BrowseType.OTHER
+            }
+        }
 
     fun isArtist(browseId: String?): Boolean = parse(browseId)?.kind == ARTIST
 
@@ -152,14 +160,7 @@ object LocalGroups {
                 // and there is no row to draw for "no album" — those are the
                 // Songs tab's and nothing else's.
                 if (name == null || name.lowercase(Locale.ROOT) in claimed) return@mapNotNull null
-                LocalGroup(
-                    browseId = albumPageId(folderId, name),
-                    title = name,
-                    subtitle = group.firstOrNull()?.artist.orEmpty(),
-                    thumbnailUrl = group.firstNotNullOfOrNull { it.thumbnailUrl },
-                    type = BrowseType.ALBUM,
-                    songs = group.sortedForAlbum(),
-                )
+                album(folderId, name, group)
             }
         return (asked + derived).sortedWith(
             compareByDescending<LocalGroup> { it.downloadId != null }
@@ -203,25 +204,88 @@ object LocalGroups {
             }
             .sortedBy { it.title.lowercase(Locale.ROOT) }
 
-    /** The Folders tab: one entry per directory that holds tracks, named by its last segment. */
-    fun directoriesOf(folderId: String, songs: List<Song>): List<LocalGroup> =
-        songs.mapNotNull { song -> song.directory()?.let { it to song } }
-            .groupBy({ it.first }, { it.second })
-            .map { (path, group) ->
-                LocalGroup(
-                    browseId = directoryPageId(folderId, path),
-                    title = directoryName(path),
-                    subtitle = path,
-                    thumbnailUrl = group.firstNotNullOfOrNull { it.thumbnailUrl },
-                    type = BrowseType.OTHER,
-                    songs = group.sortedByTitle(),
-                )
+    /**
+     * The Folders tab: every directory on the device holding any of [songs],
+     * the way a file manager would name it, with where it sits under it.
+     *
+     * A track with no path has no directory to be in, and is the Songs tab's
+     * alone. Two directories of the same name in different places stay two
+     * rows; the subtitle is what tells them apart.
+     */
+    fun foldersOf(folderId: String, songs: List<Song>): List<LocalGroup> =
+        songs.groupBy { it.directory() }
+            .mapNotNull { (path, group) ->
+                if (path == null) return@mapNotNull null
+                folder(folderId, path, group)
             }
-            .sortedBy { it.title.lowercase(Locale.ROOT) }
+            .sortedWith(compareBy<LocalGroup> { it.title.lowercase(Locale.ROOT) }.thenBy { it.subtitle })
+
+    /** Kept for existing callers; the Folders tab is [foldersOf]. */
+    fun directoriesOf(folderId: String, songs: List<Song>): List<LocalGroup> = foldersOf(folderId, songs)
+
+    /**
+     * The grouping [browseId] names, rebuilt from [songs] — or null if it isn't
+     * a grouping. For a page opened by its id alone, such as from the player's
+     * "Playing from", so it gets the same cover and credit as from its tab row.
+     */
+    fun groupOf(browseId: String, songs: List<Song>): LocalGroup? {
+        val group = parse(browseId) ?: return null
+        return when (group.kind) {
+            ALBUM -> album(group.folderId, group.name, songs)
+            FOLDER -> folder(group.folderId, group.name, songs)
+            GENRE -> LocalGroup(
+                browseId = genrePageId(group.folderId, group.name),
+                title = group.name,
+                subtitle = "",
+                thumbnailUrl = songs.firstNotNullOfOrNull { it.thumbnailUrl },
+                type = BrowseType.OTHER,
+                songs = songs.sortedByTitle(),
+            )
+            else -> artist(group.folderId, group.name, songs)
+        }
+    }
+
+    private fun album(folderId: String, name: String, songs: List<Song>) = LocalGroup(
+        browseId = albumPageId(folderId, name),
+        title = name,
+        subtitle = songs.firstOrNull()?.artist.orEmpty(),
+        thumbnailUrl = songs.firstNotNullOfOrNull { it.thumbnailUrl },
+        type = BrowseType.ALBUM,
+        songs = songs.sortedForAlbum(),
+    )
+
+    private fun artist(folderId: String, name: String, songs: List<Song>) = LocalGroup(
+        browseId = artistPageId(folderId, name),
+        title = name,
+        subtitle = "",
+        thumbnailUrl = null,
+        type = BrowseType.OTHER,
+        songs = songs.sortedByTitle(),
+    )
+
+    private fun folder(folderId: String, path: String, songs: List<Song>) = LocalGroup(
+        browseId = directoryPageId(folderId, path),
+        title = directoryName(path),
+        subtitle = path.substringBeforeLast('/', "").readablePath(),
+        thumbnailUrl = songs.firstNotNullOfOrNull { it.thumbnailUrl },
+        type = BrowseType.PLAYLIST,
+        songs = songs.sortedByTitle(),
+    )
+
+    /**
+     * `/storage/emulated/0/Music/Rock` as `Music/Rock`: the volume is the same
+     * for nearly everything on a phone and reads as noise. A memory card keeps
+     * its name, since that is exactly what tells its folders apart.
+     */
+    private fun String.readablePath(): String = when {
+        startsWith("/storage/emulated/0") -> removePrefix("/storage/emulated/0").trimStart('/')
+        startsWith("/storage/") -> removePrefix("/storage/")
+        else -> trimStart('/')
+    }
 }
 
 /** The directory this device file sits in, or null when its path is unknown. */
-fun Song.directory(): String? = localPath?.substringBeforeLast('/', "")?.takeIf { it.isNotEmpty() }
+fun Song.directory(): String? = localPath?.replace('\\', '/')?.substringBeforeLast('/', "")?.takeIf { it.isNotEmpty() }
 
 /**
  * Whether this track is a hit for a query typed into a page's filter box — or

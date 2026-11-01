@@ -88,4 +88,35 @@ class LocalGroupsTest {
         assertEquals(listOf("b"), LocalGroups.songsOf(id, tracks).map { it.videoId })
         assertEquals("Hits", LocalGroups.directoryName("/sd/Pop/Hits/"))
     }
+
+    private fun track(id: String, title: String, path: String?) =
+        Song(videoId = id, title = title, artist = "Artist", thumbnailUrl = null, localUri = "content://$id", localPath = path)
+
+    @Test
+    fun directoryPageIds_roundTripPaths() {
+        val id = LocalGroups.directoryPageId("local:all", "/storage/emulated/0/Music/Live: 2019")
+        assertEquals("local:all", LocalGroups.folderOf(id))
+        assertEquals(BrowseType.PLAYLIST, LocalGroups.typeOf(id))
+        assertTrue(LocalGroups.isDirectory(id))
+        assertFalse(LocalGroups.isArtist(id))
+        assertFalse(LocalGroups.isDirectory(LocalGroups.albumPageId("local:all", "Live: 2019")))
+    }
+
+    @Test
+    fun foldersOf_groupsByDirectoryAndSkipsPathless() {
+        val tracks = listOf(
+            track("b", "B", "/storage/emulated/0/Music/Rock/b.mp3"),
+            track("a", "A", "/storage/emulated/0/Music/Rock/a.mp3"),
+            track("c", "C", "/storage/1A2B-3C4D/Music/c.flac"),
+            track("d", "D", "/storage/emulated/0/Download/d.mp3"),
+            track("x", "X", null),
+        )
+        val folders = LocalGroups.foldersOf("local:all", tracks)
+        assertEquals(listOf("Download", "Music", "Rock"), folders.map { it.title })
+        assertEquals(listOf("", "1A2B-3C4D", "Music"), folders.map { it.subtitle })
+        val rock = folders.last()
+        assertEquals(listOf("a", "b"), rock.songs.map { it.videoId })
+        // The page reads the same rows back off a fresh listing.
+        assertEquals(listOf("a", "b"), LocalGroups.songsOf(rock.browseId, tracks).map { it.videoId })
+    }
 }
