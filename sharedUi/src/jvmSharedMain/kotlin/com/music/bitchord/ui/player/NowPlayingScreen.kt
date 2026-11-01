@@ -79,6 +79,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.MutableFloatState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -1507,6 +1508,7 @@ fun NowPlayingScreen(
         } else 0.dp
     // For the mounted clip — see [heroClipMounted].
     val clipBottom = canvasBottom(clipPortrait)
+    val renderedCanvasBottom = canvasBottom(canvasFirstPortrait)
     // Match the old hero's fade height in physical pixels, not its much larger
     // percentage of a portrait video. The mask ends at the real video bottom.
     val clipFadeFraction = if (clipBottom > 0.dp) {
