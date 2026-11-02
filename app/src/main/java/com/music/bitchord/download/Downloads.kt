@@ -99,6 +99,8 @@ object Downloads {
     private const val KEY_SAVED_COLLECTIONS = "downloaded_collections"
 
     private const val LYRICS_LOOKUP_MS = 15_000L
+    /** Past this, stop holding out for word-synced lyrics and keep the best already found. */
+    private const val LYRICS_SETTLE_MS = 12_000L
 
     private lateinit var prefs: SharedPreferences
     private val json = Json { ignoreUnknownKeys = true }
@@ -1401,26 +1403,7 @@ object Downloads {
                 return@withContext
             }
 
-            // The path below the download folder, so the lyrics land beside their track.
-            val displayName = DownloadStore.relativeName(context, audioUri)
-                ?: DownloadStore.fileNameFor(song, "m4a")
-            val extension = displayName.substringAfterLast('.', "m4a")
-
-            val lyricsResult = saveLyricsSidecar(context, displayName, artifact)
-            runCatching {
-                val embeddable = LyricsTag.Embeddable(
-                    plain = artifact.lines.toLrc(),
-                    enhanced = artifact.lines.toEnhancedLrc().takeIf { it.isNotBlank() },
-                )
-                MediaTagger.embed(context, audioUri, track, extension, embeddable)
-            }.onFailure {
-                Log.w(TAG, "could not embed lyrics tag in $displayName: ${it.message}")
-            }
-            if (lyricsResult?.state == LyricsDownloadState.SAVED) {
-                updateLyricsMetadata(id, lyricsResult)
-            } else {
-                updateLyricsState(id, lyricsResult?.state ?: LyricsDownloadState.FAILED)
-            }
+            writeLyrics(context, id, audioUri, track, artifact)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -1428,6 +1411,39 @@ object Downloads {
             updateLyricsState(id, LyricsDownloadState.FAILED)
         } finally {
             _lyricsActive.update { it - id }
+        }
+    }
+
+    /**
+     * Replaces the lyrics of a track that is already downloaded with [artifact]: the sidecar beside it
+     * and the tag inside it. For lookups made elsewhere, such as a playlist's lyrics search.
+     */
+    suspend fun replaceLyrics(context: Context, song: Song, artifact: LyricsArtifact) = withContext(Dispatchers.IO) {
+        val audioUri = savedUri(context, song.videoId) ?: return@withContext
+        runCatching { writeLyrics(context, song.videoId, audioUri, song, artifact) }
+            .onFailure { Log.w(TAG, "could not replace lyrics for ${song.videoId}: ${it.message}") }
+    }
+
+    private suspend fun writeLyrics(context: Context, id: String, audioUri: Uri, track: Song, artifact: LyricsArtifact) {
+        // The path below the download folder, so the lyrics land beside their track.
+        val displayName = DownloadStore.relativeName(context, audioUri)
+            ?: DownloadStore.fileNameFor(track, "m4a")
+        val extension = displayName.substringAfterLast('.', "m4a")
+
+        val lyricsResult = saveLyricsSidecar(context, displayName, artifact)
+        runCatching {
+            val embeddable = LyricsTag.Embeddable(
+                plain = artifact.lines.toLrc(),
+                enhanced = artifact.lines.toEnhancedLrc().takeIf { it.isNotBlank() },
+            )
+            MediaTagger.embed(context, audioUri, track, extension, embeddable)
+        }.onFailure {
+            Log.w(TAG, "could not embed lyrics tag in $displayName: ${it.message}")
+        }
+        if (lyricsResult?.state == LyricsDownloadState.SAVED) {
+            updateLyricsMetadata(id, lyricsResult)
+        } else {
+            updateLyricsState(id, lyricsResult?.state ?: LyricsDownloadState.FAILED)
         }
     }
 
@@ -1480,6 +1496,9 @@ object Downloads {
                     durationMs = durationMs,
                     album = track.albumName,
                     sources = sources,
+                    order = AppSettings.lyricsSourceOrder.value,
+                    prioritizeSyllableSync = AppSettings.prioritizeSyllableSync.value,
+                    settleAfterMs = LYRICS_SETTLE_MS,
                 )
             } catch (e: CancellationException) {
                 throw e
