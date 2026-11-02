@@ -154,6 +154,11 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
             object : androidx.lifecycle.DefaultLifecycleObserver {
                 override fun onStart(owner: androidx.lifecycle.LifecycleOwner) {
                     dev.auden.library.PlaylistAutoSync.onForeground(this@BitChordApplication)
+                    // Files deleted while the app was away: forget them, and let the library index notice too.
+                    CoroutineScope(Dispatchers.IO).launch {
+                        Downloads.pruneMissing(this@BitChordApplication)
+                        dev.auden.library.LibraryIndexer.sync(this@BitChordApplication)
+                    }
                 }
             },
         )

@@ -448,6 +448,26 @@ object Downloads {
         return null
     }
 
+    /**
+     * Forgets every download whose file is no longer there — deleted with a file manager, or a folder cleared
+     * out from under the app — so nothing keeps showing it as downloaded or refuses to fetch it again.
+     * One check per file, however many ids point at it. Returns how many files were found gone.
+     */
+    suspend fun pruneMissing(context: Context): Int = withContext(Dispatchers.IO) {
+        val uris = (_saved.value.values + _savedMetadata.value.values.map { it.uri }).toSet()
+        var gone = 0
+        for (uriString in uris) {
+            if (DownloadStore.exists(context, uriString.toUri())) continue
+            gone++
+            Log.d(TAG, "a downloaded file is gone; forgetting it")
+            record(
+                saved = { map -> map.filterValues { it != uriString } },
+                meta = { map -> map.filterValues { it.uri != uriString } },
+            )
+        }
+        gone
+    }
+
     /** Delete the file saved for [videoId] and forget it. */
     suspend fun delete(context: Context, videoId: String): Boolean = withContext(Dispatchers.IO) {
         val uri = _saved.value[videoId]?.toUri() ?: return@withContext false

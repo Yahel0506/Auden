@@ -1551,4 +1551,6 @@
     <string name="bit_perfect_status_inexact">%1$s · non esatto: questa sorgente non è PCM lossless</string>
     <string name="bit_perfect_status_waiting">In attesa di un brano lossless su un\'uscita supportata</string>
     <string name="bit_perfect_status_unavailable">Non disponibile per questo brano (%1$s)</string>
+    <string name="new_playlist_on_device">Su questo dispositivo</string>
+    <string name="new_playlist_on_youtube_music">YouTube Music</string>
 </resources>

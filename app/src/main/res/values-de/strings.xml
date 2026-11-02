@@ -1612,4 +1612,6 @@
     <string name="bit_perfect_status_inexact">%1$s · nicht exakt: Diese Quelle ist kein verlustfreies PCM</string>
     <string name="bit_perfect_status_waiting">Warte auf einen verlustfreien Titel an einem unterstützten Ausgang</string>
     <string name="bit_perfect_status_unavailable">Für diesen Titel nicht verfügbar (%1$s)</string>
+    <string name="new_playlist_on_device">Auf diesem Gerät</string>
+    <string name="new_playlist_on_youtube_music">YouTube Music</string>
 </resources>

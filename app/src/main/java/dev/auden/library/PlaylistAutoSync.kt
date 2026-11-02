@@ -16,9 +16,9 @@ import kotlinx.coroutines.sync.Mutex
 /**
  * Keeps the library copies of Spotify and YouTube Music playlists and albums up to date by itself.
  *
- * One direction only, and only additive: what the original has gained is added to the copy, and nothing is ever
- * written to Spotify or YouTube Music, nor taken out of the copy. A song removed from a copy therefore comes back
- * on the next sync, the same as with the manual button.
+ * One direction only: nothing is ever written to Spotify or YouTube Music. What the original has gained is added
+ * to the copy, and for Spotify what it has lost is taken out (songs the listener added themselves stay). A song
+ * removed from a YouTube Music copy comes back on the next sync, the same as with the manual button.
  *
  * It runs when the app comes to the front, at most every [MIN_INTERVAL_MS] per playlist, and not at all on a
  * metered connection unless the listener allowed it. A run reports once, at the end, and only if something new

@@ -650,6 +650,22 @@ private fun Song.pickedMixQuery(configId: String): String {
     return "&${SourceResolver.MIX_PARAM}=${SourceResolver.mixOf(sourceQuality)}"
 }
 
+/**
+ * The cover for the item of a song that is playing from a file on the device.
+ *
+ * A row from a playlist or a search carries YouTube's thumbnail url, or none at all, and only the Downloads
+ * pages were reading the cover saved beside the file — so a downloaded song played from anywhere else had a
+ * blank cover when the row had none, and a broken one when offline. The saved cover wins over a remote one;
+ * a local (`file:` / `content:`) cover the row already has is left alone.
+ */
+private fun Song.artworkForPlayback(): String? {
+    val own = artworkAt(NOTIFICATION_ART_PX)
+    if (own != null && !own.startsWith("http")) return own
+    val saved = Downloads.savedMetadata.value[videoId]?.thumbnailUrl
+        ?.takeIf { it.startsWith("file:") && !Downloads.isMissingLocalFile(it) }
+    return saved ?: own
+}
+
 fun Song.toMediaItem(): MediaItem {
     val sourceTrack = SourceRegistry.parseTrackKey(videoId)
     // A row from search or a playlist carries no file of its own, but the track
@@ -725,7 +741,7 @@ fun Song.toMediaItem(): MediaItem {
             // Sized here rather than left as stored: this is what the lock
             // screen, the notification and Android Auto draw, all of them
             // large, and none of them go back for a better copy later.
-            .setArtworkUri(artworkAt(NOTIFICATION_ART_PX)?.toUri())
+            .setArtworkUri(artworkForPlayback()?.toUri())
             // System media surfaces (One UI's Now Bar, Android Auto, Assistant)
             // classify a session by its media type; untyped sessions get treated
             // as generic audio and lose the music-specific card.

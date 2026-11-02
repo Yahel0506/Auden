@@ -10,6 +10,8 @@ data class LocalPlaylist(
     val songs: List<Song>,
     /** The cloud page this copy was saved from, if it was. */
     val sourceId: String? = null,
+    /** The cover the cloud page this was saved from had, if any; wins over a mosaic of the songs' covers. */
+    val coverUrl: String? = null,
 ) {
     val browseId: String get() = "local:playlist:$id"
 }

@@ -41,7 +41,7 @@ interface TrackDao {
     suspend fun delete(ids: List<Long>)
 
     /** A file that is gone but whose song can still be streamed stays, as a streamable row. */
-    @Query("UPDATE track SET localUri = NULL, folder = NULL, sizeBytes = NULL, modifiedAt = NULL WHERE id IN (:ids)")
+    @Query("UPDATE track SET localUri = NULL, path = NULL, folder = NULL, sizeBytes = NULL, modifiedAt = NULL WHERE id IN (:ids)")
     suspend fun detachFiles(ids: List<Long>)
 
     @Query("SELECT * FROM track WHERE localUri IS NOT NULL")

@@ -1530,4 +1530,6 @@
     <string name="bit_perfect_status_inexact">%1$s · không chính xác: nguồn này không phải PCM lossless</string>
     <string name="bit_perfect_status_waiting">Đang chờ bản nhạc lossless trên đầu ra được hỗ trợ</string>
     <string name="bit_perfect_status_unavailable">Không khả dụng cho bản nhạc này (%1$s)</string>
+    <string name="new_playlist_on_device">Trên thiết bị này</string>
+    <string name="new_playlist_on_youtube_music">YouTube Music</string>
 </resources>

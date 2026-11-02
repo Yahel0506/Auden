@@ -1644,4 +1644,6 @@
     <string name="bit_perfect_status_inexact">%1$s · неточно: этот источник не является PCM без потерь</string>
     <string name="bit_perfect_status_waiting">Ожидание трека без потерь на поддерживаемом выходе</string>
     <string name="bit_perfect_status_unavailable">Недоступно для этого трека (%1$s)</string>
+    <string name="new_playlist_on_device">На этом устройстве</string>
+    <string name="new_playlist_on_youtube_music">YouTube Music</string>
 </resources>

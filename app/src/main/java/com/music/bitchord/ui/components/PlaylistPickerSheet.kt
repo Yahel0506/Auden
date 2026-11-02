@@ -120,6 +120,11 @@ fun PlaylistPickerSheet(
     /** Ids of the playlists still being read, whose row can't be answered yet. */
     checking: Set<String> = emptySet(),
     offline: Boolean = false,
+    /**
+     * Where a new playlist may live, when the listener already chose (the Library tile asks first): only
+     * [PlaylistPrivacy.DEVICE], or only the YouTube Music ones. Null offers every option the account allows.
+     */
+    privacyOptions: List<PlaylistPrivacy>? = null,
 ) {
     var creating by remember { mutableStateOf(startCreating) }
     // By id rather than by value: the list is re-fetched under an open sheet,
@@ -172,7 +177,12 @@ fun PlaylistPickerSheet(
                     onClose = { closeAfter {} },
                     onCreate = { name, privacy -> closeAfter { onCreate(name, privacy) } },
                     offline = offline,
-                    signedIn = signedIn,
+                    options = when {
+                        offline -> listOf(PlaylistPrivacy.DEVICE)
+                        !privacyOptions.isNullOrEmpty() -> privacyOptions
+                        signedIn -> PlaylistPrivacy.entries
+                        else -> listOf(PlaylistPrivacy.DEVICE)
+                    },
                 )
             } else {
                 SheetTopBar(
@@ -361,10 +371,10 @@ private fun NewPlaylistForm(
     onClose: () -> Unit,
     onCreate: (String, PlaylistPrivacy) -> Unit,
     offline: Boolean,
-    signedIn: Boolean,
+    options: List<PlaylistPrivacy>,
 ) {
     var name by remember { mutableStateOf("") }
-    var privacy by remember { mutableStateOf(if (signedIn) PlaylistPrivacy.PRIVATE else PlaylistPrivacy.DEVICE) }
+    var privacy by remember { mutableStateOf(options.first()) }
     val focusRequester = remember { FocusRequester() }
     val focusManager = LocalFocusManager.current
 
@@ -458,8 +468,8 @@ private fun NewPlaylistForm(
             }
         }
 
-        // A playlist on the device is seen by whoever holds the device.
-        if (!offline) {
+        // Nothing to choose between when only one place is possible.
+        if (options.size > 1) {
             SheetHeading(stringResource(R.string.who_can_see_it).uppercase(Locale.getDefault()))
             Row(
                 modifier = Modifier
@@ -467,7 +477,7 @@ private fun NewPlaylistForm(
                     .padding(horizontal = 22.dp, vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                (if (signedIn) PlaylistPrivacy.entries else listOf(PlaylistPrivacy.DEVICE)).forEach { option ->
+                options.forEach { option ->
                     PrivacyPill(
                         icon = option.icon,
                         label = option.label,

@@ -330,6 +330,7 @@ private fun PlaylistShelf(
                     label = stringResource(Res.string.new_playlist),
                     subtitle = stringResource(Res.string.new_playlist_subtitle),
                     onClick = onNewPlaylist,
+                    liftOnClick = true,
                 )
                 if (onImportSpotifyPlaylist != null) {
                     NewShelfCard(
@@ -441,6 +442,7 @@ fun LibraryGridPage(
                         label = stringResource(Res.string.new_playlist),
                         subtitle = stringResource(Res.string.new_playlist_subtitle),
                         onClick = onNewPlaylist,
+                        liftOnClick = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }

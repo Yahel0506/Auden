@@ -1652,4 +1652,6 @@
     <string name="bit_perfect_status_inexact">%1$s · niedokładne: to źródło nie jest bezstratnym PCM</string>
     <string name="bit_perfect_status_waiting">Oczekiwanie na bezstratny utwór na obsługiwanym wyjściu</string>
     <string name="bit_perfect_status_unavailable">Niedostępne dla tego utworu (%1$s)</string>
+    <string name="new_playlist_on_device">Na tym urządzeniu</string>
+    <string name="new_playlist_on_youtube_music">YouTube Music</string>
 </resources>

@@ -23,7 +23,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SpotifyMatchEntity::class,
         PlayEventEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 abstract class AudenDb : RoomDatabase() {
@@ -39,7 +39,7 @@ abstract class AudenDb : RoomDatabase() {
 
         fun get(context: Context): AudenDb = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, AudenDb::class.java, "auden.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
                 .build()
                 .also { instance = it }
         }
@@ -93,6 +93,13 @@ abstract class AudenDb : RoomDatabase() {
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS `spotify_match` (`spotifyId` TEXT NOT NULL, `status` TEXT NOT NULL, `songJson` TEXT, `matchedAt` INTEGER NOT NULL, PRIMARY KEY(`spotifyId`))")
+            }
+        }
+
+        /** Playlists saved from the cloud keep the cover the page had. */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE playlist ADD COLUMN coverUrl TEXT")
             }
         }
     }
