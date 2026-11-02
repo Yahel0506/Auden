@@ -100,6 +100,8 @@ data class PlaylistEntity(
     val pinned: Boolean = false,
     /** The cloud page this was saved from (a browse id), so saving it again syncs instead of duplicating. */
     val sourceId: String? = null,
+    /** The cover of the cloud page this was saved from (a Spotify playlist's own image, say), if it had one. */
+    val coverUrl: String? = null,
 )
 
 /**

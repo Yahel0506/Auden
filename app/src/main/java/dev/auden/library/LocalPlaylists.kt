@@ -47,7 +47,7 @@ object LocalPlaylists {
     suspend fun reload(database: AudenDb? = db) {
         if (database == null) return
         val rows = database.playlistWrites().all()
-        _playlists.value = rows.map { LocalPlaylist(it.id, it.title, database.playlists().tracksOf(it.id).map(TrackEntity::toSong), it.sourceId) }
+        _playlists.value = rows.map { LocalPlaylist(it.id, it.title, database.playlists().tracksOf(it.id).map(TrackEntity::toSong), it.sourceId, it.coverUrl) }
     }
 
     fun get(id: String): LocalPlaylist? {
@@ -55,8 +55,8 @@ object LocalPlaylists {
         return _playlists.value.firstOrNull { it.id == clean }
     }
 
-    fun create(title: String, songs: List<Song> = emptyList(), sourceId: String? = null): LocalPlaylist {
-        val playlist = LocalPlaylist(ID_PREFIX + System.currentTimeMillis(), title, songs.distinctBy { it.videoId }, sourceId)
+    fun create(title: String, songs: List<Song> = emptyList(), sourceId: String? = null, coverUrl: String? = null): LocalPlaylist {
+        val playlist = LocalPlaylist(ID_PREFIX + System.currentTimeMillis(), title, songs.distinctBy { it.videoId }, sourceId, coverUrl)
         _playlists.value = listOf(playlist) + _playlists.value
         persist(playlist, insert = true)
         return playlist
@@ -70,16 +70,37 @@ object LocalPlaylists {
      *
      * Saving the same page twice does not make a second copy: the first one is
      * brought up to date with whatever the page has gained, so this doubles as
-     * "sync". Songs the listener removed from their copy come back with a sync,
-     * which is the price of keeping it simple; their own additions stay.
+     * "sync". The listener's own additions stay.
+     *
+     * [sourceSpotifyIds], given for a Spotify page, is every track the page holds (matched or not). A copy
+     * then also loses the songs that came from Spotify and are no longer there: those with a Spotify id
+     * outside this set. Songs without one were added by the listener and are never taken out. Without it
+     * (YouTube Music pages, which mark nothing) a sync only adds, and songs the listener removed come back.
+     *
+     * [coverUrl] is the page's own cover; a copy takes the newest one it is given.
      */
-    fun saveFromSource(sourceId: String, title: String, songs: List<Song>): SaveResult {
+    fun saveFromSource(
+        sourceId: String,
+        title: String,
+        songs: List<Song>,
+        coverUrl: String? = null,
+        sourceSpotifyIds: Set<String>? = null,
+    ): SaveResult {
         val existing = bySource(sourceId)
-        if (existing == null) return SaveResult(create(title, songs, sourceId), added = songs.distinctBy { it.videoId }.size, created = true)
-        return SaveResult(existing, added = add(existing.id, songs), created = false)
+        if (existing == null) return SaveResult(create(title, songs, sourceId, coverUrl), added = songs.distinctBy { it.videoId }.size, created = true)
+        val kept = if (sourceSpotifyIds == null) existing.songs
+        else existing.songs.filter { it.spotifyId == null || it.spotifyId in sourceSpotifyIds }
+        val removed = existing.songs.size - kept.size
+        val have = kept.mapTo(HashSet()) { it.videoId }
+        val fresh = songs.filter { have.add(it.videoId) }
+        val newCover = coverUrl?.takeIf { it.isNotBlank() } ?: existing.coverUrl
+        if (removed > 0 || fresh.isNotEmpty() || newCover != existing.coverUrl) {
+            replace(existing.copy(songs = kept + fresh, coverUrl = newCover))
+        }
+        return SaveResult(get(existing.id) ?: existing, added = fresh.size, created = false, removed = removed)
     }
 
-    data class SaveResult(val playlist: LocalPlaylist, val added: Int, val created: Boolean)
+    data class SaveResult(val playlist: LocalPlaylist, val added: Int, val created: Boolean, val removed: Int = 0)
 
     /** Adds [songs] that are not already there; returns how many went in. */
     fun add(id: String, songs: List<Song>): Int {
@@ -140,7 +161,7 @@ object LocalPlaylists {
             playlistId = playlist.id,
             title = playlist.title,
             subtitle = "",
-            thumbnailUrl = playlist.songs.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl,
+            thumbnailUrl = playlist.coverUrl ?: playlist.songs.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl,
             pageId = playlist.browseId,
         )
     }
@@ -167,8 +188,8 @@ object LocalPlaylists {
         scope.launch {
             writeLock.withLock {
                 val now = System.currentTimeMillis()
-                if (insert) database.playlists().upsert(PlaylistEntity(playlist.id, playlist.title, now, now, sourceId = playlist.sourceId))
-                else database.playlists().byId(playlist.id)?.let { database.playlists().upsert(it.copy(updatedAt = now)) }
+                if (insert) database.playlists().upsert(PlaylistEntity(playlist.id, playlist.title, now, now, sourceId = playlist.sourceId, coverUrl = playlist.coverUrl))
+                else database.playlists().byId(playlist.id)?.let { database.playlists().upsert(it.copy(updatedAt = now, coverUrl = playlist.coverUrl)) }
                 database.withTransaction {
                     database.playlistWrites().clearEntries(playlist.id)
                     database.playlists().insertEntries(

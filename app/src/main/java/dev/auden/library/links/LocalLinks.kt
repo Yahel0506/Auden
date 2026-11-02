@@ -108,7 +108,7 @@ object LocalLinks {
         copiesOf(song).filterNot { Downloads.isMissingLocalFile(it.uri) }.randomOrNull(Random.Default)?.uri
 
     private fun ownDownload(song: Song): LocalCopy? {
-        val uri = Downloads.saved.value[song.videoId] ?: return null
+        val uri = Downloads.saved.value[song.videoId]?.takeUnless(Downloads::isMissingLocalFile) ?: return null
         val meta = Downloads.savedMetadata.value[song.videoId]
         val inApp = uri.startsWith("file:") &&
             (uri.contains("/Android/data/") || uri.contains("/data/user/") || uri.contains("/data/data/"))

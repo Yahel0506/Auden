@@ -48,6 +48,8 @@ object PlaylistCovers {
      * (see [revision]). Callers fall back to the first song's cover meanwhile.
      */
     fun coverFor(context: Context, playlist: LocalPlaylist): String? {
+        // A copy saved from a cloud page keeps the page's own cover.
+        playlist.coverUrl?.takeIf { it.isNotBlank() }?.let { return it }
         val sources = sourcesOf(playlist)
         if (sources.isEmpty()) return null
         val file = File(File(context.cacheDir, "mosaics"), hash(sources) + ".jpg")

@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
+import androidx.core.net.toUri
 import androidx.room.withTransaction
 import com.music.bitchord.data.LocalMediaRepository
 import com.music.bitchord.data.model.Song
@@ -61,9 +62,14 @@ object LibraryIndexer {
 
             var added = 0
             var changed = 0
-            val gone = known.values.filter { it.localUri !in listed }
-            // A scan that finds nothing while the library holds files is a failed scan, not a purge.
-            if (songs.isEmpty() && known.isNotEmpty()) {
+            // A scan that finds nothing while the library holds files may be a failed scan rather than a purge,
+            // so then only the files that can no longer be opened count as gone — the listener deleting every
+            // download is a real empty scan, and must not leave those rows pointing at nothing.
+            val gone = known.values.filter { it.localUri !in listed }.let { unlisted ->
+                if (songs.isNotEmpty()) unlisted
+                else unlisted.filterNot { com.music.bitchord.download.DownloadStore.exists(context, it.localUri.toUri()) }
+            }
+            if (songs.isEmpty() && known.isNotEmpty() && gone.isEmpty()) {
                 return@withContext State.Failed("scan returned no files").also { _state.value = it }
             }
 

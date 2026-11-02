@@ -65,6 +65,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.material.icons.Icons
+import com.music.bitchord.ui.components.LocalActionRowStyle
+import com.music.bitchord.ui.components.ActionRowStyle
+import com.music.bitchord.ui.components.ActionRow
+import androidx.compose.material.icons.rounded.Public
+import androidx.compose.material.icons.rounded.PhoneIphone
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
@@ -742,6 +747,11 @@ private fun BitChordApp(
     // The picker opened from the Library tab, where there is no track and
     // creating the playlist is the whole errand.
     var creatingPlaylist by remember { mutableStateOf(false) }
+    // The "new playlist" tile, lifted into a menu that asks where the playlist lives (device or YouTube
+    // Music) — only when there is an account to choose; signed out it goes straight to the form.
+    var newPlaylistMenu by remember { mutableStateOf<HeldItem?>(null) }
+    // The place picked there; null keeps every option in the form.
+    var newPlaylistOptions by remember { mutableStateOf<List<PlaylistPrivacy>?>(null) }
     // The Spotify row whose YouTube Music match is being corrected.
     var fixingSpotifyMatch by remember { mutableStateOf<Song?>(null) }
     // The same two, over the device's own playlists — for a track that is a
@@ -2282,6 +2292,17 @@ private fun BitChordApp(
     }
     // Shared by the Library tab itself and by a shelf's "Show all" page, so a
     // card opens the same way from either.
+    // The Library's "new playlist" tile. With an account there are two places to put it, so the tile lifts
+    // into a menu to ask; without one there is only the device and the form opens directly.
+    val openNewPlaylist: () -> Unit = {
+        val origin = com.music.bitchord.ui.components.LongPressOrigin.consume()
+        newPlaylistOptions = null
+        if (signedIn && origin != null) {
+            newPlaylistMenu = origin
+        } else {
+            creatingPlaylist = true
+        }
+    }
     val onLibraryItemClick: (ShelfItem) -> Unit = { item ->
         item.browseId?.let { id ->
             if (id == SPOTIFY_BROWSE_ID) {
@@ -2335,7 +2356,7 @@ private fun BitChordApp(
         val songs = requested
             // Files already on the device and unmatched Spotify rows have nothing to fetch.
             .filter {
-                it.videoId !in saved && it.localUri == null && !it.isMatchPending && !it.isMatchMissing &&
+                (it.videoId !in saved || Downloads.verifiedSavedUri(it.videoId) == null) && it.localUri == null && !it.isMatchPending && !it.isMatchMissing &&
                     // A file on the device already is this song.
                     !dev.auden.library.links.LocalLinks.has(it)
             }
@@ -3031,7 +3052,7 @@ private fun BitChordApp(
                                     // Only the Playlists shelf can grow one — see
                                     // [PlaylistShelf].
                                     onNewPlaylist = if (shelf.title == YtMusicRepository.PLAYLISTS_SHELF) {
-                                        { creatingPlaylist = true }
+                                        openNewPlaylist
                                     } else {
                                         null
                                     },
@@ -3773,7 +3794,7 @@ private fun BitChordApp(
                                 // album or a Liked Music card gets. Holding an artist still
                                 // does nothing; see [onBrowseLongPress].
                                 onShelfItemLongPress = onBrowseLongPress,
-                                onNewPlaylist = { creatingPlaylist = true },
+                                onNewPlaylist = openNewPlaylist,
                                 onImportSpotifyPlaylist = { showSpotifyImportDialog = true },
                                 onImportPlaylistFile = { importLauncher.launch(arrayOf("*/*")) },
                                 onShowAll = { shelf -> navigator.push(AppRoute.LibraryShowAll(shelf)) },
@@ -5068,6 +5089,39 @@ private fun BitChordApp(
             }
         }
 
+        // ---- Where a new playlist goes ----
+        // Held-menu animation, opened by a tap on the tile: the tile lifts and the two places hang off it.
+        HeldContextMenu(
+            item = if (newPlaylistMenu != null) Unit else null,
+            held = newPlaylistMenu,
+            hazeState = hazeState,
+            onDismiss = { newPlaylistMenu = null },
+            onPreviewClick = null,
+        ) {
+            CompositionLocalProvider(LocalActionRowStyle provides ActionRowStyle.Menu) {
+                Column {
+                    ActionRow(
+                        icon = Icons.Rounded.PhoneIphone,
+                        label = stringResource(R.string.new_playlist_on_device),
+                        onClick = {
+                            newPlaylistMenu = null
+                            newPlaylistOptions = listOf(PlaylistPrivacy.DEVICE)
+                            creatingPlaylist = true
+                        },
+                    )
+                    ActionRow(
+                        icon = Icons.Rounded.Public,
+                        label = stringResource(R.string.new_playlist_on_youtube_music),
+                        onClick = {
+                            newPlaylistMenu = null
+                            newPlaylistOptions = PlaylistPrivacy.entries.filter { it != PlaylistPrivacy.DEVICE }
+                            creatingPlaylist = true
+                        },
+                    )
+                }
+            }
+        }
+
         // ---- Add to playlist / new playlist ----
         // One sheet for both, because they are one decision: the list of
         // playlists with a way to make another. `creatingPlaylist` opens it
@@ -5077,6 +5131,7 @@ private fun BitChordApp(
             val dismiss = {
                 playlistTarget = null
                 creatingPlaylist = false
+                newPlaylistOptions = null
             }
             val deviceRows = localPlaylists.map {
                 UserPlaylist(
@@ -5100,6 +5155,7 @@ private fun BitChordApp(
                 loading = playlistsLoading,
                 song = target,
                 startCreating = target == null,
+                privacyOptions = if (target == null) newPlaylistOptions else null,
                 present = membership.filterValues { it is MainViewModel.Member.Has && it.present }.keys,
                 checking = membership.filterValues { it is MainViewModel.Member.Checking }.keys,
                 onDismiss = dismiss,

@@ -961,9 +961,15 @@ internal fun NewShelfCard(
     modifier: Modifier = Modifier.width(SHELF_CARD_WIDTH),
     /** A full-colour mark drawn in place of [icon], for a card that stands for a brand. */
     logo: DrawableResource? = null,
+    /** The tap opens a menu that lifts this card (see [longPressMenuClickable]); the host reads it from LongPressOrigin. */
+    liftOnClick: Boolean = false,
 ) {
     Column(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = if (liftOnClick) {
+            modifier.longPressMenuClickable(onClick = onClick, onLongClick = null, captureOnClick = true)
+        } else {
+            modifier.clickable(onClick = onClick)
+        },
     ) {
         Box(
             modifier = Modifier

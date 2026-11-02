@@ -40,7 +40,7 @@ object CloudSaver {
     val saving: StateFlow<Set<String>> = _saving.asStateFlow()
 
     sealed interface Result {
-        data class Saved(val name: String, val added: Int, val created: Boolean, val unmatched: Int) : Result
+        data class Saved(val name: String, val added: Int, val created: Boolean, val unmatched: Int, val removed: Int = 0) : Result
         data object Failed : Result
     }
 
@@ -84,8 +84,15 @@ object CloudSaver {
 
     private suspend fun run(context: Context, browseId: String, source: String, title: String, thumbnailUrl: String?, notifier: Notifier?): Result {
         var unmatched = 0
+        // Spotify: every track id the playlist holds right now, so the copy can drop what was taken out.
+        var spotifyIds: Set<String>? = null
+        var cover: String? = thumbnailUrl
         val songs: List<Song> = if (browseId.startsWith(SPOTIFY_PAGE_PREFIX)) {
-            val tracks = SpotifyLibrary.tracks(browseId.removePrefix(SPOTIFY_PAGE_PREFIX)) { }
+            val playlistId = browseId.removePrefix(SPOTIFY_PAGE_PREFIX)
+            val tracks = SpotifyLibrary.tracks(playlistId) { }
+            spotifyIds = tracks.mapTo(HashSet()) { it.id }
+            // The playlist's own image, not a song's. The sync that runs by itself is given none, so ask.
+            if (cover.isNullOrBlank()) cover = runCatching { SpotifyLibrary.cover(playlistId) }.getOrNull()
             val gate = Semaphore(MATCH_PARALLELISM)
             val done = AtomicInteger()
             val matched = coroutineScope {
@@ -112,8 +119,8 @@ object CloudSaver {
         }
         require(songs.isNotEmpty()) { "nothing to save" }
         notifier?.storing(songs.size)
-        val saved = LocalPlaylists.saveFromSource(source, title, songs)
-        return Result.Saved(saved.playlist.title, saved.added, saved.created, unmatched)
+        val saved = LocalPlaylists.saveFromSource(source, title, songs, cover, spotifyIds)
+        return Result.Saved(saved.playlist.title, saved.added, saved.created, unmatched, saved.removed)
     }
 
     /** One save's notification, worded for each stage of it. */

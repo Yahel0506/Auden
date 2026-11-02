@@ -1589,4 +1589,6 @@
     <string name="bit_perfect_status_inexact">%1$s · 不精确：此音源不是无损 PCM</string>
     <string name="bit_perfect_status_waiting">正在等待受支持输出上的无损曲目</string>
     <string name="bit_perfect_status_unavailable">此曲目不可用（%1$s）</string>
+    <string name="new_playlist_on_device">在此设备上</string>
+    <string name="new_playlist_on_youtube_music">YouTube Music</string>
 </resources>

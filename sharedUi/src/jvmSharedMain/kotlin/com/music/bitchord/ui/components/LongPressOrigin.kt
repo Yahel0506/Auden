@@ -107,39 +107,49 @@ fun Modifier.longPressMenuClickable(
     onLongClick: (() -> Unit)?,
     enabled: Boolean = true,
     liftPadding: PaddingValues = NoLiftPadding,
+    /**
+     * Records the item on a plain tap as well, for a button whose menu lifts the button itself (the "new
+     * playlist" tile asking where the playlist should live).
+     */
+    captureOnClick: Boolean = false,
 ): Modifier {
     val capture = remember { HoldCapture() }
     val graphicsContext = LocalGraphicsContext.current
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
+    val record = {
+        capture.coordinates?.takeIf { it.isAttached }?.let { coordinates ->
+            // Not clipped to what shows: a card half off the screen is
+            // lifted whole, rather than its whole picture squeezed into the
+            // slice of it that was on screen.
+            val whole = Rect(coordinates.positionInWindow(), coordinates.size.toSize())
+            with(density) {
+                capture.trimLeft = liftPadding.calculateLeftPadding(layoutDirection).toPx()
+                capture.trimRight = liftPadding.calculateRightPadding(layoutDirection).toPx()
+            }
+            val item = HeldItem(
+                Rect(whole.left + capture.trimLeft, whole.top, whole.right - capture.trimRight, whole.bottom),
+            )
+            LongPressOrigin.record(item)
+            // Before the frame that records it, so the row's ⋮ is
+            // already out of the row when it does.
+            LongPressOrigin.capturing = item.bounds
+            capture.pending = item
+            capture.requests++
+        }
+        Unit
+    }
     val longClick = onLongClick?.let { held ->
         {
-            capture.coordinates?.takeIf { it.isAttached }?.let { coordinates ->
-                // Not clipped to what shows: a card half off the screen is
-                // lifted whole, rather than its whole picture squeezed into the
-                // slice of it that was on screen.
-                val whole = Rect(coordinates.positionInWindow(), coordinates.size.toSize())
-                with(density) {
-                    capture.trimLeft = liftPadding.calculateLeftPadding(layoutDirection).toPx()
-                    capture.trimRight = liftPadding.calculateRightPadding(layoutDirection).toPx()
-                }
-                val item = HeldItem(
-                    Rect(whole.left + capture.trimLeft, whole.top, whole.right - capture.trimRight, whole.bottom),
-                )
-                LongPressOrigin.record(item)
-                // Before the frame that records it, so the row's ⋮ is
-                // already out of the row when it does.
-                LongPressOrigin.capturing = item.bounds
-                capture.pending = item
-                capture.requests++
-            }
+            record()
             held()
         }
     }
+    val click = if (captureOnClick) ({ record(); onClick() }) else onClick
     return this
         .onPlaced { capture.coordinates = it }
-        .combinedClickable(enabled = enabled, onClick = onClick, onLongClick = longClick)
+        .combinedClickable(enabled = enabled, onClick = click, onLongClick = longClick)
         .drawWithContent {
             drawContent()
             // Reading the counter is what subscribes this draw to a hold;

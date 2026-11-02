@@ -1569,4 +1569,6 @@
     <string name="bit_perfect_status_inexact">%1$s · tam değil: bu kaynak kayıpsız PCM değil</string>
     <string name="bit_perfect_status_waiting">Desteklenen bir çıkışta kayıpsız parça bekleniyor</string>
     <string name="bit_perfect_status_unavailable">Bu parça için kullanılamıyor (%1$s)</string>
+    <string name="new_playlist_on_device">Bu cihazda</string>
+    <string name="new_playlist_on_youtube_music">YouTube Music</string>
 </resources>

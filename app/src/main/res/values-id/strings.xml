@@ -1589,4 +1589,6 @@
     <string name="bit_perfect_status_inexact">%1$s · tidak persis: sumber ini bukan PCM lossless</string>
     <string name="bit_perfect_status_waiting">Menunggu trek lossless pada output yang didukung</string>
     <string name="bit_perfect_status_unavailable">Tidak tersedia untuk trek ini (%1$s)</string>
+    <string name="new_playlist_on_device">Di perangkat ini</string>
+    <string name="new_playlist_on_youtube_music">YouTube Music</string>
 </resources>
