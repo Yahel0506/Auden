@@ -645,11 +645,13 @@ object StreamResolver {
      * asks for MP4 from the start instead of discovering the restriction when
      * it creates the destination.
      *
-     * There is no "best available" fallback below. A walk that takes another
-     * container can no longer fulfil the destination already chosen: WebM
-     * cannot be exported through the Music collection, and silently replacing
-     * a requested private Opus download with AAC changes its codec. Running out
-     * of the required ladder is therefore a failure with a sentence attached.
+     * An export never falls back to another container: WebM cannot go through
+     * the Music collection, so running out of the MP4 ladder is a failure with
+     * a sentence attached. A private download prefers Opus, and takes AAC only
+     * when no client offers any Opus for the track at all — some releases are
+     * kept in AAC alone, and refusing those would leave them undownloadable.
+     * An Opus that was offered but could not be reached stays a "try again"
+     * failure, rather than quietly changing the codec of that download.
      *
      * The container is asked of InnerTubeX up front rather than filtered out
      * of whatever it picks, because it answers with one format per ask: MP4
@@ -733,6 +735,12 @@ object StreamResolver {
             // A rung above the ceiling beats no download at all; extraction does the same.
             found?.let { return@withContext it }
             if (offered) error("Couldn't reach a downloadable copy just now — try again")
+            // Some releases are kept in AAC only, with no Opus rung on any client. App storage takes
+            // MP4 as well, so such a track is saved as AAC rather than refused.
+            if (!requireM4a) {
+                TrackLog.w(TAG, "no Opus at all for $videoId; saving its AAC instead")
+                return@withContext downloadStream(videoId, maxKbps, requireM4a = true)
+            }
             error("No downloadable audio for this track")
         }
 
