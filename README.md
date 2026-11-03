@@ -25,7 +25,20 @@
 
 ---
 
-Auden is a fork of [BitChord](https://github.com/kushagrasinghx/BitChord). It keeps BitChord's Apple Music–style player, word-synced lyrics and YouTube Music streaming, and adds the library management of a dedicated local player: an indexed on-device library, local playlists that work without signing in, organised downloads, per-song lyrics control, a hybrid Home, and an on-device AI DJ.
+Auden is a fork of [BitChord](https://github.com/kushagrasinghx/BitChord). It keeps BitChord's Apple Music–style player, word-synced lyrics and YouTube Music streaming, and adds the library management of a dedicated local player: an indexed on-device library, local playlists that work without signing in, organised downloads, per-song lyrics control, a hybrid Home, and an AI DJ that talks between songs.
+
+### What Auden adds to BitChord
+
+| Area | BitChord | Auden |
+| --- | --- | --- |
+| Library | Streaming-first; local files are scanned on demand | Indexed `AudenDb` library with Genres and Folders, local files identified and linked to streamed songs |
+| Playlists | Account-based | Local playlists that work signed out, M3U8 / XSPF / JSON import and export, library backup |
+| Downloads | One flat file per track | Template-based folders, rich tags, lyrics and `cover.jpg` beside each song, persistent queue with retries, AAC fallback |
+| Lyrics | One global provider order and offset | Variants stored per provider, per-song provider and timing, batch lookup, downloads that follow your provider order |
+| Spotify | Basic library import | Read-only library, remembered matches, albums and artists, playlists that stay in sync |
+| Home | YouTube Music recommendations | Hybrid Home: local shelves mixed with YouTube Music's |
+| DJ | — | Auden DJ: themed sets, spoken in Spanish or English, requests that follow your taste |
+| Identity | BitChord | Own name, icons and logo; installs next to BitChord and updates from this repository |
 
 <div align="center">
 
@@ -49,15 +62,20 @@ Auden is a fork of [BitChord](https://github.com/kushagrasinghx/BitChord). It ke
 - **Rich tags** — album artist, track, disc, year and source link written into each file.
 - **Lyrics and `cover.jpg` beside each song**, in a folder you can open from any file manager.
 - **Persistent queue** with retries and back-off, pause, and adjustable concurrency.
+- **AAC fallback** — when YouTube offers a release in AAC only, the track is saved as AAC instead of failing with "No downloadable audio".
 
 ### Lyrics
 - **Word-synced lyrics** from many providers, stored per provider as variants.
 - **Per-song choice and timing** — pick the provider and offset for each song, and manage them from the player's provider sheet.
-- **Batch lookup**, sidecar `.lrc` / `.ttml` files and embedded tags for offline use.
+- **Batch lookup**, sidecar `.lrc` / `.ttml` files and embedded tags for offline use. Searching a playlist's lyrics looks every song up again and rewrites a downloaded track's sidecar and tag.
+- **Downloads follow your provider order** and syllable-first setting, and keep the best answer found (word-synced, else the top-priority line-synced) if the lookup runs out of time.
 
 ### Auden DJ
-- **Themed sets** that start from Home and queue like music, each opening with a reason about the listener and the song it begins on.
-- **Spoken in Spanish or English** — the DJ speaks through Fish Audio (needs a `FISH_API_KEY` in a git-ignored `.env` at the repo root, see `.env.example`); without one the DJ plays and its words are on screen.
+- **Themed sets** that start from the Home card, straight into the DJ's own screen, and queue like music. Each set opens with a reason about the listener and the song it begins on, with many phrase variants per situation (the DJ sometimes lets a set run without speaking).
+- **Spoken in Spanish or English** through Fish Audio. It needs a `FISH_API_KEY` in a git-ignored `.env` at the repo root (see `.env.example`), `local.properties` or the environment; without one the DJ still plays and its words are on screen. The old on-device voice packs are gone.
+- **A DJ player** — the player itself becomes the DJ screen, with a ring on the moving mesh that deforms with the voice. Tap the corner button to type a request (or ask for more, less or stop); long-press it for "surprise me".
+- **Requests that follow your taste** — a typed ask is searched in each of your genres and from your favourite artists, and anything the library can't make sense of is searched on YouTube Music. The DJ says when it went by your taste.
+- **Its own Settings category** for language, voice, comments and set size. Playing something else by hand ends the DJ and restores shuffle and AutoPlay.
 
 ### Home and Spotify
 - **Hybrid Home** — local shelves mixed with YouTube Music's recommendations.
@@ -66,7 +84,13 @@ Auden is a fork of [BitChord](https://github.com/kushagrasinghx/BitChord). It ke
 ### Player
 - Gapless playback with crossfade, Automix beat-matching, playback speed, skip silence, sleep timer and system equalizer.
 - Artwork-driven Material theming, a full-cover blur backdrop, and an output pill that shows the real output device.
+- Video fades in progressively as the cover returns to the player.
 - Scrobbling to Last.fm and ListenBrainz, and Discord Rich Presence.
+
+### Identity and updates
+- **Auden branding** — an A-waveform logo with Minimal, Liquid Glass Light and Liquid Glass Dark icons.
+- **Installs next to BitChord** under its own application ID (`dev.auden.app`), so both can live on one device.
+- **Updates from this repository** — releases and the in-app updater follow Auden, and local library backups are named Auden.
 
 ---
 
