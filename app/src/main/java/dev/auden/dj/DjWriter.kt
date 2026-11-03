@@ -38,9 +38,13 @@ class DjWriter(
     /** What the listener last asked for, if anything: a set that matches it says so. */
     var request: DjRequest? = null
 
+    /** The song that ended just before the set being introduced, for a line that picks up from it; null when unknown. */
+    private var prev: String? = null
+
     /** Said once, as the session starts: a greeting, then why the first set is what it is. */
     fun opening(@Suppress("UNUSED_PARAMETER") hour: Int, first: DjBlock, request: DjRequest?, relaxed: Boolean): String {
         this.request = request
+        prev = null
         return join(
             pick(greetingKey(this.hour)),
             when {
@@ -53,7 +57,10 @@ class DjWriter(
     }
 
     /** Said as a new set begins: why these songs, and the one it starts with. */
-    fun blockIntro(block: DjBlock, @Suppress("UNUSED_PARAMETER") previous: DjBlock?): String = introduce(block).orEmpty()
+    fun blockIntro(block: DjBlock, previous: DjBlock?): String {
+        prev = previous?.tracks?.lastOrNull()?.title
+        return introduce(block).orEmpty()
+    }
 
     /**
      * A remark on a song, only when there is something about it worth saying: how often the listener has
@@ -114,6 +121,7 @@ class DjWriter(
                 pick("intro_discover", "seed" to seed, "opener" to opener) ?: pick("intro_discover_plain", "opener" to opener)
             }
             is DjTheme.ByPlaylist -> pick("intro_playlist", "playlist" to theme.name, "opener" to opener)
+            is DjTheme.ByRequest -> pick("intro_search", "what" to theme.text, "taste" to theme.taste, "opener" to opener)
             is DjTheme.ByDecade, is DjTheme.ByGenre, is DjTheme.ByAlbum -> pick("intro_theme", "what" to what(theme), "opener" to opener)
         }
     }
@@ -190,7 +198,8 @@ class DjWriter(
     private fun pick(key: String, vararg slots: Pair<String, String?>): String? {
         val all = phrases.templates(key)
         if (all.isEmpty()) return null
-        val values = slots.toMap()
+        // {prev} is available to every template: one that names it is passed over when there is no such song.
+        val values = mapOf("prev" to prev) + slots.toMap()
         val usable = all.indices.filter { fill(all[it], values) != null }
         if (usable.isEmpty()) return null
         val recent = lastUsed.getOrPut(key) { ArrayDeque() }

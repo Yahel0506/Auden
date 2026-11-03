@@ -114,6 +114,27 @@ fun MediaController.toggleShuffle() {
     )
 }
 
+/**
+ * [toggleAutoplay], returning once the service has handled it. For a caller
+ * that reads [AppSettings.autoplay] or starts a queue right after: the plain
+ * toggle returns before the service has even seen the command, so whatever
+ * comes next would read the setting as it was.
+ */
+suspend fun MediaController.toggleAutoplayAndWait() {
+    sendCustomCommand(
+        SessionCommand(ACTION_TOGGLE_AUTOPLAY, Bundle.EMPTY),
+        Bundle.EMPTY,
+    ).await()
+}
+
+/** [toggleShuffle], returning once the service has handled it; see [toggleAutoplayAndWait]. */
+suspend fun MediaController.toggleShuffleAndWait() {
+    sendCustomCommand(
+        SessionCommand(ACTION_TOGGLE_SHUFFLE, Bundle.EMPTY),
+        Bundle.EMPTY,
+    ).await()
+}
+
 /** Starts an album/playlist through the service-owned bounded context window. */
 suspend fun MediaController.playBoundedContext(
     songs: List<Song>,

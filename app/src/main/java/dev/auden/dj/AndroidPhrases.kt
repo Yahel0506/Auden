@@ -39,6 +39,7 @@ class AndroidPhrases(context: Context, language: String) : DjPhrases {
         "intro_mood_energy" to R.array.dj_intro_mood_energy,
         "intro_mood_acoustic" to R.array.dj_intro_mood_acoustic,
         "intro_request_match" to R.array.dj_intro_request_match,
+        "intro_search" to R.array.dj_intro_search,
         "intro_theme" to R.array.dj_intro_theme,
         "what_artist" to R.array.dj_what_artist,
         "what_decade" to R.array.dj_what_decade,

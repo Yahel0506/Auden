@@ -11,6 +11,9 @@ gradle-app.setting
 # Local configuration file (SDK path, etc.)
 local.properties
 
+# Local secrets (the DJ voice key); .env.example says what goes in it
+.env
+
 # Kotlin
 .kotlin/
 

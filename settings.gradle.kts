@@ -12,8 +12,6 @@ dependencyResolutionManagement {
         mavenCentral()
         // NewPipeExtractor is published via JitPack.
         maven("https://jitpack.io")
-        // The sherpa-onnx AAR, fetched and hash-checked by app/build.gradle.kts (fetchSherpa).
-        flatDir { dirs(file("app/build/sherpa")) }
     }
 }
 

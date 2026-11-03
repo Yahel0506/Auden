@@ -766,8 +766,14 @@ fun NowPlayingScreen(
     onQueueDragActiveChange: (Boolean) -> Unit = {},
     onClearQueue: () -> Unit,
     onOpenMenu: () -> Unit,
-    /** Opens the DJ's request sheet; null where the DJ is not offered. */
+    /**
+     * Set only while the DJ is on. The DJ has no queue to show, so with it the queue is gone from this
+     * player (its button, its gesture, its panel) and the DJ's button sits where it was: a tap asks
+     * the DJ for something ([onOpenDj]), a hold leaves the choice to it ([onDjSurprise]). Null, as it
+     * is for every other kind of playback, leaves no trace of the DJ here.
+     */
     onOpenDj: (() -> Unit)? = null,
+    onDjSurprise: (() -> Unit)? = null,
     onOpenAlbum: (String) -> Unit,
     /**
      * Opens an artist's page. [browseId] is null for anyone but the lead credit:
@@ -961,9 +967,12 @@ fun NowPlayingScreen(
     // the same surface on phones and tablets without making this UI state a
     // continuously collected setting.
     val restoredPlayerScreen = remember { PlayerSettings.lastPlayerScreen.value }
+    val djMode = onOpenDj != null
     var queueOpen by remember {
-        mutableStateOf(restoredPlayerScreen == LastPlayerScreen.QUEUE)
+        mutableStateOf(restoredPlayerScreen == LastPlayerScreen.QUEUE && !djMode)
     }
+    // The DJ has no queue: if it comes on with the queue up, the queue goes.
+    LaunchedEffect(djMode) { if (djMode) queueOpen = false }
     var lyricsOpen by remember {
         mutableStateOf(restoredPlayerScreen == LastPlayerScreen.LYRICS)
     }
@@ -1032,7 +1041,8 @@ fun NowPlayingScreen(
     val toggleLyrics: () -> Unit = {
         if (lyricsOpen) closeLyrics() else openLyrics()
     }
-    val toggleQueue: () -> Unit = {
+    val toggleQueue: () -> Unit = toggle@{
+        if (djMode) return@toggle
         val opening = !queueOpen
         if (opening && lyricsOpen) queueSlide.floatValue = 1f
         // With the queue rather than after it, for the reason [openLyrics]
@@ -1561,7 +1571,7 @@ fun NowPlayingScreen(
     val openPlaybackOrigin: () -> Unit = {
         if (playedBy != null) {
             onListenTogether()
-        } else if (song.playbackSourceType == PlaybackSourceType.QUEUE) {
+        } else if (song.playbackSourceType == PlaybackSourceType.QUEUE && !djMode) {
             queueOpen = true
             closeLyrics()
         } else {
@@ -1640,6 +1650,7 @@ fun NowPlayingScreen(
             onListenTogether = onListenTogether,
             onOpenListenTogetherMembers = openListenTogetherMembers,
             onOpenDj = onOpenDj,
+            onDjSurprise = onDjSurprise,
         )
         // Keep the current output caption visible in every state.
         Spacer(Modifier.height(18.dp))
@@ -2729,7 +2740,7 @@ fun NowPlayingScreen(
                                         bandBottom = dismissBandBottom
                                     }
                                     if (y >= bandTop && y <= bandBottom) {
-                                        if (!panelUp) {
+                                        if (!panelUp && !djMode) {
                                             dragQueueIn(
                                                 down = down,
                                                 travel = bandBottom - bandTop -

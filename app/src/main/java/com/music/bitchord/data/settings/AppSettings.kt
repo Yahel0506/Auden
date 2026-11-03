@@ -565,6 +565,9 @@ object AppSettings {
     /** Whether the DJ talks between blocks; off, it still chooses and queues. */
     val djVoice = MutableStateFlow(true)
 
+    /** What the DJ speaks and writes: "es" or "en". The device's language when it is Spanish, English otherwise, until chosen. */
+    val djLanguage = MutableStateFlow(if (java.util.Locale.getDefault().language == "es") "es" else "en")
+
     /** Whether the DJ also says a word about a song partway through a block. */
     val djChatty = MutableStateFlow(false)
 
@@ -1019,6 +1022,7 @@ object AppSettings {
             ?: dev.auden.home.LocalShelfKind.entries.map { it.name }.toSet()
         djVoice.value = prefs.getBoolean(KEY_DJ_VOICE, true)
         djChatty.value = prefs.getBoolean(KEY_DJ_CHATTY, false)
+        djLanguage.value = prefs.getString(KEY_DJ_LANGUAGE, null)?.takeIf { it == "es" || it == "en" } ?: djLanguage.value
         djBlockSize.value = prefs.getInt(KEY_DJ_BLOCK_SIZE, 8).coerceIn(5, 12)
         homeLocalWeight.value = prefs.getInt(KEY_HOME_LOCAL_WEIGHT, dev.auden.home.HomeSettings.DEFAULT_WEIGHT).coerceIn(0, 100)
         lastPlayerScreen.value = runCatching {
@@ -1624,6 +1628,12 @@ object AppSettings {
     fun setDjVoice(value: Boolean) {
         djVoice.value = value
         prefs.edit().putBoolean(KEY_DJ_VOICE, value).apply()
+    }
+
+    fun setDjLanguage(value: String) {
+        val clean = if (value == "es") "es" else "en"
+        djLanguage.value = clean
+        prefs.edit().putString(KEY_DJ_LANGUAGE, clean).apply()
     }
 
     fun setDjChatty(value: Boolean) {
@@ -2275,6 +2285,7 @@ object AppSettings {
     private const val KEY_HOME_LOCAL_WEIGHT = "home_local_weight"
     private const val KEY_DJ_VOICE = "dj_voice"
     private const val KEY_DJ_CHATTY = "dj_chatty"
+    private const val KEY_DJ_LANGUAGE = "dj_language"
     private const val KEY_DJ_BLOCK_SIZE = "dj_block_size"
     private const val KEY_LAST_PLAYER_SCREEN = "last_player_screen"
     private const val KEY_SYNCED_LYRICS = "synced_lyrics"

@@ -10,6 +10,20 @@ import androidx.compose.foundation.Image
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import com.music.bitchord.sharedui.resources.dj_listen
+import com.music.bitchord.ui.player.DjRing
+import com.music.bitchord.ui.player.DjMeshPalettes
+import com.music.bitchord.ui.player.MESH_CYCLE_MILLIS
+import com.music.bitchord.ui.player.MeshGradientBackground
+import com.music.bitchord.ui.player.cyclingMeshPalette
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import com.music.bitchord.ui.components.longPressMenuClickable
@@ -200,7 +214,10 @@ fun HomeScreen(
                 item { HomeTitle(title) }
             }
             if (onOpenDj != null) {
-                item(key = "auden-dj") { DjCard(onClick = onOpenDj) }
+                item(key = "auden-dj") {
+                    // Read in this item, so a scroll starting or ending recomposes the card alone.
+                    DjCard(onClick = onOpenDj, motion = LocalArtworkMotion.current && !listState.isScrollInProgress)
+                }
             }
             if (!signedIn && onSignIn != null) {
                 item {
@@ -1159,47 +1176,74 @@ internal fun ShelfCard(
     }
 }
 
-/** The way into the DJ: one quiet row at the top of Home, in the page's own voice. */
+/**
+ * The way into the DJ: a big card at the top of Home, on the app's own moving mesh like the sign-in card,
+ * with the DJ's ring moving on the right. Held still while the feed scrolls.
+ */
 @Composable
-private fun DjCard(onClick: () -> Unit) {
-    androidx.compose.foundation.layout.Row(
+private fun DjCard(onClick: () -> Unit, motion: Boolean = true) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.98f else 1f, spring(stiffness = 900f), label = "djCardScale")
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 6.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = PAGE_GUTTER, vertical = 8.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clip(RoundedCornerShape(26.dp))
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
     ) {
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(androidx.compose.foundation.shape.CircleShape)
-                .background(MaterialTheme.colorScheme.primary),
-            contentAlignment = Alignment.Center,
+        MeshGradientBackground(
+            palette = cyclingMeshPalette(DjMeshPalettes, running = motion),
+            modifier = Modifier.matchParentSize(),
+            continuous = true,
+            paused = !motion,
+            driftMillis = 6_000,
+            blurRadius = 36.dp,
+            colorFadeMillis = MESH_CYCLE_MILLIS,
+        )
+        Row(
+            Modifier.padding(start = 22.dp, end = 8.dp, top = 20.dp, bottom = 20.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                Icons.Rounded.GraphicEq,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-        androidx.compose.foundation.layout.Spacer(Modifier.width(14.dp))
-        androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
-            Text(
-                stringResource(Res.string.dj_title),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
-            Text(
-                stringResource(Res.string.dj_subtitle),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-            )
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(Res.string.dj_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.W800,
+                    color = Color.White,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    stringResource(Res.string.dj_subtitle),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.85f),
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    Modifier
+                        .clip(CircleShape)
+                        .background(Color.White)
+                        .padding(start = 14.dp, end = 20.dp, top = 10.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        stringResource(Res.string.dj_listen),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.W700,
+                        color = Color.Black,
+                    )
+                }
+            }
+            DjRing(level = { 0f }, modifier = Modifier.size(136.dp), running = motion, talking = true)
         }
     }
 }

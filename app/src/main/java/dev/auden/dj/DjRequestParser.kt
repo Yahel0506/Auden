@@ -17,12 +17,16 @@ object DjRequestParser {
         val q = fold(text)
         if (q.isBlank()) return DjRequest(text = text)
 
+        // A plain substring test first: the word-boundary check builds a regular expression, and a library
+        // has thousands of artists, nearly all of which are not in the ask.
         val artist = pool.asSequence().map { it.leadArtist }.distinct()
-            .filter { it.length >= 2 && containsWord(q, fold(it)) }
+            .filter { it.length >= 2 }
+            .filter { val f = fold(it); q.contains(f) && containsWord(q, f) }
             .maxByOrNull { it.length }
 
         val genre = pool.asSequence().mapNotNull { it.genreKey }.distinct()
-            .filter { it.length >= 3 && containsWord(q, fold(it)) }
+            .filter { it.length >= 3 }
+            .filter { val f = fold(it); q.contains(f) && containsWord(q, f) }
             .maxByOrNull { it.length }
 
         val mood = when {
@@ -45,6 +49,25 @@ object DjRequestParser {
             localOnly = hasAny(q, "sin conexion", "offline", "descargad", "downloaded", "sin internet", "no internet"),
         )
     }
+
+    /**
+     * Whether [text] names a genre of its own ("rock en español", "some jazz"): the one case where an ask is
+     * not bent towards the listener's own genres. Mood and intention words are not genres.
+     */
+    fun namesGenre(text: String): Boolean {
+        val q = fold(text)
+        return GENRE_WORDS.any { containsWord(q, it) } || GENRE_STEMS.any { q.contains(it) }
+    }
+
+    private val GENRE_WORDS = listOf(
+        "rock", "pop", "rap", "hip hop", "hiphop", "hip-hop", "trap", "reggaeton", "regueton", "reggae", "ska", "jazz", "blues",
+        "metal", "punk", "indie", "techno", "house", "edm", "cumbia", "salsa", "bachata", "merengue", "banda", "corridos", "corrido",
+        "norteno", "norteña", "mariachi", "ranchera", "rancheras", "folk", "country", "soul", "funk", "disco", "grunge", "emo",
+        "lofi", "lo-fi", "bossa nova", "flamenco", "tango", "kpop", "k-pop", "jpop", "latin", "latino", "balada", "baladas",
+        "gospel", "opera", "classical", "clasica", "r&b", "rnb", "dubstep", "drill", "alternativo", "alternative", "electronica",
+        "electronic", "electro", "synthpop", "shoegaze", "hardcore", "trova", "boleros", "bolero", "vallenato", "sertanejo",
+    )
+    private val GENRE_STEMS = listOf("hip hop", "hip-hop", "regional mexican", "musica regional")
 
     /** "90s", "los 80", "años 70", "1985", "noventa", "the eighties". */
     internal fun decadeIn(q: String): Int? {

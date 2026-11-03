@@ -183,6 +183,8 @@ class DjPlanner(
         DjTheme.Fresh -> t.addedAt > 0 && now - t.addedAt <= FRESH_MS && t.localUri != null
         DjTheme.Discover -> t.discovery
         is DjTheme.ByPlaylist -> t.playlists.any { it.equals(theme.name, ignoreCase = true) }
+        // Made by the session from a search, never chosen by the planner.
+        is DjTheme.ByRequest -> false
     }
 
     /** The songs of [theme] still free to play; a surprise also leaves out artists of the last sets. */
@@ -239,6 +241,7 @@ class DjPlanner(
             DjTheme.Fresh -> 0.6
             DjTheme.Discover -> 0.7
             is DjTheme.ByPlaylist -> 0.9
+            is DjTheme.ByRequest -> 0.0
             else -> 0.5
         }
     }
@@ -279,7 +282,7 @@ class DjPlanner(
             is DjTheme.ByDecade -> if (r.decade == theme.decade) 1.0 else 0.0
             is DjTheme.ByGenre -> if (r.genre == theme.genre) 1.0 else 0.0
             is DjTheme.ByMood -> if (r.mood == theme.mood) 1.0 else 0.0
-            is DjTheme.ByAlbum, DjTheme.Discover, is DjTheme.ByPlaylist -> 0.0
+            is DjTheme.ByAlbum, DjTheme.Discover, is DjTheme.ByPlaylist, is DjTheme.ByRequest -> 0.0
         }
     }
 

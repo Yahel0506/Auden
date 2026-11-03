@@ -95,6 +95,8 @@ android {
         // Last.fm credentials are supplied locally and never committed.
         buildConfigField("String", "LASTFM_API_KEY", "\"${lastfmApiKey.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         buildConfigField("String", "LASTFM_SECRET", "\"${lastfmSecret.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+        // The phone app's DJ is compiled in here too, so its voice key has to exist; see the root build file.
+        buildConfigField("String", "FISH_API_KEY", "\"${(rootProject.extra["fishApiKey"] as String).replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         buildConfigField(
             "String",
             "LISTEN_TOGETHER_SERVER",
@@ -236,7 +238,7 @@ android {
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
         jniLibs {
-            // sherpa-onnx and the Automix model's runtime both ship an x86 ONNX Runtime; only emulators run x86.
+            // Other x86 libraries bundle their own ONNX Runtime beside the Automix model's; only emulators run x86.
             pickFirsts += setOf("lib/x86/libonnxruntime.so")
         }
     }
@@ -282,11 +284,6 @@ val newPipeExtractorRaw: Configuration by configurations.creating {
     isCanBeConsumed = false
 }
 dependencies {
-    // The phone app's sources are compiled in here, the DJ with them: its voice engine and the unpacker
-    // for its voice packs. The AAR is fetched and hash-checked by the app module (fetchSherpa).
-    implementation(mapOf("name" to "sherpa-onnx-static-link-onnxruntime-1.13.8", "ext" to "aar"))
-    implementation("org.apache.commons:commons-compress:1.27.1")
-
     newPipeExtractorRaw("com.github.TeamNewPipe:NewPipeExtractor:v0.26.3")
 }
 val newPipeExtractorStripped = tasks.register<org.gradle.api.tasks.bundling.Jar>(
@@ -520,5 +517,3 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
         el.file.startsWith(phoneJava) && el.relativePath.pathString in replacedByTv
     }
 }
-
-tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(":app:fetchSherpa") }

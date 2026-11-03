@@ -43,6 +43,7 @@ class DjTest {
                         DjTheme.Fresh -> track.localUri != null
                         DjTheme.Discover -> track.discovery
                         is DjTheme.ByPlaylist -> track.playlists.isNotEmpty()
+                        is DjTheme.ByRequest -> true
                     }
                     assertTrue("$track in ${block.theme}", ok)
                 }
@@ -257,17 +258,6 @@ class DjTest {
         val ana = library.filter { it.artist == "Ana" }.take(4)
         val line = writer().opening(23, block(DjTheme.ByArtist("Ana"), ana), DjRequest(text = "blah"), relaxed = false)
         assertTrue(line, line.startsWith("Late one. Didn’t catch that."))
-    }
-
-    @Test
-    fun aLineIsSpokenAsSentencesWithBreathsBetweenThem() {
-        val parts = DjSpeech.shape("Good evening. Here we go: four songs, starting with this one!", seed = 3)
-        assertEquals(3, parts.size)
-        assertTrue(parts.dropLast(1).all { it.pauseAfterMs >= 220 })
-        assertEquals(0L, parts.last().pauseAfterMs)
-        assertTrue(parts.all { it.rate in 0.9f..1.0f })
-        // Never the same twice.
-        assertTrue(parts.map { it.rate }.toSet().size > 1)
     }
 
     // ── Surprises are for listening, not for repetition ─────────────────────

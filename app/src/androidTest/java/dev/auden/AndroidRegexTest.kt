@@ -4,7 +4,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.music.bitchord.data.ArtistSplitter
 import com.music.bitchord.download.DownloadLayout
 import dev.auden.dj.DjRequestParser
-import dev.auden.dj.DjSpeech
 import dev.auden.dj.DjTrack
 import dev.auden.dj.DjWriter
 import dev.auden.library.ident.YoutubeIdInName
@@ -60,7 +59,6 @@ class AndroidRegexTest {
         val pool = listOf(DjTrack("1", "t", "Ana", genre = "Rock", year = 1995))
         assertEquals(1990, DjRequestParser.parse("algo tranquilo de los 90 de Ana", pool).decade)
         assertEquals("Ana", DjRequestParser.parse("algo de Ana", pool).artist)
-        assertEquals(3, DjSpeech.shape("Hola. Esto es una prueba: dos frases.", 1).size)
         val writer = DjWriter(object : dev.auden.dj.DjPhrases { override fun templates(key: String) = emptyList<String>() }, "es", 1)
         assertEquals("De 1999.", writer.fill("De {year}.", mapOf("year" to "1999")))
     }

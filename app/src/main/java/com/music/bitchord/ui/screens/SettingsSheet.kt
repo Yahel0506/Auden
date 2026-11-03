@@ -1342,7 +1342,7 @@ fun SettingsScreen(
             }
         }
 
-        if (shows(SettingsCategory.PLAYBACK)) SearchableSettingsGroup(search, header = stringResource(R.string.dj_title)) {
+        if (shows(SettingsCategory.DJ)) SearchableSettingsGroup(search, header = stringResource(R.string.dj_title)) {
             val djVoiceTitle = stringResource(R.string.dj_setting_voice)
             row(djVoiceTitle, "dj", "voice", "speech", "talk") {
                 SettingsRow(
@@ -1395,22 +1395,20 @@ fun SettingsScreen(
                     steps = 6,
                 )
             }
+            val djLanguage by AppSettings.djLanguage.collectAsStateWithLifecycle()
             val djVoiceState by dev.auden.dj.DjSession.state.collectAsStateWithLifecycle()
-            val djPackTitle = stringResource(R.string.dj_setting_pack)
-            row(djPackTitle, "dj", "voice", "download", "pack") {
+            val djLanguageTitle = stringResource(R.string.dj_setting_language)
+            row(djLanguageTitle, "dj", "language", "idioma", "spanish", "english", "voice") {
                 val voice = djVoiceState.voice
                 SettingsRow(
                     icon = Icons.Rounded.GraphicEq,
-                    title = djPackTitle,
+                    title = djLanguageTitle,
                     subtitle = when (voice) {
                         dev.auden.dj.DjUiState.Voice.Unavailable -> stringResource(R.string.dj_voice_none)
-                        is dev.auden.dj.DjUiState.Voice.NotInstalled -> stringResource(R.string.dj_voice_download, "%.0f MB".format(voice.pack.sizeBytes / 1_000_000.0))
-                        is dev.auden.dj.DjUiState.Voice.Downloading -> stringResource(R.string.dj_voice_downloading, (voice.fraction * 100).toInt())
-                        is dev.auden.dj.DjUiState.Voice.Ready -> stringResource(R.string.dj_voice_ready, voice.pack.voice)
+                        is dev.auden.dj.DjUiState.Voice.Ready -> stringResource(R.string.dj_voice_ready, voice.name)
                     },
-                    onClick = if (voice is dev.auden.dj.DjUiState.Voice.NotInstalled) {
-                        { dev.auden.dj.DjSession.downloadVoice(context) }
-                    } else null,
+                    value = stringResource(if (djLanguage == "es") R.string.dj_language_es else R.string.dj_language_en),
+                    onClick = { AppSettings.setDjLanguage(if (djLanguage == "es") "en" else "es") },
                 )
             }
         }
@@ -2945,6 +2943,7 @@ internal fun SegmentedControl(
 enum class SettingsCategory(@param:StringRes val title: Int) {
     DOWNLOADS(R.string.downloads),
     PLAYBACK(R.string.playback),
+    DJ(R.string.dj_title),
     APPEARANCE(R.string.appearance),
     PERFORMANCE(R.string.performance),
     LOCAL_MUSIC(R.string.local_music),
@@ -2959,6 +2958,7 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
         get() = when (this) {
             DOWNLOADS -> SfIcons.Download
             PLAYBACK -> SfIcons.PlayCircle
+            DJ -> SfIcons.GraphicEq
             APPEARANCE -> SfIcons.Appearance
             PERFORMANCE -> SfIcons.Performance
             LOCAL_MUSIC -> SfIcons.LibraryMusic
