@@ -171,3 +171,37 @@ jobs:
           body_path: release-notes.md
           generate_release_notes: false
           files: dist/*.apk
+
+  # Fixed-name copies of the newest stable release's APKs, so a website can link
+  # https://github.com/Yahel0506/Auden/releases/latest/download/Auden.apk and
+  # always hand out the current version. The names deliberately avoid the
+  # "Auden-" / "AudenTV-" prefixes AppUpdateChecker matches on. Runs on every
+  # push (and by hand), so it also fills in a release that predates this job.
+  stable-links:
+    name: Point the fixed download links at the latest release
+    needs: [version, release]
+    if: ${{ !cancelled() && needs.version.result == 'success' && needs.release.result != 'failure' }}
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Copy the versioned APKs to fixed names
+        run: |
+          set -euo pipefail
+          tag=$(gh release view --repo "$REPO" --json tagName -q .tagName)   # newest non-prerelease
+          echo "Latest release: $tag"
+          mkdir -p stable && cd stable
+          copy() {  # copy <versioned asset> <fixed name>
+            if gh release download "$tag" --repo "$REPO" --pattern "$1" --clobber; then
+              mv "$1" "$2"
+              gh release upload "$tag" "$2" --repo "$REPO" --clobber
+              rm -f "$2"
+            else
+              echo "No $1 in $tag; skipping $2"
+            fi
+          }
+          copy "Auden-$tag.apk"             Auden.apk
+          copy "Auden-${tag}_arm64-v8a.apk" Auden_arm64-v8a.apk
+          copy "AudenTV-$tag.apk"           AudenTV.apk
+          copy "AudenWear-$tag.apk"         AudenWear.apk
