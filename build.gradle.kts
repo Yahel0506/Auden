@@ -41,8 +41,8 @@ buildscript {
  * No "v" in the name — the in-app updater reads it as a number; the "v" is the
  * release tag's alone.
  */
-extra["bitchordVersionCode"] = 35
-extra["bitchordVersionName"] = "1.10.2"
+extra["bitchordVersionCode"] = 36
+extra["bitchordVersionName"] = "1.11.0"
 
 /*
  * Bump this by hand before cutting each sideloaded test build ("beta2",
@@ -64,6 +64,30 @@ extra["bitchordVersionName"] = "1.10.2"
  * beta watch app shows "Update available" as soon as the phone has the release.
  */
 extra["bitchordBetaSuffix"] = ""
+
+/*
+ * The Fish Audio key the DJ's voice is bought with, read from `.env` at the repo
+ * root (KEY=VALUE; `#` comments, `export `, quotes and CRLF are tolerated), then
+ * from local.properties, then from the environment. Blank is a supported state,
+ * not a broken build: the DJ still plays and its words are on screen.
+ *
+ * It is compiled into the APK (BuildConfig.FISH_API_KEY), so anyone who holds an
+ * APK holds the key: keep it out of builds you hand to other people.
+ */
+extra["fishApiKey"] = run {
+    val name = "FISH_API_KEY"
+    fun clean(raw: String) = raw.trim().removeSurrounding("\"").removeSurrounding("'").trim()
+    val fromEnvFile = file(".env").takeIf { it.isFile }?.readLines().orEmpty()
+        .map { it.trim().removePrefix("export ").trim() }
+        .firstOrNull { it.startsWith("$name=") }
+        ?.substringAfter('=')
+        ?.let { if (it.trimStart().startsWith("\"") || it.trimStart().startsWith("'")) it else it.substringBefore(" #") }
+        ?.takeIf { it.isNotBlank() }
+    val fromLocal = file("local.properties").takeIf { it.isFile }?.let { f ->
+        java.util.Properties().apply { f.inputStream().use { load(it) } }.getProperty(name)
+    }?.takeIf { it.isNotBlank() }
+    clean(fromEnvFile ?: fromLocal ?: System.getenv(name)?.takeIf { it.isNotBlank() } ?: "")
+}
 
 plugins {
     id("com.android.application") version "8.10.1" apply false

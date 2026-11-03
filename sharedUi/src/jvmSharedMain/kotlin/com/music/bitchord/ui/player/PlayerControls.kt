@@ -34,7 +34,9 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -113,6 +115,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.music.bitchord.ui.components.LINE_FADE
+import com.music.bitchord.ui.components.menuAnchor
 import com.music.bitchord.ui.graphics.fadingEdges
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
@@ -475,6 +478,8 @@ internal fun TransportRow(
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     compact: Boolean = false,
+    /** The glyphs' colour: white on the player's art, something dark on a pale page like the DJ's. */
+    tint: Color = Color.White,
 ) {
     val playSize = if (compact) 58.dp else 74.dp
     val playTouch = if (compact) 76.dp else 84.dp
@@ -487,6 +492,7 @@ internal fun TransportRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TransportGlyph(
+            tint = tint,
             icon = Res.drawable.ic_player_previous,
             contentDescription = stringResource(Res.string.widget_previous),
             size = skipSize,
@@ -501,13 +507,14 @@ internal fun TransportRow(
             // would shunt everything below it on every load.
             Box(Modifier.size(playTouch), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(
-                    color = Color.White,
+                    color = tint,
                     strokeWidth = 3.dp,
                     modifier = Modifier.size(if (compact) 30.dp else 38.dp),
                 )
             }
         } else {
             TransportGlyph(
+            tint = tint,
                 icon = if (isPlaying) Res.drawable.ic_player_pause else Res.drawable.ic_player_play,
                 contentDescription = stringResource(if (isPlaying) Res.string.pause else Res.string.play),
                 size = playSize,
@@ -517,6 +524,7 @@ internal fun TransportRow(
             )
         }
         TransportGlyph(
+            tint = tint,
             icon = Res.drawable.ic_player_next,
             contentDescription = stringResource(Res.string.widget_next),
             size = skipSize,
@@ -595,8 +603,12 @@ internal fun PlayerActionRow(
     onListenTogether: () -> Unit,
     /** Opens [ListenTogetherMembersSheet] rather than settings directly. */
     onOpenListenTogetherMembers: () -> Unit,
-    /** Set while the DJ is on: its button takes the queue's place, because the DJ has no queue to open. */
+    /**
+     * Set only while the DJ is on: its button takes the queue's place, because the DJ has no queue to
+     * open. A tap asks it for something ([onOpenDj]); a hold lets it choose ([onDjSurprise]).
+     */
     onOpenDj: (() -> Unit)? = null,
+    onDjSurprise: (() -> Unit)? = null,
 ) {
     val showPartyButton by PlayerSettings.showListenTogetherButton.collectAsStateWithLifecycle()
     val inParty = rememberPartyBadge().inParty
@@ -714,8 +726,10 @@ internal fun PlayerActionRow(
                         icon = Icons.Rounded.GraphicEq,
                         contentDescription = stringResource(Res.string.dj_ask),
                         onClick = onOpenDj,
+                        onLongClick = onDjSurprise,
                         highlighted = false,
                         haptic = Haptic.Expand,
+                        modifier = Modifier.menuAnchor(),
                     )
                 } else {
                     BottomGlyph(
@@ -798,6 +812,7 @@ private fun TransportGlyph(
     haptic: Haptic = Haptic.Tap,
     /** Vertical squash of the glyph alone; its width and touch box are untouched. */
     heightScale: Float = 1f,
+    tint: Color = Color.White,
 ) {
     val haptics = rememberHaptics()
     // Faded rather than hidden: the row keeps its shape at the ends of a queue.
@@ -821,7 +836,7 @@ private fun TransportGlyph(
         Icon(
             painter = painterResource(icon),
             contentDescription = contentDescription,
-            tint = Color.White.copy(alpha = alpha),
+            tint = tint.copy(alpha = alpha),
             modifier = Modifier
                 .size(size)
                 .then(if (heightScale != 1f) Modifier.graphicsLayer { scaleY = heightScale } else Modifier),
@@ -1236,6 +1251,7 @@ private fun rememberPartyBadge(): PartyBadge {
         .value
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun BottomGlyph(
     icon: ImageVector?,
@@ -1253,6 +1269,9 @@ internal fun BottomGlyph(
      * ask for a window.
      */
     tapWindowMs: Long = 0L,
+    /** A hold, for the glyphs that have a second thing to do; null leaves the glyph a plain button. */
+    onLongClick: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
 ) {
     val haptics = rememberHaptics()
     // Read only from the click handler, never during composition, so writing it
@@ -1261,7 +1280,7 @@ internal fun BottomGlyph(
     val lastTap = remember { mutableLongStateOf(-tapWindowMs) }
     val tileColor = LocalPlayerTint.current.copy(alpha = BOTTOM_ACTIVE_TILE_ALPHA)
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(BOTTOM_ACTION_SIZE)
             // Lit, Apple's way: a rounded tile with the glyph cut out of it, the
             // artwork showing through. The glyph is drawn first and the tile over
@@ -1287,9 +1306,15 @@ internal fun BottomGlyph(
                     Modifier
                 },
             )
-            .clickable(
+            .combinedClickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
+                onLongClick = onLongClick?.let { hold ->
+                    {
+                        haptics.play(Haptic.Expand)
+                        hold()
+                    }
+                },
             ) {
                 val now = uptimeMillis()
                 if (now - lastTap.longValue >= tapWindowMs) {

@@ -101,7 +101,7 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // Full tag (zh-Hant / zh-Hans preserved); Innertube maps to hl/gl.
         Innertube.appLanguage = { AppCompatDelegate.getApplicationLocales().get(0)?.toLanguageTag() }
         migrateScriptOnlyAppLocale()
-        // The DJ's voice store knows which voice packs are on the device; no network, no decoding.
+        // The DJ reads its language and whether it has a voice; no network, no decoding.
         dev.auden.dj.DjSession.init(this)
         // The Samsung / Pixel / Clear icons are gone with the old mark; a phone still on one moves to the default.
         runCatching { AppIcon.migrateLegacy(this) }

@@ -22,12 +22,14 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
@@ -100,6 +102,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -114,6 +117,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -243,7 +248,9 @@ import com.music.bitchord.download.Downloads
 import com.music.bitchord.ui.components.BrowseActionsMenu
 import com.music.bitchord.ui.components.BrowseTarget
 import com.music.bitchord.ui.components.ConfirmationAlert
-import com.music.bitchord.ui.components.DjSheet
+import com.music.bitchord.ui.components.CornerReveal
+import com.music.bitchord.ui.components.DjAskMenu
+import com.music.bitchord.ui.components.keepHeightUnderKeyboard
 import dev.auden.dj.DjSession
 import dev.auden.dj.DjUiState
 import com.music.bitchord.ui.player.DjNowPlayingScreen
@@ -387,6 +394,12 @@ import java.util.Locale
 
 /** A full first screen of a native YouTube Music radio before AutoPlay tops it up. */
 /** How much of an artist page's header scrolls away before the top fade begins. */
+/** What the player sheet is handed when the DJ is asked for with nothing loaded: only its own screen shows. */
+private val DjPendingSong = Song(videoId = "dj:pending", title = "", artist = "", thumbnailUrl = null)
+
+/** How long the DJ's player takes to spread over the usual one from the DJ button's corner. */
+private const val DJ_REVEAL_MS = 650
+
 private const val TOP_FADE_START = 0.55f
 
 /** How much of the header's height the fade takes to reach full strength. */
@@ -846,19 +859,26 @@ private fun BitChordApp(
         dark = !darkTheme && !showNowPlaying && route != AppRoute.Replay && replayStory == null && !onboardingVisible,
     )
 
-    var showDj by remember { mutableStateOf(false) }
-    // Set when the listener starts the DJ from Home: the player opens as soon as it is on.
-    var djOpenPlayerWhenReady by remember { mutableStateOf(false) }
-    var djVoicePrompt by remember { mutableStateOf(false) }
-    val djStarted by DjSession.state.collectAsStateWithLifecycle()
-    LaunchedEffect(djStarted.running, djStarted.problem) {
-        if (djStarted.running && djOpenPlayerWhenReady) {
-            showNowPlaying = true
-            djOpenPlayerWhenReady = false
-        } else if (djStarted.problem != null) {
-            djOpenPlayerWhenReady = false
+    // The glass menu off the DJ's button in the player, and the button it hangs from.
+    var djMenuUp by remember { mutableStateOf(false) }
+    var djMenuAnchor by remember { mutableStateOf<Rect?>(null) }
+    // A hold on that button turns the player into the DJ's, spreading from the button's corner:
+    // [djReveal] counts the holds, [djRevealing] says the old player is still wanted underneath,
+    // [djRevealProgress] is how far the DJ's has spread (0 to 1) and [djRevealOrigin] where from.
+    var djReveal by remember { mutableIntStateOf(0) }
+    var djRevealing by remember { mutableStateOf(false) }
+    val djRevealProgress = remember { mutableFloatStateOf(1f) }
+    var djRevealOrigin by remember { mutableStateOf<Offset?>(null) }
+    LaunchedEffect(djReveal) {
+        if (djReveal == 0) return@LaunchedEffect
+        animate(0f, 1f, animationSpec = tween(durationMillis = DJ_REVEAL_MS, easing = FastOutSlowInEasing)) { value, _ ->
+            djRevealProgress.floatValue = value
         }
+        djRevealing = false
     }
+    val djStarted by DjSession.state.collectAsStateWithLifecycle()
+    // The menu is the DJ's: it goes when the DJ does.
+    LaunchedEffect(djStarted.active) { if (!djStarted.active) djMenuUp = false }
     val homeState by viewModel.homeComposed.collectAsStateWithLifecycle()
     val localHomeTitles by viewModel.localShelfTitles.collectAsStateWithLifecycle()
     val homeLoadingMore by viewModel.homeLoadingMore.collectAsStateWithLifecycle()
@@ -1121,10 +1141,22 @@ private fun BitChordApp(
         queueNoticeId += 1
         queueNotice = QueueActionNotice(queueNoticeId, message)
     }
+    // Straight into the DJ's player, which waits for the first words: no notice, no menu to get past.
     val startDj: () -> Unit = {
-        djOpenPlayerWhenReady = true
-        showQueueNotice(context.getString(R.string.dj_starting))
+        showNowPlaying = true
         DjSession.start(context, "")
+    }
+    // A start that could not happen says so on the strip the app already answers with.
+    LaunchedEffect(djStarted.problem) {
+        val message = when (djStarted.problem) {
+            DjUiState.Problem.TOO_FEW_SONGS -> R.string.dj_too_few
+            DjUiState.Problem.NO_PLAYER -> R.string.dj_no_player
+            null -> return@LaunchedEffect
+        }
+        // The notice strip is drawn under the player's window, so the player comes down for it: and
+        // with it the DJ-shaped hole it was raised into.
+        showNowPlaying = false
+        showQueueNotice(context.getString(message))
     }
     LaunchedEffect(queueNotice?.id) {
         val shown = queueNotice ?: return@LaunchedEffect
@@ -1594,6 +1626,8 @@ private fun BitChordApp(
         scope.launch {
             if (refusedByHost()) return@launch
             val c = controller ?: return@launch
+            // Anything played by hand ends the DJ, and it gives the player back as it found it first.
+            DjSession.leave()
             val currentTimeline = player.queue.takeIf { it.size == c.mediaItemCount }
                 ?: (0 until c.mediaItemCount).map { c.getMediaItemAt(it).toSong() }
             val currentIndex = c.currentMediaItemIndex
@@ -1686,6 +1720,8 @@ private fun BitChordApp(
         scope.launch {
             if (refusedByHost()) return@launch
             val c = controller ?: return@launch
+            // Anything played by hand ends the DJ, and it gives the player back as it found it first.
+            DjSession.leave()
             val currentTimeline = player.queue.takeIf { it.size == c.mediaItemCount }
                 ?: (0 until c.mediaItemCount).map { c.getMediaItemAt(it).toSong() }
             val currentIndex = c.currentMediaItemIndex
@@ -1752,6 +1788,7 @@ private fun BitChordApp(
                 }
                 // Cancel any armed crossfade/AutoPlay work and erase the old
                 // cold-start snapshot before the visible queue is replaced.
+                DjSession.leave()
                 activeController.beginRadioQueue()
                 val currentIndex = activeController.currentMediaItemIndex
                 val currentItem = activeController.currentMediaItem
@@ -1822,6 +1859,7 @@ private fun BitChordApp(
                     )
                 }
                 activeRadioSeed = null
+                DjSession.leave()
                 activeController.beginRadioQueue()
                 activeController.playSongs(station, 0)
                 activeController.commitRadioQueue()
@@ -2605,22 +2643,28 @@ private fun BitChordApp(
                         it.memberId == playback.startedBy
                     }?.displayName?.takeIf(String::isNotBlank)
             }
-        // The DJ's own player while it speaks: its line, its waveform, and the way to ask for more.
+        // The DJ's own player while it is on and speaking, or choosing: its line, its waveform, and the way
+        // to ask for more. While a song of the set plays, the player is the usual one, without a queue.
         val djRunning by DjSession.state.collectAsStateWithLifecycle()
-        if (displayedSong.isDjClip) {
-            val clip = DjSession.clipOf(displayedSong.videoId)
-            DjNowPlayingScreen(
-                words = clip?.text,
-                theme = djRunning.theme,
-                envelope = clip?.envelope ?: FloatArray(0),
-                isPlaying = player.isPlaying,
-                position = player.position,
-                durationMs = player.durationMs,
-                onPlayPause = { togglePlayPause() },
-                onSkip = { controller?.seekToNextMediaItem() },
-                onAsk = { showDj = true },
-            )
-        } else NowPlayingScreen(
+        val djScreen = djRunning.pending || (djRunning.running && displayedSong.isDjClip)
+        val openDjMenu: () -> Unit = {
+            djMenuAnchor = MenuAnchor.consume()
+            djMenuUp = true
+            // Taken on the frame the menu opens on, like the ⋯ menu's.
+            if (!AppSettings.reduceDynamicBlur.value && !playerLiveCanvas) playerBackdrop.capture()
+        }
+        val djSurprise: () -> Unit = {
+            if (!djScreen) {
+                // The player as it is stays under the DJ's while that spreads from the button.
+                djRevealOrigin = MenuAnchor.consume()?.center
+                djRevealProgress.floatValue = 0f
+                djRevealing = true
+                djReveal++
+            }
+            DjSession.request(context, "")
+        }
+        Box(Modifier.fillMaxSize()) {
+        if (!djScreen || djRevealing) NowPlayingScreen(
             song = displayedSong,
             playedBy = playedBy,
             accountName = account?.name,
@@ -2683,7 +2727,7 @@ private fun BitChordApp(
                     )
                 }
             },
-            queue = if (djRunning.running) emptyList() else player.queue,
+            queue = if (djRunning.active) emptyList() else player.queue,
             queueIndex = player.queueIndex,
             hasPrevious = player.hasPrevious,
             hasNext = player.hasNext,
@@ -2735,8 +2779,10 @@ private fun BitChordApp(
             // The enriched copy, not player.song — otherwise the menu
             // hides the album and artist rows even once their browse
             // ids have been resolved.
-            // The DJ's button only exists while the DJ is on, where it takes the queue's place.
-            onOpenDj = if (djRunning.running) ({ showDj = true }) else null,
+            // The DJ's button only exists while the DJ is on, where it takes the queue's place; otherwise
+            // this player has no trace of the DJ.
+            onOpenDj = if (djRunning.active) openDjMenu else null,
+            onDjSurprise = if (djRunning.active) djSurprise else null,
             onOpenMenu = {
                 menuFromPlayer = true
                 songMenuOrigin = null
@@ -2866,6 +2912,47 @@ private fun BitChordApp(
                 }
             },
         )
+        if (djScreen) {
+            val djClip = DjSession.clipOf(displayedSong.videoId)
+            var origin by remember { mutableStateOf(Offset.Zero) }
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .onGloballyPositioned { origin = it.positionInWindow() }
+                    .then(
+                        if (djRevealing) {
+                            // Read in the layer, not here: the spread moves every frame, and the player
+                            // under it should not recompose for each of them.
+                            Modifier.graphicsLayer {
+                                val spread = djRevealProgress.floatValue
+                                alpha = (spread * 2f).coerceIn(0f, 1f)
+                                clip = true
+                                val from = djRevealOrigin?.let { it - origin } ?: Offset(size.width, size.height)
+                                shape = CornerReveal(spread, from)
+                            }
+                        } else {
+                            Modifier
+                        },
+                    ),
+            ) {
+                DjNowPlayingScreen(
+                    words = djClip?.text,
+                    // While it chooses, what was asked for, not what the last set was about.
+                    theme = if (djRunning.pending) djRunning.request.ifBlank { null } else djRunning.theme,
+                    envelope = djClip?.envelope ?: FloatArray(0),
+                    isPlaying = player.isPlaying,
+                    position = player.position,
+                    durationMs = player.durationMs,
+                    onPlayPause = { togglePlayPause() },
+                    onSkip = { controller?.seekToNextMediaItem() },
+                    onAsk = openDjMenu,
+                    loading = djRunning.pending,
+                    onSurprise = djSurprise,
+                    note = djRunning.speechError?.let { stringResource(R.string.dj_speech_error, it) },
+                )
+            }
+        }
+        }
     }
 
     // One step back, from anywhere: the page on top of the stack, then a mood
@@ -3520,15 +3607,8 @@ private fun BitChordApp(
                                 onItemLongPress = onShelfLongPress,
                                 onRetry = viewModel::loadHome,
                                 onOpenDj = {
-                                    // The DJ opens straight into its player, on a surprise: no menu to get past. The
-                                    // one thing asked first is the voice, whenever there is one to download.
-                                    val st = DjSession.state.value
-                                    when {
-                                        st.running -> showNowPlaying = true
-                                        st.voice is DjUiState.Voice.NotInstalled || st.voice is DjUiState.Voice.Downloading ->
-                                            djVoicePrompt = true
-                                        else -> startDj()
-                                    }
+                                    // The DJ opens straight into its player, on a surprise: no menu to get past.
+                                    if (DjSession.state.value.active) showNowPlaying = true else startDj()
                                 },
                                 refreshing = MainViewModel.Feed.HOME in refreshing,
                                 onRefresh = { viewModel.refresh(MainViewModel.Feed.HOME) },
@@ -4382,7 +4462,8 @@ private fun BitChordApp(
 
         }
 
-        val playerRaised = showNowPlaying && playerSong != null
+        // The DJ can be asked for with nothing loaded: its player is up while it chooses.
+        val playerRaised = showNowPlaying && (playerSong != null || djStarted.pending)
 
         // ---- The page's still, for a menu hung over it ----
         // Taken as a ⋮ or ⋯ menu opens over a page, let go once it has played
@@ -4896,7 +4977,10 @@ private fun BitChordApp(
                         .onSizeChanged {
                             playerDock.sheetTravel = it.height.toFloat()
                             playerSheetMotion.laidOut = true
-                        },
+                        }
+                        // The sheet is padded by the keyboard (M3 does it to every modal sheet); the player
+                        // and its menus are laid out as they are without one.
+                        .keepHeightUnderKeyboard(),
                 ) {
                     // The still the ⋯ menu below blurs under its panel — taken
                     // by the tap that opens it (see onOpenMenu), not the player
@@ -4906,7 +4990,7 @@ private fun BitChordApp(
                     // sheet's own window, as the menu has to be to sit above
                     // the player. Not under "reduce dynamic blur": the panel
                     // is opaque then.
-                    val playerMenuUp = songActions != null && songMenuOrigin == null && menuFromPlayer
+                    val playerMenuUp = (songActions != null && songMenuOrigin == null && menuFromPlayer) || djMenuUp
                     LaunchedEffect(playerMenuUp, reduceDynamicBlur) {
                         if (!playerMenuUp || reduceDynamicBlur) {
                             delay(SNAPSHOT_RELEASE_DELAY_MS)
@@ -4921,7 +5005,7 @@ private fun BitChordApp(
                         },
                     ) {
                         CompositionLocalProvider(LocalPlayerDock provides activeDock) {
-                            nowPlaying(playerSong)
+                            nowPlaying(playerSong ?: DjPendingSong)
                         }
                     }
                     IosMenuPopover(
@@ -4931,6 +5015,24 @@ private fun BitChordApp(
                         backdrop = if (playerLiveCanvas) livePlayerBackdrop else playerBackdrop,
                     ) { song ->
                         songMenuBody(song)
+                    }
+                    // The DJ's: the same glass, hung off the DJ's button.
+                    IosMenuPopover(
+                        item = if (djMenuUp) Unit else null,
+                        anchor = djMenuAnchor,
+                        onDismiss = { djMenuUp = false },
+                        backdrop = if (playerLiveCanvas) livePlayerBackdrop else playerBackdrop,
+                    ) {
+                        DjAskMenu(
+                            canSteer = djStarted.running && DjSession.isDjSong(playerSong?.videoId),
+                            onSend = { text ->
+                                djMenuUp = false
+                                DjSession.request(context, text)
+                            },
+                            onMore = { djMenuUp = false; DjSession.more() },
+                            onLess = { djMenuUp = false; DjSession.less() },
+                            onStop = { djMenuUp = false; DjSession.stop() },
+                        )
                     }
                 }
             }
@@ -5028,64 +5130,6 @@ private fun BitChordApp(
                     songMenuAnchor = null
                     menuFromHistory = false
                 }
-            }
-        }
-
-        // ---- The DJ: its voice, asked before it starts whenever it is not on the phone ----
-        if (djVoicePrompt) {
-            val voice = djStarted.voice
-            // Once the voice is there (or the language has none), the DJ starts by itself.
-            LaunchedEffect(voice) {
-                if (voice is DjUiState.Voice.Ready || voice is DjUiState.Voice.Unavailable) {
-                    djVoicePrompt = false
-                    startDj()
-                }
-            }
-            AlertDialog(
-                onDismissRequest = { djVoicePrompt = false },
-                title = { Text(stringResource(R.string.dj_voice_prompt_title)) },
-                text = {
-                    Text(
-                        when (voice) {
-                            is DjUiState.Voice.Downloading ->
-                                stringResource(R.string.dj_voice_downloading, (voice.fraction * 100).toInt())
-                            is DjUiState.Voice.NotInstalled -> buildString {
-                                append(
-                                    stringResource(
-                                        R.string.dj_voice_prompt_message,
-                                        "%s · %.0f MB".format(voice.pack.voice, voice.pack.sizeBytes / 1_000_000.0),
-                                    ),
-                                )
-                                voice.failure?.let { append("\n\n").append(stringResource(R.string.dj_voice_failed, it)) }
-                            }
-                            else -> ""
-                        },
-                    )
-                },
-                confirmButton = {
-                    if (voice is DjUiState.Voice.NotInstalled) {
-                        TextButton(onClick = { DjSession.downloadVoice(context) }) {
-                            Text(stringResource(R.string.dj_voice_prompt_download))
-                        }
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { djVoicePrompt = false; startDj() }) {
-                        Text(stringResource(R.string.dj_voice_prompt_skip))
-                    }
-                },
-            )
-        }
-
-        // ---- The DJ ----
-        if (showDj) {
-            val closeDj = { showDj = false }
-            BackHandler(onBack = closeDj)
-            ModalBottomSheet(
-                onDismissRequest = closeDj,
-                containerColor = MaterialTheme.colorScheme.background,
-            ) {
-                DjSheet(onDismiss = closeDj)
             }
         }
 

@@ -124,6 +124,11 @@ object LyricsRepository {
      * was supposed to mean. On, a merely line-synced answer is kept only as a
      * fallback, and the search keeps going through the rest of [order] for a
      * word-synced one, taking the top-priority source that has one.
+     *
+     * [settleAfterMs], when set, stops waiting at that point and takes the best
+     * answer already in: a word-synced one if any finished source has one,
+     * else the top-priority line-synced one, else plain text. Callers with a
+     * hard time limit use it so a slow search still keeps what it found.
      */
     suspend fun lyrics(
         videoId: String,
@@ -135,6 +140,7 @@ object LyricsRepository {
         order: List<LyricsSource> = LyricsSource.entries,
         prioritizeSyllableSync: Boolean = false,
         isrc: String? = null,
+        settleAfterMs: Long? = null,
         /** Called from the provider job itself, including for lazily-started providers. */
         onSourceStarted: ((LyricsSource) -> Unit)? = null,
         /**
@@ -199,24 +205,38 @@ object LyricsRepository {
 
         try {
             var lineSynced: Result? = null
-            for ((source, job) in racing) {
-                // If we already found a line-synced or better result, skip Genius completely
-                if (lineSynced != null && source == LyricsSource.GENIUS) continue
+            val search = suspend {
+                var answer: Result? = null
+                for ((source, job) in racing) {
+                    // If we already found a line-synced or better result, skip Genius completely
+                    if (lineSynced != null && source == LyricsSource.GENIUS) continue
 
-                val found = runCatching { job.await() }.getOrNull() ?: continue
-                if (found.lines.any { it.isWordSynced }) return@coroutineScope found
-                if (!prioritizeSyllableSync && found.lines.any { it.timeMs > 0 }) {
-                    return@coroutineScope found
+                    val found = runCatching { job.await() }.getOrNull() ?: continue
+                    if (found.lines.any { it.isWordSynced }) { answer = found; break }
+                    if (!prioritizeSyllableSync && found.lines.any { it.timeMs > 0 }) { answer = found; break }
+                    if (lineSynced == null) lineSynced = found
                 }
-                if (lineSynced == null) lineSynced = found
+                answer ?: lineSynced
             }
-            lineSynced
+            if (settleAfterMs == null) return@coroutineScope search()
+            withTimeoutOrNull(settleAfterMs) { search() } ?: settled(racing)
         } finally {
             // Whoever lost the race is no longer worth waiting on, and
             // coroutineScope will not return while they are still running.
             racing.forEach { it.second.cancel() }
             documents.cancel()
         }
+    }
+
+    /** The best answer among the sources that have already finished, in priority order. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private fun settled(racing: List<Pair<LyricsSource, Deferred<Result?>>>): Result? {
+        val done = racing.mapNotNull { (_, job) ->
+            if (job.isCompleted && !job.isCancelled) runCatching { job.getCompleted() }.getOrNull() else null
+        }
+        return done.firstOrNull { r -> r.lines.any { it.isWordSynced } }
+            ?: done.firstOrNull { r -> r.lines.any { it.timeMs > 0 } }
+            ?: done.firstOrNull()
     }
 
     private suspend fun fetch(

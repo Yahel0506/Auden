@@ -57,7 +57,7 @@ Auden is a fork of [BitChord](https://github.com/kushagrasinghx/BitChord). It ke
 
 ### Auden DJ
 - **Themed sets** that start from Home and queue like music, each opening with a reason about the listener and the song it begins on.
-- **Fully on-device voice** — offline neural text-to-speech via sherpa-onnx; the DJ speaks and writes English.
+- **Spoken in Spanish or English** — the DJ speaks through Fish Audio (needs a `FISH_API_KEY` in a git-ignored `.env` at the repo root, see `.env.example`); without one the DJ plays and its words are on screen.
 
 ### Home and Spotify
 - **Hybrid Home** — local shelves mixed with YouTube Music's recommendations.

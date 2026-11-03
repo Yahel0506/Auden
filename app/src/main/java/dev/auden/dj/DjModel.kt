@@ -67,6 +67,9 @@ sealed interface DjTheme {
     data object Fresh : DjTheme { override val key get() = "fresh" }
     data object Discover : DjTheme { override val key get() = "discover" }
 
+    /** What the listener typed, as YouTube Music understood it: songs the DJ found by searching it, not chose from the library. */
+    data class ByRequest(val text: String, val taste: String? = null) : DjTheme { override val key get() = "request:${text.lowercase(Locale.ROOT)}" }
+
     /** The family a theme belongs to; two blocks in a row are never of the same one unless asked for. */
     val kind: String get() = key.substringBefore(':')
 }

@@ -3,6 +3,7 @@ package dev.auden.library.lyrics
 import android.content.Context
 import com.music.bitchord.R
 import com.music.bitchord.data.lyrics.LyricsRepository
+import com.music.bitchord.download.Downloads
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.model.Song
 import dev.auden.library.JobNotification
@@ -24,13 +25,16 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Finds lyrics for a whole album, playlist or folder in the background and keeps them, so they are there
- * offline later. Songs that already have a stored version are left alone.
+ * offline later. Every song is looked up again, so a better version found since replaces the one kept, and
+ * a downloaded song's lyrics file and tag are rewritten to match.
  *
  * Reports on a notification as it goes; a batch is long enough that nobody should have to watch the screen.
  */
 object LyricsBatch {
     private const val PARALLELISM = 3
     private const val PER_SONG_MS = 40_000L
+    /** Leaves time to keep what was found when the word-synced search runs long. */
+    private const val SETTLE_MS = PER_SONG_MS - 3_000L
     private const val NOTIFICATION_ID = 0x9300
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -47,7 +51,7 @@ object LyricsBatch {
                 val sources = AppSettings.lyricsSources.value
                 val order = AppSettings.lyricsSourceOrder.value
                 val todo = songs.distinctBy { LyricsStore.key(it) }
-                    .filter { SongIdentity.seconds(it.durationText) != null && LyricsStore.variants(app, LyricsStore.key(it)).isEmpty() }
+                    .filter { SongIdentity.seconds(it.durationText) != null }
                 if (todo.isEmpty()) {
                     notification.finish(app.getString(R.string.lyrics_batch_title, title), app.getString(R.string.lyrics_batch_nothing))
                     return@launch
@@ -67,11 +71,13 @@ object LyricsBatch {
                                             durationMs = (SongIdentity.seconds(song.durationText) ?: 0) * 1000L,
                                             album = song.albumName, sources = sources, order = order,
                                             prioritizeSyllableSync = AppSettings.prioritizeSyllableSync.value,
+                                            settleAfterMs = SETTLE_MS,
                                         )
                                     }.getOrNull()
                                 }
                                 result?.artifact?.let {
                                     LyricsStore.save(app, LyricsStore.key(song), it, makeActive = true)
+                                    Downloads.replaceLyrics(app, song, it)
                                     found.incrementAndGet()
                                 }
                                 val n = done.incrementAndGet()
