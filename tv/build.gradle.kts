@@ -41,15 +41,17 @@ val lastfmSecret: String = (
  * deployment-specific rather than a property of the source, which is what puts
  * it here beside the others instead of in a constant.
  *
- * Empty is a supported state, not a broken build: the field below is only the
- * *default* the address box on the Listen Together screen starts with, and
- * anything typed there wins and persists. So a fresh checkout without this line
- * builds and runs, and simply asks for an address the first time somebody opens
- * the screen. See ListenTogether.DEFAULT_SERVER.
+ * A blank value counts as missing. CI writes this line from a secret, and an
+ * unset secret yields `LISTEN_TOGETHER_SERVER=` — present but empty — which
+ * used to win over the built-in address and shipped a release whose Create and
+ * Join buttons were permanently disabled. Falling through to the built-in
+ * address keeps every build on the same server as every other, so invites and
+ * codes keep working between them. Anything typed into the Listen Together
+ * screen still wins and persists. See ListenTogether.DEFAULT_SERVER.
  */
 val listenTogetherServer: String = (
-    localProps.getProperty("LISTEN_TOGETHER_SERVER")
-        ?: System.getenv("LISTEN_TOGETHER_SERVER")
+    localProps.getProperty("LISTEN_TOGETHER_SERVER")?.takeIf { it.isNotBlank() }
+        ?: System.getenv("LISTEN_TOGETHER_SERVER")?.takeIf { it.isNotBlank() }
         ?: "https://bitchord-listen-together.onrender.com"
     ).trim().trimEnd('/')
 
@@ -87,8 +89,8 @@ android {
         // Haze falls back to a translucent scrim below that.
         minSdk = 26
         targetSdk = 36
-        versionCode = 34
-        versionName = "1.11.0"
+        versionCode = 35
+        versionName = "1.11.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
