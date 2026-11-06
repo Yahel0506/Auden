@@ -158,6 +158,7 @@ import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.isUnresolvedSpotify
 import com.music.bitchord.data.model.UiState
 import com.music.bitchord.data.model.PlaylistPrivacy
+import com.music.bitchord.data.model.withoutVideos
 import com.music.bitchord.data.model.UserPlaylist
 import com.music.bitchord.data.model.isMatchMissing
 import com.music.bitchord.data.model.isMatchPending
@@ -293,6 +294,7 @@ import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.data.sources.SourceConfig
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.data.sources.SourceRegistry
+import com.music.bitchord.ui.components.ChoiceAlert
 import com.music.bitchord.ui.components.ListenBrainzTokenAlert
 import com.music.bitchord.ui.components.MiniPlayer
 import com.music.bitchord.ui.components.QueueActionNotice
@@ -324,6 +326,7 @@ import com.music.bitchord.data.model.TopPickKind
 import com.music.bitchord.data.model.TopPickMood
 import com.music.bitchord.ui.screens.MoodGridPage
 import com.music.bitchord.ui.player.NowPlayingScreen
+import com.music.bitchord.ui.player.MixViewRequest
 import com.music.bitchord.ui.player.MusicVideoEngine
 import com.music.bitchord.ui.player.PlayerSheetMotion
 import androidx.compose.ui.geometry.Offset
@@ -370,6 +373,8 @@ import com.music.bitchord.ui.screens.MoodGenrePlaylistsScreen
 import com.music.bitchord.ui.screens.SearchScreen
 import com.music.bitchord.data.settings.SongSort
 import com.music.bitchord.ui.onboarding.OnboardingScreen
+import com.music.bitchord.ui.festive.DiwaliGate
+import com.music.bitchord.ui.festive.DiwaliGreetingScreen
 import com.music.bitchord.ui.replay.ReplayScreen
 import com.music.bitchord.ui.replay.cards
 import com.music.bitchord.ui.replay.ReplayShareSheet
@@ -669,6 +674,9 @@ private fun BitChordApp(
     // background at all. Hosting it here also puts the scrim over the tab bar
     // and the mini player, like every other alert in the app.
     var editingSource by remember { mutableStateOf<SourceConfig?>(null) }
+    var choosingSourceQuality by remember { mutableStateOf<SourceConfig?>(null) }
+    /** An addon whose "Outdated addon" line was tapped; see [SourceConfig.needsAddonUpdate]. */
+    var explainingOutdatedAddon by remember { mutableStateOf<SourceConfig?>(null) }
     var confirmJioSaavn by remember { mutableStateOf(false) }
     var confirmBitPerfect by remember { mutableStateOf<BitPerfectMode?>(null) }
     var confirmFixedVolume by remember { mutableStateOf(false) }
@@ -827,6 +835,25 @@ private fun BitChordApp(
     onboardingShown.targetState = !onboardingComplete
     val onboardingVisible = onboardingShown.currentState || onboardingShown.targetState
 
+    // ---- Diwali (greeting once after the welcome, golden home wordmark) ----
+    // Indian users only, by the device timezone alone, and only on Diwali
+    // itself (see DiwaliGate). Asked again each time the app comes to the
+    // front, so one left open overnight into the day still greets — and one
+    // left open past it lets the gold go.
+    // Auden: off. BitChord's own greeting and branding; the code stays so merges stay clean.
+    // Auden: off. BitChord's own greeting and branding; the code stays so merges stay clean.
+    val diwaliFestive = remember(appForeground) {
+        AUDEN_FESTIVE_GREETINGS && DiwaliGate.isIndianTimezone() && DiwaliGate.isDiwaliDay()
+    }
+    var showDiwali by rememberSaveable { mutableStateOf(false) }
+    var diwaliAutoShown by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(diwaliFestive, onboardingComplete) {
+        if (diwaliFestive && onboardingComplete && !diwaliAutoShown) {
+            diwaliAutoShown = true
+            if (!AppSettings.diwaliGreetingShown.value) showDiwali = true
+        }
+    }
+
     // ---- Navigation ----
     // One back stack for every page: the routes pushed over the tabs, and the
     // album / artist / playlist pages interleaved with them — see
@@ -856,7 +883,7 @@ private fun BitChordApp(
     }
 
     SystemBarIcons(
-        dark = !darkTheme && !showNowPlaying && route != AppRoute.Replay && replayStory == null && !onboardingVisible,
+        dark = !darkTheme && !showNowPlaying && route != AppRoute.Replay && replayStory == null && !onboardingVisible && !showDiwali,
     )
 
     // The glass menu off the DJ's button in the player, and the button it hangs from.
@@ -881,6 +908,22 @@ private fun BitChordApp(
     LaunchedEffect(djStarted.active) { if (!djStarted.active) djMenuUp = false }
     val homeState by viewModel.homeComposed.collectAsStateWithLifecycle()
     val localHomeTitles by viewModel.localShelfTitles.collectAsStateWithLifecycle()
+    val hideRecents by AppSettings.hideRecents.collectAsStateWithLifecycle()
+    val hideHomeVideos by AppSettings.hideHomeVideos.collectAsStateWithLifecycle()
+    val hideTopPicks by AppSettings.hideTopPicks.collectAsStateWithLifecycle()
+    val hideHomeMoods by AppSettings.hideHomeMoods.collectAsStateWithLifecycle()
+    // Only what Home draws: Top Picks reads the unfiltered feed from the view model.
+    val visibleHomeState = remember(homeState, hideHomeVideos, hideRecents) {
+        val loaded = homeState as? UiState.Success
+        if (loaded != null && (hideHomeVideos || hideRecents)) {
+            var shelves = loaded.data
+            if (hideRecents) shelves = shelves.filterNot { it.title == YtMusicRepository.RECENT_TITLE }
+            if (hideHomeVideos) shelves = shelves.withoutVideos()
+            UiState.Success(shelves)
+        } else {
+            homeState
+        }
+    }
     val homeLoadingMore by viewModel.homeLoadingMore.collectAsStateWithLifecycle()
     val homeRecentlyPlayedLoading by viewModel.homeRecentlyPlayedLoading.collectAsStateWithLifecycle()
     val topPicks by viewModel.topPicks.collectAsStateWithLifecycle()
@@ -3003,6 +3046,8 @@ private fun BitChordApp(
         BackHandler(enabled = showLastfmLogin) { showLastfmLogin = false }
         BackHandler(enabled = discordDialog != null) { discordDialog = null }
         BackHandler(enabled = editingSource != null) { editingSource = null }
+        BackHandler(enabled = choosingSourceQuality != null) { choosingSourceQuality = null }
+        BackHandler(enabled = explainingOutdatedAddon != null) { explainingOutdatedAddon = null }
         BackHandler(enabled = editingPartyServer) { editingPartyServer = false }
         BackHandler(enabled = editingSignatureApi) { editingSignatureApi = false }
 
@@ -3013,8 +3058,13 @@ private fun BitChordApp(
         // one child it always had and changes nothing.
         //
         // Everything a page's menu floats over, and so what [pageBackdrop]
-        // takes its still of; the menus themselves are drawn outside it.
-        Row(Modifier.fillMaxSize().snapshotBackdropSource(pageBackdrop)) {
+        // takes its still of; the menus themselves are drawn outside it. On the
+        // window's background, which the pages don't paint: see `paintBackdrop`.
+        Row(
+            Modifier
+                .fillMaxSize()
+                .snapshotBackdropSource(pageBackdrop, floor = MaterialTheme.colorScheme.background),
+        ) {
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 AnimatedContent(
                     // Whatever is on top of the back stack — see [AppNavigator].
@@ -3238,6 +3288,8 @@ private fun BitChordApp(
                             SourcesScreen(
                                 contentPadding = listPadding,
                                 onEditSource = { editingSource = it },
+                                onChooseSourceQuality = { choosingSourceQuality = it },
+                                onExplainOutdatedAddon = { explainingOutdatedAddon = it },
                                 onEditWebDav = { showWebDavEditor = true },
                                 onEditSmb = { showSmbEditor = true },
                                 onConfirmJioSaavn = { confirmJioSaavn = true },
@@ -3564,11 +3616,13 @@ private fun BitChordApp(
                             )
                         } else when ((destination as? AppDestination.Tab)?.index ?: selectedTab) {
                             TAB_HOME -> HomeScreen(
-                                state = homeState,
+                                state = visibleHomeState,
                                 listState = homeListState,
                                 currentSong = player.song,
                                 isPlaying = player.isPlaying,
                                 title = stringResource(R.string.listen_now),
+                                festiveLogo = diwaliFestive,
+                                onFestiveLogoClick = { showDiwali = true },
                                 signedIn = signedIn,
                                 onSignIn = { webSession = WebSessionMode.SIGN_IN },
                                 onItemClick = { item, shelfTitle ->
@@ -3616,14 +3670,16 @@ private fun BitChordApp(
                                 contentPadding = listPadding,
                                 onLoadMore = viewModel::loadMoreHome,
                                 loadingMore = homeLoadingMore,
-                                recentlyPlayedLoading = homeRecentlyPlayedLoading,
+                                recentlyPlayedLoading = homeRecentlyPlayedLoading && !hideRecents,
                                 topPicks = topPicks,
                                 topPicksLoading = topPicksLoading,
                                 listenerName = account?.name,
-                                onTopPickClick = openTopPick,
-                                onMoodClick = playMood,
+                                // Neither shelf is drawn without its callback.
+                                onTopPickClick = openTopPick.takeUnless { hideTopPicks },
+                                onMoodClick = playMood.takeUnless { hideHomeMoods },
                                 onMoodsShowAll = { navigator.push(AppRoute.Moods) },
-                                artworkMotion = artworkMotion,
+                                // Nothing on Home is seen while the greeting covers it.
+                                artworkMotion = artworkMotion && !showDiwali,
                                 onTopPickLongPress = { pick ->
                                     pick.browseId?.let { browseId ->
                                         onShelfLongPress(
@@ -4651,6 +4707,7 @@ private fun BitChordApp(
             // so "Remove from cache" is only offered for a track it holds.
             // Re-asked when the cache changes, which is what drops the row
             // once the track has gone.
+            val automixOn by AppSettings.smartFadeEnabled.collectAsStateWithLifecycle()
             val cacheVersion by AudioCache.contentsChanged.collectAsStateWithLifecycle()
             val inCache by produceState(false, song.videoId, cacheVersion) {
                 value = song.localUri == null &&
@@ -4852,6 +4909,16 @@ private fun BitChordApp(
                     {
                         songActions = null
                         showLyricsOffset = true
+                    }
+                } else {
+                    null
+                },
+                // The popup lives in the player, so the menu only has to close
+                // and ask for it; it lays the next transition out on its own.
+                onAutomixOverview = if (fromPlayer && automixOn) {
+                    {
+                        songActions = null
+                        MixViewRequest.open = true
                     }
                 } else {
                     null
@@ -5749,8 +5816,22 @@ private fun BitChordApp(
             }
         }
 
-        // ---- Update available (once per launch; held until the welcome is done) ----
-        if (showUpdateDialog && onboardingComplete) {
+        // ---- Diwali greeting ----
+        AnimatedVisibility(
+            visible = showDiwali,
+            enter = fadeIn(tween(400)),
+            exit = fadeOut(tween(300)),
+        ) {
+            val dismissDiwali = {
+                showDiwali = false
+                AppSettings.setDiwaliGreetingShown()
+            }
+            BackHandler(onBack = dismissDiwali)
+            DiwaliGreetingScreen(onDismiss = dismissDiwali)
+        }
+
+        // ---- Update available (once per launch; held until the welcome and Diwali greeting are done) ----
+        if (showUpdateDialog && onboardingComplete && !showDiwali) {
             updateNotice?.let { update ->
                 UpdateAvailableDialog(
                     version = update.version,
@@ -5784,474 +5865,506 @@ private fun BitChordApp(
             }
         }
 
-        if (showLyricsSources) {
-            BackHandler { showLyricsSources = false }
-            LyricsSourcesDialog(
-                hazeState = hazeState,
-                onDismiss = { showLyricsSources = false },
-            )
-        }
-
-        if (songSortMenuOpen) {
-            BackHandler { songSortMenuOpen = false }
-            FrostedSortMenu(
-                hazeState = hazeState,
-                selected = songSort,
-                onSelect = { option ->
-                    detail?.browseId?.let { AppSettings.setDetailSongSort(it, option) }
-                    songSortMenuOpen = false
-                },
-                // Flipping the date direction deliberately leaves the menu up:
-                // closing it here would cut the arrow's rotation animation off
-                // before it played, and the open menu lets the direction flip
-                // read against the list reordering behind the frost.
-                onFlipDateDirection = {
-                    detail?.browseId?.let { browseId ->
-                        val next = when (songSort) {
-                            SongSort.DATE_ADDED_DESC -> SongSort.DATE_ADDED_ASC
-                            SongSort.DATE_ADDED_ASC -> SongSort.DATE_ADDED_DESC
-                            else -> SongSort.DATE_ADDED_DESC
-                        }
-                        AppSettings.setDetailSongSort(browseId, next)
-                    }
-                },
-                onDismiss = { songSortMenuOpen = false },
-            )
-        }
-
-        val menuFolder = detail?.browseId?.takeIf { it.isDeviceFolder() }
-        if (folderMenuOpen && menuFolder != null) {
-            BackHandler { folderMenuOpen = false }
-            val downloadsFolder = menuFolder == "local:downloads"
-            val viewType = folderViewTypeOf(menuFolder)
-            FrostedFolderMenu(
-                hazeState = hazeState,
-                sort = folderSortOf(menuFolder),
-                viewType = viewType,
-                onSort = { option ->
-                    if (downloadsFolder) AppSettings.setDownloadedMusicSort(option)
-                    else AppSettings.setLocalMusicSort(option)
-                    folderMenuOpen = false
-                },
-                onToggleViewType = {
-                    val next = if (viewType == LibraryViewType.GRID) LibraryViewType.LIST else LibraryViewType.GRID
-                    if (downloadsFolder) AppSettings.setDownloadedMusicViewType(next)
-                    else AppSettings.setLocalMusicViewType(next)
-                    folderMenuOpen = false
-                },
-                onDismiss = { folderMenuOpen = false },
-            )
-        }
-
-        if (showAccountSelector) {
-            BackHandler { showAccountSelector = false }
-            AccountProfileSelector(
-                accounts = googleAccounts,
-                activeAccountId = activeAccountId,
-                activeProfileId = activeProfileId,
-                hazeState = hazeState,
-                onSelect = { selected, profile -> viewModel.selectProfile(selected.accountId, profile.profileId) },
-                onAddAccount = {
-                    showAccountSelector = false
-                    webSession = WebSessionMode.SIGN_IN
-                },
-                onRemoveAccount = { selected ->
-                    viewModel.removeAccount(selected.accountId)
-                    showAccountSelector = false
-                },
-                onOpenSettings = {
-                    showAccountSelector = false
-                    navigator.push(AppRoute.Settings)
-                },
-                onDismiss = { showAccountSelector = false },
-            )
-        }
-
-        if (showAppLanguage) {
-            BackHandler { showAppLanguage = false }
-            AppLanguageDialog(
-                hazeState = hazeState,
-                onDismiss = { showAppLanguage = false },
-            )
-        }
-
-        if (showTranslationLanguage) {
-            BackHandler { showTranslationLanguage = false }
-            TranslationLanguageDialog(
-                hazeState = hazeState,
-                onDismiss = { showTranslationLanguage = false },
-            )
-        }
-
-        if (showListenBrainzLogin) {
-            var tokenInput by remember { mutableStateOf(listenBrainzToken) }
-            ListenBrainzTokenAlert(
-                hazeState = hazeState,
-                tokenInput = tokenInput,
-                onTokenInputChange = { tokenInput = it },
-                onSave = {
-                    AppSettings.setListenBrainzToken(tokenInput.trim())
-                    showListenBrainzLogin = false
-                },
-                onDismiss = { showListenBrainzLogin = false },
-            )
-        }
-
-        if (showLastfmLogin) {
-            var usernameInput by remember { mutableStateOf("") }
-            var passwordInput by remember { mutableStateOf("") }
-            var lastfmError by remember { mutableStateOf<String?>(null) }
-            var lastfmLoading by remember { mutableStateOf(false) }
-            LastfmLoginAlert(
-                hazeState = hazeState,
-                usernameInput = usernameInput,
-                onUsernameInputChange = { usernameInput = it },
-                passwordInput = passwordInput,
-                onPasswordInputChange = { passwordInput = it },
-                error = lastfmError,
-                loading = lastfmLoading,
-                onSignIn = {
-                    lastfmLoading = true
-                    lastfmError = null
-                    scope.launch {
-                        try {
-                            LastFM.initialize(
-                                apiKey = AppSettings.lastfmApiKey.value,
-                                secret = AppSettings.lastfmSecret.value,
-                            )
-                            LastFM.getMobileSession(usernameInput.trim(), passwordInput)
-                                .onSuccess { auth ->
-                                    AppSettings.setLastfmSessionKey(auth.session.key)
-                                    AppSettings.setLastfmUsername(auth.session.name)
-                                    AppSettings.setLastfmEnabled(true)
-                                    showLastfmLogin = false
-                                }
-                                .onFailure { e ->
-                                    lastfmError = e.message ?: context.getString(R.string.login_failed)
-                                }
-                        } catch (e: Exception) {
-                            lastfmError = e.message ?: context.getString(R.string.login_failed)
-                        } finally {
-                            lastfmLoading = false
-                        }
-                    }
-                },
-                onDismiss = { if (!lastfmLoading) showLastfmLogin = false },
-            )
-        }
-
-        if (showWebDavEditor) {
-            BackHandler { showWebDavEditor = false }
-            ServerEditorHost(
-                hazeState = hazeState,
-                title = stringResource(R.string.webdav),
-                description = stringResource(R.string.webdav_description),
-                fields = listOf(
-                    FieldConfig(
-                        initial = AppSettings.webdavUrl.value,
-                        placeholder = stringResource(R.string.webdav_server_url_hint),
-                        keyboardType = KeyboardType.Uri,
-                    ),
-                    FieldConfig(
-                        initial = AppSettings.webdavUsername.value,
-                        placeholder = stringResource(R.string.username),
-                    ),
-                    FieldConfig(
-                        initial = AppSettings.webdavPassword.value,
-                        placeholder = stringResource(R.string.password),
-                        keyboardType = KeyboardType.Password,
-                        isPassword = true,
-                    ),
-                ),
-                canSubmit = { it[0].isNotBlank() },
-                testFailedRes = R.string.webdav_test_failed,
-                onTest = { (url, username, password) ->
-                    com.music.bitchord.data.webdav.WebDavRepository.testConnection(
-                        url.trim(),
-                        username.trim(),
-                        password,
-                    )
-                },
-                onSave = { (url, username, password) ->
-                    AppSettings.setWebDavUrl(url.trim())
-                    AppSettings.setWebDavUsername(username.trim())
-                    AppSettings.setWebDavPassword(password)
-                    showWebDavEditor = false
-                },
-                onDismiss = { showWebDavEditor = false },
-            )
-        }
-
-        if (showSmbEditor) {
-            BackHandler { showSmbEditor = false }
-            ServerEditorHost(
-                hazeState = hazeState,
-                title = stringResource(R.string.smb),
-                description = stringResource(R.string.smb_description),
-                fields = listOf(
-                    FieldConfig(
-                        initial = AppSettings.smbHost.value,
-                        placeholder = stringResource(R.string.smb_server_hint),
-                        keyboardType = KeyboardType.Uri,
-                    ),
-                    FieldConfig(
-                        initial = AppSettings.smbShare.value,
-                        placeholder = stringResource(R.string.smb_share_hint),
-                    ),
-                    FieldConfig(
-                        initial = AppSettings.smbBasePath.value,
-                        placeholder = stringResource(R.string.smb_folder_hint),
-                    ),
-                    FieldConfig(
-                        initial = AppSettings.smbUsername.value,
-                        placeholder = stringResource(R.string.username),
-                    ),
-                    FieldConfig(
-                        initial = AppSettings.smbPassword.value,
-                        placeholder = stringResource(R.string.password),
-                        keyboardType = KeyboardType.Password,
-                        isPassword = true,
-                    ),
-                ),
-                canSubmit = { it[0].isNotBlank() && it[1].isNotBlank() },
-                testFailedRes = R.string.smb_test_failed,
-                onTest = { (host, share, folder, username, password) ->
-                    com.music.bitchord.data.smb.SmbRepository.testConnection(
-                        host.trim(),
-                        share.trim(),
-                        folder.trim(),
-                        username.trim(),
-                        password,
-                    )
-                },
-                onSave = { (host, share, folder, username, password) ->
-                    AppSettings.setSmbHost(host.trim())
-                    AppSettings.setSmbShare(share.trim())
-                    AppSettings.setSmbBasePath(folder.trim())
-                    AppSettings.setSmbUsername(username.trim())
-                    AppSettings.setSmbPassword(password)
-                    showSmbEditor = false
-                },
-                onDismiss = { showSmbEditor = false },
-            )
-        }
-
-        // A clash mid-upload, answered here so the scrim covers the tab bar
-        // and mini player like every other alert. Backing out is a skip —
-        // leaving the batch suspended on a dismissed dialog would hang the
-        // upload with no way to reach the question again.
-        val uploadConflict by com.music.bitchord.data.webdav.WebDavUploads.conflict.collectAsStateWithLifecycle()
-        uploadConflict?.let { req ->
-            var applyToAll by remember(req) { mutableStateOf(false) }
-            val answer: (com.music.bitchord.data.webdav.WebDavUploads.Choice) -> Unit = { choice ->
-                req.answer.complete(
-                    com.music.bitchord.data.webdav.WebDavUploads.Resolution(choice, applyToAll),
+        // Dialogs and alerts, in a scope of their own: BitChordApp had outgrown the JVM's method limit.
+        Isolated {
+            if (showLyricsSources) {
+                BackHandler { showLyricsSources = false }
+                LyricsSourcesDialog(
+                    hazeState = hazeState,
+                    onDismiss = { showLyricsSources = false },
                 )
             }
-            BackHandler { answer(com.music.bitchord.data.webdav.WebDavUploads.Choice.SKIP) }
-            WebDavConflictAlert(
-                hazeState = hazeState,
-                fileName = req.fileName,
-                showApplyToAll = req.remaining > 0,
-                applyToAll = applyToAll,
-                onApplyToAllChange = { applyToAll = it },
-                onOverwrite = { answer(com.music.bitchord.data.webdav.WebDavUploads.Choice.OVERWRITE) },
-                onKeepBoth = { answer(com.music.bitchord.data.webdav.WebDavUploads.Choice.KEEP_BOTH) },
-                onSkip = { answer(com.music.bitchord.data.webdav.WebDavUploads.Choice.SKIP) },
-                onDismiss = { answer(com.music.bitchord.data.webdav.WebDavUploads.Choice.SKIP) },
-            )
-        }
 
-        // ---- Discord sign-in (full screen WebView) ----
-        if (showDiscordLogin) {
-            BackHandler { showDiscordLogin = false }
-            Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                Column(Modifier.fillMaxSize()) {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(onClick = { showDiscordLogin = false }) {
-                            Icon(
-                                Icons.Rounded.Close,
-                                contentDescription = stringResource(R.string.close),
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
+            if (songSortMenuOpen) {
+                BackHandler { songSortMenuOpen = false }
+                FrostedSortMenu(
+                    hazeState = hazeState,
+                    selected = songSort,
+                    onSelect = { option ->
+                        detail?.browseId?.let { AppSettings.setDetailSongSort(it, option) }
+                        songSortMenuOpen = false
+                    },
+                    // Flipping the date direction deliberately leaves the menu up:
+                    // closing it here would cut the arrow's rotation animation off
+                    // before it played, and the open menu lets the direction flip
+                    // read against the list reordering behind the frost.
+                    onFlipDateDirection = {
+                        detail?.browseId?.let { browseId ->
+                            val next = when (songSort) {
+                                SongSort.DATE_ADDED_DESC -> SongSort.DATE_ADDED_ASC
+                                SongSort.DATE_ADDED_ASC -> SongSort.DATE_ADDED_DESC
+                                else -> SongSort.DATE_ADDED_DESC
+                            }
+                            AppSettings.setDetailSongSort(browseId, next)
                         }
-                        Text(
-                            "Sign in to Discord",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onBackground,
+                    },
+                    onDismiss = { songSortMenuOpen = false },
+                )
+            }
+
+            val menuFolder = detail?.browseId?.takeIf { it.isDeviceFolder() }
+            if (folderMenuOpen && menuFolder != null) {
+                BackHandler { folderMenuOpen = false }
+                val downloadsFolder = menuFolder == "local:downloads"
+                val viewType = folderViewTypeOf(menuFolder)
+                FrostedFolderMenu(
+                    hazeState = hazeState,
+                    sort = folderSortOf(menuFolder),
+                    viewType = viewType,
+                    onSort = { option ->
+                        if (downloadsFolder) AppSettings.setDownloadedMusicSort(option)
+                        else AppSettings.setLocalMusicSort(option)
+                        folderMenuOpen = false
+                    },
+                    onToggleViewType = {
+                        val next = if (viewType == LibraryViewType.GRID) LibraryViewType.LIST else LibraryViewType.GRID
+                        if (downloadsFolder) AppSettings.setDownloadedMusicViewType(next)
+                        else AppSettings.setLocalMusicViewType(next)
+                        folderMenuOpen = false
+                    },
+                    onDismiss = { folderMenuOpen = false },
+                )
+            }
+
+            if (showAccountSelector) {
+                BackHandler { showAccountSelector = false }
+                AccountProfileSelector(
+                    accounts = googleAccounts,
+                    activeAccountId = activeAccountId,
+                    activeProfileId = activeProfileId,
+                    hazeState = hazeState,
+                    onSelect = { selected, profile -> viewModel.selectProfile(selected.accountId, profile.profileId) },
+                    onAddAccount = {
+                        showAccountSelector = false
+                        webSession = WebSessionMode.SIGN_IN
+                    },
+                    onRemoveAccount = { selected ->
+                        viewModel.removeAccount(selected.accountId)
+                        showAccountSelector = false
+                    },
+                    onOpenSettings = {
+                        showAccountSelector = false
+                        navigator.push(AppRoute.Settings)
+                    },
+                    onDismiss = { showAccountSelector = false },
+                )
+            }
+
+            if (showAppLanguage) {
+                BackHandler { showAppLanguage = false }
+                AppLanguageDialog(
+                    hazeState = hazeState,
+                    onDismiss = { showAppLanguage = false },
+                )
+            }
+
+            if (showTranslationLanguage) {
+                BackHandler { showTranslationLanguage = false }
+                TranslationLanguageDialog(
+                    hazeState = hazeState,
+                    onDismiss = { showTranslationLanguage = false },
+                )
+            }
+
+            if (showListenBrainzLogin) {
+                var tokenInput by remember { mutableStateOf(listenBrainzToken) }
+                ListenBrainzTokenAlert(
+                    hazeState = hazeState,
+                    tokenInput = tokenInput,
+                    onTokenInputChange = { tokenInput = it },
+                    onSave = {
+                        AppSettings.setListenBrainzToken(tokenInput.trim())
+                        showListenBrainzLogin = false
+                    },
+                    onDismiss = { showListenBrainzLogin = false },
+                )
+            }
+
+            if (showLastfmLogin) {
+                var usernameInput by remember { mutableStateOf("") }
+                var passwordInput by remember { mutableStateOf("") }
+                var lastfmError by remember { mutableStateOf<String?>(null) }
+                var lastfmLoading by remember { mutableStateOf(false) }
+                LastfmLoginAlert(
+                    hazeState = hazeState,
+                    usernameInput = usernameInput,
+                    onUsernameInputChange = { usernameInput = it },
+                    passwordInput = passwordInput,
+                    onPasswordInputChange = { passwordInput = it },
+                    error = lastfmError,
+                    loading = lastfmLoading,
+                    onSignIn = {
+                        lastfmLoading = true
+                        lastfmError = null
+                        scope.launch {
+                            try {
+                                LastFM.initialize(
+                                    apiKey = AppSettings.lastfmApiKey.value,
+                                    secret = AppSettings.lastfmSecret.value,
+                                )
+                                LastFM.getMobileSession(usernameInput.trim(), passwordInput)
+                                    .onSuccess { auth ->
+                                        AppSettings.setLastfmSessionKey(auth.session.key)
+                                        AppSettings.setLastfmUsername(auth.session.name)
+                                        AppSettings.setLastfmEnabled(true)
+                                        showLastfmLogin = false
+                                    }
+                                    .onFailure { e ->
+                                        lastfmError = e.message ?: context.getString(R.string.login_failed)
+                                    }
+                            } catch (e: Exception) {
+                                lastfmError = e.message ?: context.getString(R.string.login_failed)
+                            } finally {
+                                lastfmLoading = false
+                            }
+                        }
+                    },
+                    onDismiss = { if (!lastfmLoading) showLastfmLogin = false },
+                )
+            }
+
+            if (showWebDavEditor) {
+                BackHandler { showWebDavEditor = false }
+                ServerEditorHost(
+                    hazeState = hazeState,
+                    title = stringResource(R.string.webdav),
+                    description = stringResource(R.string.webdav_description),
+                    fields = listOf(
+                        FieldConfig(
+                            initial = AppSettings.webdavUrl.value,
+                            placeholder = stringResource(R.string.webdav_server_url_hint),
+                            keyboardType = KeyboardType.Uri,
+                        ),
+                        FieldConfig(
+                            initial = AppSettings.webdavUsername.value,
+                            placeholder = stringResource(R.string.username),
+                        ),
+                        FieldConfig(
+                            initial = AppSettings.webdavPassword.value,
+                            placeholder = stringResource(R.string.password),
+                            keyboardType = KeyboardType.Password,
+                            isPassword = true,
+                        ),
+                    ),
+                    canSubmit = { it[0].isNotBlank() },
+                    testFailedRes = R.string.webdav_test_failed,
+                    onTest = { (url, username, password) ->
+                        com.music.bitchord.data.webdav.WebDavRepository.testConnection(
+                            url.trim(),
+                            username.trim(),
+                            password,
                         )
-                    }
-                    DiscordLoginScreen(
-                        onTokenCaptured = { token ->
-                            AppSettings.setDiscordToken(token)
-                            showDiscordLogin = false
-                        },
+                    },
+                    onSave = { (url, username, password) ->
+                        AppSettings.setWebDavUrl(url.trim())
+                        AppSettings.setWebDavUsername(username.trim())
+                        AppSettings.setWebDavPassword(password)
+                        showWebDavEditor = false
+                    },
+                    onDismiss = { showWebDavEditor = false },
+                )
+            }
+
+            if (showSmbEditor) {
+                BackHandler { showSmbEditor = false }
+                ServerEditorHost(
+                    hazeState = hazeState,
+                    title = stringResource(R.string.smb),
+                    description = stringResource(R.string.smb_description),
+                    fields = listOf(
+                        FieldConfig(
+                            initial = AppSettings.smbHost.value,
+                            placeholder = stringResource(R.string.smb_server_hint),
+                            keyboardType = KeyboardType.Uri,
+                        ),
+                        FieldConfig(
+                            initial = AppSettings.smbShare.value,
+                            placeholder = stringResource(R.string.smb_share_hint),
+                        ),
+                        FieldConfig(
+                            initial = AppSettings.smbBasePath.value,
+                            placeholder = stringResource(R.string.smb_folder_hint),
+                        ),
+                        FieldConfig(
+                            initial = AppSettings.smbUsername.value,
+                            placeholder = stringResource(R.string.username),
+                        ),
+                        FieldConfig(
+                            initial = AppSettings.smbPassword.value,
+                            placeholder = stringResource(R.string.password),
+                            keyboardType = KeyboardType.Password,
+                            isPassword = true,
+                        ),
+                    ),
+                    canSubmit = { it[0].isNotBlank() && it[1].isNotBlank() },
+                    testFailedRes = R.string.smb_test_failed,
+                    onTest = { (host, share, folder, username, password) ->
+                        com.music.bitchord.data.smb.SmbRepository.testConnection(
+                            host.trim(),
+                            share.trim(),
+                            folder.trim(),
+                            username.trim(),
+                            password,
+                        )
+                    },
+                    onSave = { (host, share, folder, username, password) ->
+                        AppSettings.setSmbHost(host.trim())
+                        AppSettings.setSmbShare(share.trim())
+                        AppSettings.setSmbBasePath(folder.trim())
+                        AppSettings.setSmbUsername(username.trim())
+                        AppSettings.setSmbPassword(password)
+                        showSmbEditor = false
+                    },
+                    onDismiss = { showSmbEditor = false },
+                )
+            }
+
+            // A clash mid-upload, answered here so the scrim covers the tab bar
+            // and mini player like every other alert. Backing out is a skip —
+            // leaving the batch suspended on a dismissed dialog would hang the
+            // upload with no way to reach the question again.
+            val uploadConflict by com.music.bitchord.data.webdav.WebDavUploads.conflict.collectAsStateWithLifecycle()
+            uploadConflict?.let { req ->
+                var applyToAll by remember(req) { mutableStateOf(false) }
+                val answer: (com.music.bitchord.data.webdav.WebDavUploads.Choice) -> Unit = { choice ->
+                    req.answer.complete(
+                        com.music.bitchord.data.webdav.WebDavUploads.Resolution(choice, applyToAll),
                     )
                 }
+                BackHandler { answer(com.music.bitchord.data.webdav.WebDavUploads.Choice.SKIP) }
+                WebDavConflictAlert(
+                    hazeState = hazeState,
+                    fileName = req.fileName,
+                    showApplyToAll = req.remaining > 0,
+                    applyToAll = applyToAll,
+                    onApplyToAllChange = { applyToAll = it },
+                    onOverwrite = { answer(com.music.bitchord.data.webdav.WebDavUploads.Choice.OVERWRITE) },
+                    onKeepBoth = { answer(com.music.bitchord.data.webdav.WebDavUploads.Choice.KEEP_BOTH) },
+                    onSkip = { answer(com.music.bitchord.data.webdav.WebDavUploads.Choice.SKIP) },
+                    onDismiss = { answer(com.music.bitchord.data.webdav.WebDavUploads.Choice.SKIP) },
+                )
             }
-        }
 
-        // ---- Spotify sign-in (full screen WebView) ----
-        // Out here with Discord's rather than on the Spotify page itself: see
-        // SpotifyLoginScreen for what the blurred content tree does to a WebView.
-        if (showSpotifyLogin) {
-            BackHandler { showSpotifyLogin = false }
-            Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                Column(Modifier.fillMaxSize()) {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(onClick = { showSpotifyLogin = false }) {
-                            Icon(
-                                Icons.Rounded.Close,
-                                contentDescription = stringResource(R.string.close),
-                                tint = MaterialTheme.colorScheme.onBackground,
+            // ---- Discord sign-in (full screen WebView) ----
+            if (showDiscordLogin) {
+                BackHandler { showDiscordLogin = false }
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    Column(Modifier.fillMaxSize()) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            IconButton(onClick = { showDiscordLogin = false }) {
+                                Icon(
+                                    Icons.Rounded.Close,
+                                    contentDescription = stringResource(R.string.close),
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
+                            Text(
+                                "Sign in to Discord",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
                             )
                         }
-                        Text(
-                            stringResource(R.string.spotify_sign_in),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onBackground,
+                        DiscordLoginScreen(
+                            onTokenCaptured = { token ->
+                                AppSettings.setDiscordToken(token)
+                                showDiscordLogin = false
+                            },
                         )
                     }
-                    SpotifyLoginScreen(
-                        modifier = Modifier.navigationBarsPadding(),
-                        onConnected = { token ->
-                            AppSettings.setSpotifySpdcToken(token)
-                            showSpotifyLogin = false
-                        },
-                    )
                 }
             }
-        }
 
-        if (showSpotifyCanvasAuth) {
-            BackHandler { showSpotifyCanvasAuth = false }
-            SpotifyCanvasAuthScreen(
-                onNavigateUp = { showSpotifyCanvasAuth = false }
-            )
-        }
+            // ---- Spotify sign-in (full screen WebView) ----
+            // Out here with Discord's rather than on the Spotify page itself: see
+            // SpotifyLoginScreen for what the blurred content tree does to a WebView.
+            if (showSpotifyLogin) {
+                BackHandler { showSpotifyLogin = false }
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    Column(Modifier.fillMaxSize()) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            IconButton(onClick = { showSpotifyLogin = false }) {
+                                Icon(
+                                    Icons.Rounded.Close,
+                                    contentDescription = stringResource(R.string.close),
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                )
+                            }
+                            Text(
+                                stringResource(R.string.spotify_sign_in),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onBackground,
+                            )
+                        }
+                        SpotifyLoginScreen(
+                            modifier = Modifier.navigationBarsPadding(),
+                            onConnected = { token ->
+                                AppSettings.setSpotifySpdcToken(token)
+                                showSpotifyLogin = false
+                            },
+                        )
+                    }
+                }
+            }
 
-        discordDialog?.let { which ->
-            DiscordDialogHost(
-                which = which,
-                hazeState = hazeState,
-                onDismiss = { discordDialog = null },
-            )
-        }
+            if (showSpotifyCanvasAuth) {
+                BackHandler { showSpotifyCanvasAuth = false }
+                SpotifyCanvasAuthScreen(
+                    onNavigateUp = { showSpotifyCanvasAuth = false }
+                )
+            }
 
-        // At the root with the source editor, and for the same two reasons: it
-        // is a haze card that has to sample the backdrop it is *not* inside,
-        // and a full-window scrim that has to be full-window.
-        if (editingPartyServer) {
-            PartyServerEditor(
-                hazeState = hazeState,
-                onDismiss = { editingPartyServer = false },
-            )
-        }
+            discordDialog?.let { which ->
+                DiscordDialogHost(
+                    which = which,
+                    hazeState = hazeState,
+                    onDismiss = { discordDialog = null },
+                )
+            }
 
-        if (editingSignatureApi) {
-            SignatureApiEditor(
-                hazeState = hazeState,
-                onDismiss = { editingSignatureApi = false },
-            )
-        }
+            // At the root with the source editor, and for the same two reasons: it
+            // is a haze card that has to sample the backdrop it is *not* inside,
+            // and a full-window scrim that has to be full-window.
+            if (editingPartyServer) {
+                PartyServerEditor(
+                    hazeState = hazeState,
+                    onDismiss = { editingPartyServer = false },
+                )
+            }
 
-        editingSource?.let { config ->
-            SourceEditorAlert(
-                hazeState = hazeState,
-                config = config,
-                onDismiss = { editingSource = null },
-                onSaved = { editingSource = null },
-                onDelete = {
-                    SourceRegistry.remove(config.id)
-                    editingSource = null
-                },
-                scope = scope,
-            )
-        }
+            if (editingSignatureApi) {
+                SignatureApiEditor(
+                    hazeState = hazeState,
+                    onDismiss = { editingSignatureApi = false },
+                )
+            }
 
-        if (confirmJioSaavn) {
-            ConfirmationAlert(
-                hazeState = hazeState,
-                title = stringResource(R.string.enable_jiosaavn),
-                description = stringResource(R.string.jiosaavn_mismatch_warning),
-                confirmLabel = stringResource(R.string.enable_anyway),
-                onConfirm = {
-                    SourceRegistry.configs.value
-                        .firstOrNull { it.kind == SourceKind.JIOSAAVN }
-                        ?.let { SourceRegistry.setEnabled(it.id, true) }
-                    confirmJioSaavn = false
-                },
-                onDismiss = { confirmJioSaavn = false },
-            )
-        }
+            editingSource?.let { config ->
+                SourceEditorAlert(
+                    hazeState = hazeState,
+                    config = config,
+                    onDismiss = { editingSource = null },
+                    onSaved = { editingSource = null },
+                    onDelete = {
+                        SourceRegistry.remove(config.id)
+                        editingSource = null
+                    },
+                    scope = scope,
+                )
+            }
 
-        confirmBitPerfect?.let { mode ->
-            ConfirmationAlert(
-                hazeState = hazeState,
-                title = stringResource(R.string.bit_perfect_confirm_title),
-                description = stringResource(R.string.bit_perfect_confirm_message),
-                confirmLabel = stringResource(R.string.enable),
-                onConfirm = {
-                    AppSettings.setBitPerfectMode(mode)
-                    confirmBitPerfect = null
-                },
-                onDismiss = { confirmBitPerfect = null },
-            )
-        }
+            choosingSourceQuality?.let { config ->
+                ChoiceAlert(
+                    hazeState = hazeState,
+                    title = stringResource(R.string.audio_quality),
+                    message = null,
+                    options = config.qualityOptions,
+                    selected = config.activeQuality,
+                    label = { it?.label.orEmpty() },
+                    onSelect = { option ->
+                        // Off the stored config, not the one this list opened with:
+                        // a probe may have refreshed it since.
+                        SourceRegistry.config(config.id)?.let {
+                            SourceRegistry.update(it.copy(pickedQuality = option?.value))
+                        }
+                        choosingSourceQuality = null
+                    },
+                    onDismiss = { choosingSourceQuality = null },
+                )
+            }
 
-        if (confirmFixedVolume) {
-            ConfirmationAlert(
-                hazeState = hazeState,
-                title = stringResource(R.string.usb_allow_fixed_volume_confirm_title),
-                description = stringResource(R.string.usb_allow_fixed_volume_confirm_message),
-                confirmLabel = stringResource(R.string.enable),
-                onConfirm = {
-                    AppSettings.setUsbAllowFixedVolume(true)
-                    confirmFixedVolume = false
-                },
-                onDismiss = { confirmFixedVolume = false },
-            )
-        }
+            explainingOutdatedAddon?.let { config ->
+                InfoAlert(
+                    hazeState = hazeState,
+                    title = config.displayName,
+                    description = stringResource(R.string.source_needs_update),
+                    onDismiss = { explainingOutdatedAddon = null },
+                )
+            }
 
-        // Over the page and its frosted bars, under nothing but the alerts.
-        DacVolumeHud(hazeState)
+            if (confirmJioSaavn) {
+                ConfirmationAlert(
+                    hazeState = hazeState,
+                    title = stringResource(R.string.enable_jiosaavn),
+                    description = stringResource(R.string.jiosaavn_mismatch_warning),
+                    confirmLabel = stringResource(R.string.enable_anyway),
+                    onConfirm = {
+                        SourceRegistry.configs.value
+                            .firstOrNull { it.kind == SourceKind.JIOSAAVN }
+                            ?.let { SourceRegistry.setEnabled(it.id, true) }
+                        confirmJioSaavn = false
+                    },
+                    onDismiss = { confirmJioSaavn = false },
+                )
+            }
 
-        blockedAddonSong?.let { song ->
-            AddonBlockedAlert(
-                hazeState = hazeState,
-                song = song,
-                onDismiss = { blockedAddonSong = null },
-            )
-        }
+            confirmBitPerfect?.let { mode ->
+                ConfirmationAlert(
+                    hazeState = hazeState,
+                    title = stringResource(R.string.bit_perfect_confirm_title),
+                    description = stringResource(R.string.bit_perfect_confirm_message),
+                    confirmLabel = stringResource(R.string.enable),
+                    onConfirm = {
+                        AppSettings.setBitPerfectMode(mode)
+                        confirmBitPerfect = null
+                    },
+                    onDismiss = { confirmBitPerfect = null },
+                )
+            }
 
-        addonLeftOutOfDownload?.let { (addon, why) ->
-            InfoAlert(
-                hazeState = hazeState,
-                title = stringResource(R.string.download_addon_left_out_title, addon),
-                description = when (why) {
-                    SourceRegistry.DownloadExclusion.DOWNLOADS_NOT_ALLOWED ->
-                        stringResource(R.string.download_addon_not_allowed, addon)
-                    SourceRegistry.DownloadExclusion.NEEDS_LOSSLESS_OUTPUT ->
-                        stringResource(R.string.download_addon_needs_lossless_output, addon)
-                },
-                onDismiss = { addonLeftOutOfDownload = null },
-                // A download can be asked for from the player or from either
-                // menu, and each is a window of its own over this one. Drawn
-                // here, the alert opened behind whichever it was.
-                inOwnWindow = playerRaised || songActions != null || browseActions != null,
-            )
+            if (confirmFixedVolume) {
+                ConfirmationAlert(
+                    hazeState = hazeState,
+                    title = stringResource(R.string.usb_allow_fixed_volume_confirm_title),
+                    description = stringResource(R.string.usb_allow_fixed_volume_confirm_message),
+                    confirmLabel = stringResource(R.string.enable),
+                    onConfirm = {
+                        AppSettings.setUsbAllowFixedVolume(true)
+                        confirmFixedVolume = false
+                    },
+                    onDismiss = { confirmFixedVolume = false },
+                )
+            }
+
+            // Over the page and its frosted bars, under nothing but the alerts.
+            DacVolumeHud(hazeState)
+
+            blockedAddonSong?.let { song ->
+                AddonBlockedAlert(
+                    hazeState = hazeState,
+                    song = song,
+                    onDismiss = { blockedAddonSong = null },
+                )
+            }
+
+            addonLeftOutOfDownload?.let { (addon, why) ->
+                InfoAlert(
+                    hazeState = hazeState,
+                    title = stringResource(R.string.download_addon_left_out_title, addon),
+                    description = when (why) {
+                        SourceRegistry.DownloadExclusion.DOWNLOADS_NOT_ALLOWED ->
+                            stringResource(R.string.download_addon_not_allowed, addon)
+                        SourceRegistry.DownloadExclusion.NEEDS_LOSSLESS_OUTPUT ->
+                            stringResource(R.string.download_addon_needs_lossless_output, addon)
+                    },
+                    onDismiss = { addonLeftOutOfDownload = null },
+                    // A download can be asked for from the player or from either
+                    // menu, and each is a window of its own over this one. Drawn
+                    // here, the alert opened behind whichever it was.
+                    inOwnWindow = playerRaised || songActions != null || browseActions != null,
+                )
+            }
         }
 
     }
@@ -6569,3 +6682,6 @@ private const val TAB_HOME = 0
 private const val TAB_EXPLORE = 1
 private const val TAB_LIBRARY = 2
 private const val TAB_SEARCH = 3
+
+/** Auden doesn't carry BitChord's seasonal greetings. */
+private const val AUDEN_FESTIVE_GREETINGS = false
