@@ -5,6 +5,7 @@ import com.music.bitchord.ui.components.contextClick
 import com.music.bitchord.ui.AppUi
 import com.music.bitchord.sharedui.resources.*
 import org.jetbrains.compose.resources.painterResource
+import com.music.bitchord.ui.festive.GoldenLogo
 import org.jetbrains.compose.resources.DrawableResource
 import androidx.compose.foundation.Image
 import org.jetbrains.compose.resources.stringResource
@@ -69,6 +70,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Cached
@@ -97,6 +99,7 @@ import com.music.bitchord.ui.components.PAGE_GUTTER
 import com.music.bitchord.ui.components.RowMoreButton
 import com.music.bitchord.ui.components.PullToRefresh
 import com.music.bitchord.ui.components.SHELF_CARD_WIDTH
+import com.music.bitchord.ui.components.VideoThumbnails
 import com.music.bitchord.ui.components.SearchPlayingBars
 import com.music.bitchord.ui.components.SignInBanner
 import com.music.bitchord.ui.components.feedMoreSkeleton
@@ -139,6 +142,10 @@ fun HomeScreen(
     contentPadding: PaddingValues,
     /** The page's heading, or null for none — the desktop's pages carry no heading. */
     title: String?,
+    /** Casts the wordmark above the heading in glowing gold, for a festival. */
+    festiveLogo: Boolean = false,
+    /** Tapping the festive wordmark, e.g. to bring its greeting back. */
+    onFestiveLogoClick: (() -> Unit)? = null,
     signedIn: Boolean = true,
     onSignIn: (() -> Unit)? = null,
     /**
@@ -211,7 +218,7 @@ fun HomeScreen(
             },
         ) {
             if (title != null) {
-                item { HomeTitle(title) }
+                item { HomeTitle(title, festiveLogo = festiveLogo, onFestiveLogoClick = onFestiveLogoClick) }
             }
             if (onOpenDj != null) {
                 item(key = "auden-dj") {
@@ -510,19 +517,33 @@ fun CompactTrackRow(
  * system font scale.
  */
 @Composable
-private fun HomeTitle(title: String, modifier: Modifier = Modifier) {
+private fun HomeTitle(
+    title: String,
+    modifier: Modifier = Modifier,
+    festiveLogo: Boolean = false,
+    onFestiveLogoClick: (() -> Unit)? = null,
+) {
     val style = MaterialTheme.typography.displayLarge
     val logoHeight = with(LocalDensity.current) { (style.fontSize * LOGO_TO_FONT).toDp() }
     Column(modifier = modifier.padding(horizontal = PAGE_GUTTER, vertical = 8.dp)) {
-        Icon(
-            painter = painterResource(Res.drawable.ic_logo),
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier
-                .padding(bottom = 14.dp)
-                .height(logoHeight)
-                .aspectRatio(LOGO_ASPECT),
-        )
+        val logoModifier = Modifier
+            .padding(bottom = 14.dp)
+            .height(logoHeight)
+            .aspectRatio(LOGO_ASPECT)
+        if (festiveLogo) {
+            GoldenLogo(
+                painter = painterResource(Res.drawable.ic_logo),
+                modifier = logoModifier,
+                onClick = onFestiveLogoClick,
+            )
+        } else {
+            Icon(
+                painter = painterResource(Res.drawable.ic_logo),
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onBackground,
+                modifier = logoModifier,
+            )
+        }
         // "Listen now" is hidden for now; the wordmark above stays.
         // Text(
         //     text = title,
@@ -959,10 +980,10 @@ fun VideoShelfCard(
 }
 
 /** A music video's frame. */
-const val VIDEO_ASPECT = 16f / 9f
+val VIDEO_ASPECT: Float get() = if (VideoThumbnails.square) 1f else 16f / 9f
 
 /** Wide enough that a 16:9 card stands about as tall as a square [SHELF_CARD_WIDTH] one. */
-val VIDEO_CARD_WIDTH = 248.dp
+val VIDEO_CARD_WIDTH: Dp get() = if (VideoThumbnails.square) SHELF_CARD_WIDTH else 248.dp
 
 /**
  * A card that isn't a thing yet — the dashed "New playlist" tile at the head

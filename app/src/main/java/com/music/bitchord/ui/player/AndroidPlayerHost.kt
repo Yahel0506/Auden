@@ -24,6 +24,7 @@ import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.LastPlayerScreen
+import com.music.bitchord.playback.MusicOnlyPlayback
 import com.music.bitchord.playback.AudioOutputStatus
 import com.music.bitchord.playback.AudioRouting
 import com.music.bitchord.playback.audio.bitperfect.BitPerfectOutput
@@ -70,6 +71,7 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val hideVolumeBar get() = AppSettings.hideVolumeBar
         override val hideStatusBar get() = AppSettings.hideStatusBarInPlayer
         override val lastPlayerScreen get() = AppSettings.lastPlayerScreen
+        override val playerTheme get() = AppSettings.playerTheme
         override val lyricsBlur get() = AppSettings.lyricsBlur
         override val lyricsOffsetMs get() = dev.auden.library.lyrics.SongLyricsOffset.effective
         override val lyricsOffsetPerSong get() = dev.auden.library.lyrics.SongLyricsOffset.perSong
@@ -82,6 +84,7 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val prioritizeSpotifyCanvas get() = AppSettings.prioritizeSpotifyCanvas
         override val reduceAnimation get() = AppSettings.reduceAnimation
         override val reduceDynamicBlur get() = AppSettings.reduceDynamicBlur
+        override val disableBlendEffects get() = AppSettings.disableBlendEffects
         override val showNerdStats get() = AppSettings.showNerdStats
         override val showListenTogetherButton get() = AppSettings.showListenTogetherButton
         override val smartAnalysis get() = AppSettings.smartAnalysis
@@ -91,6 +94,7 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val smartMixBlend get() = AppSettings.smartMixBlend
         override val smartMixView get() = AppSettings.smartMixView
         override val smartMixProgress get() = AppSettings.smartMixProgress
+        override val smartMixPreview get() = AppSettings.smartMixPreview
         override val smartTransitionWindow get() = AppSettings.smartTransitionWindow
         override val spotifyCanvasAutoHide get() = AppSettings.spotifyCanvasAutoHide
         override val syncedLyrics get() = AppSettings.syncedLyrics
@@ -102,6 +106,9 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override fun setLyricsOffsetPerSong(enabled: Boolean) = dev.auden.library.lyrics.SongLyricsOffset.setPerSong(enabled)
         override fun downloadLyricsProvider(source: LyricsSource) = dev.auden.library.lyrics.CurrentLyrics.onDownload(source)
         override fun removeStoredLyrics(source: LyricsSource) = dev.auden.library.lyrics.CurrentLyrics.onRemove(source)
+        override fun setMixViewOpen(open: Boolean) {
+            AppSettings.mixViewOpen.value = open
+        }
     }
 
     override fun cachedCanvas(song: Song): CanvasArtwork? = CanvasRepository.cached(song)
@@ -116,6 +123,8 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
     @Composable
     override fun MusicVideo(videoId: String, fit: Boolean, onRenderedChanged: (Boolean) -> Unit, modifier: Modifier) =
         AndroidMusicVideo(videoId, fit, onRenderedChanged, modifier)
+
+    override fun showsMusicVideoPicture(videoId: String): Boolean = MusicOnlyPlayback.showsPicture(videoId)
 
     override val musicVideoAspect: StateFlow<Float> get() = MusicVideoEngine.aspect
 

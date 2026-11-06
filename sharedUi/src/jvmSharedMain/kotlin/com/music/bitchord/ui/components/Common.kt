@@ -165,10 +165,21 @@ val SHELF_CARD_WIDTH = 150.dp
 /**
  * A track's thumbnail box at [height]: square for a song, 16:9 at the same
  * height for a music video — its picture's own shape, as YouTube Music lists
- * one, rather than a still cropped into a square.
+ * one, rather than a still cropped into a square — unless the listener asked
+ * for square, see [VideoThumbnails].
  */
 fun Modifier.trackArtSize(height: Dp, isVideo: Boolean): Modifier =
-    if (isVideo) size(width = height * (16f / 9f), height = height) else size(height)
+    if (isVideo && !VideoThumbnails.square) size(width = height * (16f / 9f), height = height) else size(height)
+
+/**
+ * The "Square video thumbnails" setting, as every surface that sizes a music
+ * video reads it. Compose state rather than a flow so a plain read anywhere in
+ * composition follows it, [trackArtSize] and [VIDEO_CARD_WIDTH][com.music.bitchord.ui.screens.VIDEO_CARD_WIDTH]
+ * included, without each caller collecting it.
+ */
+object VideoThumbnails {
+    var square by mutableStateOf(false)
+}
 
 /** Share of the row a lead-shelf card takes, so the next one peeks in past it. */
 private const val HERO_CARD_FRACTION = 0.70f
@@ -208,7 +219,7 @@ private const val TRACK_COLUMN_FRACTION = 0.88f
 /**
  * How wide a sideways-paging column of track rows is ever allowed to get.
  *
- * Same trap [HERO_CARD_MAX_WIDTH] answers, and worse for a list: a track row is
+ * A fraction alone is a phone measurement wearing a percent sign, and a track row is
  * artwork, a title and a subtitle, none of which have any use for more room. At
  * 88% of a tablet the row's contents stay their own size and the space all lands
  * between the title and the overflow button, so four songs eat the width of the
