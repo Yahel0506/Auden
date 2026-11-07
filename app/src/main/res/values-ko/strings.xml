@@ -1486,4 +1486,6 @@
     <string name="dj_theme_discover">New for you</string>
     <string name="dj_now_playing_short">Now: %1$s</string>
     <string name="dj_speech_error">The DJ could not speak: %1$s</string>
+    <string name="background_video">배경 비디오</string>
+    <string name="background_video_subtitle">Plays Spotify\'s short vertical loop behind the player</string>
 </resources>

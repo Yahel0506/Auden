@@ -61,7 +61,7 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
     private val main = Handler(Looper.getMainLooper())
 
     override val settings: PlayerSettingsSource = object : PlayerSettingsSource {
-        override val animatedCanvas get() = AppSettings.animatedCanvas
+        override val animatedCanvas get() = AppSettings.anyCanvas
         override val audioQualityCellular get() = AppSettings.audioQualityCellular
         override val audioQualityWifi get() = AppSettings.audioQualityWifi
         override val canvasOverCellular get() = AppSettings.canvasOverCellular

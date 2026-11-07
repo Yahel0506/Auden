@@ -1613,4 +1613,6 @@
     <string name="diwali_title">BitChord wishes you a Happy Diwali</string>
     <string name="diwali_subtitle">May this festival of lights fill your home with joy and your days with music.</string>
     <string name="diwali_cta">Let\'s Celebrate</string>
+    <string name="background_video">背景影片</string>
+    <string name="background_video_subtitle">Plays Spotify\'s short vertical loop behind the player</string>
 </resources>

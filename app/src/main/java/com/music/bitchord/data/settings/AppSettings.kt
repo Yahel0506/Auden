@@ -552,6 +552,17 @@ object AppSettings {
     val animatedCanvas = MutableStateFlow(true)
 
     /**
+     * Spotify's Canvas: the short vertical video that plays behind the player.
+     * Split from [animatedCover][animatedCanvas], which covers the square motion
+     * artwork of Apple, Tidal and the community index. Starts from whatever the
+     * single switch was set to before the two were separated.
+     */
+    val backgroundVideo = MutableStateFlow(true)
+
+    /** Either kind of clip allowed: what the player asks before looking one up. */
+    val anyCanvas = MutableStateFlow(true)
+
+    /**
      * Whether [animatedCanvas] is allowed to actually stream on a metered
      * connection, as distinct from the switch that turns the feature off
      * altogether.
@@ -1090,6 +1101,8 @@ object AppSettings {
             reduceDynamicBlur.value = false
         }
         animatedCanvas.value = prefs.getBoolean(KEY_ANIMATED_CANVAS, true)
+        backgroundVideo.value = prefs.getBoolean(KEY_BACKGROUND_VIDEO, animatedCanvas.value)
+        anyCanvas.value = animatedCanvas.value || backgroundVideo.value
         canvasOverCellular.value = prefs.getBoolean(KEY_CANVAS_OVER_CELLULAR, false)
         spotifyCanvasAutoHide.value = prefs.getBoolean(KEY_SPOTIFY_CANVAS_AUTO_HIDE, true)
         prioritizeSpotifyCanvas.value = prefs.getBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, false)
@@ -1718,8 +1731,15 @@ object AppSettings {
         setPrioritizeSyllableSync(false)
     }
 
+    fun setBackgroundVideo(value: Boolean) {
+        backgroundVideo.value = value
+        anyCanvas.value = animatedCanvas.value || value
+        prefs.edit().putBoolean(KEY_BACKGROUND_VIDEO, value).apply()
+    }
+
     fun setAnimatedCanvas(value: Boolean) {
         animatedCanvas.value = value
+        anyCanvas.value = value || backgroundVideo.value
         prefs.edit().putBoolean(KEY_ANIMATED_CANVAS, value).apply()
     }
 
@@ -2425,6 +2445,7 @@ object AppSettings {
     private const val KEY_LYRICS_OFFSET_MS = "lyrics_offset_ms"
     private const val KEY_TRANSLATION_LANGUAGE = "translation_language"
     private const val KEY_ANIMATED_CANVAS = "animated_canvas"
+    private const val KEY_BACKGROUND_VIDEO = "background_video"
     private const val KEY_CANVAS_OVER_CELLULAR = "canvas_over_cellular"
     private const val KEY_SPOTIFY_CANVAS_AUTO_HIDE = "spotify_canvas_auto_hide"
     private const val KEY_PRIORITIZE_SPOTIFY_CANVAS = "prioritize_spotify_canvas"

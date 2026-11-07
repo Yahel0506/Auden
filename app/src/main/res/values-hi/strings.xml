@@ -1636,4 +1636,6 @@
     <string name="player_theme_default">Continuation</string>
     <string name="player_theme_legacy">Colors</string>
     <string name="player_theme_simple">Blur</string>
+    <string name="background_video">बैकग्राउंड वीडियो</string>
+    <string name="background_video_subtitle">Plays Spotify\'s short vertical loop behind the player</string>
 </resources>

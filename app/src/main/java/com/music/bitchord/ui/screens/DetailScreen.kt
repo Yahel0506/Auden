@@ -498,7 +498,7 @@ fun DetailScreen(
     // Animated cover art on the header, the same feature the player has.
     // Albums only: a playlist's artwork is a collage and an artist page's is a
     // photograph, and neither is something a label publishes a canvas for.
-    val canvasEnabled by AppSettings.animatedCanvas.collectAsStateWithLifecycle()
+    val canvasEnabled by AppSettings.anyCanvas.collectAsStateWithLifecycle()
     val fullBleedArtwork by AppSettings.fullBleedDetailArtwork.collectAsStateWithLifecycle()
     val prioritizeSpotifyCanvas by AppSettings.prioritizeSpotifyCanvas.collectAsStateWithLifecycle()
     // The credit line the header shows is the artist as far as the catalogue

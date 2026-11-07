@@ -89,21 +89,13 @@ object CanvasRepository {
         val key = cacheKey("song|${song.videoId}", spotifyFirst)
 
         return resolve(key, album != null) {
-            if (spotifyFirst) {
-                firstHit(
-                    { SpotifyCanvas.search(title, artist, album) },
-                    { AppleMusicCanvas.search(title, artist, album) },
-                    { TidalCanvas.search(title, artist, album) },
-                    { CommunityCanvas.search(title, artist, album) },
-                ) { it.matches(title, artist, album) }
-            } else {
-                firstHit(
-                    { AppleMusicCanvas.search(title, artist, album) },
-                    { TidalCanvas.search(title, artist, album) },
-                    { CommunityCanvas.search(title, artist, album) },
-                    { SpotifyCanvas.search(title, artist, album) },
-                ) { it.matches(title, artist, album) }
-            }
+            val sources = sourcesFor(spotifyFirst,
+                spotify = { SpotifyCanvas.search(title, artist, album) },
+                apple = { AppleMusicCanvas.search(title, artist, album) },
+                tidal = { TidalCanvas.search(title, artist, album) },
+                community = { CommunityCanvas.search(title, artist, album) },
+            )
+            firstHit(*sources) { it.matches(title, artist, album) }
         }
     }
 
@@ -137,27 +129,44 @@ object CanvasRepository {
 
         val spotifyFirst = AppSettings.prioritizeSpotifyCanvas.value
         return resolve(cacheKey("album|$name|$credit", spotifyFirst), withAlbum = true) {
-            if (spotifyFirst) {
-                firstHit(
-                    { SpotifyCanvas.searchAlbum(name, credit) },
-                    { AppleMusicCanvas.searchAlbum(name, credit) },
-                    { TidalCanvas.searchAlbum(name, credit) },
-                    { CommunityCanvas.searchAlbum(name, credit) },
-                ) { it.matches(name, credit, name) }
-            } else {
-                firstHit(
-                    { AppleMusicCanvas.searchAlbum(name, credit) },
-                    { TidalCanvas.searchAlbum(name, credit) },
-                    { CommunityCanvas.searchAlbum(name, credit) },
-                    { SpotifyCanvas.searchAlbum(name, credit) },
-                ) { it.matches(name, credit, name) }
-            }
+            val sources = sourcesFor(spotifyFirst,
+                spotify = { SpotifyCanvas.searchAlbum(name, credit) },
+                apple = { AppleMusicCanvas.searchAlbum(name, credit) },
+                tidal = { TidalCanvas.searchAlbum(name, credit) },
+                community = { CommunityCanvas.searchAlbum(name, credit) },
+            )
+            firstHit(*sources) { it.matches(name, credit, name) }
         }
     }
 
     /** Priority is part of the question, so a toggle never reuses the other order's answer. */
     private fun cacheKey(base: String, spotifyFirst: Boolean): String =
-        "$base|spotifyFirst=$spotifyFirst"
+        "$base|spotifyFirst=$spotifyFirst|cover=${AppSettings.animatedCanvas.value}|video=${AppSettings.backgroundVideo.value}"
+
+    /**
+     * The providers the two switches leave on, in order. Animated cover is Apple,
+     * Tidal and the community index (square motion artwork); Background video is
+     * Spotify's Canvas (the short vertical loop).
+     */
+    private fun sourcesFor(
+        spotifyFirst: Boolean,
+        spotify: suspend () -> CanvasArtwork?,
+        apple: suspend () -> CanvasArtwork?,
+        tidal: suspend () -> CanvasArtwork?,
+        community: suspend () -> CanvasArtwork?,
+    ): Array<suspend () -> CanvasArtwork?> {
+        val cover = AppSettings.animatedCanvas.value
+        val video = AppSettings.backgroundVideo.value
+        return buildList<suspend () -> CanvasArtwork?> {
+            if (video && spotifyFirst) add(spotify)
+            if (cover) {
+                add(apple)
+                add(tidal)
+                add(community)
+            }
+            if (video && !spotifyFirst) add(spotify)
+        }.toTypedArray()
+    }
 
     private suspend fun resolve(
         key: String,

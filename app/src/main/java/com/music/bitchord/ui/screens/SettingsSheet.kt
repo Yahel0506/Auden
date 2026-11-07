@@ -259,6 +259,7 @@ fun SettingsScreen(
     val liquidGlassSupported = isGlassSupported()
     val lyricsBlur by AppSettings.lyricsBlur.collectAsStateWithLifecycle()
     val animatedCanvas by AppSettings.animatedCanvas.collectAsStateWithLifecycle()
+    val backgroundVideo by AppSettings.backgroundVideo.collectAsStateWithLifecycle()
     val canvasOverCellular by AppSettings.canvasOverCellular.collectAsStateWithLifecycle()
     val signatureApiEnabled by AppSettings.signatureApiEnabled.collectAsStateWithLifecycle()
     val signatureApiUrl by AppSettings.signatureApiUrl.collectAsStateWithLifecycle()
@@ -1349,10 +1350,7 @@ fun SettingsScreen(
                 )
             }
             val animatedCoverArtTitle = stringResource(R.string.animated_cover_art)
-            // Carries the keywords of the rows that only appear once it is on,
-            // so searching "spotify" with animated covers switched off turns up
-            // the switch that brings the Spotify row back rather than nothing.
-            row(animatedCoverArtTitle, "canvas", "video", "spotify") {
+            row(animatedCoverArtTitle, "canvas", "motion", "apple", "tidal") {
                 SettingsRow(
                     icon = SfIcons.Animation,
                     title = animatedCoverArtTitle,
@@ -1366,12 +1364,30 @@ fun SettingsScreen(
                     onClick = { AppSettings.setAnimatedCanvas(!animatedCanvas) },
                 )
             }
-            // Reads as part of the Animated cover art option above it, not
-            // as a separate setting. Nothing to narrow while the clip itself
-            // is off. Defaults to off: a clip loops for as long as its track
-            // plays, so on cellular this is not a one-time video cost but
-            // that cost repeated on every loop — see AppSettings.canvasOverCellular.
-            if (animatedCanvas) {
+            val backgroundVideoTitle = stringResource(R.string.background_video)
+            // Carries the keywords of the rows that only appear once it is on,
+            // so searching "spotify" with the video switched off turns up the
+            // switch that brings the Spotify row back rather than nothing.
+            row(backgroundVideoTitle, "canvas", "video", "spotify", "background") {
+                SettingsRow(
+                    icon = SfIcons.Video,
+                    title = backgroundVideoTitle,
+                    subtitle = stringResource(R.string.background_video_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = backgroundVideo,
+                            onCheckedChange = AppSettings::setBackgroundVideo,
+                        )
+                    },
+                    onClick = { AppSettings.setBackgroundVideo(!backgroundVideo) },
+                )
+            }
+            // Reads as part of the two options above it, not as a separate
+            // setting. Nothing to narrow while both clips are off. Defaults to
+            // off: a clip loops for as long as its track plays, so on cellular
+            // this is not a one-time video cost but that cost repeated on every
+            // loop — see AppSettings.canvasOverCellular.
+            if (animatedCanvas || backgroundVideo) {
                 val coverCellularTitle = stringResource(R.string.animated_cover_cellular)
                 row(coverCellularTitle, "canvas", "cellular", divided = false) {
                     SettingsSubRow(
@@ -1380,6 +1396,8 @@ fun SettingsScreen(
                         onCheckedChange = AppSettings::setCanvasOverCellular,
                     )
                 }
+            }
+            if (backgroundVideo) {
                 val spotifyCanvasTitle = stringResource(R.string.integrate_spotify_canvas)
                 row(spotifyCanvasTitle, "spotify", "canvas", divided = false) {
                     Row(
