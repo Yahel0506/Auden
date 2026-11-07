@@ -2,6 +2,7 @@ import { Maximize2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { LogoMark } from '@/components/icons/LogoMark';
+import { RetryImg } from '@/components/music/RetryImg';
 import { ExplicitBadge } from '@/components/music/ExplicitBadge';
 import { VideoSurface } from '@/components/music/VideoSurface';
 import { albumHref, artistHref } from '@/components/music/links';
@@ -127,8 +128,9 @@ export function Lcd() {
         onClick={() => openFullScreen(true)}
       >
         {nowPlaying.artworkUrl && (
-          <img
+          <RetryImg
             key={nowPlaying.artworkUrl}
+            fallbackSrc={nowPlaying.artworkUrl}
             src={sizedArtwork(nowPlaying.artworkUrl, 34)}
             alt=""
             referrerPolicy="no-referrer"

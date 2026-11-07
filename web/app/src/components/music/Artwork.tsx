@@ -48,7 +48,7 @@ export function Artwork({ src, displayWidth, aspect = 1, radius, className, eage
           onLoad={() => setLoaded(true)}
           onError={() => {
             if (attempt === 0) setTimeout(() => setAttempt(1), 1500);
-            else if (attempt === 1 && url !== src) setAttempt(2);
+            else if (attempt === 1 && url !== src) setTimeout(() => setAttempt(2), 3500);
           }}
         />
       )}

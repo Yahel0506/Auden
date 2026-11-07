@@ -1426,7 +1426,8 @@ function updateMediaSession(track: NowPlaying | null) {
     title: track.title,
     artist: track.artist,
     artwork: track.artworkUrl
-      ? [96, 256, 512].map((px) => ({ src: artworkAtPixels(track.artworkUrl!, px), sizes: `${px}x${px}` }))
+      ? // Standard sizes only (lib/artwork.ts): an uncached one is what the CDN answers with 429.
+      [120, 226, 544].map((px) => ({ src: artworkAtPixels(track.artworkUrl!, px), sizes: `${px}x${px}` }))
       : [],
   });
 
