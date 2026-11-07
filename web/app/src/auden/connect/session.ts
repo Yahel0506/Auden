@@ -9,7 +9,7 @@ import {
 } from '@bitchord/shared/connect';
 import { config } from '@/config';
 import type { Track } from '@/data/music/types';
-import { accountUserId, deviceId, useParty } from '@/party/listenTogether';
+import { connectRoomId, deviceId, useParty } from '@/party/listenTogether';
 import { isShareable } from '@/playback/source';
 import {
   adoptShuffleOrder,
@@ -414,7 +414,7 @@ export function remoteCommand(command: Command): boolean {
 /** Joins the account's room until the returned function is called. A no-op without a server or a signed-in account. */
 export async function startConnect(identity: { room?: string; deviceId?: string; name?: string } = {}): Promise<() => void> {
   if (!config.connectUrl) return () => {};
-  const room = identity.room ?? (await accountUserId());
+  const room = identity.room ?? (await connectRoomId());
   if (!room) return () => {};
   const myId = identity.deviceId ?? deviceId();
   useConnect.setState({ myId, devices: [], activeId: null, remote: null });

@@ -8,7 +8,7 @@ let handler: (m: ServerMessage) => void = () => {};
 let setStatus: (s: 'off' | 'connecting' | 'online') => void = () => {};
 
 vi.mock('@/config', () => ({ config: { connectUrl: 'https://connect.test' } }));
-vi.mock('@/party/listenTogether', () => ({ accountUserId: async () => 'a'.repeat(32), deviceId: () => 'web1', useParty: { getState: () => ({ code: null }) } }));
+vi.mock('@/party/listenTogether', () => ({ connectRoomId: async () => 'a'.repeat(32), deviceId: () => 'web1', useParty: { getState: () => ({ code: null }) } }));
 vi.mock('./client', () => ({
   ConnectClient: class {
     constructor(o: { onMessage: typeof handler; onStatus: typeof setStatus }) {

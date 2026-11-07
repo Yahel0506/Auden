@@ -1492,11 +1492,13 @@ object ListenTogether {
     fun accountRoomId(): String? {
         val store = BitChordApplication.authStore
         if (!store.isSignedIn) return null
-        val account = store.activeSession ?: return null
-        val profile = account.profiles.firstOrNull { it.profileId == account.activeProfileId }
-            ?: account.profiles.firstOrNull()
-        return sha256("${account.accountId}:${profile?.profileId.orEmpty()}").take(32)
+        val email = store.activeSession?.email?.trim()?.lowercase().orEmpty()
+        return connectRoomIdFor(email)
     }
+
+    /** The room for a login email, as the web hashes it: `sha256("auden-connect:v1:<email>")`, first 32 hex digits. */
+    fun connectRoomIdFor(email: String): String? =
+        email.trim().lowercase().takeIf { it.isNotEmpty() }?.let { sha256("auden-connect:v1:$it").take(32) }
 
     /** This install's id, the one Listen Together counts devices by; Connect lists devices under it too. */
     fun installDeviceId(): String = deviceId()

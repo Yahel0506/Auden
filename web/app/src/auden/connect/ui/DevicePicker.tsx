@@ -65,7 +65,7 @@ export function DevicePicker({ className, placement = 'above-end' }: { className
           className={`glass-pill absolute bottom-full z-50 mb-2 w-[min(300px,86vw)] rounded-[14px] p-2 text-start ${placement === 'above-end' ? 'right-0' : 'left-0'}`}
         >
           <div className="px-2 pt-1 pb-2 type-body-emphasized">Connect to a device</div>
-          {status !== 'online' && <div className="px-2 pb-2 text-secondary">{status === 'connecting' ? 'Connecting…' : 'Not connected'}</div>}
+          {status !== 'online' && <div className="px-2 pb-2 text-secondary">{status === 'connecting' ? 'Connecting…' : 'Sign in to YouTube Music, with the same Google account as your other devices, to see them here.'}</div>}
           {status === 'online' && (
             <ul className="flex flex-col">
               {mine && <Row id={mine.deviceId} name="This browser" subtitle={mine.name} platform={mine.platform} active={activeId === myId} onPick={() => setOpen(false)} />}
