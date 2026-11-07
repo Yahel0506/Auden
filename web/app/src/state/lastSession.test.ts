@@ -110,6 +110,19 @@ describe('startLastSession', () => {
     stop();
   });
 
+  it('leaves the saved session alone while there is nothing worth keeping (a mirror of the phone)', async () => {
+    localStorage.setItem('auden:last-session', JSON.stringify(snapshotOf(state(3, 1) as never, 33, null)));
+    // The phone is playing: this browser mirrors it from the moment it opens.
+    player = state(3, 1, { mirror: true, status: 'playing' });
+    const stop = startLastSession();
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    window.dispatchEvent(new Event('pagehide'));
+    expect(JSON.parse(localStorage.getItem('auden:last-session')!).positionSec).toBe(33);
+    stop();
+  });
+
   it('saves on a queue change and forgets an emptied queue', () => {
     vi.useFakeTimers();
     const stop = startLastSession();

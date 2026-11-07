@@ -9,8 +9,10 @@ const sent: ClientMessage[] = [];
 let handler: (m: ServerMessage) => void = () => {};
 let setStatus: (s: 'off' | 'connecting' | 'online') => void = () => {};
 let clientOk = true;
+const restoring = vi.hoisted(() => ({ on: false }));
 const loads: { id: string; startSec: number | undefined; autoplay: boolean | undefined }[] = [];
 
+vi.mock('@/state/lastSession', () => ({ isRestoringLastSession: () => restoring.on }));
 vi.mock('@/config', () => ({ config: { connectUrl: 'https://connect.test' } }));
 vi.mock('@/party/listenTogether', () => ({ connectRoomId: async () => 'a'.repeat(32), deviceId: () => 'web1', useParty: { getState: () => ({ code: null }) } }));
 vi.mock('./client', () => ({
@@ -148,6 +150,26 @@ describe('mirror mode', () => {
     expect(s.status).toBe('paused');
     expect(ids()).toEqual(['a', 'b', 'c', 'd']);
     expect(loads).toHaveLength(0);
+  });
+
+  it('the last session being put back after a reload neither claims the session nor keeps the floor from the phone', async () => {
+    restoring.on = true;
+    usePlayer.getState().playTracks([track('restored')], 0, SOURCE);
+    await flush();
+    // The restore's load: 'loading', nobody asked for sound.
+    usePlayer.setState({ status: 'loading' });
+    await join();
+    expect(sent.some((m) => m.type === 'claim')).toBe(false);
+    expect(usePlayer.getState().mirror).toBe(true);
+    restoring.on = false;
+  });
+
+  it('a song that is only loading (the last session put back) does not claim a session nobody plays', async () => {
+    usePlayer.getState().playTracks([track('restored')], 0, SOURCE);
+    await flush();
+    usePlayer.setState({ status: 'loading' });
+    await join({ activeDeviceId: null, state: null });
+    expect(sent.some((m) => m.type === 'claim')).toBe(false);
   });
 
   it('a song of its own that no one has claimed keeps the floor over the phone’s state', async () => {
