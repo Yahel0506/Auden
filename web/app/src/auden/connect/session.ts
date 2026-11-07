@@ -11,6 +11,7 @@ import { config } from '@/config';
 import type { Track } from '@/data/music/types';
 import { connectRoomId, deviceId, useParty } from '@/party/listenTogether';
 import { isShareable } from '@/playback/source';
+import { isRestoringLastSession } from '@/state/lastSession';
 import {
   adoptShuffleOrder,
   canonicalOrderOf,
@@ -141,7 +142,8 @@ function claimIfPlaying(): void {
   // A party's queue is the party's, not a session to carry to another device.
   if (p.queue[p.index]?.source?.title === 'Listen Together') return;
   const state = localState();
-  if (!state?.isPlaying) return;
+  // Sounding, not merely loading: the last session being put back after a reload loads without anyone asking for sound.
+  if (!state?.isPlaying || (p.status !== 'playing' && p.status !== 'buffering')) return;
   useConnect.setState({ activeId: myId, remote: null });
   send({ type: 'claim', state });
 }
@@ -205,7 +207,7 @@ function syncMirror(): void {
   if (remote && mirrorWanted()) {
     // Sound of its own that nobody has claimed (a local file, a party) keeps the floor; the claim follows it.
     const status = usePlayer.getState().status;
-    if (!isMirrored() && !forcing && (status === 'playing' || status === 'buffering' || status === 'loading')) return;
+    if (!isMirrored() && !forcing && !isRestoringLastSession() && (status === 'playing' || status === 'buffering' || status === 'loading')) return;
     mirrorPlayer.show(viewOf(remote.state));
   } else if (isMirrored()) {
     mirrorPlayer.leave();

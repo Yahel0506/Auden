@@ -89,6 +89,9 @@ function write(session: SavedSession | null): void {
   }
 }
 
+/** True while the last session is being put back: its load is not something the listener started. */
+export const isRestoringLastSession = (): boolean => restoring;
+
 /** True while the last session is being put back: what is stored must not be overwritten by the half-loaded player. */
 let restoring = false;
 /**
@@ -110,7 +113,9 @@ function save(): void {
   } else {
     pending = null;
   }
-  write(snapshotOf(state, sec, sessionPlayer.canonical()));
+  // Nothing worth keeping right now (a mirror, a clip, a party): the session saved before stays as it was.
+  const snapshot = snapshotOf(state, sec, sessionPlayer.canonical());
+  if (snapshot) write(snapshot);
 }
 
 /** Puts the last session back (once, paused) and keeps it up to date until the returned function is called. */
