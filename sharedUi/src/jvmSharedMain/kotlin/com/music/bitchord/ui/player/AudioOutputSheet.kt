@@ -92,6 +92,7 @@ internal fun AudioOutputSheet(
     val outputs = rememberAudioOutputs()
     val cast by PlayerPlatform.host.castState.collectAsStateWithLifecycle()
     val watch by PlayerPlatform.host.watchOutput.collectAsStateWithLifecycle()
+    val connect by PlayerPlatform.host.connect.collectAsStateWithLifecycle()
     // A watch comes and goes; ask again each time the drawer opens.
     LaunchedEffect(Unit) { PlayerPlatform.host.refreshWatchOutput() }
 
@@ -125,6 +126,12 @@ internal fun AudioOutputSheet(
                 WatchRow(watch = watch, onClick = { PlayerPlatform.host.selectWatchOutput() })
             }
             if (cast.supported) CastRow(cast = cast, onClick = onOpenCast)
+        }
+
+        // Auden Connect: the account's other devices, and a remote for the one that is playing.
+        if (connect.visible && connect.devices.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            ConnectSection(connect)
         }
 
         Spacer(Modifier.height(10.dp))

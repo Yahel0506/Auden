@@ -1608,4 +1608,6 @@
     <string name="bit_perfect_status_unavailable">Für diesen Titel nicht verfügbar (%1$s)</string>
     <string name="new_playlist_on_device">Auf diesem Gerät</string>
     <string name="new_playlist_on_youtube_music">YouTube Music</string>
+    <string name="connect_enabled">Play on my other devices</string>
+    <string name="connect_enabled_subtitle">Lists the other Auden devices of this account in the audio output menu, so playback can move between them and be controlled from any of them</string>
 </resources>

@@ -51,7 +51,18 @@ val lastfmSecret: String = (
 val listenTogetherServer: String = (
     localProps.getProperty("LISTEN_TOGETHER_SERVER")
         ?: System.getenv("LISTEN_TOGETHER_SERVER")
-        ?: "https://bitchord-listen-together.onrender.com"
+        ?: "https://auden-listen-together.onrender.com"
+    ).trim().trimEnd('/')
+
+/*
+ * Where Auden Connect (the "play on my other devices" switcher) lives: the Cloudflare Worker in web/connect.
+ * Like the party server it is a public URL, not a credential; override it with CONNECT_SERVER in
+ * local.properties or the environment to point a build at a staging Worker.
+ */
+val connectServer: String = (
+    localProps.getProperty("CONNECT_SERVER")
+        ?: System.getenv("CONNECT_SERVER")
+        ?: "https://auden-connect.yahelloppez.workers.dev"
     ).trim().trimEnd('/')
 
 // See the root build.gradle.kts: one version for the phone and its watch app.
@@ -87,6 +98,8 @@ android {
             "LISTEN_TOGETHER_SERVER",
             "\"${listenTogetherServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
         )
+        buildConfigField("String", "CONNECT_SERVER", "\"${connectServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+        buildConfigField("String", "CONNECT_PLATFORM", "\"android\"")
         // Which release assets are this app's: the phone and TV APKs ship in
         // the same GitHub release, told apart by file name. See
         // AppUpdateChecker.apkAssetUrl.

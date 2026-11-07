@@ -1,0 +1,257 @@
+{
+ "greeting_morning": [
+  "Good morning.",
+  "Morning. Let’s ease into the day.",
+  "Good morning. Something to start the day right.",
+  "Good morning! Time for some music.",
+  "Hey, good morning. Let me put something on for your coffee.",
+  "Morning. Let’s see what I wake you up with.",
+  "Good morning. I’ve got your music right here."
+ ],
+ "greeting_afternoon": [
+  "Good afternoon.",
+  "Hey, good afternoon.",
+  "Good afternoon. Let’s keep the music going.",
+  "Afternoon. Time to put something good on.",
+  "Good afternoon. Let’s give the afternoon some rhythm.",
+  "Hi there. I’ve got something ready for the afternoon."
+ ],
+ "greeting_evening": [
+  "Good evening.",
+  "Good evening. Let’s get comfortable.",
+  "Hey, good evening. Let me pick something.",
+  "Good evening. Here we go.",
+  "Evening. Feels like time for good music.",
+  "Good evening. I’ll choose, you relax.",
+  "Hi. For tonight, something good."
+ ],
+ "greeting_night": [
+  "It’s late. Let’s keep it mellow.",
+  "Still up? Something for these hours.",
+  "Long night. Let’s make it worth it.",
+  "Quiet hour. Let’s put something on.",
+  "Late one. Let the music keep you company.",
+  "Still here, at this hour. Music’s on."
+ ],
+ "relaxed": [
+  "There isn’t much of that in your library, so here’s something close.",
+  "You don’t have a lot of that saved, so I’ll stretch it a little.",
+  "That’s thin in your library, but I’ll build something along those lines.",
+  "Not enough for a whole set of that, so I’ll wander a bit."
+ ],
+ "unrecognized": [
+  "I didn’t quite catch that, so I’ll choose.",
+  "Not sure what you asked for, so I’ll surprise you.",
+  "I couldn’t work that one out. I’ll surprise you instead."
+ ],
+ "signoff": [
+  "I’ll leave you with the music. Until next time.",
+  "That’s me. Enjoy what’s left.",
+  "I’ll step aside and let the music play.",
+  "That’s all for now. Keep the music going."
+ ],
+ "intro_artist_recent": [
+  "You’ve been playing a lot of {artist} lately, so let’s stay with them. Starting with {opener}.",
+  "{artist} has been on repeat this month, so here’s a set. Up first: {opener}.",
+  "Looks like {artist} is your thing these days. Here’s {opener}.",
+  "You keep coming back to {artist} this month. So, more: {opener}.",
+  "More {artist}, since it’s clearly stuck in your head. Here’s {opener}.",
+  "{artist} again, and I’m not complaining. Starting with {opener}.",
+  "That was {prev}. And since you’re in an {artist} mood, here’s {opener}."
+ ],
+ "intro_artist_always": [
+  "{artist} is one of your all-time artists, so they deserve a set. Starting with {opener}.",
+  "You always come back to {artist}. Here’s the best of it, starting with {opener}.",
+  "Some artists never leave you, and {artist} is one. Here’s {opener}.",
+  "A classic of yours: {artist}. Here’s {opener}.",
+  "Speaking of the ones you always play, {artist}. Up first: {opener}.",
+  "That was {prev}. Now one of your regulars, {artist}, with {opener}."
+ ],
+ "intro_artist_saved": [
+  "You’ve got plenty of {artist} saved, so let’s give them their moment. Starting with {opener}.",
+  "A {artist} set, from what you’ve saved. Up first: {opener}.",
+  "You had {artist} saved up, just waiting. Today’s the day. Here’s {opener}.",
+  "Let’s take {artist} out of the drawer. Starting with {opener}.",
+  "That was {prev}. Now it’s {artist}’s turn, starting with {opener}."
+ ],
+ "intro_favorites": [
+  "These are the songs you play over and over, like {opener}. A set of your favorites.",
+  "Let’s go with what you replay most, starting with {opener}.",
+  "Your favorites, the ones that never get old. Here’s {opener}.",
+  "Today it’s the ones you love most. Starting with {opener}.",
+  "You know these by heart, and they still hit. Up first: {opener}.",
+  "That was {prev}. Staying with your favorites: {opener}."
+ ],
+ "intro_rediscover": [
+  "It’s been {ago} since you played these, and you used to play them a lot. Starting with {opener}.",
+  "{ago} without these, and they used to be everywhere. Starting with {opener}.",
+  "Remember these? It’s been {ago}. Here’s {opener}.",
+  "These haven’t played here in {ago}. Time to bring them back, starting with {opener}."
+ ],
+ "intro_rediscover_plain": [
+  "You used to play these a lot, and it’s been a while. Starting with {opener}.",
+  "Songs that got left behind. Here’s {opener}.",
+  "Remember these? It’s been a long time. Here’s {opener}.",
+  "Let’s dust something off. Up first: {opener}.",
+  "That was {prev}. And now something you’d forgotten: {opener}."
+ ],
+ "intro_fresh": [
+  "You just added these to your library and haven’t played them much, so let’s start with {opener}.",
+  "Some of your latest additions, starting with {opener}.",
+  "Fresh arrivals in your library. Here’s {opener}.",
+  "This is the latest you saved. Let’s hear it: {opener}.",
+  "New stuff of yours, still with that new-song smell. Up first: {opener}."
+ ],
+ "intro_discover": [
+  "You listen to a lot of {seed}, so here’s something new along those lines, starting with {opener}.",
+  "This one’s new to you, but it goes with {seed}, who you play a lot. Starting with {opener}.",
+  "If you like {seed}, maybe you’ll like this. Here’s {opener}.",
+  "Something you haven’t heard yet, close to {seed}. Up first: {opener}.",
+  "Let me sneak in something new, in the spirit of {seed}. Here’s {opener}.",
+  "That was {prev}. Now something new, near {seed}: {opener}."
+ ],
+ "intro_discover_plain": [
+  "Something new for you, close to what you already listen to. Starting with {opener}.",
+  "Here’s something you haven’t heard. {opener}.",
+  "A bit of fresh air, not far from your taste. Up first: {opener}.",
+  "Let’s see what you make of this: {opener}.",
+  "That was {prev}. Now something you don’t know yet: {opener}."
+ ],
+ "intro_playlist": [
+  "Let’s pull something from your {playlist} playlist, starting with {opener}.",
+  "Your {playlist} playlist deserves a turn. Starting with {opener}.",
+  "A little from {playlist}, your playlist. Up first: {opener}.",
+  "Time to visit {playlist}. Here’s {opener}.",
+  "That was {prev}. Now a bit of {playlist}, with {opener}."
+ ],
+ "intro_mood_focus": [
+  "{moment_cap} calls for something steady to focus on, so let’s start with {opener}.",
+  "For {moment}, music that stays out of the way: {opener}.",
+  "To focus {moment}, something that sits in the background. Here’s {opener}.",
+  "No distractions. Music to concentrate, starting with {opener}.",
+  "Time to work, calmly. Here’s {opener}."
+ ],
+ "intro_mood_chill": [
+  "{moment_cap} calls for something mellow, so let’s slow it down with {opener}.",
+  "For {moment}, something soft. Starting with {opener}.",
+  "No rush. Something easy for {moment}: {opener}.",
+  "Let’s bring the revs down. Up first: {opener}.",
+  "A little calm, because {moment} deserves it. Here’s {opener}.",
+  "That was {prev}. Let’s slow things down with {opener}."
+ ],
+ "intro_mood_energy": [
+  "{moment_cap} calls for some energy, so let’s pick it up with {opener}.",
+  "For {moment}, something with more rhythm. Starting with {opener}.",
+  "Time to move. Here’s {opener}.",
+  "Turn it up a notch, {moment} asks for it. {opener}.",
+  "With some drive: {opener}.",
+  "That was {prev}. Now, more energy: {opener}."
+ ],
+ "intro_mood_acoustic": [
+  "{moment_cap} suits something more stripped back, so something acoustic, starting with {opener}.",
+  "For {moment}, something acoustic. Starting with {opener}.",
+  "Guitar, voice, nothing else. Here’s {opener}.",
+  "Nothing fancy, just the song. Up first: {opener}."
+ ],
+ "intro_request_match": [
+  "You asked for {what}, so this set is right on it. Starting with {opener}.",
+  "{what_cap}: here’s a set like that, starting with {opener}.",
+  "That {what} you asked for is on its way. Here’s {opener}.",
+  "{what_cap}, coming up. Starting with {opener}.",
+  "Noted: {what}. Up first: {opener}.",
+  "One order of {what}. Here’s {opener}."
+ ],
+ "intro_search": [
+  "I went looking for {what}, as you asked. Up first: {opener}.",
+  "Here’s yours: {what}. Starting with {opener}.",
+  "For {what}, I’m starting with {opener}.",
+  "You asked for {what}. Here’s what I found, starting with {opener}.",
+  "{what}. Here’s {opener}.",
+  "Here comes {what}, starting with {opener}.",
+  "Good ask. For {what}, first up is {opener}.",
+  "You asked for {what}, so I built it around what you listen to, {taste}. Up first: {opener}.",
+  "For {what} I stayed on your side of things, {taste}. Starting with {opener}.",
+  "{what}, your way: {taste}. Here’s {opener}.",
+  "Looking for {what} in your world, {taste}. First, {opener}.",
+  "That {what}, with the flavor of what you usually play: {taste}. Here’s {opener}."
+ ],
+ "intro_theme": [
+  "Let’s go with {what}, starting with {opener}.",
+  "Now it’s {what}. Here’s {opener}.",
+  "A set of {what}. Up first: {opener}.",
+  "Changing the air: {what}. Here’s {opener}.",
+  "That was {prev}. Now, {what}, starting with {opener}."
+ ],
+ "what_artist": [
+  "music by {artist}",
+  "some {artist}"
+ ],
+ "what_decade": [
+  "music from {decade}",
+  "some of {decade}"
+ ],
+ "what_genre": [
+  "some {genre}"
+ ],
+ "what_album": [
+  "{album}, by {artist}"
+ ],
+ "what_favorites": [
+  "your favorites"
+ ],
+ "what_fresh": [
+  "something new"
+ ],
+ "what_rediscover": [
+  "something you’d forgotten"
+ ],
+ "mood_word_focus": [
+  "something to focus on"
+ ],
+ "mood_word_chill": [
+  "something mellow"
+ ],
+ "mood_word_energy": [
+  "something with energy"
+ ],
+ "mood_word_acoustic": [
+  "something acoustic"
+ ],
+ "ago_months": [
+  "{n} months"
+ ],
+ "ago_year": [
+  "over a year"
+ ],
+ "by_artist": [
+  "{title}, by {artist}",
+  "{title}, from {artist}"
+ ],
+ "note_repeat": [
+  "{title} is one you’ve replayed the most this month: {n} times.",
+  "Look at that, {title}: you’ve played it {n} times this month.",
+  "{n} times this month for {title}. There’s something to it."
+ ],
+ "note_playlist": [
+  "{title} comes from your {playlist} playlist.",
+  "{title}, straight from {playlist}.",
+  "This one’s from your {playlist} playlist: {title}."
+ ],
+ "note_album_year": [
+  "{title} is from the album {album}, {year}.",
+  "{title}, from {year}, off the record {album}.",
+  "From the album {album}, {year}: {title}."
+ ],
+ "moment_morning": [
+  "this morning"
+ ],
+ "moment_afternoon": [
+  "this afternoon"
+ ],
+ "moment_evening": [
+  "tonight"
+ ],
+ "moment_night": [
+  "tonight"
+ ]
+}

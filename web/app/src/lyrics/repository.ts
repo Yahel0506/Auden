@@ -81,16 +81,28 @@ export interface LookupOptions {
   /** Ask this one provider only: the panel's provider picker. */
   only?: LyricsSourceId;
   onSource?: (source: LyricsSourceId, state: SourceState) => void;
+  /**
+   * Stop waiting for slower providers after this long and answer with the best found so far (a
+   * line-synced or plain result beats losing everything to one hung mirror). The batch uses it.
+   */
+  settleAfterMs?: number;
+  /** Ask these providers, in this order, instead of the current settings (a batch snapshots them at its start). */
+  sequence?: readonly LyricsSourceId[];
+  /** Ignore a remembered answer: a cached "nothing found" is not what a batch should report. */
+  fresh?: boolean;
 }
 
-export async function lookupLyrics(track: LyricsTrack, { only, onSource }: LookupOptions = {}): Promise<LyricsResult | null> {
-  const sequence = only ? [only] : enabledSources();
+export async function lookupLyrics(
+  track: LyricsTrack,
+  { only, onSource, settleAfterMs, fresh, sequence: given }: LookupOptions = {},
+): Promise<LyricsResult | null> {
+  const sequence = only ? [only] : [...(given ?? enabledSources())];
   if (!sequence.length) return null;
   const { paxsenixKey, preferSyllables } = useLyricsSettings.getState();
   // preferSyllables picks a different winner from the same answers, so it is part of the key.
   const key = `${track.videoId}|${track.durationMs}|${track.title}|${track.artist}|${only ?? ''}|${sequence.join(',')}|${preferSyllables}`;
   const cached = cache.get(key);
-  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.result;
+  if (!fresh && cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.result;
 
   const query: providers.LyricsQuery = {
     videoId: track.videoId,
@@ -157,12 +169,15 @@ export async function lookupLyrics(track: LyricsTrack, { only, onSource }: Looku
     }
   };
 
+  /** Every answer that has arrived, for settling early on what is already in hand. */
+  const finished = new Map<LyricsSourceId, LyricsResult | null>();
   const run = (source: LyricsSourceId) => {
     onSource?.(source, 'pending');
     return fetchFrom(source)
       .catch(() => null)
       .then((parsed) => {
         const result = parsed?.lines.some((l) => l.text.trim()) ? toResult(source, parsed) : null;
+        finished.set(source, result);
         onSource?.(source, result ? 'found' : 'missing');
         return result;
       });
@@ -173,9 +188,22 @@ export async function lookupLyrics(track: LyricsTrack, { only, onSource }: Looku
   let lineSynced: LyricsResult | null = null;
   let plain: LyricsResult | null = null;
   let winner: LyricsResult | null = null;
+  const timedOut = Symbol('settle');
+  let settledEarly = false;
+  const deadline =
+    settleAfterMs !== undefined ? new Promise<typeof timedOut>((resolve) => setTimeout(() => resolve(timedOut), settleAfterMs)) : null;
   for (const entry of racing) {
     if (entry.source === 'genius' && (lineSynced || plain)) continue;
-    const found = await (entry.job ?? run(entry.source));
+    const pending = entry.job ?? run(entry.source);
+    const answer = deadline ? await Promise.race([pending, deadline]) : await pending;
+    if (answer === timedOut) {
+      // One slow provider must not cost the answers that already arrived: best of those, in order.
+      const have = sequence.map((source) => finished.get(source)).filter((r): r is LyricsResult => !!r);
+      winner = have.find((r) => r.wordSynced) ?? have.find((r) => r.synced) ?? have[0] ?? null;
+      settledEarly = true;
+      break;
+    }
+    const found = answer;
     if (!found) continue;
     if (found.wordSynced) {
       winner = found;
@@ -189,6 +217,7 @@ export async function lookupLyrics(track: LyricsTrack, { only, onSource }: Looku
     else plain ??= found;
   }
   winner ??= lineSynced ?? plain;
-  cache.set(key, { at: Date.now(), result: winner });
+  // An answer cut short by the deadline is not the final word: the panel, with no deadline, may do better.
+  if (!settledEarly) cache.set(key, { at: Date.now(), result: winner });
   return winner;
 }

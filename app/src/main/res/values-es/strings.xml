@@ -1580,4 +1580,6 @@
     <string name="bit_perfect_status_unavailable">No disponible para esta pista (%1$s)</string>
     <string name="new_playlist_on_device">En este dispositivo</string>
     <string name="new_playlist_on_youtube_music">YouTube Music</string>
+    <string name="connect_enabled">Reproducir en mis otros dispositivos</string>
+    <string name="connect_enabled_subtitle">Muestra los demás dispositivos Auden de esta cuenta en el menú de salida de audio, para pasar la reproducción de uno a otro y controlarla desde cualquiera</string>
 </resources>

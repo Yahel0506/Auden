@@ -1,0 +1,15 @@
+name = "auden-connect"
+main = "src/worker.ts"
+compatibility_date = "2026-01-01"
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "ConnectRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["ConnectRoom"]
+
+[vars]
+# Comma-separated browser Origins allowed to open a socket; native apps send none.
+ALLOWED_ORIGINS = "https://auden-2x9.pages.dev,http://localhost:5173"

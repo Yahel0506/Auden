@@ -30,10 +30,10 @@ declare const __DISCORD_PRESENCE__: boolean;
 export const APPLICATION_ID = '1543679166967193620';
 const GATEWAY = 'wss://gateway.discord.gg/?v=9&encoding=json';
 const API = 'https://discord.com/api/v9';
-const PROJECT_URL = 'https://github.com/kushagrasinghx/BitChord';
+const PROJECT_URL = 'https://github.com/Yahel0506/Auden';
 const DEFAULT_BUTTON_1 = 'Listen on YouTube Music';
-const DEFAULT_BUTTON_2 = 'Visit BitChord';
-const APP_NAME = 'BitChord';
+const DEFAULT_BUTTON_2 = 'Visit Auden';
+const APP_NAME = 'Auden';
 
 const INITIAL_RECONNECT_MS = 1_000;
 const MAX_RECONNECT_MS = 60_000;
@@ -201,7 +201,7 @@ export class Gateway {
       try {
         this.onMessage(JSON.parse(String(event.data)) as Payload);
       } catch (error) {
-        console.warn('BitChord: Discord gateway payload', error);
+        console.warn('Auden: Discord gateway payload', error);
       }
     };
     socket.onclose = (event) => {
@@ -246,7 +246,7 @@ export class Gateway {
   }
 
   private drop(why: string): void {
-    console.info(`BitChord: Discord gateway dropped (${why})`);
+    console.info(`Auden: Discord gateway dropped (${why})`);
     this.ready = false;
     this.socket?.close();
   }

@@ -1,10 +1,13 @@
+import { SaveToDeviceButton } from '@/auden/playlists/ui/SaveToDeviceButton';
+import { saveSpotifyToDevice, saveYouTubeToDevice } from '@/auden/playlists/actions';
 import { useMutation } from '@tanstack/react-query';
 import { ListPlus } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { DetailHeader, detailButton } from '@/components/music/DetailHeader';
 import { playList, shuffleList } from '@/components/music/play';
-import { EmptyState, LoadError, NeedsExtension } from '@/components/music/States';
+import { SpotifyProblem } from '@/components/music/SpotifyProblem';
+import { EmptyState, NeedsExtension } from '@/components/music/States';
 import { TrackList } from '@/components/music/TrackList';
 import { createPlaylist } from '@/data/music/api';
 import { useSignedIn } from '@/data/music/queries';
@@ -33,7 +36,7 @@ export default function SpotifyPlaylistPage() {
 
   if (extension.state === 'missing') return <NeedsExtension what="your Spotify playlists" />;
   if (!signedIn) return <EmptyState title="Sign in to Spotify" detail="Open Spotify in the sidebar to connect your account." />;
-  if (rows.status === 'error' && !rows.rows.length) return <LoadError error={rows.error} onRetry={rows.retry} />;
+  if (rows.status === 'error' && !rows.rows.length) return <SpotifyProblem error={rows.error} onRetry={rows.retry} />;
   if (!info.data || (rows.status === 'loading' && !rows.rows.length)) return <PlaylistSkeleton />;
 
   const playable = rows.rows.filter((t) => !t.unavailable);
@@ -65,8 +68,21 @@ export default function SpotifyPlaylistPage() {
         canPlay={playable.length > 0}
         onPlay={() => playList(playable, 0, context)}
         onShuffle={() => shuffleList(playable, context)}
-        extra={<ImportButton title={info.data.name} videoIds={playable.map((t) => t.videoId)} ready={rows.matching === 0} />}
+        extra={
+          <>
+            <SaveToDeviceButton onSave={() => saveSpotifyToDevice(id, info.data.name, info.data.imageUrl)} />
+            <ImportButton title={info.data.name} videoIds={playable.map((t) => t.videoId)} ready={rows.matching === 0} />
+          </>
+        }
       />
+      {rows.partial && (
+        <p className="mx-[var(--page-gutter,20px)] my-3 flex items-center gap-3 type-callout text-secondary">
+          <span>Couldn’t load the whole playlist: {rows.rows.length} of {total} songs so far.</span>
+          <button className="type-callout-emphasized text-key" onClick={rows.retry}>
+            Load the rest
+          </button>
+        </p>
+      )}
       <TrackList tracks={rows.rows} variant="playlist" source={context.source} />
       <footer className={detailFooter}>
         <p>From Spotify. Songs are matched to YouTube Music by title, artist and length.</p>
@@ -81,7 +97,7 @@ function ImportButton({ title, videoIds, ready }: { title: string; videoIds: str
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
   const create = useMutation({
-    mutationFn: () => createPlaylist(title, videoIds, 'Imported from Spotify with BitChord'),
+    mutationFn: () => createPlaylist(title, videoIds, 'Imported from Spotify with Auden'),
     onSuccess: (playlistId) => navigate(`/playlist/${encodeURIComponent(`VL${playlistId}`)}`),
   });
   if (!ytSignedIn) return null;

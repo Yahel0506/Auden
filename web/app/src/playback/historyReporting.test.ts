@@ -5,11 +5,13 @@ import { create } from 'zustand';
 const pings: string[] = [];
 const ended = new Set<() => void>();
 const audio = { currentTime: 0 };
-const player = create<{ nowPlaying: { videoId: string } | null; status: string }>()(() => ({ nowPlaying: null, status: 'idle' }));
+let mirrored = false;
+const player = create<{ nowPlaying: { videoId: string; shareable?: boolean } | null; status: string }>()(() => ({ nowPlaying: null, status: 'idle' }));
 
 vi.mock('@/state/player', () => ({
   usePlayer: player,
   getAudio: () => audio,
+  isMirrored: () => mirrored,
   onTrackEnded: (listener: () => void) => {
     ended.add(listener);
     return () => ended.delete(listener);
@@ -50,7 +52,10 @@ const playbacks = () => pings.filter((u) => u.includes('/playback')).length;
 
 describe('history reporting', () => {
   let stop: (() => void) | null = null;
-  afterEach(() => stop?.());
+  afterEach(() => {
+    stop?.();
+    mirrored = false;
+  });
 
   it('closes a play that ran to its end, so a repeat-one loop is a new play', async () => {
     stop = startHistoryReporting();
@@ -66,5 +71,34 @@ describe('history reporting', () => {
     player.setState({ status: 'buffering' });
     player.setState({ status: 'playing' });
     await vi.waitFor(() => expect(playbacks()).toBe(2));
+  });
+
+  it('reports nothing for a local file or a DJ clip, even with an id that looks like YouTube\'s', async () => {
+    stop = startHistoryReporting();
+    const before = pings.length;
+    player.setState({ nowPlaying: { videoId: 'cdefghijklm', shareable: false }, status: 'playing' });
+    await new Promise((r) => setTimeout(r, 100));
+    expect(pings.length).toBe(before);
+  });
+
+  it('reports nothing for a song that plays on another device (the Connect mirror), and closes what it had heard when the mirror starts', async () => {
+    stop = startHistoryReporting();
+    audio.currentTime = 0;
+    const opened = playbacks();
+    player.setState({ nowPlaying: { videoId: 'defghijklmn' }, status: 'playing' });
+    await vi.waitFor(() => expect(playbacks()).toBe(opened + 1));
+
+    // Another device takes the session: the same status flips, now flagged.
+    mirrored = true;
+    const before = pings.length;
+    player.setState({ status: 'paused' });
+    await vi.waitFor(() => expect(pings.slice(before).some((u) => u.includes('final=1'))).toBe(true));
+    const afterClose = pings.length;
+
+    // The mirrored song plays on (as far as the store says), and a new one starts: nothing is opened for either.
+    player.setState({ status: 'playing' });
+    player.setState({ nowPlaying: { videoId: 'efghijklmno' }, status: 'playing' });
+    await new Promise((r) => setTimeout(r, 100));
+    expect(pings.length).toBe(afterClose);
   });
 });

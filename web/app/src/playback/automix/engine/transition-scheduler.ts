@@ -1,6 +1,7 @@
 // From AutoMix (https://github.com/heydavidf/automix), Copyright (C) 2026 David Finnegan.
 // AGPL-3.0-only: see ./LICENSE and ./NOTICE.md in playback/automix.
 
+import { easeBackSteps } from './easeBack';
 import type { TrackAnalysis } from '../analysis/types';
 import type { Deck } from './deck';
 import { gridOf, phraseAtOrBefore, phraseAtOrAfter, downbeatAtOrAfter, BEATS_PER_BAR } from './grid';
@@ -171,7 +172,8 @@ export function scheduleTransition(req: TransitionRequest): TransitionPlan {
     from.eq.reset();
     from.setVolume(1);
   });
-  glideRateToUnity(to, rate, tEnd);
+  // The incoming song comes back to its own speed from 70% of the blend on, with the old one still fading (v1.12).
+  easeBack(to, rate, t0, durationSec, toGrid.beatSec);
 
   return { t0, durationSec, mixInTrackTime, mixOutTrackTime, rate, fallback: false, style: 'blend', reason: null };
 }
@@ -346,18 +348,9 @@ function applyEqualPowerCross(outParam: AudioParam, inParam: AudioParam, t0: num
   inParam.setValueCurveAtTime(fadeIn, t0, durationSec);
 }
 
-/** Step the incoming deck's rate back to 1.0 in inaudible ~0.8% increments. */
-function glideRateToUnity(deck: Deck, fromRate: number, startCtxTime: number): void {
-  if (Math.abs(fromRate - 1) < 0.002) {
-    deck.setRate(1, startCtxTime + 0.5);
-    return;
-  }
-  const steps = 8;
-  const stepSec = 3;
-  for (let i = 1; i <= steps; i++) {
-    const r = fromRate + (1 - fromRate) * (i / steps);
-    deck.setRate(r, startCtxTime + i * stepSec);
-  }
+/** Walks the incoming deck's rate back to 1 inside the blend that started at [t0] (see easeBack.ts). */
+function easeBack(deck: Deck, fromRate: number, t0: number, blendSec: number, beatSec: number | null): void {
+  for (const step of easeBackSteps(fromRate, blendSec, beatSec)) deck.setRate(step.rate, t0 + step.at);
 }
 
 /** Fire a callback near an AudioContext time (cosmetic cleanup only). */

@@ -24,7 +24,7 @@ const ALLOWED_ORIGINS = new Set(__SITE_ORIGINS__);
 const OWN_ORIGIN = new URL(browser.runtime.getURL('/')).origin;
 
 /** Grows as each phase lands its methods; Discord only in builds that include it. */
-const CAPABILITIES: Capability[] = ['yt', 'yt.auth', 'yt.stats', 'lyrics', 'spotify', ...(discord.AVAILABLE ? (['discord'] as const) : [])];
+const CAPABILITIES: Capability[] = ['yt', 'yt.auth', 'yt.stats', 'lyrics', 'spotify', 'spotify.library', ...(discord.AVAILABLE ? (['discord'] as const) : [])];
 
 function originOf(sender: Browser.runtime.MessageSender): string | null {
   if (sender.origin) return sender.origin;
@@ -42,15 +42,21 @@ function allowed(sender: Browser.runtime.MessageSender): boolean {
 
 function failure(id: string, error: unknown): BridgeResponse {
   const known = (error as { code?: string }).code;
+  const spotifyKind = error instanceof spotify.SpotifyError ? error.kind : null;
   const code: BridgeErrorCode =
     error instanceof spotify.SpotifyAuthError
       ? 'unauthenticated'
       : known === 'forbidden' || known === 'unauthenticated' || known === 'permission'
       ? known
-      : error instanceof TypeError
+      : error instanceof TypeError || spotifyKind === 'network'
         ? 'network'
         : 'internal';
-  return errorResponse(id, code, error instanceof Error ? error.message : String(error));
+  const response = errorResponse(id, code, error instanceof Error ? error.message : String(error));
+  // The old `code` stays for an older page; a newer one reads the kind (and Spotify's Retry-After) from here.
+  if (error instanceof spotify.SpotifyError && !response.ok) {
+    response.error.detail = { kind: error.kind, ...(error.retryAfterSec !== undefined && { retryAfterSec: error.retryAfterSec }) };
+  }
+  return response;
 }
 
 async function handle(request: BridgeRequest): Promise<BridgeResponse> {
@@ -111,6 +117,14 @@ async function handle(request: BridgeRequest): Promise<BridgeResponse> {
       case 'spotify.playlists': {
         const { offset } = (request as BridgeRequest<'spotify.playlists'>).params;
         return okResponse<'spotify.playlists'>(request.id, await spotify.playlists(offset ?? 0));
+      }
+      case 'spotify.albums': {
+        const { offset } = (request as BridgeRequest<'spotify.albums'>).params;
+        return okResponse<'spotify.albums'>(request.id, await spotify.albums(offset ?? 0));
+      }
+      case 'spotify.artists': {
+        const { offset } = (request as BridgeRequest<'spotify.artists'>).params;
+        return okResponse<'spotify.artists'>(request.id, await spotify.artists(offset ?? 0));
       }
       case 'spotify.tracks': {
         const { playlistId, offset } = (request as BridgeRequest<'spotify.tracks'>).params;
@@ -217,7 +231,7 @@ function onCookieChanged({ cookie }: Browser.cookies.CookieChangeInfo): void {
       spotify
         .authState()
         .then((data) => broadcast({ event: 'spotify.authState', data }))
-        .catch((error: unknown) => console.warn('BitChord: reading the Spotify session failed', error));
+        .catch((error: unknown) => console.warn('Auden: reading the Spotify session failed', error));
     }, 1000);
     return;
   }
@@ -228,7 +242,7 @@ function onCookieChanged({ cookie }: Browser.cookies.CookieChangeInfo): void {
   cookieTimer = setTimeout(() => {
     authState(true)
       .then((data) => broadcast({ event: 'yt.authState', data }))
-      .catch((error: unknown) => console.warn('BitChord: reading the YouTube session failed', error));
+      .catch((error: unknown) => console.warn('Auden: reading the YouTube session failed', error));
   }, 1000);
 }
 
@@ -236,7 +250,7 @@ export default defineBackground(() => {
   // Dynamic rules persist, but are rewritten on every install and startup so
   // an update that changes them never leaves stale ones behind.
   const refreshRules = () =>
-    installRules(__SITE_ORIGINS__).catch((error: unknown) => console.error('BitChord: installing rules failed', error));
+    installRules(__SITE_ORIGINS__).catch((error: unknown) => console.error('Auden: installing rules failed', error));
   browser.runtime.onInstalled.addListener(refreshRules);
   browser.runtime.onStartup.addListener(refreshRules);
 

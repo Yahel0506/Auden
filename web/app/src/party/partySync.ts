@@ -1,9 +1,10 @@
 import type { Track } from '@/data/music/types';
 import type { QueueTier } from '@/playback/queue/timeline';
-import { getAudio, partyPlayer, setPartyHooks, usePlayer } from '@/state/player';
+import { isShareable } from '@/playback/source';
+import { getAudio, isMirrored, partyPlayer, setPartyHooks, usePlayer } from '@/state/player';
 import { controlsLocked, msUntilStart, party, partyPositionMs, useParty, type PartyState } from './listenTogether';
 import type { PartyTrack } from './models';
-import { autoplaySupplierId, detectSingleMove, partyQueueIndexOf, partyUpcomingAfter } from './queueReading';
+import { autoplaySupplierId, detectSingleMove, partyLocalItems, partyQueueIndexOf, partyUpcomingAfter } from './queueReading';
 
 /**
  * Makes the player obey the party, and the party obey this player: a port of
@@ -77,6 +78,12 @@ function current() {
   return index >= 0 ? (queue[index] ?? null) : null;
 }
 
+/** A local file or a DJ clip is in front: it is this device's own, and the party neither sees nor moves it. */
+function localFront(): boolean {
+  const entry = current();
+  return !!entry && !isShareable(entry.track);
+}
+
 const positionMs = () => Math.max(0, (getAudio()?.currentTime ?? 0) * 1000);
 
 /** Whether the player means to be playing: going, stalled, or loading a track it will start. */
@@ -125,9 +132,13 @@ function onIntent(): void {
 function publish(): void {
   const state = useParty.getState();
   if (!state.code) return;
+  // A mirrored session is another device's (Auden Connect), never the party's.
+  if (isMirrored()) return;
   const { queue, index } = usePlayer.getState();
   const entry = current();
   if (!entry) return;
+  // A local file or a DJ clip is never sent: nobody else has it.
+  if (!isShareable(entry.track)) return;
   const audio = getAudio();
   const track = toPartyTrack(entry.track, entry.tier, audio && Number.isFinite(audio.duration) ? audio.duration * 1000 : 0);
   const position = positionMs();
@@ -139,9 +150,9 @@ function publish(): void {
   let queueControls = 0;
 
   // The party's queue is the server's: past and current, then what's queued by hand or by AutoPlay.
-  const localItems = [...queue.slice(0, index + 1), ...queue.slice(index + 1).filter((e) => e.tier !== 'context')];
+  // Entries that are not shareable (local files, clips) are left out, and the playing index shifts with them.
+  const { items: localItems, trackIndex } = partyLocalItems(queue, index);
   const localIds = localItems.map((e) => e.track.videoId);
-  const trackIndex = index;
   const clampedIds = localIds.slice(0, Math.min(localIds.length, trackIndex + 1 + MAX_UPCOMING));
 
   const partyIndex = partyQueueIndexOf(state.queue, state.playback, state.playback.track?.videoId);
@@ -196,6 +207,7 @@ function publish(): void {
 function shouldDeferPlay(): boolean {
   const state = useParty.getState();
   if (!state.code || state.connection !== 'live' || !state.clockSynced) return false;
+  if (localFront()) return false;
   if (playWhenReady()) return false;
   setAwaiting(true);
   clearTimeout(startTimer);
@@ -212,6 +224,7 @@ function shouldDeferPlay(): boolean {
 function onLockedTransport(playing: boolean): boolean {
   const state = useParty.getState();
   if (!controlsLocked(state)) return false;
+  if (localFront()) return false;
   if (playing) {
     locallyPaused = false;
     if (!state.playback.isPlaying) return true;
@@ -246,6 +259,9 @@ function reconcile(): void {
   if (!track) return seedEmptyParty(state);
 
   const entry = current();
+  // A local file or clip is playing: the party's track is not what this device is on, and loading it
+  // would replace the queue. Nothing is reconciled until a shareable track is in front again.
+  if (entry && !isShareable(entry.track)) return;
   if (entry?.track.videoId !== track.videoId) return load(state);
   if (loadingVideoId === track.videoId && usePlayer.getState().status === 'loading') return;
   loadingVideoId = null;
@@ -352,6 +368,8 @@ function reconcileQueue(state: PartyState): void {
 /** A new party plays nothing until someone presses something; the host hands it what's already playing. */
 function seedEmptyParty(state: PartyState): void {
   if (state.connection !== 'live' || state.you?.isHost !== true || !current()) return;
+  // Nothing of a local file's queue is trimmed for a party that will not carry it (publish says nothing).
+  if (localFront()) return;
   const { queue, index } = usePlayer.getState();
   const keep = queue.slice(index + 1).filter((e) => e.tier !== 'context');
   if (keep.length !== queue.length - index - 1) partyPlayer.setUpcoming(keep.map((e) => e.track), keep.map((e) => (e.tier === 'autoplay' ? 'autoplay' : 'user')));

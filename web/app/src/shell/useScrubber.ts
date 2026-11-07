@@ -78,20 +78,22 @@ export function useScrubber() {
   const status = usePlayer((s) => s.status);
   const deck = usePlayer((s) => s.deck);
   const mixing = usePlayer((s) => s.mixing);
+  const mirror = usePlayer((s) => s.mirror);
   const seek = usePlayer((s) => s.seek);
   const [dragging, setDragging] = useState<number | null>(null);
 
   useEffect(() => {
-    const audio = getAudio();
+    // A mirrored session has no element: the other device's position and the song's length stand in for it.
+    const audio = mirror ? null : getAudio();
     const element = bar.current;
-    if (!audio || !element) return;
+    if ((!audio && !mirror) || !element) return;
     let frame = 0;
     const draw = () => {
-      const duration = audio.duration;
+      const duration = audio ? audio.duration : (usePlayer.getState().nowPlaying?.durationSec ?? 0);
       // during a loop mix the element is paused under the decks: the mix's own playhead
       const head = getPlayhead();
-      const paused = head?.paused ?? audio.paused;
-      const time = dragging !== null && Number.isFinite(duration) ? dragging * duration : (head?.sec ?? audio.currentTime);
+      const paused = head?.paused ?? audio?.paused ?? true;
+      const time = dragging !== null && Number.isFinite(duration) ? dragging * duration : (head?.sec ?? audio?.currentTime ?? 0);
       const base = Math.min(1, Math.max(0, duration > 0 ? time / duration : 0));
       const beat = dragging === null ? getMixBeat() : null;
       const mix = stepPulse(pulse.current, performance.now(), beat, paused);
@@ -107,12 +109,12 @@ export function useScrubber() {
     };
     draw();
     const onSeeked = () => draw();
-    audio.addEventListener('seeked', onSeeked);
+    audio?.addEventListener('seeked', onSeeked);
     return () => {
       cancelAnimationFrame(frame);
-      audio.removeEventListener('seeked', onSeeked);
+      audio?.removeEventListener('seeked', onSeeked);
     };
-  }, [status, deck, dragging, mixing]);
+  }, [status, deck, dragging, mixing, mirror]);
 
   const fractionAt = (event: React.PointerEvent<HTMLElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -121,7 +123,7 @@ export function useScrubber() {
 
   const handlers = {
     onPointerDown: (e: React.PointerEvent<HTMLElement>) => {
-      if (!getAudio()) return;
+      if (!getAudio() && !usePlayer.getState().mirror) return;
       e.currentTarget.setPointerCapture(e.pointerId);
       setDragging(fractionAt(e));
     },
@@ -130,8 +132,9 @@ export function useScrubber() {
     },
     onPointerUp: (e: React.PointerEvent<HTMLElement>) => {
       if (dragging === null) return;
-      const audio = getAudio();
-      if (audio && Number.isFinite(audio.duration)) seek(fractionAt(e) * audio.duration);
+      const { mirror: mirrored, nowPlaying } = usePlayer.getState();
+      const duration = mirrored ? (nowPlaying?.durationSec ?? 0) : (getAudio()?.duration ?? NaN);
+      if (Number.isFinite(duration) && duration > 0) seek(fractionAt(e) * duration);
       setDragging(null);
     },
     onPointerCancel: () => setDragging(null),

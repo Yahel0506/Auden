@@ -296,6 +296,8 @@ export class AutoDJ {
 
       const playing = this.host.current();
       const front = this.host.front();
+      // Before any early return: a skip to the last track has to release what was being measured for the songs left behind.
+      if (playing) analyzer.retain([playing.videoId, this.host.next()?.videoId].filter((id): id is string => !!id));
       if (!playing || !front.isPlaying) return;
       if (playing.videoId !== this.currentKey) {
         // A new track in front that this loop didn't mix in (a tap, a skip).
@@ -547,8 +549,8 @@ export class AutoDJ {
       if (!blend.handedOff) this.host.handoff();
       blend.from.cancel();
       blend.to.unfollow();
-      // the incoming deck keeps its rate glide (posted up to ~24 s ahead); it
-      // releases itself once that is played out
+      // the incoming deck's tempo walk back to its own speed (easeBack.ts) was
+      // posted at the start of the blend; it releases itself once that is played out
       this.settling = blend.to;
       releaseWhenSettled(blend.to, () => this.settling === blend.to);
       this.host.finished();
@@ -598,7 +600,7 @@ function stubAnalysis(t: QueuedTrack, durationSec: number): TrackAnalysis {
   };
 }
 
-/** The glide's last step lands at blend end + 24 s; hold the servo until no rate change is left ahead. */
+/** The tempo walk back usually ends inside the blend (a short one runs on a little past it); hold the servo until no rate change is left ahead. */
 function releaseWhenSettled(deck: Deck, isCurrent: () => boolean) {
   const check = () => {
     if (!isCurrent()) return;

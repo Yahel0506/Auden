@@ -1,5 +1,6 @@
 package com.music.bitchord.ui.player
 
+import com.music.bitchord.wear.WatchOutputState
 import com.music.bitchord.wear.WearBridge
 import android.content.Context
 import android.database.ContentObserver
@@ -17,6 +18,12 @@ import androidx.compose.ui.graphics.Shape
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.canvas.CanvasArtwork
 import com.music.bitchord.data.canvas.CanvasRepository
+import com.music.bitchord.data.connect.Command
+import com.music.bitchord.data.connect.CommandAction
+import com.music.bitchord.data.connect.ConnectManager
+import com.music.bitchord.data.connect.ConnectStatus
+import com.music.bitchord.data.connect.DeviceEntry
+import com.music.bitchord.data.connect.RemoteSession
 import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsTranslation
@@ -136,15 +143,23 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         val outputs = rememberAndroidAudioOutputs()
         val cast by CastController.state.collectAsStateWithLifecycle()
         val watch by WearBridge.watchOutput.collectAsStateWithLifecycle()
+        val mirroring by ConnectManager.shared.mirroring.collectAsStateWithLifecycle()
         // While a receiver is the speaker no output of this phone is the one
-        // playing, so none of them is lit; the Cast or watch row is.
-        return if (cast.casting || watch.active) outputs.map { it.copy(isActive = false) } else outputs
+        // playing, so none of them is lit; the Cast or watch row is. The same
+        // while this phone only mirrors another of the account's devices.
+        return if (cast.casting || watch.active || mirroring) outputs.map { it.copy(isActive = false) } else outputs
     }
 
     @Composable
     override fun rememberOutputPicker(onOpen: () -> Unit): () -> Unit = rememberAndroidOutputPicker(onOpen)
 
     override fun selectAudioOutput(id: Int?) {
+        // Picking an output of this phone while it mirrors another device is picking this phone: the session
+        // is handed over to it (the same transfer as tapping its row in the device list).
+        main.post {
+            val manager = ConnectManager.shared
+            if (manager.isMirroring) manager.switchTo(manager.myId)
+        }
         // Picking an output of this phone is picking this phone: the receiver
         // is let go of, and the music carries on here if it was playing.
         if (CastController.state.value.casting) CastController.disconnect(resumeHere = true)
@@ -165,6 +180,22 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         // watch picks the queue up from where the phone's player is.
         if (CastController.state.value.casting) CastController.disconnect(resumeHere = false)
         WearBridge.selectWatchOutput()
+    }
+
+    override val connect: StateFlow<ConnectUi> by lazy {
+        val manager = ConnectManager.shared
+        combine(
+            manager.status,
+            manager.devices,
+            manager.activeDeviceId,
+            AppSettings.connectEnabled,
+        ) { status, devices, active, enabled ->
+            toConnectUi(manager.myId, enabled && status != ConnectStatus.OFF, devices, active)
+        }.stateIn(scope, SharingStarted.Eagerly, ConnectUi())
+    }
+
+    override fun connectSwitchTo(deviceId: String) {
+        main.post { ConnectManager.shared.switchTo(deviceId) }
     }
 
     override val outputFormat: StateFlow<OutputFormatUi> by lazy {
@@ -295,8 +326,19 @@ private class CastAwareVolume(
         CastController.state.map { it.casting },
         WearBridge.watchOutput,
         DacVolume.level,
-    ) { phone, receiver, casting, watch, dac ->
+        ConnectManager.shared.mirroring,
+        ConnectManager.shared.remote,
+    ) { values ->
+        val phone = values[0] as Float
+        val receiver = values[1] as Float
+        val casting = values[2] as Boolean
+        val watch = values[3] as WatchOutputState
+        val dac = values[4] as Float?
+        val mirroring = values[5] as Boolean
+        val remote = values[6] as RemoteSession?
         when {
+            // Mirroring another device of the account: its volume is the one that means anything.
+            mirroring -> (remote?.state?.volume ?: 0.0).toFloat()
             casting -> receiver
             watch.active -> watch.volume
             // Direct USB: the music stream no longer reaches the DAC, so its
@@ -309,6 +351,8 @@ private class CastAwareVolume(
 
     override fun set(level: Float) {
         when {
+            ConnectManager.shared.isMirroring ->
+                ConnectManager.shared.remoteCommand(Command.volume(level.toDouble().coerceIn(0.0, 1.0)))
             CastController.state.value.casting -> CastController.setVolume(level)
             WearBridge.watchOutput.value.active -> WearBridge.setWatchVolume(level)
             DacVolume.level.value != null -> DacVolume.set(level)
@@ -361,4 +405,24 @@ private class BackdropPlayerFrost(private val backdrop: SnapshotBackdrop) : Play
     override fun release() = backdrop.release()
 
     override fun Modifier.frostPanel(shape: Shape, fill: Color): Modifier = menuBackdropFrost(backdrop, shape, fill)
+}
+
+/** Auden Connect as the output drawer draws it: the account's devices, with this one and the playing one marked. */
+internal fun toConnectUi(
+    myId: String,
+    visible: Boolean,
+    devices: List<DeviceEntry>,
+    activeId: String?,
+): ConnectUi {
+    if (!visible || devices.isEmpty()) return ConnectUi()
+    val rows = devices.map {
+        ConnectDeviceUi(
+            id = it.deviceId,
+            name = it.name,
+            platform = it.platform,
+            isThisDevice = it.deviceId == myId,
+            isActive = it.deviceId == activeId,
+        )
+    }
+    return ConnectUi(visible = true, devices = rows)
 }

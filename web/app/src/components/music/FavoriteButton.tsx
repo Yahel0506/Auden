@@ -1,4 +1,5 @@
 import { StarFilledIcon, StarIcon } from '@/components/icons/Transport';
+import { isSyntheticId } from '@/playback/source';
 import { useLikeStatus, useSetLiked, useSignedIn } from '@/data/music/queries';
 
 interface FavoriteButtonProps {
@@ -16,7 +17,7 @@ export function FavoriteButton({ videoId, className, size = 18 }: FavoriteButton
   const signedIn = useSignedIn();
   const status = useLikeStatus(videoId);
   const setLiked = useSetLiked();
-  if (!signedIn || !videoId) return null;
+  if (!signedIn || !videoId || isSyntheticId(videoId)) return null;
   const liked = status.data === 'LIKE';
   return (
     <button

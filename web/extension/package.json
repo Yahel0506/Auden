@@ -11,7 +11,8 @@
     "dev-key": "node scripts/gen-dev-key.mjs",
     "postinstall": "wxt prepare",
     "package": "wxt build && wxt build -b firefox && node scripts/publish-to-site.mjs",
-    "icons": "node scripts/gen-icons.mjs"
+    "icons": "node scripts/gen-icons.mjs",
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@bitchord/shared": "workspace:*"
@@ -21,6 +22,7 @@
     "@types/node": "^22.0.0",
     "fflate": "0.8.3",
     "typescript": "^7.0.2",
+    "vitest": "^5.0.4",
     "wxt": "^0.21.4"
   },
   "version": "0.4.4"

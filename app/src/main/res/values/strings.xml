@@ -1472,4 +1472,6 @@
     <string name="no_audio_version">No audio version found for this video</string>
     <string name="no_video_version">No video version found for this song</string>
     <string name="version_switch_in_party">Everyone in Listen Together hears the same version</string>
+    <string name="connect_enabled">Play on my other devices</string>
+    <string name="connect_enabled_subtitle">Lists the other Auden devices of this account in the audio output menu, so playback can move between them and be controlled from any of them</string>
 </resources>

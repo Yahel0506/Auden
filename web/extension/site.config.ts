@@ -1,4 +1,10 @@
-/** The web player's production origin. */
+/**
+ * OPEN DECISION: Auden's own domain is not chosen yet. Until it is, the origins below are still the BitChord
+ * deployment the site runs on. To publish under Auden's domain, set BITCHORD_SITE_ORIGINS at build time
+ * (the first origin is the one the popup links to) and change the www redirect in app/index.html to match.
+ * See web/README.md › Deploy.
+ *
+ * The web player's production origin. */
 export const PRODUCTION_ORIGIN = 'https://bitchord.in';
 
 /** The same site at its Cloudflare Pages address (the production branch's deploy). */

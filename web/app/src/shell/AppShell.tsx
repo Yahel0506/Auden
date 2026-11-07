@@ -3,6 +3,14 @@ import { resumeSession } from '@/party/listenTogether';
 import { startPartySync } from '@/party/partySync';
 import { useDiscordPresence } from '@/playback/discordPresence';
 import { startHistoryReporting } from '@/playback/historyReporting';
+import { startAudenQuerySync } from '@/auden/db';
+import { installLocalLibrary } from '@/auden/library/localResolver';
+import { startAutoSync } from '@/auden/playlists/autoSync';
+import { DbReloadBanner } from './DbReloadBanner';
+import { startPlayRecorder } from '@/auden/stats/recorder';
+import { JobBanner } from '@/auden/jobs/JobBanner';
+import { SavedLyricsHost } from './LyricsManage';
+import { SpotifyMatchHost } from './SpotifyMatchDialog';
 import { startLivePresence } from '@/playback/livePresence';
 import { Outlet } from 'react-router';
 import { PrefetchLink } from '@/components/PrefetchLink';
@@ -13,6 +21,7 @@ import { useUi } from '@/state/ui';
 import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 import { Banner, bannerButtonClass } from './Banner';
 import { MobileTopBar } from './MobileTopBar';
+import { useConnectSession } from '@/auden/connect/useConnectSession';
 import { PlayerBar } from './PlayerBar';
 import { SidePanel } from './SidePanel';
 import { Sidebar } from './Sidebar';
@@ -29,6 +38,8 @@ const FullScreenPlayer = lazy(() => import('./FullScreenPlayer').then((m) => ({ 
 export function AppShell() {
   useKeyboardShortcuts();
   useDiscordPresence();
+  // Auden Connect: this browser in the account's device list; while another device plays, the player below mirrors it.
+  useConnectSession();
   // Listen Together: pick a party back up after a reload, and keep the player in step with it.
   useEffect(() => {
     resumeSession();
@@ -36,6 +47,26 @@ export function AppShell() {
   }, []);
   // Plays into the account's YouTube Music history (Settings › Share Listening Activity).
   useEffect(() => startHistoryReporting(), []);
+  // Auden's own library: listening kept on this device (Home and the DJ read it), and queries over it kept fresh.
+  useEffect(() => startPlayRecorder(), []);
+  useEffect(() => startAudenQuerySync(), []);
+  // Local files: tells the player which songs have a file on this device, and keeps that current.
+  useEffect(() => installLocalLibrary(), []);
+  // Offline copies: registered with the player (so kept songs play), and the queue's runner. Loaded after first paint; the byte source
+  // (YouTube.js, BotGuard) is a further lazy import inside it.
+  useEffect(() => {
+    let off = () => {};
+    let gone = false;
+    void import('@/auden/offline/runtime').then((m) => {
+      if (!gone) off = m.installOffline();
+    });
+    return () => {
+      gone = true;
+      off();
+    };
+  }, []);
+  // Saved copies of YouTube Music / Spotify playlists gain their new songs (at most every 6 h, when the tab is in front).
+  useEffect(() => startAutoSync(), []);
   // Counts this tab in the "listening now" figure beside the phone and PC apps.
   useEffect(() => startLivePresence(), []);
   const extension = useExtension();
@@ -47,8 +78,8 @@ export function AppShell() {
   if (mobile) {
     banner = (
       <Banner
-        title="BitChord is better in the app."
-        detail="Phone browsers can’t run the BitChord extension. The Android app has everything."
+        title="Auden is better in the app."
+        detail="Phone browsers can’t run the Auden extension. The Android app has everything."
         action={
           <a className={bannerButtonClass} href={config.androidAppUrl} target="_blank" rel="noreferrer">
             Get the App
@@ -59,7 +90,7 @@ export function AppShell() {
   } else if (extension.state === 'missing' && !bannerDismissed) {
     banner = (
       <Banner
-        title="Play YouTube Music with the BitChord extension."
+        title="Play YouTube Music with the Auden extension."
         detail="Playback, YouTube Music sign-in, Spotify and Discord need the extension. Addons and lyrics work without it."
         action={
           <PrefetchLink className={bannerButtonClass} to="/extension">
@@ -90,7 +121,13 @@ export function AppShell() {
         <PlayerBar />
         <SidePanel />
       </div>
-      {banner}
+      <DbReloadBanner />
+      <div>
+        <JobBanner />
+        <SavedLyricsHost />
+        <SpotifyMatchHost />
+        {banner}
+      </div>
       {fullScreen && (
         <Suspense fallback={null}>
           <FullScreenPlayer />

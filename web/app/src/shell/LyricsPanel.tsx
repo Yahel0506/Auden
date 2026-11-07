@@ -2,17 +2,20 @@
 import '@uimaxbai/am-lyrics/am-lyrics.js';
 import { Check, ChevronDown, Loader2, Minus, Settings2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { chooseProvider, exportLrc, saveLyrics, useLyricsOffset, type LyricsOffset } from '@/auden/lyrics/actions';
+import { cursorMs, seekMs } from '@/auden/lyrics/offset';
 import { useCanvas } from '@/data/spotify/canvas';
 import { getBridge } from '@/extension/bridge';
 import { Menu, MenuHeader, MenuItem, MenuSeparator } from '@/components/Menu';
 import { LyricClock } from '@/lyrics/clock';
 import { onUngrantedChange, ungrantedOrigins } from '@/lyrics/http';
-import type { SourceState } from '@/lyrics/repository';
+import type { LyricsResult, SourceState } from '@/lyrics/repository';
 import { enabledSources } from '@/lyrics/settings';
 import { sourceById, type LyricsSourceId } from '@/lyrics/sources';
 import { useLyrics, useLyricsUi } from '@/lyrics/useLyrics';
 import { getAudio, getPlayhead, usePlayer } from '@/state/player';
 import { LyricsSettings } from './LyricsSettings';
+import { OffsetSheet, SavedLyricsDialog } from './LyricsManage';
 
 type AmLyricsElement = HTMLElement & {
   currentTime: number;
@@ -93,11 +96,15 @@ const FULL_SIZE =
  * dates readings by sample time" lesson. No React state per frame: the time is
  * written straight onto the element.
  */
-function LyricsView({ ttml, full }: { ttml: string; full: boolean }) {
+function LyricsView({ ttml, full, offsetMs }: { ttml: string; full: boolean; offsetMs: number }) {
   const host = useRef<HTMLDivElement>(null);
+  // The offset is read at each frame through a ref: a step of it must not rebuild the clock.
+  const offsetRef = useRef(offsetMs);
+  offsetRef.current = offsetMs;
   const element = useRef<AmLyricsElement | null>(null);
   const deck = usePlayer((s) => s.deck);
   const mixing = usePlayer((s) => s.mixing);
+  const mirror = usePlayer((s) => s.mirror);
   const videoId = usePlayer((s) => s.nowPlaying?.videoId);
 
   // Created by hand, with its TTML set before it's attached: am-lyrics starts
@@ -115,7 +122,7 @@ function LyricsView({ ttml, full }: { ttml: string; full: boolean }) {
     el.toggleAttribute('data-full', full);
     const onLineClick = (event: Event) => {
       const timestamp = (event as CustomEvent<{ timestamp: number }>).detail?.timestamp;
-      if (typeof timestamp === 'number') usePlayer.getState().seek(timestamp / 1000);
+      if (typeof timestamp === 'number') usePlayer.getState().seek(seekMs(timestamp, offsetRef.current) / 1000);
     };
     el.addEventListener('line-click', onLineClick);
     host.current?.append(el);
@@ -155,12 +162,13 @@ function LyricsView({ ttml, full }: { ttml: string; full: boolean }) {
   useEffect(() => {
     const audio = getAudio();
     const el = element.current;
-    if (!audio || !el) return;
-    if (mixing) {
+    if (!el || (!audio && !mirror)) return;
+    if (mixing || mirror) {
       // A loop mix plays the song from a deck while its element sits paused:
       // follow the mix's playhead, which loops and moves at the ramped tempo.
       // A loop's wrap (or the handover) is a jump on purpose, not drift to steer out.
-      const start = getPlayhead()?.sec ?? audio.currentTime;
+      // A mirrored session has no element at all: the other device's position is the playhead.
+      const start = getPlayhead()?.sec ?? audio?.currentTime ?? 0;
       const clock = new LyricClock(start * 1000);
       let discontinuity = 0;
       let last = start;
@@ -170,26 +178,27 @@ function LyricsView({ ttml, full }: { ttml: string; full: boolean }) {
         const sec = getPlayhead()?.sec ?? last;
         if (sec < last - 0.15 || sec > last + 1) discontinuity++;
         last = sec;
-        el.currentTime = clock.frame(now, Math.trunc(sec * 1000), now, discontinuity);
+        el.currentTime = cursorMs(clock.frame(now, Math.trunc(sec * 1000), now, discontinuity), offsetRef.current);
         frame = requestAnimationFrame(tick);
       };
       frame = requestAnimationFrame(tick);
       return () => cancelAnimationFrame(frame);
     }
+    if (!audio) return;
     const clock = new LyricClock(audio.currentTime * 1000);
     let discontinuity = 0;
     let frame = 0;
     const tick = () => {
       const now = performance.now();
       // The reading and its stamp are taken together.
-      el.currentTime = clock.frame(now, Math.trunc(audio.currentTime * 1000), now, discontinuity);
+      el.currentTime = cursorMs(clock.frame(now, Math.trunc(audio.currentTime * 1000), now, discontinuity), offsetRef.current);
       frame = requestAnimationFrame(tick);
     };
     const hold = () => {
       cancelAnimationFrame(frame);
       const ms = audio.currentTime * 1000;
       clock.hold(ms, performance.now());
-      el.currentTime = ms;
+      el.currentTime = cursorMs(ms, offsetRef.current);
     };
     const resume = () => {
       cancelAnimationFrame(frame);
@@ -213,7 +222,14 @@ function LyricsView({ ttml, full }: { ttml: string; full: boolean }) {
       audio.removeEventListener('pause', hold);
       audio.removeEventListener('play', resume);
     };
-  }, [deck, videoId, ttml, mixing]);
+  }, [deck, videoId, ttml, mixing, mirror]);
+
+  // A paused song has no frame loop to pick a new offset up: move the cursor now.
+  useEffect(() => {
+    const audio = getAudio();
+    // Not during a loop mix: its element sits paused while the deck plays, and the mix's own loop moves the cursor.
+    if (element.current && audio?.paused && !usePlayer.getState().mixing && !usePlayer.getState().mirror) element.current.currentTime = cursorMs(audio.currentTime * 1000, offsetMs);
+  }, [offsetMs]);
 
   // am-lyrics renders and scrolls itself; it only needs the space. Full screen fades it out at the top and bottom.
   return (
@@ -237,15 +253,40 @@ function useUngranted(): string[] {
 const NO_STATES: Partial<Record<LyricsSourceId, SourceState>> = {};
 
 /** The provider picker: which provider these lyrics are from, and the others' answers for this track. */
-function ProviderPicker({ current, full }: { current: LyricsSourceId | null; full: boolean }) {
+function ProviderPicker({
+  current,
+  chosen,
+  result,
+  saved,
+  songKey,
+  offset,
+  full,
+}: {
+  current: LyricsSourceId | null;
+  chosen: LyricsSourceId | null;
+  result: LyricsResult | null | undefined;
+  saved: boolean;
+  songKey: string | null;
+  offset: LyricsOffset;
+  full: boolean;
+}) {
   const videoId = usePlayer((s) => s.nowPlaying?.videoId ?? '');
+  const title = usePlayer((s) => s.nowPlaying?.title ?? '');
+  const artist = usePlayer((s) => s.nowPlaying?.artist ?? '');
   const states = useLyricsUi((s) => s.states[videoId]) ?? NO_STATES;
-  const picked = useLyricsUi((s) => s.picked[videoId]);
-  const pick = useLyricsUi((s) => s.pick);
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [settings, setSettings] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [timing, setTiming] = useState(false);
+  const [manage, setManage] = useState(false);
+  const track = () => {
+    const player = usePlayer.getState();
+    const entry = player.queue[player.index];
+    const durationSec = entry?.track.durationSec || player.nowPlaying?.durationSec || 0;
+    return { videoId, title, artist, durationMs: Math.round(durationSec * 1000), album: entry?.track.album?.name ?? null };
+  };
   const close = useCallback(() => setAnchor(null), []);
-  const label = current ? sourceById(current)?.label : 'Lyrics';
+  const label = current ? (sourceById(current)?.label ?? result?.label ?? current) : 'Lyrics';
 
   return (
     // In full screen the picker sits quietly above the lines, shown on hover.
@@ -273,7 +314,7 @@ function ProviderPicker({ current, full }: { current: LyricsSourceId | null; ful
       </button>
       {anchor && (
         <Menu anchor={anchor} placement="below-end" onClose={close} label="Lyrics provider">
-          <MenuItem checked={!picked} onSelect={() => (close(), pick(videoId, null))}>
+          <MenuItem checked={!chosen} onSelect={() => (close(), void chooseProvider(videoId, null))}>
             Best available
           </MenuItem>
           <MenuSeparator />
@@ -283,7 +324,7 @@ function ProviderPicker({ current, full }: { current: LyricsSourceId | null; ful
             return (
               <MenuItem
                 key={id}
-                checked={picked === id}
+                checked={chosen === id}
                 trailing={
                   state === 'pending' ? (
                     <Loader2 size={13} className="animate-spin" />
@@ -293,17 +334,38 @@ function ProviderPicker({ current, full }: { current: LyricsSourceId | null; ful
                     <Minus size={13} />
                   ) : undefined
                 }
-                onSelect={() => (close(), pick(videoId, id))}
+                onSelect={() => (close(), void chooseProvider(videoId, id))}
               >
                 {sourceById(id)?.label}
               </MenuItem>
             );
           })}
           <MenuSeparator />
+          <MenuItem
+            disabled={!result || saved || saving}
+            onSelect={() => {
+              close();
+              if (!result) return;
+              setSaving(true);
+              void saveLyrics(track(), result).finally(() => setSaving(false));
+            }}
+          >
+            {saved ? 'Saved for this song' : 'Save these lyrics'}
+          </MenuItem>
+          <MenuItem disabled={!songKey} onSelect={() => (close(), setManage(true))}>
+            Saved lyrics…
+          </MenuItem>
+          <MenuItem disabled={!result} onSelect={() => (close(), result && exportLrc(result, { title, artist }, offset.effective))}>
+            Export as .lrc
+          </MenuItem>
+          <MenuItem onSelect={() => (close(), setTiming(true))}>Timing…</MenuItem>
+          <MenuSeparator />
           <MenuItem onSelect={() => (close(), setSettings(true))}>Lyric Settings…</MenuItem>
         </Menu>
       )}
       {settings && <LyricsSettings onClose={() => setSettings(false)} />}
+      {timing && <OffsetSheet songKey={songKey} offset={offset} onClose={() => setTiming(false)} />}
+      {manage && songKey && <SavedLyricsDialog songKey={songKey} track={track()} onClose={() => setManage(false)} />}
     </div>
   );
 }
@@ -377,6 +439,7 @@ const fullSizes =
  */
 export function LyricsPanel({ variant = 'panel' }: { variant?: 'panel' | 'full' }) {
   const lyrics = useLyrics();
+  const offset = useLyricsOffset(lyrics.songKey);
   const hasTrack = usePlayer((s) => s.nowPlaying !== null);
   const videoId = usePlayer((s) => s.nowPlaying?.videoId ?? '');
   // A provider picked by hand that came back with nothing is named in the
@@ -395,7 +458,15 @@ export function LyricsPanel({ variant = 'panel' }: { variant?: 'panel' | 'full' 
   return (
     <div className={full ? `${panel} ${fullSizes}` : panel}>
       {canvas && variant === 'panel' && <CanvasBackdrop url={canvas} />}
-      <ProviderPicker current={result?.source ?? null} full={full} />
+      <ProviderPicker
+        current={result?.source ?? null}
+        chosen={lyrics.chosen}
+        result={result}
+        saved={lyrics.saved}
+        songKey={lyrics.songKey}
+        offset={offset}
+        full={full}
+      />
       {/* Only worth raising when nothing was found: then the hosts behind the extension might have it. */}
       {ungranted.length > 0 && !result && !lyrics.isFetching && <PermissionNotice origins={ungranted} />}
       {!hasTrack ? (
@@ -408,7 +479,7 @@ export function LyricsPanel({ variant = 'panel' }: { variant?: 'panel' | 'full' 
           <Loader2 size={20} className="animate-spin" />
         </div>
       ) : result ? (
-        <LyricsView ttml={result.ttml} full={full} />
+        <LyricsView ttml={result.ttml} full={full} offsetMs={offset.effective} />
       ) : picked ? (
         <div className={empty}>
           <p className={emptyTitle}>Not on {sourceById(picked)?.label ?? 'this provider'}</p>

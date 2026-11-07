@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { cancelFrame, requestFrame } from '@/lib/frames';
 import { GRID, meshPalette, type Rgb } from '@/lib/meshPalette';
 
 /*
@@ -63,7 +64,8 @@ function average(cells: Rgb[]): Rgb {
 }
 
 interface Renderer {
-  draw: (cells: Rgb[], seconds: number) => void;
+  /** [soft]: 0 = the blobs as they are, 1 = reaching wider toward the bottom (Continuation's deepening blur). */
+  draw: (cells: Rgb[], seconds: number, soft: number) => void;
   dispose: () => void;
 }
 
@@ -82,6 +84,7 @@ uniform vec3 uBase;
 uniform vec3 uCol[${GRID * GRID}];
 uniform vec3 uBlob[${GRID * GRID}];
 uniform float uFrame;
+uniform float uSoft;
 
 float hash(vec2 p) {
   vec3 q = fract(vec3(p.xyx) * 0.1031 + uFrame * 0.0137);
@@ -92,10 +95,13 @@ float hash(vec2 p) {
 void main() {
   vec2 px = vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y);
   float side = max(uRes.x, uRes.y);
+  // Continuation: the blobs reach up to ~2x wider by halfway down, so the foot is blurrier than the head
+  // (Android bakes blur radius 1 at the top to 3 by half way) for the price of one multiply per pixel.
+  float widen = 1.0 + uSoft * 1.0 * smoothstep(0.0, 0.5, px.y / uRes.y);
   vec3 sum = pow(uBase, vec3(2.2)) * 0.35;
   float weight = 0.35;
   for (int i = 0; i < ${GRID * GRID}; i++) {
-    float d = distance(px, uBlob[i].xy * uRes) / (uBlob[i].z * side);
+    float d = distance(px, uBlob[i].xy * uRes) / (uBlob[i].z * side * widen);
     float w = exp(-4.0 * d * d);
     sum += pow(uCol[i], vec3(2.2)) * w;
     weight += w;
@@ -132,11 +138,11 @@ function webglRenderer(canvas: HTMLCanvasElement): Renderer | null {
   gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
 
   const at = (name: string) => gl.getUniformLocation(program, name);
-  const [uRes, uBase, uCol, uBlob, uFrame] = ['uRes', 'uBase', 'uCol', 'uBlob', 'uFrame'].map(at);
+  const [uRes, uBase, uCol, uBlob, uFrame, uSoft] = ['uRes', 'uBase', 'uCol', 'uBlob', 'uFrame', 'uSoft'].map(at);
   let frame = 0;
 
   return {
-    draw(cells, seconds) {
+    draw(cells, seconds, soft) {
       // One device pixel per CSS pixel at most: the mesh has no detail a denser canvas would show.
       const scale = Math.min(window.devicePixelRatio || 1, 1);
       const width = Math.max(1, Math.round(canvas.clientWidth * scale));
@@ -151,6 +157,7 @@ function webglRenderer(canvas: HTMLCanvasElement): Renderer | null {
       gl.uniform3fv(uCol!, cells.flatMap((c) => c.map((v) => v / 255)));
       gl.uniform3fv(uBlob!, blobsAt(seconds).flat());
       gl.uniform1f(uFrame!, (frame = (frame + 1) % 1024));
+      gl.uniform1f(uSoft!, soft);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     },
     dispose() {
@@ -175,7 +182,7 @@ function canvasRenderer(canvas: HTMLCanvasElement): Renderer | null {
   canvas.width = SMALL_WIDTH;
   canvas.height = SMALL_HEIGHT;
   return {
-    draw(cells, seconds) {
+    draw(cells, seconds, soft) {
       context.fillStyle = css(average(cells), 1);
       context.fillRect(0, 0, SMALL_WIDTH, SMALL_HEIGHT);
       const side = Math.max(SMALL_WIDTH, SMALL_HEIGHT);
@@ -183,7 +190,9 @@ function canvasRenderer(canvas: HTMLCanvasElement): Renderer | null {
         const x = bx * SMALL_WIDTH;
         const y = by * SMALL_HEIGHT;
         const color = cells[i]!;
-        const gradient = context.createRadialGradient(x, y, 0, x, y, reach * side);
+        // The soft theme reaches wider toward the bottom here too, per blob (the canvas has no per-pixel step).
+        const widen = 1 + soft * Math.min(1, Math.max(0, y / (SMALL_HEIGHT * 0.5)));
+        const gradient = context.createRadialGradient(x, y, 0, x, y, reach * side * widen);
         gradient.addColorStop(0, css(color, 0.9));
         gradient.addColorStop(0.55, css(color, 0.35));
         gradient.addColorStop(1, css(color, 0));
@@ -201,7 +210,24 @@ function canvasRenderer(canvas: HTMLCanvasElement): Renderer | null {
  * It moves only while the music plays and motion is allowed, cross-fades to
  * each new track's colours, and draws nothing while the tab is hidden.
  */
-export function MeshBackdrop({ artworkUrl, playing }: { artworkUrl: string | null; playing: boolean }) {
+export function MeshBackdrop({
+  artworkUrl,
+  playing,
+  soft = false,
+  colors = null,
+  fadeMs = FADE_MS,
+  pace = 1,
+}: {
+  artworkUrl: string | null;
+  playing: boolean;
+  soft?: boolean;
+  /** Colours to stand on instead of the artwork's (the DJ's cycling palettes): GRID × GRID cells, as meshPalette returns. */
+  colors?: Rgb[] | null;
+  /** How long a change of colours takes to cross-fade. */
+  fadeMs?: number;
+  /** How much faster than the artwork's slow drift the blobs move (the DJ's mesh is never at rest). */
+  pace?: number;
+}) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const still = useReducedMotion();
   const animate = playing && !still;
@@ -209,29 +235,35 @@ export function MeshBackdrop({ artworkUrl, playing }: { artworkUrl: string | nul
   const [generation, setGeneration] = useState(0);
   const [fallback, setFallback] = useState(false);
   // Kept outside React: the frame loop reads and writes these.
-  const state = useRef({ from: FALLBACK, to: FALLBACK, fadeStart: -Infinity, seconds: 0, wake: () => {} });
+  const state = useRef({ from: FALLBACK, to: FALLBACK, fadeStart: -Infinity, fadeMs: FADE_MS, seconds: 0, pace: 1, wake: () => {} });
+  state.current.pace = pace;
 
   useEffect(() => {
-    if (!artworkUrl) return;
     let live = true;
-    meshPalette(artworkUrl)
-      .then((cells) => {
-        if (!live) return;
-        const s = state.current;
-        const now = performance.now();
-        // The first colours show at once; later tracks cross-fade from whatever is on screen.
-        s.from = s.fadeStart === -Infinity ? cells : mix(s.from, s.to, Math.min(1, (now - s.fadeStart) / FADE_MS));
-        s.to = cells;
-        s.fadeStart = now;
-        s.wake();
-      })
-      .catch(() => {
-        // An unreadable image keeps the colours already showing.
-      });
+    const aim = (cells: Rgb[], duration: number) => {
+      if (!live) return;
+      const s = state.current;
+      const now = performance.now();
+      // The first colours show at once; later ones cross-fade from whatever is on screen.
+      s.from = s.fadeStart === -Infinity ? cells : mix(s.from, s.to, Math.min(1, (now - s.fadeStart) / s.fadeMs));
+      s.to = cells;
+      s.fadeStart = now;
+      s.fadeMs = duration;
+      s.wake();
+    };
+    if (colors) {
+      aim(colors, fadeMs);
+    } else if (artworkUrl) {
+      meshPalette(artworkUrl)
+        .then((cells) => aim(cells, FADE_MS))
+        .catch(() => {
+          // An unreadable image keeps the colours already showing.
+        });
+    }
     return () => {
       live = false;
     };
-  }, [artworkUrl]);
+  }, [artworkUrl, colors, fadeMs]);
 
   useEffect(() => {
     const el = canvas.current;
@@ -248,20 +280,20 @@ export function MeshBackdrop({ artworkUrl, playing }: { artworkUrl: string | nul
     let drawn = -Infinity;
     const tick = (now: number) => {
       frame = 0;
-      if (animate) s.seconds += Math.min(now - last, 100) / 1000;
+      if (animate) s.seconds += (Math.min(now - last, 100) / 1000) * s.pace;
       last = now;
-      const fade = Math.min(1, (now - s.fadeStart) / FADE_MS);
+      const fade = Math.min(1, (now - s.fadeStart) / s.fadeMs);
       if (now - drawn >= FRAME_MS - 1) {
         drawn = now;
         // Ease out, so the old colours let go quickly and the new ones settle.
-        renderer.draw(fade < 1 ? mix(s.from, s.to, 1 - (1 - fade) ** 3) : s.to, s.seconds);
+        renderer.draw(fade < 1 ? mix(s.from, s.to, 1 - (1 - fade) ** 3) : s.to, s.seconds, soft ? 1 : 0);
       }
-      if (animate || fade < 1) frame = requestAnimationFrame(tick);
+      if (animate || fade < 1) frame = requestFrame(tick);
     };
     s.wake = () => {
       if (!frame) {
         last = performance.now();
-        frame = requestAnimationFrame(tick);
+        frame = requestFrame(tick);
       }
     };
     // A paused mesh still has to follow the window's size.
@@ -274,13 +306,13 @@ export function MeshBackdrop({ artworkUrl, playing }: { artworkUrl: string | nul
     el.addEventListener('webglcontextlost', lost);
     s.wake();
     return () => {
-      cancelAnimationFrame(frame);
+      cancelFrame(frame);
       resized.disconnect();
       el.removeEventListener('webglcontextlost', lost);
       renderer.dispose();
       s.wake = () => {};
     };
-  }, [animate, generation, fallback]);
+  }, [animate, generation, fallback, soft]);
 
   return (
     <div className={backdrop} aria-hidden="true" data-fallback={fallback || undefined}>

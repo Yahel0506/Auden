@@ -435,6 +435,9 @@ object AppSettings {
     /** Show the output / Listen Together pill under the player's transport. */
     val showListenTogetherButton = MutableStateFlow(false)
 
+    /** Auden Connect: join the account's device list and let its other devices play on, or control, this one. */
+    val connectEnabled = MutableStateFlow(true)
+
     /** Freezes the main player's mesh gradient instead of letting it drift/crossfade. */
     val reduceAnimation = MutableStateFlow(false)
 
@@ -986,6 +989,7 @@ object AppSettings {
         repeatMode.value = prefs.getInt(KEY_REPEAT_MODE, Player.REPEAT_MODE_OFF)
         showNerdStats.value = prefs.getBoolean(KEY_NERD_STATS, false)
         showListenTogetherButton.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_BUTTON, false)
+        connectEnabled.value = prefs.getBoolean(KEY_CONNECT_ENABLED, true)
         reduceAnimation.value = prefs.getBoolean(KEY_REDUCE_ANIMATION, false)
         onboardingComplete.value = prefs.getBoolean(KEY_ONBOARDING_COMPLETE, false)
         highPerformanceMode.value = prefs.getBoolean(KEY_HIGH_PERFORMANCE_MODE, false)
@@ -1358,6 +1362,11 @@ object AppSettings {
     fun setShowListenTogetherButton(value: Boolean) {
         showListenTogetherButton.value = value
         prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_BUTTON, value).apply()
+    }
+
+    fun setConnectEnabled(value: Boolean) {
+        connectEnabled.value = value
+        prefs.edit().putBoolean(KEY_CONNECT_ENABLED, value).apply()
     }
 
     fun setThemeMode(value: ThemeMode) {
@@ -2255,6 +2264,7 @@ object AppSettings {
     private const val KEY_REPEAT_MODE = "repeat_mode"
     private const val KEY_NERD_STATS = "show_nerd_stats"
     private const val KEY_LISTEN_TOGETHER_BUTTON = "show_listen_together_button"
+    private const val KEY_CONNECT_ENABLED = "connect_enabled"
     private const val KEY_CACHE_LIMIT = "audio_cache_limit_bytes"
     private const val KEY_REDUCE_ANIMATION = "reduce_animation"
     private const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"

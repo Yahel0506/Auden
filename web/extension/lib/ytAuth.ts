@@ -297,7 +297,7 @@ async function readAccounts(): Promise<{ list: StoredAccount[]; webIndex: string
   }
   if (!list.length) {
     problem = results[Number(webIndex ?? 0)]?.why ?? results[0]?.why ?? 'no signed-in Google account found';
-    console.warn(`BitChord: no YouTube account found: ${problem}`);
+    console.warn(`Auden: no YouTube account found: ${problem}`);
   }
   return { list, webIndex };
 }

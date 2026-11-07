@@ -1,4 +1,8 @@
+import { OfflineButton } from '@/auden/offline/ui/OfflineButton';
+import { SaveToDeviceButton } from '@/auden/playlists/ui/SaveToDeviceButton';
+import { saveSpotifyToDevice, saveYouTubeToDevice } from '@/auden/playlists/actions';
 import { useParams } from 'react-router';
+import { LyricsBatchButton } from '@/components/music/LyricsBatchButton';
 import { DetailHeader } from '@/components/music/DetailHeader';
 import { playList, shuffleList } from '@/components/music/play';
 import { Shelves } from '@/components/music/ShelfView';
@@ -40,6 +44,13 @@ export default function AlbumPage() {
         motion={motion}
         onPlay={() => playList(tracks, 0, context)}
         onShuffle={() => shuffleList(tracks, context)}
+        extra={
+          <>
+            <LyricsBatchButton tracks={tracks} title={data.title} fallbackArtists={data.artists} />
+            <SaveToDeviceButton onSave={() => saveYouTubeToDevice(data.id, data.title, data.thumbnail)} />
+            <OfflineButton tracks={tracks} />
+          </>
+        }
       />
       <TrackList
         tracks={tracks}

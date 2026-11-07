@@ -24,7 +24,7 @@ Prompt §5.3. There's no login screen: BitChord uses the YouTube session the bro
 ## Pushes
 
 `Bridge.subscribe`:
-- On Chromium the page opens an `externally_connectable` port (`bitchord-events`).
+- On Chromium the page opens an `externally_connectable` port (`auden-events`).
 - On Firefox the relay content script holds the port and forwards each event with `postMessage`.
 
 An MV3 worker drops its ports when it sleeps, so ports reconnect only while the page is visible. The page also re-reads the state when the tab regains focus.

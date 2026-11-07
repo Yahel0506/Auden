@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { metered, useReducedMotion } from '@/data/spotify/canvas';
+import { useClipsAllowedOnLink, useReducedMotion } from '@/data/spotify/canvas';
 import { lyricsGet, onGranted, urlWith } from '@/lyrics/http';
 import { queryClient } from '@/lib/queryClient';
 import { obj, parse, str, type Json } from './artistPage';
@@ -100,11 +100,12 @@ export async function fetchAlbumMotion(album: string, artist: string): Promise<A
 // Apple's hosts are optional extension permissions: once allowed, the lookups they refused run again.
 onGranted(() => void queryClient.invalidateQueries({ queryKey: ['apple', 'motion'] }));
 
-/** Whether a clip may be looked up and shown at all: the setting on, motion allowed, not metered. */
+/** Whether a clip may be looked up and shown at all: the setting on, motion allowed, not metered (unless clips are allowed over cellular). */
 function useMotionAllowed(): boolean {
   const enabled = useAppleSettings((s) => s.motion);
   const still = useReducedMotion();
-  return enabled && !still && !metered();
+  const linkAllows = useClipsAllowedOnLink();
+  return enabled && !still && linkAllows;
 }
 
 const QUERY = { staleTime: Infinity, gcTime: 30 * 60_000, retry: false } as const;

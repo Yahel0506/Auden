@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { usePlayer } from '@/state/player';
 import { useUi } from '@/state/ui';
+import { volumeOf } from './VolumeControl';
 
 /** Typing in a field shouldn't trigger the player. */
 function typing(target: EventTarget | null): boolean {
@@ -71,10 +72,10 @@ export function useKeyboardShortcuts() {
           return player.previous();
         case 'ArrowUp':
           event.preventDefault();
-          return player.setVolume(player.volume + 0.1);
+          return player.setVolume(volumeOf(player) + 0.1);
         case 'ArrowDown':
           event.preventDefault();
-          return player.setVolume(player.volume - 0.1);
+          return player.setVolume(volumeOf(player) - 0.1);
       }
     };
     window.addEventListener('keydown', onKey);

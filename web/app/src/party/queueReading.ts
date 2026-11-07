@@ -1,3 +1,5 @@
+import type { QueueEntry } from '@/playback/queue/timeline';
+import { isShareable } from '@/playback/source';
 import type { PartyMember, PartyPlayback, PartyQueue, PartyTrack } from './models';
 
 /**
@@ -68,4 +70,19 @@ export function autoplaySupplierId(members: PartyMember[], hostOnlyControl: bool
   if (host) return host;
   const connected = members.filter((m) => m.connected).map((m) => m.memberId).sort();
   return connected[0] ?? null;
+}
+
+/**
+ * The part of the local queue a party can carry: what has played, the playing track and what is queued
+ * by hand or by AutoPlay, with local files and clips left out (nobody else has them). [trackIndex] is
+ * where the playing track sits among them, which moves when earlier entries are dropped.
+ */
+export function partyLocalItems(queue: readonly QueueEntry[], index: number): { items: QueueEntry[]; trackIndex: number } {
+  const past = queue.slice(0, index).filter((e) => isShareable(e.track));
+  const items = [
+    ...past,
+    ...queue.slice(index, index + 1),
+    ...queue.slice(index + 1).filter((e) => e.tier !== 'context' && isShareable(e.track)),
+  ];
+  return { items, trackIndex: past.length };
 }

@@ -3,16 +3,19 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { create } from 'zustand';
 
 const calls: { track: unknown }[] = [];
+const clears: number[] = [];
+let mirrored = false;
 let audio: (EventTarget & { currentTime: number; duration: number; playbackRate: number }) | null = null;
-const player = create<{ nowPlaying: { videoId: string; title: string; artist: string } | null; status: string; queue: []; index: number; deck: number }>()(
+const player = create<{ nowPlaying: { videoId: string; title: string; artist: string; shareable?: boolean; source?: string } | null; status: string; queue: []; index: number; deck: number }>()(
   () => ({ nowPlaying: null, status: 'idle', queue: [], index: 0, deck: 0 }),
 );
 
-vi.mock('@/state/player', () => ({ usePlayer: player, getAudio: () => audio }));
+vi.mock('@/state/player', () => ({ usePlayer: player, getAudio: () => audio, isMirrored: () => mirrored }));
 vi.mock('@/extension/bridge', () => ({
   getBridge: () => ({
     call: async (_: string, payload: { track: unknown }) => {
       if (payload.track) calls.push(payload);
+      else clears.push(1);
     },
   }),
 }));
@@ -25,6 +28,7 @@ describe('discord presence', () => {
   let stop: (() => void) | null = null;
   afterEach(() => {
     stop?.();
+    mirrored = false;
     vi.useRealTimers();
   });
 
@@ -62,5 +66,43 @@ describe('discord presence', () => {
     player.setState({ status: 'playing' });
     await vi.advanceTimersByTimeAsync(500);
     expect(calls).toHaveLength(2);
+  });
+
+  it('puts no card on Discord for a local file, and leaves the last card up through a DJ line', async () => {
+    vi.useFakeTimers();
+    calls.length = 0;
+    clears.length = 0;
+    audio = Object.assign(new EventTarget(), { currentTime: 0, duration: 200, playbackRate: 1 });
+    player.setState({ nowPlaying: { videoId: 'auden:local:1', title: 't', artist: 'a', shareable: false, source: 'local' }, status: 'playing' });
+    stop = startPublisher();
+    await vi.advanceTimersByTimeAsync(500);
+    expect(calls).toHaveLength(0);
+    expect(clears).toHaveLength(1);
+
+    player.setState({ nowPlaying: { videoId: 'auden:clip:1', title: 'DJ', artist: 'Auden', shareable: false, source: 'clip' }, status: 'playing' });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(calls).toHaveLength(0);
+    expect(clears).toHaveLength(1);
+  });
+
+  it('announces nothing for a song that plays on another device (the Connect mirror), and takes the card down', async () => {
+    vi.useFakeTimers();
+    calls.length = 0;
+    clears.length = 0;
+    audio = Object.assign(new EventTarget(), { currentTime: 0, duration: 200, playbackRate: 1 });
+    stop = startPublisher();
+    player.setState({ nowPlaying: { videoId: 'abcdefghijk', title: 't', artist: 'a' }, status: 'playing' });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(calls).toHaveLength(1);
+
+    mirrored = true;
+    player.setState({ nowPlaying: { videoId: 'bcdefghijkl', title: 'u', artist: 'b' }, status: 'playing' });
+    await vi.advanceTimersByTimeAsync(500);
+    audio.dispatchEvent(new Event('seeked'));
+    player.setState({ status: 'paused' });
+    player.setState({ status: 'playing' });
+    await vi.advanceTimersByTimeAsync(500);
+    expect(calls).toHaveLength(1);
+    expect(clears.length).toBeGreaterThan(0);
   });
 });

@@ -2,6 +2,7 @@ import { SabrStreamingAdapter } from 'googlevideo/sabr-streaming-adapter';
 import { buildSabrFormat } from 'googlevideo/utils';
 import shaka from 'shaka-player/dist/shaka-player.compiled';
 import { Constants, Utils, YT, type Innertube } from 'youtubei.js/web';
+import { SupersededError } from '../superseded';
 import { timed, trackLog } from '../trackLog';
 import { botguard } from './botguard';
 import { ytAuthSnapshot } from '@/extension/useYtAuth';
@@ -26,7 +27,8 @@ export interface LoadedTrack {
   durationSec: number;
   /** Largest first. */
   thumbnails: { url: string; width: number; height: number }[];
-  client: PlayerClientName;
+  /** The YouTube client that streams it; 'local' for a file or clip (playback/fileEngine.ts). */
+  client: PlayerClientName | 'local';
   /** The audio format actually selected, e.g. "251 opus 140kbps". */
   format: string;
   /** The same, field by field, for stats for nerds. */
@@ -42,8 +44,8 @@ export interface StreamStats {
   bitrateKbps: number | null;
   sampleRateHz: number | null;
   channels: number | null;
-  /** "direct" (googlevideo URLs, by range) or "SABR". */
-  mode: 'direct' | 'SABR';
+  /** "direct" (googlevideo URLs, by range), "SABR", or "file" (a local file or clip, playback/fileEngine.ts). */
+  mode: 'direct' | 'SABR' | 'file';
 }
 
 /** A music video's picture: a video-only DASH manifest over the same response's direct URLs. */
@@ -62,9 +64,7 @@ export interface VideoStream {
  */
 const MIN_VIDEO_ASPECT = 1.2;
 
-export class SupersededError extends Error {
-  override readonly name = 'SupersededError';
-}
+export { SupersededError };
 
 /** How long to wait before re-asking after the server sent no media (its backoffs measured 0-2s). */
 const RETRY_STREAMING_SECONDS = 2;
@@ -81,10 +81,21 @@ const FIRST_AUDIO_TIMEOUT_MS = 15_000;
  * One engine, one `<audio>` element. Loading a new track supersedes whatever
  * was loading before. A client that fails to stream is excluded for the track
  * and the next one in the walk is tried, at the same position.
+ *
+ * The element is shared with the deck's file engine (playback/deck.ts). The
+ * deck [release]s this engine before a file plays: Shaka detaches, and until
+ * the deck [claim]s it back nothing here touches the element, a recovery
+ * included. A load re-attaches Shaka only while it is still the current one.
  */
 export class YouTubeEngine {
   readonly audio: HTMLAudioElement;
   private player: shaka.Player | null = null;
+  /** Shaka is attached to [audio]. */
+  private attached = false;
+  /** The deck gave the element to the file engine: loads are refused until it's claimed back. */
+  private released = false;
+  /** An attach in progress: a release waits for it, or Shaka would set its MediaSource over the file. */
+  private attaching: Promise<void> | null = null;
   private adapter: SabrStreamingAdapter | null = null;
   private yt: Innertube | null = null;
   private generation = 0;
@@ -107,8 +118,18 @@ export class YouTubeEngine {
     this.preferredCodecs = opus ? ['opus', 'mp4a'] : ['mp4a'];
   }
 
-  private async ensurePlayer(): Promise<shaka.Player> {
-    if (this.player) return this.player;
+  private async ensurePlayer(generation: number): Promise<shaka.Player> {
+    // Another load's attach (the first one, or a re-attach): this one rides on it.
+    if (this.attaching) await this.attaching.catch(() => {});
+    if (this.player) {
+      if (!this.attached) {
+        // Released earlier for a file: back on the element, but only for a load that's still current.
+        this.checkCurrent(generation);
+        await this.attachTo(this.player);
+        this.checkCurrent(generation);
+      }
+      return this.player;
+    }
     shaka.polyfill.installAll();
     if (!shaka.Player.isBrowserSupported()) throw new Error('This browser can’t play YouTube streams (no Media Source Extensions)');
     const player = new shaka.Player();
@@ -139,10 +160,31 @@ export class YouTubeEngine {
         },
       },
     });
-    await player.attach(this.audio);
     player.addEventListener('error', (event) => this.onShakaError((event as unknown as { detail: shaka.util.Error }).detail));
+    // Known before the attach finishes, so a release during it can detach it.
     this.player = player;
+    try {
+      await this.attachTo(player);
+    } catch (error) {
+      if (this.player === player) this.player = null;
+      throw error;
+    }
+    this.checkCurrent(generation);
     return player;
+  }
+
+  private async attachTo(player: shaka.Player): Promise<void> {
+    this.attached = true;
+    const attaching = player.attach(this.audio);
+    this.attaching = attaching;
+    try {
+      await attaching;
+    } catch (error) {
+      this.attached = false;
+      throw error;
+    } finally {
+      if (this.attaching === attaching) this.attaching = null;
+    }
   }
 
   /** Pays the cold costs before the first tap (InnerTubeXResolver.warm): the session, the player script, BotGuard. */
@@ -158,11 +200,13 @@ export class YouTubeEngine {
    */
   async load(videoId: string, { startSec = 0, autoplay = true } = {}): Promise<LoadedTrack> {
     const generation = ++this.generation;
+    // The deck gave the element to a file: nothing may load here until it claims it back.
+    if (this.released) throw new SupersededError('The deck is playing a file');
     this.loading = true;
     const started = performance.now();
     trackLog.i(`loading at ${startSec.toFixed(1)}s`, videoId);
     try {
-      const player = await this.ensurePlayer();
+      const player = await this.ensurePlayer(generation);
       this.yt ??= await timed('InnerTube session', videoId, getInnertube);
       void botguard.init().catch((error: unknown) => trackLog.w(`BotGuard init failed: ${String(error)}`, videoId));
 
@@ -194,7 +238,9 @@ export class YouTubeEngine {
           );
           return track;
         } catch (error) {
-          if (error instanceof SupersededError) throw error;
+          // A load replaced or released mid-stream fails with whatever Shaka
+          // says about being interrupted: that's not this client's fault.
+          if (error instanceof SupersededError || generation !== this.generation) throw error;
           lastError = error;
           skip.add(resolved.client);
           excludeClient(videoId, resolved.client, `streaming failed: ${describe(error)}`, resolved.signed);
@@ -202,9 +248,9 @@ export class YouTubeEngine {
       }
       throw lastError instanceof Error ? lastError : new Error('No YouTube client could stream this track');
     } catch (error) {
-      if (!(error instanceof SupersededError)) {
-        trackLog.e(`load failed: ${describe(error)}`, videoId);
-      }
+      if (error instanceof SupersededError) throw error;
+      if (generation !== this.generation) throw new SupersededError();
+      trackLog.e(`load failed: ${describe(error)}`, videoId);
       throw error;
     } finally {
       if (generation === this.generation) this.loading = false;
@@ -449,7 +495,8 @@ export class YouTubeEngine {
       return;
     }
     trackLog.w(line, current?.videoId ?? null);
-    if (this.loading || !current || error.severity !== shaka.util.Error.Severity.CRITICAL) return;
+    // Released for a file: the element isn't this engine's to reload or stop.
+    if (this.released || this.loading || !current || error.severity !== shaka.util.Error.Severity.CRITICAL) return;
     // Recover once per track and client; later errors from the same stream are echoes.
     this.current = null;
     excludeClient(current.videoId, current.client, `stream error ${error.code}`, current.signed);
@@ -458,7 +505,7 @@ export class YouTubeEngine {
     this.load(current.videoId, { startSec: resumeAt, autoplay: wasPlaying })
       .then((track) => this.onRecovered(track))
       .catch((failure: unknown) => {
-        if (failure instanceof SupersededError) return;
+        if (failure instanceof SupersededError || this.released) return;
         void this.stop();
         this.onFatal(current.videoId, describe(failure), failure instanceof UnplayableError);
       });
@@ -468,9 +515,40 @@ export class YouTubeEngine {
     this.generation++;
     this.current = null;
     this.direct = null;
-    await this.player?.unload();
+    // Released, Shaka is off the element; an unload would set up a MediaSource on it again.
+    if (!this.released && this.attached) await this.player?.unload();
     this.adapter?.dispose();
     this.adapter = null;
+  }
+
+  /**
+   * Hands the element over (to the deck's file engine): supersedes any load,
+   * drops the stream, and detaches Shaka. A released engine never attaches
+   * itself again; only a load after [claim] does.
+   */
+  async release(): Promise<void> {
+    this.released = true;
+    this.generation++;
+    this.current = null;
+    this.direct = null;
+    // An attach still under way would set its MediaSource on the element after the file's src: wait it out first.
+    if (this.attaching) await this.attaching.catch(() => {});
+    if (this.player && this.attached) {
+      this.attached = false;
+      try {
+        await this.player.detach();
+      } catch (error) {
+        trackLog.w(`Shaka wouldn't detach: ${describe(error)}`);
+      }
+    }
+    // As in stop(): the stream goes first, then the SABR session under it.
+    this.adapter?.dispose();
+    this.adapter = null;
+  }
+
+  /** The deck gives the element back: the next load may attach Shaka again. */
+  claim(): void {
+    this.released = false;
   }
 }
 

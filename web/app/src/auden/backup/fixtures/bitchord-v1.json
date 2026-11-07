@@ -1,0 +1,84 @@
+{
+    "app": "bitchord",
+    "version": 1,
+    "versionName": "1.8",
+    "exportedAt": "2026-06-14T18:02:11Z",
+    "settings": {
+        "replay_enabled": {
+            "type": "bool",
+            "value": "false",
+            "values": []
+        },
+        "home_title": {
+            "type": "string",
+            "value": "BitChord",
+            "values": []
+        }
+    },
+    "listening": [
+        {
+            "version": 1,
+            "month": "2026-05",
+            "tracks": [
+                {
+                    "id": "abc123xyz00",
+                    "title": "Old Favourite",
+                    "artist": "Some Band",
+                    "album": null,
+                    "albumId": null,
+                    "artistId": null,
+                    "art": null,
+                    "ms": 540000,
+                    "plays": 3,
+                    "last": 1748700000000,
+                    "days": {}
+                }
+            ],
+            "artists": [
+                {
+                    "name": "Some Band",
+                    "sub": null,
+                    "art": null,
+                    "id": null,
+                    "ms": 540000,
+                    "plays": 3,
+                    "key": null,
+                    "days": {}
+                }
+            ],
+            "albums": [],
+            "hours": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                540000,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0
+            ],
+            "days": {
+                "21": 540000
+            },
+            "trackDays": null,
+            "artistDays": null,
+            "albumDays": null
+        }
+    ]
+}

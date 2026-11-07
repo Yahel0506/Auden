@@ -214,4 +214,12 @@
     <string name="dj_listen">Escuchar</string>
     <string name="dj_ask">Pídele algo al DJ</string>
     <string name="dj_no_words">El DJ está hablando</string>
+    <string name="connect_devices">Dispositivos Auden</string>
+    <string name="connect_playing">Reproduciendo</string>
+    <string name="connect_this_device">Este dispositivo</string>
+    <string name="connect_playing_on">Reproduciendo en %1$s</string>
+    <string name="connect_previous">Anterior</string>
+    <string name="connect_next">Siguiente</string>
+    <string name="connect_play">Reproducir</string>
+    <string name="connect_pause">Pausar</string>
 </resources>
