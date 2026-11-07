@@ -3,7 +3,7 @@ import { APPLE_ORIGINS, useAppleAccess } from '@/data/apple/artistArt';
 import { useAppleSettings } from '@/data/apple/motionArt';
 import { useHostAccess } from '@/extension/useHostAccess';
 import { LYRIC_EXTENSION_ORIGINS } from '@/lyrics/http';
-import { useSpotifySettings } from '@/data/spotify/canvas';
+import { useClipNetwork, useSpotifySettings } from '@/data/spotify/canvas';
 import {
   useDiscord,
   useDiscordConnect,
@@ -55,11 +55,25 @@ export function AppleMusicToggles() {
       />
       <Toggle
         label="Animated Artwork"
-        detail="Apple Music’s moving covers in the full-screen player and on album pages. Not on metered connections or with reduced motion."
+        detail="Apple Music’s moving covers in the full-screen player and on album pages. Not with reduced motion or Save-Data, and not over cellular data unless you allow it below."
         checked={motion}
         onChange={setMotion}
       />
     </>
+  );
+}
+
+/** One override for both clips (Animated Artwork and Spotify Canvas), as Android's "Cellular data". */
+export function ClipNetworkToggle() {
+  const overCellular = useClipNetwork((s) => s.overCellular);
+  const set = useClipNetwork((s) => s.setOverCellular);
+  return (
+    <Toggle
+      label="Moving artwork on cellular data"
+      detail="Lets Animated Artwork and Spotify Canvas loop over a cellular link. Save-Data still stops them. Only Chromium reports the link."
+      checked={overCellular}
+      onChange={set}
+    />
   );
 }
 
@@ -161,7 +175,7 @@ export function CanvasToggle() {
   return (
     <Toggle
       label="Spotify Canvas"
-      detail="Spotify’s looping clip behind the lyrics. Not on metered connections or with reduced motion."
+      detail="Spotify’s looping clip behind the lyrics. Not with reduced motion or Save-Data, and not over cellular data unless you allow it."
       checked={canvas}
       onChange={setCanvas}
     />
@@ -209,7 +223,7 @@ export function DiscordSettings() {
               <span>Name</span>
               <input
                 className={settingsUi.input}
-                placeholder="BitChord"
+                placeholder="Auden"
                 value={options.activityName}
                 onChange={(e) => set({ activityName: e.currentTarget.value })}
               />
@@ -236,13 +250,13 @@ export function DiscordSettings() {
                 />
               </label>
             )}
-            <Toggle label="BitChord button" checked={options.button2Visible} onChange={(v) => set({ button2Visible: v })} />
+            <Toggle label="Auden button" checked={options.button2Visible} onChange={(v) => set({ button2Visible: v })} />
             {options.button2Visible && (
               <label className={settingsUi.controlRow}>
-                <span>BitChord button text</span>
+                <span>Auden button text</span>
                 <input
                   className={settingsUi.input}
-                  placeholder="Visit BitChord"
+                  placeholder="Visit Auden"
                   value={options.button2Text}
                   onChange={(e) => set({ button2Text: e.currentTarget.value })}
                 />

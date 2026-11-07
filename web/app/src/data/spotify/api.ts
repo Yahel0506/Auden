@@ -1,8 +1,8 @@
-import type { SpotifyPlaylist, SpotifyTrack } from '@bitchord/shared/bridge';
+import type { SpotifyAlbum, SpotifyArtist, SpotifyPlaylist, SpotifyTrack } from '@bitchord/shared/bridge';
 import { best, type MatchCandidate } from '@/data/match/trackMatcher';
-import { searchSongs } from '@/data/music/api';
 import type { Track } from '@/data/music/types';
 import { getBridge } from '@/extension/bridge';
+import { withSpotifyRetry } from './retry';
 
 /**
  * Spotify through the extension (prompt §7.1): the library, a playlist's
@@ -14,15 +14,18 @@ export const LIKED_ID = 'liked';
 
 function bridge() {
   const b = getBridge();
-  if (!b) throw new Error('The BitChord extension is not installed');
+  if (!b) throw new Error('The Auden extension is not installed');
   return b;
 }
 
-/** Every playlist in the library, Liked Songs first, however many pages it takes. */
-export async function fetchSpotifyPlaylists(): Promise<SpotifyPlaylist[]> {
-  const out: SpotifyPlaylist[] = [];
+/**
+ * Every entry of a paged Spotify list, [read] one page at a time. Each page is retried on its own
+ * (withSpotifyRetry), so a throttle in the middle asks for the same offset again rather than starting over.
+ */
+async function pagedList<T>(read: (offset: number) => Promise<{ items: T[]; total: number; raw: number }>, signal?: AbortSignal): Promise<T[]> {
+  const out: T[] = [];
   for (let offset = 0; ; ) {
-    const page = await bridge().call('spotify.playlists', { offset }, { timeoutMs: 30_000 });
+    const page = await withSpotifyRetry(() => read(offset), { signal });
     out.push(...page.items);
     offset += page.raw;
     if (page.raw === 0 || offset >= page.total) break;
@@ -30,18 +33,37 @@ export async function fetchSpotifyPlaylists(): Promise<SpotifyPlaylist[]> {
   return out;
 }
 
-export function fetchSpotifyPlaylistInfo(playlistId: string) {
-  return bridge().call('spotify.playlist', { playlistId }, { timeoutMs: 30_000 });
+/** Every playlist in the library, Liked Songs first, however many pages it takes. */
+export function fetchSpotifyPlaylists(signal?: AbortSignal): Promise<SpotifyPlaylist[]> {
+  return pagedList((offset) => bridge().call('spotify.playlists', { offset }, { timeoutMs: 30_000, signal }), signal);
+}
+
+/** The saved albums (needs an extension with the `spotify.library` capability). */
+export function fetchSpotifyAlbums(signal?: AbortSignal): Promise<SpotifyAlbum[]> {
+  return pagedList((offset) => bridge().call('spotify.albums', { offset }, { timeoutMs: 30_000, signal }), signal);
+}
+
+/** The followed artists (needs an extension with the `spotify.library` capability). */
+export function fetchSpotifyArtists(signal?: AbortSignal): Promise<SpotifyArtist[]> {
+  return pagedList((offset) => bridge().call('spotify.artists', { offset }, { timeoutMs: 30_000, signal }), signal);
+}
+
+export function fetchSpotifyPlaylistInfo(playlistId: string, signal?: AbortSignal) {
+  return withSpotifyRetry(() => bridge().call('spotify.playlist', { playlistId }, { timeoutMs: 30_000, signal }), { signal });
 }
 
 /** Every track of a playlist; [onPage] gets the running list after each page, so a long one fills in. */
-export async function fetchSpotifyTracks(playlistId: string, onPage: (soFar: SpotifyTrack[], total: number) => void): Promise<SpotifyTrack[]> {
-  const out: SpotifyTrack[] = [];
-  for (let offset = 0; ; ) {
-    const page = await bridge().call('spotify.tracks', { playlistId, offset }, { timeoutMs: 30_000 });
+export async function fetchSpotifyTracks(
+  playlistId: string,
+  onPage: (soFar: SpotifyTrack[], total: number, nextOffset: number) => void,
+  { from = 0, soFar = [] as SpotifyTrack[], signal }: { from?: number; soFar?: SpotifyTrack[]; signal?: AbortSignal } = {},
+): Promise<SpotifyTrack[]> {
+  const out: SpotifyTrack[] = [...soFar];
+  for (let offset = from; ; ) {
+    const page = await withSpotifyRetry(() => bridge().call('spotify.tracks', { playlistId, offset }, { timeoutMs: 30_000, signal }), { signal });
     out.push(...page.items);
     offset += page.raw;
-    onPage([...out], page.total);
+    onPage([...out], page.total, offset);
     if (page.raw === 0 || offset >= page.total) break;
   }
   return out;
@@ -59,6 +81,7 @@ export function pendingTrack(track: SpotifyTrack, unavailable: 'matching' | 'mis
     thumbnail: track.imageUrl,
     index: null,
     plays: null,
+    spotifyId: track.id,
     unavailable,
   };
 }
@@ -73,28 +96,17 @@ export function candidateOf(track: Track): MatchCandidate {
   };
 }
 
-const matched = new Map<string, Track | null>();
-
 /**
- * The YouTube Music song that is [track], or null if there is none:
- * the best candidate by title, artist, length and album, and failing that
- * the search's first hit (SpotifyImporter.matchTrack).
+ * The YouTube Music song that is [track], or null if there is none: the remembered match, else a search
+ * (matches.ts). Kept for callers that want just the song (saving a Spotify playlist as a local copy);
+ * a failed search throws rather than reading as "not found", so a caller can try again later.
+ * Loaded on demand because matches.ts reads this file's `candidateOf`.
  */
 export async function matchToYouTube(track: SpotifyTrack): Promise<Track | null> {
-  if (matched.has(track.id)) return matched.get(track.id)!;
-  const query = [track.title, track.artist].filter((s) => s.trim()).join(' ');
-  const candidates = await searchSongs(query);
-  const target = {
-    title: track.title,
-    artist: track.artist,
-    durationSec: track.durationMs > 0 ? Math.round(track.durationMs / 1000) : null,
-    album: track.album,
-  };
-  const scored = best(candidates.map((c) => ({ ...candidateOf(c), track: c })), target);
-  const found = scored?.track ?? candidates[0] ?? null;
-  const result = found && { ...found, thumbnail: found.thumbnail ?? track.imageUrl };
-  matched.set(track.id, result);
-  return result;
+  const { resolveSpotifyTrack } = await import('./matches');
+  const result = await resolveSpotifyTrack(track);
+  if (result.status === 'error') throw result.error;
+  return result.status === 'found' ? { ...result.track, spotifyId: track.id } : null;
 }
 
 // ---- Canvas (SpotifyCanvas / DesktopSpotifyCanvas) ---------------------------------

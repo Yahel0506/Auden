@@ -26,12 +26,21 @@ import { useUi } from '@/state/ui';
 import { useHasVideo, useVideo } from '@/state/video';
 import { Credits, PageLink, pageLink } from './Lcd';
 import { LyricsPanel } from './LyricsPanel';
+import { CoverBlurBackdrop, MeshScrim } from './CoverBlurBackdrop';
+import { useStickyCover } from './useStickyCover';
 import { MeshBackdrop } from './MeshBackdrop';
+import { usePlayerLook } from './playerLook';
+import { DjButton } from '@/auden/dj/ui/DjMenu';
+import { DjCaption } from '@/auden/dj/ui/DjCaption';
+import { DjScreen, DJ_SCRIM } from '@/auden/dj/ui/DjScreen';
+import { DJ_MESH_PACE, MESH_CYCLE_MS } from '@/auden/dj/ui/djScreen';
+import { useDjMeshColors, useDjScreen } from '@/auden/dj/ui/useDjScreen';
 import { albumPageFor } from './nowPlayingLinks';
 import { UpNext } from './UpNext';
 import { MixWindowHighlight, NerdStats } from './NerdStats';
 import { useScrubber } from './useScrubber';
 import { VideoQuality } from './VideoQuality';
+import { DevicePicker } from '@/auden/connect/ui/DevicePicker';
 import { fadeForVolume, VolumeControl } from './VolumeControl';
 
 function useBrowserFullScreen(): boolean {
@@ -48,7 +57,7 @@ function useBrowserFullScreen(): boolean {
 function Scrubber() {
   const { bar, elapsed, remaining, mixLabel, dragging, handlers } = useScrubber();
   return (
-    <div className="group/scrub mt-3.5" data-dragging={dragging || undefined}>
+    <div className="group/scrub mt-1.5" data-dragging={dragging || undefined}>
       {/* A taller hit area than the line it carries. */}
       <div className="group/hit flex h-4 cursor-pointer touch-none items-center" {...handlers}>
         <div
@@ -89,7 +98,7 @@ function Transport() {
   const { togglePlay, next, previous, toggleShuffle, cycleRepeat } = usePlayer.getState();
 
   return (
-    <div className="mx-auto mt-[clamp(8px,1.6vh,16px)] mb-0 flex h-13 w-[min(100%,315px)] items-center justify-between">
+    <div className="mx-auto mt-[clamp(0px,0.5vh,4px)] mb-0 flex h-12 w-[min(100%,315px)] items-center justify-between">
       <button className={toggle} aria-label="Shuffle" aria-pressed={shuffle} onClick={toggleShuffle}>
         <ShuffleIcon size={30} />
       </button>
@@ -136,6 +145,7 @@ const IDLE_MS = 3000;
  */
 export function FullScreenPlayer() {
   const nowPlaying = usePlayer((s) => s.nowPlaying);
+  const { previousCover, coverLoaded, coverFailed } = useStickyCover(nowPlaying?.artworkUrl ?? null);
   // The queue's row for what's playing: it carries the album and each artist's channel.
   const track = usePlayer((s) => {
     const entry = s.queue[s.index]?.track;
@@ -146,8 +156,14 @@ export function FullScreenPlayer() {
   const { pathname } = useLocation();
   const openedAt = useRef(pathname);
   const playing = usePlayer((s) => s.status === 'playing' || s.status === 'buffering');
+  // The DJ's screen (its ring, its words) is up only while the DJ speaks or chooses; when a song plays it is gone and this is
+  // the usual player, exactly as for any track (Android: djScreen = pending || (running && the playing item is a DJ clip)).
+  const dj = useDjScreen();
+  const djColors = useDjMeshColors(dj);
   const setFullScreen = useUi((s) => s.setFullScreen);
-  const video = useHasVideo(nowPlaying?.videoId);
+  const hasVideo = useHasVideo(nowPlaying?.videoId);
+  const video = hasVideo && !dj;
+  const theme = usePlayerLook((s) => s.theme);
   // The right-hand column: the lyrics, Up Next, or nothing. Lyrics toggle bottom left, Up Next bottom right.
   // A music video opens on its own, without the lyrics.
   const [panel, setPanel] = useState<'lyrics' | 'queue' | null>(() =>
@@ -165,8 +181,8 @@ export function FullScreenPlayer() {
 
   // The column follows the toggle alone: whether this track has lyrics, and
   // from which provider, is the panel's own business to say.
-  const showLyrics = panel === 'lyrics';
-  const showQueue = panel === 'queue';
+  const showLyrics = !dj && panel === 'lyrics';
+  const showQueue = !dj && panel === 'queue';
   const togglePanel = (p: 'lyrics' | 'queue') => {
     picked.current = true;
     setPanel((on) => (on === p ? null : p));
@@ -202,10 +218,10 @@ export function FullScreenPlayer() {
     if (pathname !== openedAt.current) setFullScreen(false);
   }, [pathname, setFullScreen]);
 
-  // Nothing left to show once the queue ends.
+  // Nothing left to show once the queue ends (the DJ's screen can stand without a song while it chooses its first set).
   useEffect(() => {
-    if (!nowPlaying) setFullScreen(false);
-  }, [nowPlaying, setFullScreen]);
+    if (!nowPlaying && !dj) setFullScreen(false);
+  }, [nowPlaying, dj, setFullScreen]);
 
   const toggleBrowserFullScreen = () => {
     if (document.fullscreenElement) {
@@ -219,13 +235,15 @@ export function FullScreenPlayer() {
     }
   };
 
-  if (!nowPlaying) return null;
-  const { videoId, title, artist } = nowPlaying;
+  if (!nowPlaying && !dj) return null;
+  const { videoId, title, artist } = nowPlaying ?? { videoId: '', title: '', artist: '' };
   const album = track?.album ?? null;
   // With a right-hand column; on narrow windows that column fills the screen and the controls sit under it, without the artwork.
   const column = showLyrics || showQueue;
   // A music video on its own fills the window.
   const theater = video && !column;
+  // The DJ's screen is the ring on the moving mesh whatever the theme; a music video on its own covers every backdrop.
+  const blurTheme = theme === 'blur' && !dj;
   // ...and hides the controls and the pointer while it plays undisturbed.
   const hidden = theater && playing && idle ? ' pointer-events-none opacity-0' : '';
   const corner = `${chrome} transition-[background-color,color,opacity] duration-300${hidden}`;
@@ -233,8 +251,9 @@ export function FullScreenPlayer() {
   return (
     <div
       // Over everything but menus and dialogs, which portal above it. The on-dark colours come from tokens.css (data-full-screen).
-      // --art, the artwork's side: Apple's 461px at 1440px wide, and never taller than the screen leaves room for.
-      className="fixed inset-0 z-[calc(var(--z-contextual-menus)-2)] isolate animate-enter overflow-hidden text-primary [--art:min(32vw,calc(100dvh-330px),720px)] motion-reduce:[animation-name:fade-in] max-md:[--art:min(84vw,calc(100dvh-330px),420px)]"
+      // --art, the artwork's side: Apple's 461px at 1440px wide, and never taller than the screen leaves room for (the controls under it
+      // sit closer together since v1.12, and the cover takes that height back).
+      className="fixed inset-0 z-[calc(var(--z-contextual-menus)-2)] isolate animate-enter overflow-hidden text-primary [--art:min(34vw,calc(100dvh-280px),760px)] motion-reduce:[animation-name:fade-in] max-md:[--art:min(84vw,calc(100dvh-310px),420px)]"
       role="dialog"
       aria-modal="true"
       aria-label="Now Playing"
@@ -245,13 +264,31 @@ export function FullScreenPlayer() {
       onKeyDown={wake}
       style={theater && playing && idle ? { cursor: 'none' } : undefined}
     >
-      <MeshBackdrop artworkUrl={nowPlaying.artworkUrl} playing={playing} />
+      {/* Frozen while the blurred cover fully covers it (lyrics or the queue open): its shader would draw pixels nobody sees. */}
+      {/* The Blur theme stands on the blurred cover alone, so the mesh (a per-pixel shader) is not even mounted. The DJ's screen is on the mesh
+          whatever the theme, never at rest: the DJ's palettes cycle through it, one every 3.6 s, and the blobs keep moving (one instance for
+          both states, so the swap to a song's colours is a cross-fade). */}
+      {!blurTheme && (
+        <MeshBackdrop
+          artworkUrl={nowPlaying?.artworkUrl ?? null}
+          playing={dj || (playing && (!column || theater))}
+          soft={!dj && theme === 'continuation'}
+          colors={dj ? djColors : null}
+          fadeMs={MESH_CYCLE_MS}
+          pace={dj ? DJ_MESH_PACE : 1}
+        />
+      )}
+      {/* Over the mesh: a lighter scrim in the main view, and with the lyrics or the queue open the full-cover blur under a deeper one. */}
+      {dj && <div className="pointer-events-none absolute inset-0 -z-1" style={{ background: DJ_SCRIM }} aria-hidden="true" />}
+      {!dj && !theater && !blurTheme && <MeshScrim column={column} continuation={theme === 'continuation'} />}
+      {!dj && !theater && <CoverBlurBackdrop artworkUrl={nowPlaying?.artworkUrl ?? null} column={column || blurTheme} solid={blurTheme} />}
       {theater && (
         <div className="absolute inset-0 animate-fade-in bg-black">
           <VideoSurface fit="contain" className="size-full" />
         </div>
       )}
 
+      {dj ? <DjScreen /> : <DjCaption />}
       <button ref={close} className={`${corner} top-4 left-5`} aria-label="Close" onClick={() => setFullScreen(false)}>
         <X size={20} />
       </button>
@@ -270,6 +307,7 @@ export function FullScreenPlayer() {
       )}
 
       {/* Apple's grid areas "controls lyrics": the artwork column, then the lyrics. */}
+      {!dj && nowPlaying && (
       <div
         className={
           theater
@@ -306,6 +344,17 @@ export function FullScreenPlayer() {
                   decoding="async"
                   onLoad={(e) => e.currentTarget.setAttribute('data-loaded', '')}
                 />
+                {/* The cover that was showing stays under the new one until that has loaded, so a track change fades across rather than through nothing. */}
+                {previousCover && (
+                  <img
+                    key={`prev-${previousCover}`}
+                    className="absolute inset-0 size-full rounded-[inherit] object-cover"
+                    src={sizedArtwork(previousCover, 600)}
+                    alt=""
+                    referrerPolicy="no-referrer"
+                    decoding="async"
+                  />
+                )}
                 <img
                   key={nowPlaying.artworkUrl}
                   className={`${artworkLayer} bg-[#ffffff12] shadow-[0_4px_10px_#0000001a] data-loaded:opacity-100`}
@@ -313,7 +362,11 @@ export function FullScreenPlayer() {
                   alt=""
                   referrerPolicy="no-referrer"
                   decoding="async"
-                  onLoad={(e) => e.currentTarget.setAttribute('data-loaded', '')}
+                  onLoad={(e) => {
+                    e.currentTarget.setAttribute('data-loaded', '');
+                    coverLoaded();
+                  }}
+                  onError={coverFailed}
                 />
               </>
             )}
@@ -329,7 +382,7 @@ export function FullScreenPlayer() {
             {video && !theater && <VideoSurface className="absolute inset-0" />}
           </div>
 
-          <div className={`flex items-center gap-3${theater ? '' : ' mt-[clamp(20px,3.2vh,32px)]'}${column ? ' max-md:mt-0' : ''}`}>
+          <div className={`flex items-center gap-3${theater ? '' : ' mt-[clamp(14px,2.4vh,24px)]'}${column ? ' max-md:mt-0' : ''}`}>
             {/* As the mini player's: the title opens the album, each credited name its artist. */}
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <div className="flex min-w-0 items-center">
@@ -390,7 +443,9 @@ export function FullScreenPlayer() {
           </section>
         )}
       </div>
+      )}
 
+      {!dj && (
       <button
         className={`${corner} bottom-5 left-5 aria-pressed:text-primary`}
         aria-label="Lyrics"
@@ -399,6 +454,7 @@ export function FullScreenPlayer() {
       >
         {showLyrics ? <LyricsActiveIcon size={18} /> : <LyricsIcon size={18} />}
       </button>
+      )}
       {/* Up Next, with the speaker beside it: the level slides in over Up Next, as it does in the pill. */}
       <div
         className={`group/actions absolute right-5 bottom-5 z-1 flex items-center [--volume-gap:36px] transition-opacity duration-300${hidden}`}
@@ -408,14 +464,21 @@ export function FullScreenPlayer() {
           if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setVolumeOpen(false);
         }}
       >
-        <button
-          className={`${chromeButton} ${fadeForVolume} aria-pressed:text-primary`}
-          aria-label="Up Next"
-          aria-pressed={showQueue}
-          onClick={() => togglePanel('queue')}
-        >
-          <UpNextIcon size={18} />
-        </button>
+        {/* On the DJ's screen its button takes Up Next's place, as on the phone (there is no queue to show while it speaks);
+            when a song plays the DJ's chrome is gone and this is Up Next, as for any track. */}
+        {dj ? (
+          <DjButton className={`${chromeButton} ${fadeForVolume} aria-expanded:text-primary`} />
+        ) : (
+          <button
+            className={`${chromeButton} ${fadeForVolume} aria-pressed:text-primary`}
+            aria-label="Up Next"
+            aria-pressed={showQueue}
+            onClick={() => togglePanel('queue')}
+          >
+            <UpNextIcon size={18} />
+          </button>
+        )}
+        <DevicePicker className={`${chromeButton} ${fadeForVolume}`} />
         <VolumeControl open={volumeOpen} onOpen={() => setVolumeOpen(true)} className={chromeButton} iconSize={18} />
       </div>
     </div>

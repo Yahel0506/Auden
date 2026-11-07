@@ -130,6 +130,16 @@ interface PlayerHost {
     /** The output drawer opening: look for a watch in reach again. */
     fun refreshWatchOutput() = Unit
 
+    /**
+     * Auden Connect: the account's devices that are online. While another one is playing, the player itself
+     * shows that session (the phone mirrors it), so the drawer only lists devices. Absent (never visible) where
+     * the platform has no Connect, or the listener turned it off.
+     */
+    val connect: StateFlow<ConnectUi> get() = NoConnect
+
+    /** Plays on the device [deviceId] of [ConnectUi.devices]: this one or another. */
+    fun connectSwitchTo(deviceId: String) = Unit
+
     /** Make the watch the speaker. */
     fun selectWatchOutput() = Unit
 
@@ -200,6 +210,26 @@ internal fun MusicVideoSurface(
 ) = PlayerPlatform.host.MusicVideo(videoId, fit, onRenderedChanged, modifier)
 
 private val NoWatch = MutableStateFlow(WatchOutputUi())
+
+private val NoConnect = MutableStateFlow(ConnectUi())
+
+/** What the output drawer needs to draw Auden Connect: its devices. (A playing remote session is the player itself.) */
+data class ConnectUi(
+    /** Connect is on, signed in and has a room to show. False hides the whole section. */
+    val visible: Boolean = false,
+    /** The devices online now, this one included. */
+    val devices: List<ConnectDeviceUi> = emptyList(),
+)
+
+data class ConnectDeviceUi(
+    val id: String,
+    val name: String,
+    /** `web`, `android`, `tv`, `watch` or `pc`; anything else draws as a generic speaker. */
+    val platform: String,
+    val isThisDevice: Boolean,
+    /** The one making sound. */
+    val isActive: Boolean,
+)
 
 /** What the output drawer needs to draw the watch's row. */
 data class WatchOutputUi(

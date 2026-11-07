@@ -11,6 +11,7 @@ import {
   ShuffleIcon,
   UpNextIcon,
 } from '@/components/icons/Transport';
+import { DevicePicker } from '@/auden/connect/ui/DevicePicker';
 import { FavoriteButton } from '@/components/music/FavoriteButton';
 import { TrackMenu } from '@/components/music/TrackMenu';
 import { usePlayer } from '@/state/player';
@@ -106,6 +107,7 @@ export function PlayerBar() {
           >
             <UpNextIcon size={18} />
           </button>
+          <DevicePicker className={fading} />
           <VolumeControl open={volumeOpen} onOpen={() => setVolumeOpen(true)} className={action} />
         </div>
       </div>

@@ -80,6 +80,7 @@ import com.music.bitchord.playback.cast.CastPlayback
 import com.music.bitchord.playback.cast.CastSink
 import com.music.bitchord.playback.cast.RemoteSpeaker
 import com.music.bitchord.playback.cast.Speakers
+import com.music.bitchord.data.connect.ConnectManager
 import com.music.bitchord.playback.cast.CastStream
 import com.music.bitchord.playback.audio.PrecisionAudioSink
 import com.music.bitchord.playback.dsd.DsdExtractorsFactory
@@ -766,8 +767,18 @@ class PlaybackService : MediaLibraryService() {
         WearBridge.createSpeaker(this, scope, localPlayer = { player }, onChanged = { publishWidgetState() })
     }
 
+    /**
+     * Auden Connect's mirror: while another of the account's devices is the one playing, this phone's player shows
+     * its session as its own and makes no sound. Another speaker of the same model as the two above, plus the door
+     * the session player sends the user's controls through and the gate the side effects below ask. See
+     * ConnectMirror.kt.
+     */
+    private val connectSpeaker = ConnectSpeaker(ConnectManager.shared)
+    private val mirrorDoor: MirrorDoor = MirrorRouting(ConnectManager.shared)
+    private val mirrorGate = MirrorGate { ConnectManager.shared.isMirroring }
+
     /** Every remote speaker, as the one the session player reports. */
-    private val speakers by lazy { Speakers(listOf(castPlayback, watchSpeaker)) }
+    private val speakers by lazy { Speakers(listOf(connectSpeaker, castPlayback, watchSpeaker)) }
 
     /**
      * Binds playback to a Listen Together party, when there is one.
@@ -776,6 +787,9 @@ class PlaybackService : MediaLibraryService() {
      * being backgrounded and the screen going off — see [PartySync].
      */
     private var partySync: PartySync? = null
+
+    /** Auden Connect's binding to the player: this device in the account's list of devices. See [ConnectSync]. */
+    private var connectSync: ConnectSync? = null
 
     /** Commands exposed as the secondary buttons on the media notification. */
     private val boundedContextCommand = SessionCommand(ACTION_START_BOUNDED_CONTEXT, Bundle.EMPTY)
@@ -859,10 +873,15 @@ class PlaybackService : MediaLibraryService() {
     private val playbackListener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
             val activePlayer = this@PlaybackService.player ?: return
-            if (player === activePlayer) updateAudioEffectSession(activePlayer)
+            if (player === activePlayer) {
+                updateAudioEffectSession(activePlayer)
+                connectSync?.onPlayerEvents(events)
+            }
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            // A mirrored phone makes no sound, so nothing is listened to: no scrobble, no history, no presence.
+            if (isPlaying && mirrorGate.blocks(Effect.LISTEN_BOOKKEEPING)) return
             // The player this fired on, which is by definition the one the
             // session is currently pointed at.
             val exoPlayer = player ?: return
@@ -1004,6 +1023,15 @@ class PlaybackService : MediaLibraryService() {
                 return
             }
 
+            // The mirror moved to the other device's song: only what is drawn follows. Nothing is booked, loaded,
+            // read ahead or trimmed for a song that is not playing here.
+            if (mirrorGate.blocks(Effect.TRACK_START)) {
+                publishWidgetState()
+                loadLyricsForCurrentTrack()
+                refreshCustomLayouts()
+                return
+            }
+
             // A receiver, if it is the speaker, is put on whatever became
             // current — or it is the one that moved, and this is the phone
             // catching up, which [CastPlayback] tells apart by track.
@@ -1096,6 +1124,8 @@ class PlaybackService : MediaLibraryService() {
             lastRepeatMode = repeatMode
             speakers.onLocalRepeatChanged(repeatMode)
             player?.let { WearBridge.republish(this@PlaybackService, it) }
+            // The other device owns the queue: no stash, no refill from here.
+            if (mirrorGate.blocks(Effect.QUEUE_GROWTH)) return
             // Repeat-one makes the "next" track this one again.
             player?.let { activeLoudness().nextMediaId = nextMediaIdOf(it) }
             // Repeat-all loops the queue as it stands; AutoPlay's tracks are the
@@ -1143,6 +1173,12 @@ class PlaybackService : MediaLibraryService() {
             // stage switches to that track on its own at the boundary.
             activeLoudness().nextMediaId = nextMediaIdOf(exoPlayer)
             if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) {
+                if (mirrorGate.blocks(Effect.QUEUE_SNAPSHOT)) {
+                    // The mirrored queue is the other device's: it is not saved as this phone's last queue and
+                    // nothing tops it up.
+                    refreshCustomLayouts()
+                    return
+                }
                 speakers.onLocalQueueChanged()
                 saveQueueSnapshot(exoPlayer)
                 refreshCustomLayouts()
@@ -1814,6 +1850,9 @@ class PlaybackService : MediaLibraryService() {
         // After the player exists and before the session is built: the
         // session's wrapper reports the user's actions to it.
         partySync = PartySync(scope) { player }.also { it.start() }
+        connectSync = ConnectSync(
+            this, scope, { player }, { mediaSession?.player }, ConnectManager.shared, connectSpeaker,
+        ).also { it.start() }
         // AutoPlay has one shared supplier in a party. The host supplies it
         // while connected; if they disappear, the lowest stable connected member
         // ID takes over. That election is deterministic on every phone, so two
@@ -1876,10 +1915,14 @@ class PlaybackService : MediaLibraryService() {
     private fun newSessionPlayer(player: Player, crossfade: CrossfadeController) = SessionPlayer(
         player,
         crossfade,
-        onUserIntent = { partySync?.onLocalIntent() },
+        onUserIntent = {
+            partySync?.onLocalIntent()
+            connectSync?.onUserIntent()
+        },
         deferPlayToParty = { partySync?.shouldDeferPlay() == true },
         lockedTransport = { playing -> partySync?.onLockedTransport(playing) == true },
         cast = speakers,
+        mirror = mirrorDoor,
     ) { lastPublishedSubtitle }
 
     /**
@@ -2647,6 +2690,8 @@ class PlaybackService : MediaLibraryService() {
 
     /** Reopens the current song through YouTube and remembers that choice. */
     private fun revertCurrentToOriginal() {
+        // A song that plays on another device has no stream here to swap or upgrade.
+        if (mirrorGate.blocks(Effect.STREAM_FETCH)) return
         val activePlayer = player ?: return
         val index = activePlayer.currentMediaItemIndex
         if (index !in 0 until activePlayer.mediaItemCount) return
@@ -2674,6 +2719,8 @@ class PlaybackService : MediaLibraryService() {
      * video and audio versions of a track.
      */
     private fun swapCurrentToVersion(args: Bundle) {
+        // A song that plays on another device has no stream here to swap or upgrade.
+        if (mirrorGate.blocks(Effect.STREAM_FETCH)) return
         val activePlayer = player ?: return
         val index = activePlayer.currentMediaItemIndex
         if (index !in 0 until activePlayer.mediaItemCount) return
@@ -2705,6 +2752,11 @@ class PlaybackService : MediaLibraryService() {
     }
 
     private fun toggleShuffleFromSession() {
+        // Mirroring: shuffle is the other device's to turn, and its next state brings the queue here.
+        if (mirrorDoor.active) {
+            mirrorDoor.shuffle(!QueueShuffle.enabled.value)
+            return
+        }
         val window = boundedContextWindow
         if (window != null && !ListenTogether.state.value.inParty) {
             val target = !(boundedEditState.desiredShuffle ?: window.isShuffleEnabled)
@@ -2953,6 +3005,7 @@ class PlaybackService : MediaLibraryService() {
     }
 
     private fun scheduleBoundedContextTopUp() {
+        if (mirrorGate.blocks(Effect.QUEUE_GROWTH)) return
         if (boundedContextWindow == null || boundedContextToken == null) return
         boundedEditState = BoundedQueueEdits.requestTopUp(boundedEditState)
         if (boundedTopUpJob?.isActive == true) return
@@ -3129,6 +3182,7 @@ class PlaybackService : MediaLibraryService() {
      * everything arriving in one burst at the end of the queue.
      */
     private fun loadAutoplayForCurrentTrack() {
+        if (mirrorGate.blocks(Effect.QUEUE_GROWTH)) return
         val exoPlayer = player ?: return
         val party = ListenTogether.state.value
         if (!autoplayEnabled(party) ||
@@ -3314,6 +3368,7 @@ class PlaybackService : MediaLibraryService() {
 
     /** Re-arms AutoPlay when an external queue edit empties or shrinks its tail. */
     private fun refreshAutoplayIfQueueEmpty() {
+        if (mirrorGate.blocks(Effect.QUEUE_GROWTH)) return
         val exoPlayer = player ?: return
         val aheadNow = (exoPlayer.currentMediaItemIndex + 1 until exoPlayer.mediaItemCount)
             .count { exoPlayer.getMediaItemAt(it).fromAutoplay }
@@ -4676,6 +4731,8 @@ class PlaybackService : MediaLibraryService() {
      * listener hears one cut, for the change they asked for.
      */
     private fun upgradeQualityNow() {
+        // A song that plays on another device has no stream here to swap or upgrade.
+        if (mirrorGate.blocks(Effect.STREAM_FETCH)) return
         val player = player ?: return
         val mediaId = player.currentMediaItem?.mediaId ?: return
         // Do not charge the manual cooldown for a command that merely arrived
@@ -6626,6 +6683,8 @@ class PlaybackService : MediaLibraryService() {
      * track or skipping through a queue never fetches anything ahead.
      */
     private fun driveDirectWindow() {
+        // Nothing is audible here, and nothing is opened ahead of playback that is not this phone's.
+        if (mirrorGate.blocks(Effect.STREAM_FETCH)) return
         val exoPlayer = player ?: return
         checkSubstituteLength(exoPlayer)
         val audible = buildSet {
@@ -6677,7 +6736,7 @@ class PlaybackService : MediaLibraryService() {
                 // that happened to be first would go on reporting a player that
                 // has been silent since the last crossfade.
                 val player = this@PlaybackService.player
-                if (player != null && player.isPlaying) {
+                if (player != null && player.isPlaying && !mirrorGate.blocks(Effect.LISTEN_BOOKKEEPING)) {
                     lastPositionSeconds = player.currentPosition / 1000
                     player.currentMediaItem?.mediaId?.let {
                         PlaybackTracker.onProgress(it, lastPositionSeconds)
@@ -6722,7 +6781,8 @@ class PlaybackService : MediaLibraryService() {
                 if (deadline == null) return@collectLatest
                 val remaining = deadline - SystemClock.elapsedRealtime()
                 if (remaining > 0) delay(remaining)
-                player?.pause()
+                // Mirroring: the music that is playing is on the other device, so it is that one that pauses.
+                if (mirrorDoor.active) mirrorDoor.pause() else player?.pause()
                 SleepTimer.cancel()
             }
         }
@@ -7838,6 +7898,8 @@ class PlaybackService : MediaLibraryService() {
         audioManager?.unregisterAudioDeviceCallback(outputDeviceCallback)
         partySync?.stop()
         partySync = null
+        connectSync?.stop()
+        connectSync = null
         player?.let {
             saveQueueSnapshot(it)
             savePlaybackState(it)
@@ -8065,6 +8127,11 @@ class PlaybackService : MediaLibraryService() {
         private val lockedTransport: (Boolean) -> Boolean,
         /** Cast or the watch, whichever is the speaker — its clock is what this reports. */
         private val cast: RemoteSpeaker,
+        /**
+         * Auden Connect's mirror mode. While it is active the controls below are the *other* device's, so they are
+         * sent to it instead of being done to this idle player; starting a new queue ends the mirror first.
+         */
+        private val mirror: MirrorDoor,
         private val getSubtitle: () -> String?,
     ) : ForwardingPlayer(player), CastSink {
 
@@ -8100,6 +8167,18 @@ class PlaybackService : MediaLibraryService() {
                 .setMaxVolume(100)
                 .build()
 
+            val MIRROR_COMMANDS = intArrayOf(
+                Player.COMMAND_PLAY_PAUSE,
+                Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM,
+                Player.COMMAND_SEEK_TO_DEFAULT_POSITION,
+                Player.COMMAND_SEEK_BACK,
+                Player.COMMAND_SEEK_FORWARD,
+                Player.COMMAND_GET_CURRENT_MEDIA_ITEM,
+                Player.COMMAND_GET_TIMELINE,
+                Player.COMMAND_GET_METADATA,
+                Player.COMMAND_SET_REPEAT_MODE,
+            )
+
             val DEVICE_VOLUME_COMMANDS = intArrayOf(
                 Player.COMMAND_GET_DEVICE_VOLUME,
                 Player.COMMAND_SET_DEVICE_VOLUME,
@@ -8114,12 +8193,19 @@ class PlaybackService : MediaLibraryService() {
 
         private fun dacVolume(): Int = ((DacVolume.level.value ?: 0f) * 100).roundToInt()
 
-        override fun getAvailableCommands(): Player.Commands =
-            if (dac) super.getAvailableCommands().buildUpon().addAll(*DEVICE_VOLUME_COMMANDS).build()
-            else super.getAvailableCommands()
+        override fun getAvailableCommands(): Player.Commands {
+            var commands = super.getAvailableCommands()
+            if (dac || mirror.active) commands = commands.buildUpon().addAll(*DEVICE_VOLUME_COMMANDS).build()
+            // The mirror's queue is never prepared, so its timeline has no seekable windows and ExoPlayer would
+            // withhold these. The playhead is the other device's, and every one of them is a command to it.
+            if (mirror.active) commands = commands.buildUpon().addAll(*MIRROR_COMMANDS).build()
+            return commands
+        }
 
         override fun isCommandAvailable(command: Int): Boolean =
-            (dac && command in DEVICE_VOLUME_COMMANDS) || super.isCommandAvailable(command)
+            (dac && command in DEVICE_VOLUME_COMMANDS) ||
+                (mirror.active && (command in DEVICE_VOLUME_COMMANDS || command in MIRROR_COMMANDS)) ||
+                super.isCommandAvailable(command)
 
         /**
          * The DAC volume came or went ([routeChanged]), or moved. Told by the
@@ -8332,6 +8418,11 @@ class PlaybackService : MediaLibraryService() {
         }
 
         override fun onRemoteRouteChanged() {
+            // The mirror starting or ending changes what can be done (seeking an unprepared queue).
+            val commands = availableCommands
+            listeners.forEach { it.onAvailableCommandsChanged(commands) }
+            val commandEvents = Player.Events(FlagSet.Builder().add(Player.EVENT_AVAILABLE_COMMANDS_CHANGED).build())
+            listeners.forEach { it.onEvents(this, commandEvents) }
             val info = getDeviceInfo()
             listeners.forEach { it.onDeviceInfoChanged(info) }
             val events = Player.Events(FlagSet.Builder().add(Player.EVENT_DEVICE_INFO_CHANGED).build())
@@ -8372,6 +8463,7 @@ class PlaybackService : MediaLibraryService() {
         private fun locked(): Boolean = ListenTogether.state.value.controlsLocked
 
         override fun play() {
+            if (mirror.active) { mirror.play(); return }
             // Locked, this plays only here — the party carries on untouched and
             // this device rejoins it wherever it has got to. See
             // [PartySync.onLockedTransport], which owns that catch-up.
@@ -8390,6 +8482,7 @@ class PlaybackService : MediaLibraryService() {
         }
 
         override fun pause() {
+            if (mirror.active) { mirror.pause(); return }
             if (lockedTransport(false)) return
             onUserIntent()
             if (cast.active) {
@@ -8403,12 +8496,15 @@ class PlaybackService : MediaLibraryService() {
         // is the listener's own business, and the lifecycle paths that call it
         // are not asking to move the party.
         override fun stop() {
+            // A dismissed notification or a "stop" from a surface: the other device pauses, nothing here to stop.
+            if (mirror.active) { mirror.pause(); return }
             if (locked()) { super.stop(); return }
             onUserIntent()
             super.stop()
         }
 
         override fun setPlayWhenReady(playWhenReady: Boolean) {
+            if (mirror.active) { if (playWhenReady) mirror.play() else mirror.pause(); return }
             if (lockedTransport(playWhenReady)) return
             onUserIntent()
             if (playWhenReady && deferPlayToParty()) return
@@ -8423,6 +8519,7 @@ class PlaybackService : MediaLibraryService() {
         // host puts it, and a local seek would only be dragged back by the next
         // reconcile anyway.
         override fun seekTo(positionMs: Long) {
+            if (mirror.active) { mirror.seekTo(positionMs); return }
             if (locked()) return
             onUserIntent()
             if (cast.active) {
@@ -8433,6 +8530,7 @@ class PlaybackService : MediaLibraryService() {
         }
 
         override fun seekBack() {
+            if (mirror.active) { mirror.seekBack(seekBackIncrement); return }
             if (locked()) return
             onUserIntent()
             if (cast.active) {
@@ -8443,6 +8541,7 @@ class PlaybackService : MediaLibraryService() {
         }
 
         override fun seekForward() {
+            if (mirror.active) { mirror.seekForward(seekForwardIncrement); return }
             if (locked()) return
             onUserIntent()
             if (cast.active) {
@@ -8453,6 +8552,7 @@ class PlaybackService : MediaLibraryService() {
         }
 
         override fun seekToPrevious() {
+            if (mirror.active) { mirror.previous(); return }
             if (locked()) return
             onUserIntent()
             if (cast.active) {
@@ -8463,6 +8563,7 @@ class PlaybackService : MediaLibraryService() {
         }
 
         override fun seekToDefaultPosition() {
+            if (mirror.active) { mirror.seekTo(0L); return }
             if (locked()) return
             onUserIntent()
             if (cast.active) {
@@ -8473,12 +8574,14 @@ class PlaybackService : MediaLibraryService() {
         }
 
         override fun seekToDefaultPosition(mediaItemIndex: Int) {
+            if (mirror.active) { mirror.jump(mediaItemIndex); return }
             if (locked()) return
             onUserIntent()
             super.seekToDefaultPosition(mediaItemIndex)
         }
 
         override fun setMediaItems(mediaItems: List<MediaItem>, resetPosition: Boolean) {
+            if (mirror.active) mirror.newSession()
             if (locked()) return
             onUserIntent()
             super.setMediaItems(mediaItems, resetPosition)
@@ -8489,6 +8592,7 @@ class PlaybackService : MediaLibraryService() {
             startIndex: Int,
             startPositionMs: Long,
         ) {
+            if (mirror.active) mirror.newSession()
             if (locked()) return
             onUserIntent()
             super.setMediaItems(mediaItems, startIndex, startPositionMs)
@@ -8502,36 +8606,55 @@ class PlaybackService : MediaLibraryService() {
         // All refused while locked: the queue is what plays next, so a listener
         // who can reorder it is still choosing the music.
         override fun addMediaItems(index: Int, mediaItems: List<MediaItem>) {
+            if (mirror.active) {
+                mirror.add(index, mediaItems.toShareableTracks(), wrappedPlayer.currentMediaItemIndex)
+                return
+            }
             if (locked()) return
             onUserIntent()
             super.addMediaItems(index, mediaItems)
         }
 
         override fun addMediaItems(mediaItems: List<MediaItem>) {
+            if (mirror.active) {
+                mirror.add(wrappedPlayer.mediaItemCount, mediaItems.toShareableTracks(), wrappedPlayer.currentMediaItemIndex)
+                return
+            }
             if (locked()) return
             onUserIntent()
             super.addMediaItems(mediaItems)
         }
 
         override fun removeMediaItem(index: Int) {
+            if (mirror.active) {
+                mirror.remove(index, index + 1, wrappedPlayer.currentMediaItemIndex, wrappedPlayer.mediaItemCount)
+                return
+            }
             if (locked()) return
             onUserIntent()
             super.removeMediaItem(index)
         }
 
         override fun removeMediaItems(fromIndex: Int, toIndex: Int) {
+            if (mirror.active) {
+                mirror.remove(fromIndex, toIndex, wrappedPlayer.currentMediaItemIndex, wrappedPlayer.mediaItemCount)
+                return
+            }
             if (locked()) return
             onUserIntent()
             super.removeMediaItems(fromIndex, toIndex)
         }
 
         override fun moveMediaItem(currentIndex: Int, newIndex: Int) {
+            if (mirror.active) { mirror.move(currentIndex, newIndex); return }
             if (locked()) return
             onUserIntent()
             super.moveMediaItem(currentIndex, newIndex)
         }
 
         override fun moveMediaItems(fromIndex: Int, toIndex: Int, newIndex: Int) {
+            // Only a single row travels as a command; a block move is never made by the app's queue.
+            if (mirror.active) { if (toIndex - fromIndex == 1) mirror.move(fromIndex, newIndex); return }
             if (locked()) return
             onUserIntent()
             super.moveMediaItems(fromIndex, toIndex, newIndex)
@@ -8542,15 +8665,29 @@ class PlaybackService : MediaLibraryService() {
             toIndex: Int,
             mediaItems: List<MediaItem>,
         ) {
+            // Rewriting rows in place is the service's own business (shuffle, history), never a mirrored control.
+            if (mirror.active) return
             if (locked()) return
             onUserIntent()
             super.replaceMediaItems(fromIndex, toIndex, mediaItems)
         }
 
         override fun clearMediaItems() {
+            if (mirror.active) mirror.newSession()
             if (locked()) return
             onUserIntent()
             super.clearMediaItems()
+        }
+
+        // The mirror's queue is never prepared: that is what keeps it silent and off the network.
+        override fun prepare() {
+            if (mirror.active) return
+            super.prepare()
+        }
+
+        override fun setRepeatMode(repeatMode: Int) {
+            if (mirror.active) { mirror.repeat(repeatMode); return }
+            super.setRepeatMode(repeatMode)
         }
 
         override fun getMediaMetadata(): MediaMetadata {
@@ -8564,6 +8701,14 @@ class PlaybackService : MediaLibraryService() {
         }
 
         override fun seekTo(mediaItemIndex: Int, positionMs: Long) {
+            if (mirror.active) {
+                if (mediaItemIndex == wrappedPlayer.currentMediaItemIndex) {
+                    mirror.seekTo(positionMs.coerceAtLeast(0L))
+                } else {
+                    mirror.jump(mediaItemIndex)
+                }
+                return
+            }
             if (locked()) return
             onUserIntent()
             crossfade.onSkipRequested()
@@ -8595,6 +8740,7 @@ class PlaybackService : MediaLibraryService() {
         }
 
         override fun seekToPreviousMediaItem() {
+            if (mirror.active) { mirror.previous(); return }
             if (locked()) return
             onUserIntent()
             crossfade.onSkipRequested()
@@ -8606,6 +8752,7 @@ class PlaybackService : MediaLibraryService() {
         }
 
         override fun seekToNextMediaItem() {
+            if (mirror.active) { mirror.next(); return }
             if (locked()) return
             onUserIntent()
             crossfade.onSkipRequested()
@@ -8613,6 +8760,7 @@ class PlaybackService : MediaLibraryService() {
         }
 
         override fun seekToNext() {
+            if (mirror.active) { mirror.next(); return }
             if (locked()) return
             onUserIntent()
             crossfade.onSkipRequested()
@@ -8669,14 +8817,23 @@ class PlaybackService : MediaLibraryService() {
             args: Bundle,
         ): ListenableFuture<SessionResult> {
             when (customCommand.customAction) {
-                ACTION_START_BOUNDED_CONTEXT -> startBoundedContext(args)
+                ACTION_START_BOUNDED_CONTEXT -> {
+                    mirrorDoor.newSession()
+                    startBoundedContext(args)
+                }
                 ACTION_CLEAR_BOUNDED_CONTEXT -> clearBoundedContext()
                 ACTION_TOGGLE_AUTOPLAY -> toggleAutoplayFromNotification()
                 ACTION_TOGGLE_SHUFFLE -> toggleShuffleFromSession()
-                ACTION_START_STATION -> startStationFromSession()
+                ACTION_START_STATION -> {
+                    mirrorDoor.newSession()
+                    startStationFromSession()
+                }
                 ACTION_REVERT_TO_ORIGINAL -> revertCurrentToOriginal()
                 ACTION_SWAP_TO_VERSION -> swapCurrentToVersion(args)
-                ACTION_BEGIN_RADIO_QUEUE -> beginRadioQueue()
+                ACTION_BEGIN_RADIO_QUEUE -> {
+                    mirrorDoor.newSession()
+                    beginRadioQueue()
+                }
                 ACTION_COMMIT_RADIO_QUEUE -> player?.let(::saveQueueSnapshotImmediately)
                 ACTION_UPGRADE_QUALITY -> upgradeQualityNow()
                 ACTION_SWAP_VERSION -> {

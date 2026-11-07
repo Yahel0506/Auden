@@ -68,10 +68,23 @@ export interface Track {
   /** "19M plays", where YouTube shows it. */
   plays: string | null;
   /**
+   * The Spotify track this row stands for, when it came from a Spotify list (matched or not): what
+   * "Fix Spotify match" and the remembered match are keyed by.
+   */
+  spotifyId?: string;
+  /**
    * A row from another catalogue (a Spotify playlist) that has no YouTube
    * Music version yet: still being looked for, or not found. Shown, never played.
    */
   unavailable?: 'matching' | 'missing';
+  /**
+   * Where the audio comes from (playback/source.ts). Absent is YouTube, with
+   * [videoId] a real video id. 'local' (an indexed file) and 'clip' (audio
+   * made in the app, the DJ's voice) carry a synthetic id instead,
+   * `auden:local:<rowId>` and `auden:clip:<id>`. A YouTube track with a local
+   * file linked to it stays 'youtube': the file is chosen when it loads.
+   */
+  source?: 'youtube' | 'local' | 'clip';
 }
 
 export interface HeaderInfo {

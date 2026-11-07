@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useHomeSettings } from '@/auden/home/settings';
 import { PrefetchLink } from '@/components/PrefetchLink';
 import { shelfHeader, shelfKinds, shelfList, shelfSection, type ShelfKind } from '@/components/shelf';
 import type { MusicItem, Shelf, Track } from '@/data/music/types';
@@ -82,7 +83,7 @@ export function ShelfScroller({ kind, children }: { kind: ShelfKind; children: R
 }
 
 /** A shelf's title, a link with a chevron when there's a page behind it. */
-function ShelfTitle({ title, to }: { title: string; to?: string | null }) {
+export function ShelfTitle({ title, to }: { title: string; to?: string | null }) {
   return (
     <div className={shelfHeader}>
       <h2 className="type-title-2-emphasized">
@@ -123,7 +124,7 @@ export function TrackShelf({ title, to, tracks, source }: { title: string; to?: 
       <ShelfScroller key={tracks.length} kind="tracks">
         {tracks.map((track, i) => (
           <li key={track.videoId}>
-            <TrackLockup item={trackItem(track)} onPlay={() => playList(tracks, i, { source })} />
+            <TrackLockup item={trackItem(track)} track={track} onPlay={() => playList(tracks, i, { source })} />
           </li>
         ))}
       </ShelfScroller>
@@ -133,10 +134,12 @@ export function TrackShelf({ title, to, tracks, source }: { title: string; to?: 
 
 /** A titled horizontal shelf (report §2): grid columns per breakpoint, scroll-snap, hover arrows. */
 export function ShelfView({ shelf }: { shelf: Shelf }) {
+  // Music videos as squares (Settings > Home): the shelf takes the square columns, whose lockups are 1:1.
+  const squareVideos = useHomeSettings((s) => s.squareVideoThumbnails);
   return (
     <section className={shelfSection} aria-label={shelf.title}>
       <ShelfTitle title={shelf.title} to={shelf.seeAll ? browseHref(shelf.seeAll) : null} />
-      <ShelfScroller key={shelf.items.length} kind={shelf.layout}>
+      <ShelfScroller key={shelf.items.length} kind={shelf.layout === 'video' && squareVideos ? 'square' : shelf.layout}>
         {shelf.items.map((item, i) => (
           <li key={`${item.id}-${i}`}>{renderItem(shelf, item)}</li>
         ))}

@@ -1,5 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useRef, useState } from 'react';
+import { OnDeviceMark } from '@/auden/library/ui/OnDeviceMark';
 import { PrefetchLink } from '@/components/PrefetchLink';
 import { PauseIcon, PlayIcon } from '@/components/icons/Transport';
 import type { ArtistRef, Track } from '@/data/music/types';
@@ -151,6 +152,7 @@ function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps)
           <div className="flex min-w-0 items-center">
             <span className="truncate type-body text-primary">{track.title}</span>
             {track.explicit && <ExplicitBadge />}
+            <OnDeviceMark track={track} />
           </div>
           {variant === 'album' && track.artists.length > 0 && (
             <div className="truncate type-callout">
@@ -185,7 +187,7 @@ function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps)
         <span className={unavailable ? undefined : 'group-focus-within/row:invisible group-hover/row:invisible group-has-[[data-open]]/row:invisible'}>
           {unavailable === 'missing' ? 'Not found' : formatDuration(track.durationSec)}
         </span>
-        {!unavailable && (
+        {(!unavailable || track.spotifyId) && (
           <TrackMenu
             track={track}
             className="absolute end-2.5 hidden size-7 place-items-center rounded-full text-key group-focus-within/row:grid group-hover/row:grid hover:bg-quinary data-open:grid"

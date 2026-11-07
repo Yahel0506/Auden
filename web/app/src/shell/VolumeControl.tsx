@@ -53,7 +53,9 @@ function useVolumeWheel(onStep: () => void) {
     const el = ref.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
-      const { volume, setVolume } = usePlayer.getState();
+      const state = usePlayer.getState();
+      const { setVolume } = state;
+      const volume = volumeOf(state);
       const next = nextVolumeFromWheel(volume, e.deltaY);
       if (next === volume) return;
       e.preventDefault();
@@ -66,9 +68,12 @@ function useVolumeWheel(onStep: () => void) {
   return ref;
 }
 
+/** The volume the control shows and drives: this browser's own, or the mirrored device's. */
+export const volumeOf = (s: { mirror: boolean; mirrorVolume: number; volume: number }): number => (s.mirror ? s.mirrorVolume : s.volume);
+
 export function VolumeControl({ open, onOpen, className, iconSize = 20 }: VolumeControlProps) {
-  const volume = usePlayer((s) => s.volume);
-  const muted = usePlayer((s) => s.muted);
+  const volume = usePlayer(volumeOf);
+  const muted = usePlayer((s) => (s.mirror ? s.mirrorVolume === 0 : s.muted));
   const setVolume = usePlayer((s) => s.setVolume);
   const toggleMute = usePlayer((s) => s.toggleMute);
   const level = muted ? 0 : volume;

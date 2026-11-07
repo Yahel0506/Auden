@@ -4,7 +4,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./bridge": "./src/bridge/index.ts"
+    "./bridge": "./src/bridge/index.ts",
+    "./connect": "./src/connect/index.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",

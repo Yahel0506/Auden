@@ -135,7 +135,7 @@ let token: string | null = null;
 let server: string | null = null;
 export const clock = new ServerClock();
 
-function deviceId(): string {
+export function deviceId(): string {
   let id = localStorage.getItem('bitchord:deviceId');
   if (!id) {
     id = crypto.randomUUID();
@@ -144,7 +144,7 @@ function deviceId(): string {
   return id;
 }
 
-async function sha256(value: string): Promise<string> {
+export async function sha256(value: string): Promise<string> {
   const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value)));
   return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
@@ -154,6 +154,13 @@ async function sha256(value: string): Promise<string> {
  * (prompt §8; the phone requires a signed-in account too). The id is a hash of
  * the login and channel, never either of them.
  */
+/** The signed-in account's id hash, the one Listen Together and Auden Connect both key on; null when signed out. */
+export async function accountUserId(): Promise<string | null> {
+  const auth = ytAuthSnapshot();
+  const active = auth.signedIn ? auth.active : null;
+  return active ? (await sha256(`${active.authUser}:${active.id}`)).slice(0, 32) : null;
+}
+
 async function identity(): Promise<Omit<JoinRequest, 'maxMembers' | 'autoplayEnabled'>> {
   const auth = ytAuthSnapshot();
   const active = auth.signedIn ? auth.active : null;

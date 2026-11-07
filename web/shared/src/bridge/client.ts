@@ -41,11 +41,14 @@ export interface CallOptions {
 
 export class BridgeCallError extends Error {
   readonly code: BridgeError['code'] | 'timeout' | 'unavailable';
+  /** The extension's own account of the failure, when it sent one (an older extension does not). */
+  readonly detail: BridgeError['detail'];
 
-  constructor(code: BridgeCallError['code'], message: string) {
+  constructor(code: BridgeCallError['code'], message: string, detail?: BridgeError['detail']) {
     super(message);
     this.name = 'BridgeCallError';
     this.code = code;
+    this.detail = detail;
   }
 }
 
@@ -60,7 +63,7 @@ function envelope<M extends BridgeMethod>(method: M, params: ParamsOf<M>): Bridg
 
 function unwrap<M extends BridgeMethod>(response: BridgeResponse<M>): ResultOf<M> {
   if (response.ok) return response.result;
-  throw new BridgeCallError(response.error.code, response.error.message);
+  throw new BridgeCallError(response.error.code, response.error.message, response.error.detail);
 }
 
 /**

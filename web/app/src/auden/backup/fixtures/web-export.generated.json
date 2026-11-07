@@ -1,0 +1,492 @@
+{
+  "app": "auden",
+  "version": 2,
+  "versionName": "web",
+  "exportedAt": "2026-11-06T12:00:00.000Z",
+  "settings": {
+    "replay_enabled": {
+      "type": "bool",
+      "value": "true",
+      "values": []
+    },
+    "lyrics_offset_ms": {
+      "type": "int",
+      "value": "120",
+      "values": []
+    },
+    "last_sync_ms": {
+      "type": "long",
+      "value": "1730000000000",
+      "values": []
+    },
+    "playback_speed": {
+      "type": "float",
+      "value": "1.25",
+      "values": []
+    },
+    "home_title": {
+      "type": "string",
+      "value": "Auden",
+      "values": []
+    },
+    "search_history": {
+      "type": "stringSet",
+      "value": null,
+      "values": [
+        "radiohead",
+        "lo-fi beats",
+        "bonobo"
+      ]
+    }
+  },
+  "listening": [
+    {
+      "version": 2,
+      "month": "2026-09",
+      "tracks": [],
+      "artists": [],
+      "albums": [],
+      "hours": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "days": {},
+      "trackDays": null,
+      "artistDays": null,
+      "albumDays": null
+    },
+    {
+      "version": 2,
+      "month": "2026-10",
+      "tracks": [
+        {
+          "id": "dQw4w9WgXcQ",
+          "title": "Never Gonna Give You Up",
+          "artist": "Rick Astley",
+          "album": "Whenever You Need Somebody",
+          "albumId": "MPREb_abc",
+          "artistId": "UCuAXFkgsw1L7xaCfnd5JJOw",
+          "art": "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+          "ms": 2130000,
+          "plays": 10,
+          "last": 1729560000000,
+          "days": {
+            "2026-10-03": {
+              "ms": 640000,
+              "plays": 3
+            },
+            "2026-10-17": {
+              "ms": 1490000,
+              "plays": 7
+            }
+          }
+        },
+        {
+          "id": "content://media/external/audio/media/42",
+          "title": "Song from file",
+          "artist": "Some Artist",
+          "album": null,
+          "albumId": null,
+          "artistId": null,
+          "art": null,
+          "ms": 300000,
+          "plays": 2,
+          "last": 1729500000000,
+          "days": {
+            "2026-10-21": {
+              "ms": 300000,
+              "plays": 2
+            }
+          }
+        }
+      ],
+      "artists": [
+        {
+          "name": "Rick Astley",
+          "sub": null,
+          "art": null,
+          "id": "UCuAXFkgsw1L7xaCfnd5JJOw",
+          "ms": 2130000,
+          "plays": 10,
+          "key": null,
+          "days": {
+            "2026-10-03": {
+              "ms": 640000,
+              "plays": 3
+            },
+            "2026-10-17": {
+              "ms": 1490000,
+              "plays": 7
+            }
+          }
+        },
+        {
+          "name": "Some Artist",
+          "sub": null,
+          "art": null,
+          "id": null,
+          "ms": 300000,
+          "plays": 2,
+          "key": null,
+          "days": {
+            "2026-10-21": {
+              "ms": 300000,
+              "plays": 2
+            }
+          }
+        }
+      ],
+      "albums": [
+        {
+          "name": "Whenever You Need Somebody",
+          "sub": "Rick Astley",
+          "art": null,
+          "id": "MPREb_abc",
+          "ms": 2130000,
+          "plays": 10,
+          "key": null,
+          "days": {
+            "2026-10-03": {
+              "ms": 640000,
+              "plays": 3
+            },
+            "2026-10-17": {
+              "ms": 1490000,
+              "plays": 7
+            }
+          }
+        }
+      ],
+      "hours": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1200000,
+        1230000,
+        0,
+        0,
+        0,
+        0
+      ],
+      "days": {
+        "3": 640000,
+        "17": 1490000,
+        "21": 300000
+      },
+      "trackDays": {
+        "2026-10-03": {
+          "ms": 640000,
+          "plays": 3
+        },
+        "2026-10-17": {
+          "ms": 1490000,
+          "plays": 7
+        },
+        "2026-10-21": {
+          "ms": 300000,
+          "plays": 2
+        }
+      },
+      "artistDays": {
+        "2026-10-03": {
+          "ms": 640000,
+          "plays": 3
+        },
+        "2026-10-17": {
+          "ms": 1490000,
+          "plays": 7
+        },
+        "2026-10-21": {
+          "ms": 300000,
+          "plays": 2
+        }
+      },
+      "albumDays": {
+        "2026-10-03": {
+          "ms": 640000,
+          "plays": 3
+        },
+        "2026-10-17": {
+          "ms": 1490000,
+          "plays": 7
+        }
+      }
+    }
+  ],
+  "library": {
+    "tracks": [
+      {
+        "videoId": "dQw4w9WgXcQ",
+        "spotifyId": null,
+        "isrc": null,
+        "localUri": null,
+        "path": null,
+        "title": "Never Gonna Give You Up",
+        "artist": "Rick Astley",
+        "artistId": "UCuAXFkgsw1L7xaCfnd5JJOw",
+        "album": "Whenever You Need Somebody",
+        "albumId": "MPREb_abc",
+        "thumbnailUrl": "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+        "durationMs": 213000,
+        "durationText": "3:33",
+        "trackNumber": 1,
+        "discNumber": 1,
+        "albumArtist": "Rick Astley",
+        "genre": null,
+        "year": 1987,
+        "folder": null,
+        "sizeBytes": null,
+        "modifiedAt": null,
+        "isVideo": false,
+        "origin": "YTM",
+        "addedAt": 1730000001000,
+        "identStatus": null,
+        "identSource": null,
+        "suggestedVideoId": null,
+        "suggestedTitle": null,
+        "suggestedArtist": null,
+        "identifiedAt": null,
+        "id": 1
+      },
+      {
+        "videoId": null,
+        "spotifyId": null,
+        "isrc": null,
+        "localUri": "content://media/external/audio/media/42",
+        "path": "/storage/emulated/0/Music/Some Artist/Song from file.mp3",
+        "title": "Song from file",
+        "artist": "Some Artist",
+        "artistId": null,
+        "album": null,
+        "albumId": null,
+        "thumbnailUrl": null,
+        "durationMs": 201500,
+        "durationText": null,
+        "trackNumber": null,
+        "discNumber": null,
+        "albumArtist": null,
+        "genre": null,
+        "year": null,
+        "folder": "Music/Some Artist",
+        "sizeBytes": 4821033,
+        "modifiedAt": 1729990000000,
+        "isVideo": false,
+        "origin": "LOCAL",
+        "addedAt": 1730000002000,
+        "identStatus": "REVIEW",
+        "identSource": "FILE_NAME",
+        "suggestedVideoId": "kJQP7kiw5Fk",
+        "suggestedTitle": "Song from file (Official)",
+        "suggestedArtist": "Some Artist",
+        "identifiedAt": 1730000003000,
+        "id": 2
+      },
+      {
+        "videoId": "jNQXAC9IVRw",
+        "spotifyId": null,
+        "isrc": null,
+        "localUri": "content://media/external/audio/media/57",
+        "path": "/storage/emulated/0/Download/Auden/Me at the zoo.m4a",
+        "title": "Me at the zoo",
+        "artist": "jawed",
+        "artistId": null,
+        "album": null,
+        "albumId": null,
+        "thumbnailUrl": null,
+        "durationMs": 19000,
+        "durationText": "0:19",
+        "trackNumber": null,
+        "discNumber": null,
+        "albumArtist": null,
+        "genre": null,
+        "year": null,
+        "folder": "Download/Auden",
+        "sizeBytes": 412000,
+        "modifiedAt": 1730000500000,
+        "isVideo": false,
+        "origin": "DOWNLOAD",
+        "addedAt": 1730000500000,
+        "identStatus": "MATCHED",
+        "identSource": "SEARCH",
+        "suggestedVideoId": null,
+        "suggestedTitle": null,
+        "suggestedArtist": null,
+        "identifiedAt": 1730000600000,
+        "id": 3
+      },
+      {
+        "videoId": "9bZkp7q19f0",
+        "spotifyId": "4uLU6hMCjMI75M1A2tKUQC",
+        "isrc": "KRA201200001",
+        "localUri": null,
+        "path": null,
+        "title": "Gangnam Style",
+        "artist": "PSY",
+        "artistId": null,
+        "album": "PSY 6th Part 1",
+        "albumId": null,
+        "thumbnailUrl": null,
+        "durationMs": 219000,
+        "durationText": "3:39",
+        "trackNumber": 2,
+        "discNumber": 1,
+        "albumArtist": "PSY",
+        "genre": "K-Pop",
+        "year": 2012,
+        "folder": null,
+        "sizeBytes": null,
+        "modifiedAt": null,
+        "isVideo": true,
+        "origin": "SPOTIFY",
+        "addedAt": 1730000700000,
+        "identStatus": null,
+        "identSource": null,
+        "suggestedVideoId": null,
+        "suggestedTitle": null,
+        "suggestedArtist": null,
+        "identifiedAt": null,
+        "id": 4
+      }
+    ],
+    "playlists": [
+      {
+        "id": "sp_local_1730000000000",
+        "title": "Late night",
+        "createdAt": 1730000000000,
+        "updatedAt": 1730000900000,
+        "pinned": true,
+        "sourceId": null,
+        "coverUrl": null
+      },
+      {
+        "id": "sp_local_1730000600000",
+        "title": "Spotify Mix",
+        "createdAt": 1730000600000,
+        "updatedAt": 1730000600000,
+        "pinned": false,
+        "sourceId": "spotify:playlist:abc",
+        "coverUrl": "http://i.scdn.co/image/ab67616d0000b273abc123"
+      }
+    ],
+    "entries": [
+      {
+        "playlistId": "sp_local_1730000000000",
+        "trackId": 1,
+        "position": 0,
+        "entryId": 1
+      },
+      {
+        "playlistId": "sp_local_1730000000000",
+        "trackId": 2,
+        "position": 1,
+        "entryId": 2
+      },
+      {
+        "playlistId": "sp_local_1730000000000",
+        "trackId": 3,
+        "position": 2,
+        "entryId": 3
+      },
+      {
+        "playlistId": "sp_local_1730000600000",
+        "trackId": 4,
+        "position": 0,
+        "entryId": 4
+      },
+      {
+        "playlistId": "sp_local_1730000600000",
+        "trackId": 1,
+        "position": 1,
+        "entryId": 5
+      }
+    ],
+    "lyricsVariants": [
+      {
+        "songKey": "content://media/external/audio/media/42",
+        "provider": "SIMP_MUSIC",
+        "format": "ENHANCED_LRC",
+        "content": "[00:01.00]<00:01.00>Some <00:01.50>words",
+        "fetchedAt": 1730000300000
+      },
+      {
+        "songKey": "dQw4w9WgXcQ",
+        "provider": "BETTER_LYRICS",
+        "format": "TTML",
+        "content": "<tt xmlns=\"http://www.w3.org/ns/ttml\"><body><div><p begin=\"00:00:18.200\">Never gonna give you up</p></div></body></tt>",
+        "fetchedAt": 1730000200000
+      },
+      {
+        "songKey": "dQw4w9WgXcQ",
+        "provider": "LRCLIB",
+        "format": "LRC",
+        "content": "[00:18.20]Never gonna give you up\n[00:22.00]Never gonna let you down",
+        "fetchedAt": 1730000100000
+      }
+    ],
+    "lyricsPrefs": [
+      {
+        "songKey": "content://media/external/audio/media/42",
+        "activeProvider": null,
+        "offsetMs": 120
+      },
+      {
+        "songKey": "dQw4w9WgXcQ",
+        "activeProvider": "LRCLIB",
+        "offsetMs": -250
+      }
+    ],
+    "spotifyMatches": [
+      {
+        "spotifyId": "0VjIjW4GlUZAMYd2vXMi3b",
+        "status": "MISSING",
+        "songJson": null,
+        "matchedAt": 1730000800000
+      },
+      {
+        "spotifyId": "4uLU6hMCjMI75M1A2tKUQC",
+        "status": "AUTO",
+        "songJson": "{\"videoId\":\"9bZkp7q19f0\",\"title\":\"Gangnam Style\",\"artist\":\"PSY\",\"durationText\":\"3:39\",\"albumName\":\"PSY 6th Part 1\",\"isVideo\":true}",
+        "matchedAt": 1730000700000
+      }
+    ]
+  },
+  "origin": "web",
+  "settingsCapturedAt": "2026-11-02T10:15:30Z"
+}

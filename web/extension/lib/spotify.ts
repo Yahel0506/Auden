@@ -1,5 +1,25 @@
-import type { SpotifyAuthState, SpotifyPage, SpotifyPlaylist, SpotifyTrack } from '@bitchord/shared/bridge';
+import type {
+  SpotifyAlbum,
+  SpotifyArtist,
+  SpotifyAuthState,
+  SpotifyErrorKind,
+  SpotifyPage,
+  SpotifyPlaylist,
+  SpotifyTrack,
+} from '@bitchord/shared/bridge';
 import { installSpotifyFetchRule } from './rules';
+import {
+  Cooldown,
+  cookieKeyOf,
+  kindOf,
+  problemState,
+  rememberedFor,
+  retryAfterOf,
+  SpotifyAuthError,
+  SpotifyError,
+  type RememberedUser,
+} from './spotifyErrors';
+import { libraryVariables, parseAlbumPage, parseArtistPage } from './spotifyLibrary';
 
 /**
  * Spotify (prompt §7.1), with the user's own open.spotify.com session: the
@@ -53,9 +73,9 @@ const LIKED_COVER = 'https://misc.scdn.co/liked-songs/liked-songs-640.png';
 const FOUND_TTL_MS = 12 * 60 * 60_000;
 const MISSED_TTL_MS = 30 * 60_000;
 
-export class SpotifyAuthError extends Error {
-  readonly code = 'unauthenticated';
-}
+export { kindOf, SpotifyAuthError, SpotifyError };
+
+const cooldown = new Cooldown();
 
 // ---- The web player's own values ---------------------------------------------
 
@@ -131,7 +151,7 @@ async function readWebPlayer(): Promise<WebPlayer> {
   const secret = secretsIn(bundle)[0];
   const found = Object.fromEntries(OPERATIONS.map((op) => [op, queryHashIn(bundle, op) ?? queryHashIn(searchChunk, op)]));
   const complete = !!secret && !!clientVersion && OPERATIONS.every((op) => found[op]);
-  if (!complete) console.warn('BitChord: Spotify web player read partially', { clientVersion: !!clientVersion, secret: secret?.version, found });
+  if (!complete) console.warn('Auden: Spotify web player read partially', { clientVersion: !!clientVersion, secret: secret?.version, found });
   return {
     clientVersion: clientVersion || '1.2.77.0',
     secret: secret ?? KNOWN_SECRET,
@@ -237,7 +257,8 @@ async function mint(): Promise<AccessToken> {
   if (!(await prefs()).connected) throw new SpotifyAuthError('Spotify is disconnected');
   const cookie = await browser.cookies.get({ url: `${WEB_PLAYER}/`, name: 'sp_dc' }).catch(() => null);
   if (!cookie?.value) throw new SpotifyAuthError('Not signed in to Spotify in this browser');
-  if (Date.now() < retryAfter) throw new SpotifyAuthError('Spotify would not mint a token; trying again shortly');
+  // Not a sign-out: the sign-in step itself is failing (a retired secret, or a throttle), so "sign in again" would mislead.
+  if (Date.now() < retryAfter) throw new SpotifyError('unknown', 'Spotify sign-in is temporarily failing; trying again shortly');
   spotifyRules ??= installSpotifyFetchRule();
   await spotifyRules;
   for (const force of [false, true]) {
@@ -250,10 +271,13 @@ async function mint(): Promise<AccessToken> {
       totpServer: code,
       totpVer: String(player.secret.version),
     });
-    const { status, body } = await withSessionCookie(cookie.value, async () => {
-      const response = await fetch(`${WEB_PLAYER}/api/token?${query}`, { credentials: 'omit' });
+    const { status, retryAfterSec, body } = await withSessionCookie(cookie.value, async () => {
+      const response = await fetch(`${WEB_PLAYER}/api/token?${query}`, { credentials: 'omit' }).catch(() => {
+        throw new SpotifyError('network', 'Couldn’t reach Spotify');
+      });
       return {
         status: response.status,
+        retryAfterSec: retryAfterOf(response),
         body: (await response.json().catch(() => ({}))) as {
           accessToken?: string;
           accessTokenExpirationTimestampMs?: number;
@@ -265,7 +289,12 @@ async function mint(): Promise<AccessToken> {
     });
     // The web player reads this flag to learn its secret has been retired.
     if (body.totpVerExpired && !force) continue;
-    if (status === 401) throw new SpotifyAuthError('Your Spotify session has expired. Sign in again at open.spotify.com.');
+    if (status === 429) {
+      // Every later call fails fast until this passes, rather than minting again into the same throttle.
+      cooldown.start(retryAfterSec);
+      throw new SpotifyError('rate_limited', 'Spotify asked to slow down', retryAfterSec);
+    }
+    if (status === 401) throw new SpotifyAuthError('Your Spotify session has expired. Sign in again at open.spotify.com.', 'expired');
     if (body.isAnonymous) throw new SpotifyAuthError('Not signed in to Spotify in this browser');
     if (body.accessToken) {
       access = {
@@ -279,7 +308,7 @@ async function mint(): Promise<AccessToken> {
     if (force) break;
   }
   retryAfter = Date.now() + RETRY_MS;
-  throw new SpotifyAuthError('Spotify would not mint a token');
+  throw new SpotifyError('unknown', 'Spotify would not mint a token');
 }
 
 let deviceId: string | null = null;
@@ -339,6 +368,8 @@ async function clientToken(): Promise<string | null> {
 type Json = Record<string, unknown>;
 
 async function gql(operation: Operation, variables: Json, retried = false): Promise<Json> {
+  const wait = cooldown.remainingSec();
+  if (wait > 0) throw new SpotifyError('rate_limited', 'Spotify asked to slow down', wait);
   const bearer = await accessToken();
   const player = await webPlayer();
   const clientTok = await clientToken();
@@ -356,10 +387,23 @@ async function gql(operation: Operation, variables: Json, retried = false): Prom
       operationName: operation,
       extensions: { persistedQuery: { version: 1, sha256Hash: player.hashes[operation] } },
     }),
+  }).catch(() => {
+    // Only the request itself failing is a network problem: a parser bug is not.
+    throw new SpotifyError('network', 'Couldn’t reach Spotify');
   });
+  if (response.status === 429) {
+    const seconds = retryAfterOf(response);
+    cooldown.start(seconds);
+    throw new SpotifyError('rate_limited', 'Spotify asked to slow down', seconds);
+  }
   if (response.status === 401 && !retried) {
     invalidateTokens();
     return gql(operation, variables, true);
+  }
+  // Still refused with a fresh token: the session is no good. (A 403 on a playlist can mean it is private, not that
+  // the user must sign in, so only the profile call, which needs no particular playlist, reads it as expired.)
+  if (response.status === 401 || (response.status === 403 && operation === 'profileAttributes')) {
+    throw new SpotifyAuthError('Your Spotify session has expired. Sign in again at open.spotify.com.', 'expired');
   }
   const body = (await response.json().catch(() => null)) as Json | null;
   const errors = (body?.errors as { message?: string }[] | undefined)?.map((e) => e.message ?? '') ?? [];
@@ -368,7 +412,7 @@ async function gql(operation: Operation, variables: Json, retried = false): Prom
     await webPlayer(true);
     return gql(operation, variables, true);
   }
-  if (!response.ok) throw new Error(`Spotify ${operation} failed (${response.status})`);
+  if (!response.ok) throw new SpotifyError('unknown', `Spotify ${operation} failed (${response.status})`);
   if (!body) throw new Error(`Spotify ${operation} answered with something other than JSON`);
   if (errors.length && !body.data) throw new Error(errors.join('; '));
   return body;
@@ -508,6 +552,16 @@ export async function playlists(offset: number): Promise<SpotifyPage<SpotifyPlay
   return page;
 }
 
+/** The saved albums, 50 at a time: the same `libraryV3` query as the playlists, with another filter (SpotifyLibrary.albums). */
+export async function albums(offset: number): Promise<SpotifyPage<SpotifyAlbum>> {
+  return parseAlbumPage(await gql('libraryV3', libraryVariables('Albums', offset)));
+}
+
+/** The followed artists, 50 at a time. */
+export async function artists(offset: number): Promise<SpotifyPage<SpotifyArtist>> {
+  return parseArtistPage(await gql('libraryV3', libraryVariables('Artists', offset)));
+}
+
 export async function tracks(playlistId: string, offset: number): Promise<SpotifyPage<SpotifyTrack>> {
   if (playlistId === LIKED_ID) return parseLikedPage(await gql('fetchLibraryTracks', { offset, limit: 100 }));
   return parseTrackPage(
@@ -567,6 +621,7 @@ export async function setConnected(connected: boolean): Promise<SpotifyAuthState
   invalidateTokens();
   retryAfter = 0;
   profileCache = null;
+  await forgetRemembered();
   return authState();
 }
 
@@ -581,7 +636,35 @@ export function invalidateSession(): void {
   profileCache = null;
 }
 
-let profileCache: { name: string; avatarUrl: string | null } | null = null;
+let profileCache: { name: string; avatarUrl: string | null; id?: string } | null = null;
+
+/**
+ * The account last read, in session storage (and in memory, if that is unavailable): a service-worker
+ * restart empties `profileCache`, and so does the page's own "Try Again", which is exactly when a
+ * throttle or a dropped connection must not look like a sign-out. Dropped only on disconnect; another
+ * sign-in changes the cookie digest and so stops matching.
+ */
+const REMEMBERED_KEY = 'spotify.lastProfile';
+let remembered: RememberedUser | null = null;
+
+async function rememberedUser(cookieKey: string): Promise<RememberedUser['user'] | null> {
+  try {
+    const stored = (await browser.storage.session.get(REMEMBERED_KEY))[REMEMBERED_KEY] as RememberedUser | undefined;
+    return rememberedFor(stored ?? remembered, cookieKey);
+  } catch {
+    return rememberedFor(remembered, cookieKey);
+  }
+}
+
+async function remember(cookieKey: string, user: RememberedUser['user']): Promise<void> {
+  remembered = { cookieKey, user };
+  await browser.storage.session.set({ [REMEMBERED_KEY]: remembered }).catch(() => undefined);
+}
+
+async function forgetRemembered(): Promise<void> {
+  remembered = null;
+  await browser.storage.session.remove(REMEMBERED_KEY).catch(() => undefined);
+}
 
 export async function authState(): Promise<SpotifyAuthState> {
   const cookie = await browser.cookies.get({ url: `${WEB_PLAYER}/`, name: 'sp_dc' }).catch(() => null);
@@ -589,16 +672,20 @@ export async function authState(): Promise<SpotifyAuthState> {
   const { connected } = await prefs();
   const base: SpotifyAuthState = { browserSignedIn, connected, signedIn: false, user: null, problem: null };
   if (!browserSignedIn || !connected) return base;
+  const cookieKey = await cookieKeyOf(cookie!.value);
   try {
     if (!profileCache) {
       const profile = obj(path(await gql('profileAttributes', {}), 'data', 'me', 'profile'));
       profileCache = {
         name: str(profile?.name) ?? str(profile?.username) ?? 'Spotify',
         avatarUrl: sized(path(profile, 'avatar', 'sources'), 64),
+        // Two accounts can share a display name; the username is what tells them apart.
+        ...(str(profile?.username) && { id: str(profile?.username)! }),
       };
+      await remember(cookieKey, profileCache);
     }
     return { ...base, signedIn: true, user: profileCache };
   } catch (error) {
-    return { ...base, problem: error instanceof Error ? error.message : String(error) };
+    return problemState(base, profileCache ?? (await rememberedUser(cookieKey)), error);
   }
 }

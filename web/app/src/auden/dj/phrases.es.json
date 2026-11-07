@@ -1,0 +1,266 @@
+{
+ "greeting_morning": [
+  "Buenos días.",
+  "Buen día. Vamos a arrancar con calma.",
+  "Buenos días. Música para empezar bien el día.",
+  "¡Buenos días! Ya es hora de poner algo.",
+  "Hola, buen día. Déjame ponerte algo para el café.",
+  "Qué onda, buenos días. Vamos con música.",
+  "Buenos días. A ver con qué te despierto.",
+  "Muy buenos días. Aquí estoy, con música para ti."
+ ],
+ "greeting_afternoon": [
+  "Buenas tardes.",
+  "Hola, buenas tardes.",
+  "Buenas tardes. Sigamos con música.",
+  "Qué tal, buenas tardes. Hora de poner algo bueno.",
+  "Buenas tardes. Vamos a darle ritmo a la tarde.",
+  "Hola. Para la tarde, tengo algo preparado.",
+  "Buenas tardes. Me toca ponerte música, y con gusto."
+ ],
+ "greeting_evening": [
+  "Buenas noches.",
+  "Buenas noches. Vamos a ponernos cómodos.",
+  "Hola, buenas noches. Déjame elegir algo.",
+  "Buenas noches. Aquí vamos.",
+  "Qué tal, buenas noches. Ya se siente hora de buena música.",
+  "Buenas noches. Lo que sigue lo elijo yo, tú relájate.",
+  "Hola. Para esta noche, algo bueno."
+ ],
+ "greeting_night": [
+  "Ya es tarde. Vamos con algo tranquilo.",
+  "¿Sigues despierto? Algo para estas horas.",
+  "Noche larga. Hagamos que valga la pena.",
+  "Es una hora tranquila. Pongamos algo.",
+  "Qué horas. Bueno, que la música te haga compañía.",
+  "Aquí seguimos, a estas horas. Va música."
+ ],
+ "relaxed": [
+  "No tengo mucho de eso en tu biblioteca, así que te traigo algo parecido.",
+  "De eso tienes poco guardado, así que lo estiro un poco.",
+  "Eso lo tienes escaso, pero te armo algo en esa línea.",
+  "No alcanza para un set entero de eso, así que me abro un poquito."
+ ],
+ "unrecognized": [
+  "No te entendí del todo, así que elijo yo.",
+  "No estoy seguro de qué pediste, así que te sorprendo.",
+  "Esa no la pude descifrar. Mejor te sorprendo."
+ ],
+ "signoff": [
+  "Te dejo la música. Hasta la próxima.",
+  "Hasta aquí yo. Disfruta lo que queda.",
+  "Me hago a un lado y dejo que suene la música.",
+  "Eso es todo por ahora. Que siga la música."
+ ],
+ "intro_artist_recent": [
+  "Veo que has escuchado mucho a {artist} últimamente, así que sigamos con su música. Empezamos con {opener}.",
+  "{artist} ha estado en repetición este mes, así que va un set suyo. Arranca {opener}.",
+  "Parece que {artist} es lo tuyo estos días. Vámonos con {opener}.",
+  "Este mes has vuelto una y otra vez a {artist}. Pues va más: {opener}.",
+  "Otro rato de {artist}, porque se nota que lo traes en la cabeza. Va {opener}.",
+  "{artist} otra vez, y no me quejo. Empezamos con {opener}.",
+  "Ya que andas en modo {artist}, seguimos con {opener}.",
+  "Eso era {prev}. Y como andas en modo {artist}, ahora va {opener}."
+ ],
+ "intro_artist_always": [
+  "{artist} es de tus artistas de siempre, así que se merece un set. Empezamos con {opener}.",
+  "Siempre vuelves a {artist}. Aquí va lo mejor, empezando con {opener}.",
+  "Hay artistas que nunca se te van, y {artist} es uno. Arrancamos con {opener}.",
+  "Un clásico tuyo: {artist}. Va {opener}.",
+  "Hablando de los de siempre, {artist}. Empieza {opener}.",
+  "{artist}, de los que no fallan en tu lista. Sonando: {opener}.",
+  "Eso fue {prev}. Ahora uno de tus de siempre, {artist}, con {opener}."
+ ],
+ "intro_artist_saved": [
+  "Tienes bastantes canciones de {artist} guardadas, así que les damos su momento. Empezamos con {opener}.",
+  "Un set de {artist}, de lo que tienes guardado. Empieza {opener}.",
+  "Tenías a {artist} guardado ahí, esperando. Hoy le toca. Va {opener}.",
+  "Vamos a sacar a {artist} del cajón. Empezamos con {opener}.",
+  "Algo de {artist}, que lo tienes ahí guardado. Va {opener}.",
+  "Eso fue {prev}. Ahora le toca a {artist}, y empezamos con {opener}."
+ ],
+ "intro_favorites": [
+  "Estas son canciones que repites una y otra vez, como {opener}. Un set de tus favoritas.",
+  "Vamos con lo que más vuelves a poner, empezando con {opener}.",
+  "Tus favoritas, esas que no se cansan. Arranca {opener}.",
+  "Hoy toca lo que más te gusta. Empezamos con {opener}.",
+  "Esto ya te lo sabes de memoria, y sigue gustando. Va {opener}.",
+  "Sin riesgos: tus canciones de siempre. Empieza {opener}.",
+  "Eso fue {prev}. Seguimos con tus favoritas: {opener}."
+ ],
+ "intro_rediscover": [
+  "Hace {ago} que no escuchas estas y antes las ponías mucho. Empezamos con {opener}.",
+  "Llevas {ago} sin escuchar estas, y antes sonaban todo el tiempo. Empezamos con {opener}.",
+  "¿Te acuerdas de estas? Llevas {ago} sin ponerlas. Arranca {opener}.",
+  "Hace {ago} que estas no suenan por aquí. Les toca volver, empezando con {opener}.",
+  "Las tenías olvidadas desde hace {ago}. Va {opener}."
+ ],
+ "intro_rediscover_plain": [
+  "Antes ponías mucho estas canciones y hace tiempo que no suenan. Empezamos con {opener}.",
+  "Canciones que se quedaron guardadas en el tiempo. Va {opener}.",
+  "¿Te acuerdas de estas? Hace mucho que no suenan. Arranca {opener}.",
+  "Desempolvemos algo. Empieza {opener}.",
+  "Eso fue {prev}. Y ahora algo que tenías olvidado: {opener}."
+ ],
+ "intro_fresh": [
+  "Acabas de añadir estas a tu biblioteca y todavía no las has escuchado mucho, así que empezamos con {opener}.",
+  "Algunas de tus últimas incorporaciones, empezando con {opener}.",
+  "Música recién llegada a tu biblioteca. Va {opener}.",
+  "Esto es lo último que guardaste. Veamos cómo suena: {opener}.",
+  "Cosas nuevas tuyas, todavía con olor a nuevo. Empieza {opener}."
+ ],
+ "intro_discover": [
+  "Escuchas mucho a {seed}, así que te traigo algo nuevo en esa línea, empezando con {opener}.",
+  "Esto es nuevo para ti, pero va con {seed}, que escuchas bastante. Empezamos con {opener}.",
+  "Si te gusta {seed}, a lo mejor esto también. Va {opener}.",
+  "Algo que no has escuchado todavía, cerca de {seed}. Arranca {opener}.",
+  "Te cuelo algo nuevo, en la onda de {seed}. Empieza {opener}.",
+  "Salgamos un poco de lo conocido, pero sin alejarnos de {seed}. Va {opener}.",
+  "Eso fue {prev}. Y ahora algo nuevo, cerca de {seed}: {opener}."
+ ],
+ "intro_discover_plain": [
+  "Algo nuevo para ti, cerca de lo que ya escuchas. Empezamos con {opener}.",
+  "Te traigo algo que no has escuchado. Va {opener}.",
+  "Un poco de aire fresco, no muy lejos de tu gusto. Arranca {opener}.",
+  "A ver qué te parece esto: {opener}.",
+  "Eso fue {prev}. Ahora, algo que no conoces todavía: {opener}."
+ ],
+ "intro_playlist": [
+  "Saquemos algo de tu playlist {playlist}, empezando con {opener}.",
+  "Tu playlist {playlist} se merece un rato. Empezamos con {opener}.",
+  "De {playlist}, tu playlist, va un poco. Empieza {opener}.",
+  "Hoy toca visitar {playlist}. Arranca {opener}.",
+  "Eso fue {prev}. Ahora un poco de {playlist}, con {opener}."
+ ],
+ "intro_mood_focus": [
+  "{moment_cap} pide algo constante para concentrarse, así que empezamos con {opener}.",
+  "Para {moment}, música que no estorbe: {opener}.",
+  "Para concentrarte {moment}, algo que se quede de fondo. Va {opener}.",
+  "Sin distracciones. Música para enfocarse, empezando con {opener}.",
+  "A trabajar con calma. Arranca {opener}."
+ ],
+ "intro_mood_chill": [
+  "{moment_cap} pide algo tranquilo, así que bajemos el ritmo con {opener}.",
+  "Para {moment}, algo suave. Empezamos con {opener}.",
+  "Sin prisa. Algo tranquilo para {moment}: {opener}.",
+  "Vamos bajando las revoluciones. Empieza {opener}.",
+  "Un poco de calma, que {moment} se la merece. Va {opener}.",
+  "Eso fue {prev}. Ahora bajemos el ritmo con {opener}."
+ ],
+ "intro_mood_energy": [
+  "{moment_cap} pide algo de energía, así que subamos el ritmo con {opener}.",
+  "Para {moment}, algo con más ritmo. Empezamos con {opener}.",
+  "Es hora de moverse. Arranca {opener}.",
+  "Súbele un poco, que {moment} lo pide. Va {opener}.",
+  "Con ganas: {opener}.",
+  "Eso fue {prev}. Ahora, más energía: {opener}."
+ ],
+ "intro_mood_acoustic": [
+  "{moment_cap} va bien con algo más desnudo, así que algo acústico, empezando con {opener}.",
+  "Para {moment}, algo acústico. Empezamos con {opener}.",
+  "Guitarra, voz y nada más. Arranca {opener}.",
+  "Algo sin adornos, solo la canción. Va {opener}."
+ ],
+ "intro_request_match": [
+  "Pediste {what}, así que este set va justo de eso. Empezamos con {opener}.",
+  "{what_cap}: aquí tienes un set así, empezando con {opener}.",
+  "Eso que pediste, {what}, ya viene. Va {opener}.",
+  "Va {what}, como pediste. Arranca {opener}.",
+  "Tomo nota: {what}. Empieza {opener}.",
+  "Marchando {what}. Va {opener}."
+ ],
+ "intro_search": [
+  "Con lo que pediste, {what}, me puse a buscar. Arranca {opener}.",
+  "Va lo tuyo: {what}. Empezamos con {opener}.",
+  "Para {what}, empiezo con {opener}.",
+  "Pediste {what}. Esto fue lo que encontré, y va así: {opener}.",
+  "{what}. Vamos con {opener}.",
+  "Aquí va {what}, empezando con {opener}.",
+  "Buena petición. Para {what}, primero {opener}.",
+  "Pediste {what}, y lo armé con lo que escuchas, {taste}. Arranca {opener}.",
+  "Para {what} me fui por tu lado, {taste}. Empezamos con {opener}.",
+  "{what}, pero a tu manera: {taste}. Va {opener}.",
+  "Buscando {what} entre lo tuyo, {taste}. Primero, {opener}.",
+  "Eso de {what}, con el sabor de lo que sueles escuchar: {taste}. Va {opener}."
+ ],
+ "intro_theme": [
+  "Vamos con {what}, empezando con {opener}.",
+  "Toca {what}. Arranca {opener}.",
+  "Ahora, {what}. Empieza {opener}.",
+  "Un set de {what}. Va {opener}.",
+  "Cambiamos de aire: {what}. Va {opener}.",
+  "Eso fue {prev}. Ahora, {what}, empezando con {opener}."
+ ],
+ "what_artist": [
+  "música de {artist}",
+  "lo de {artist}"
+ ],
+ "what_decade": [
+  "música de {decade}",
+  "lo de {decade}"
+ ],
+ "what_genre": [
+  "algo de {genre}"
+ ],
+ "what_album": [
+  "{album}, de {artist}"
+ ],
+ "what_favorites": [
+  "tus favoritas"
+ ],
+ "what_fresh": [
+  "algo nuevo"
+ ],
+ "what_rediscover": [
+  "algo que tenías olvidado"
+ ],
+ "mood_word_focus": [
+  "algo para concentrarte"
+ ],
+ "mood_word_chill": [
+  "algo tranquilo"
+ ],
+ "mood_word_energy": [
+  "algo con energía"
+ ],
+ "mood_word_acoustic": [
+  "algo acústico"
+ ],
+ "ago_months": [
+  "{n} meses"
+ ],
+ "ago_year": [
+  "más de un año"
+ ],
+ "by_artist": [
+  "{title}, de {artist}",
+  "{title}, la de {artist}"
+ ],
+ "note_repeat": [
+  "{title} es de las que más has repetido este mes: {n} veces.",
+  "Ojo con {title}: la has puesto {n} veces este mes.",
+  "{n} veces este mes con {title}. Algo tiene."
+ ],
+ "note_playlist": [
+  "{title} viene de tu playlist {playlist}.",
+  "{title}, directo de {playlist}.",
+  "Esta salió de tu playlist {playlist}: {title}."
+ ],
+ "note_album_year": [
+  "{title} es del álbum {album}, de {year}.",
+  "{title}, de {year}, del disco {album}.",
+  "Del álbum {album}, {year}: {title}."
+ ],
+ "moment_morning": [
+  "esta mañana"
+ ],
+ "moment_afternoon": [
+  "esta tarde"
+ ],
+ "moment_evening": [
+  "esta noche"
+ ],
+ "moment_night": [
+  "esta noche"
+ ]
+}

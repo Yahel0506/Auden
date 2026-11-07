@@ -1,0 +1,193 @@
+{
+    "app": "auden",
+    "version": 2,
+    "versionName": "web",
+    "exportedAt": "2026-11-05T21:40:02.118Z",
+    "settings": {},
+    "listening": [
+        {
+            "version": 2,
+            "month": "2026-11",
+            "tracks": [
+                {
+                    "id": "dQw4w9WgXcQ",
+                    "title": "Never Gonna Give You Up",
+                    "artist": "Rick Astley",
+                    "album": "Whenever You Need Somebody",
+                    "albumId": "MPREb_abc",
+                    "artistId": "UCuAXFkgsw1L7xaCfnd5JJOw",
+                    "art": "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+                    "ms": 213000,
+                    "plays": 1,
+                    "last": 1762377600000,
+                    "days": {
+                        "2026-11-05": {
+                            "ms": 213000,
+                            "plays": 1
+                        }
+                    }
+                }
+            ],
+            "artists": [
+                {
+                    "name": "Rick Astley",
+                    "sub": null,
+                    "art": null,
+                    "id": "UCuAXFkgsw1L7xaCfnd5JJOw",
+                    "ms": 213000,
+                    "plays": 1,
+                    "key": null,
+                    "days": {
+                        "2026-11-05": {
+                            "ms": 213000,
+                            "plays": 1
+                        }
+                    }
+                }
+            ],
+            "albums": [],
+            "hours": [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                213000,
+                0,
+                0
+            ],
+            "days": {
+                "5": 213000
+            },
+            "trackDays": {
+                "2026-11-05": {
+                    "ms": 213000,
+                    "plays": 1
+                }
+            },
+            "artistDays": {
+                "2026-11-05": {
+                    "ms": 213000,
+                    "plays": 1
+                }
+            },
+            "albumDays": {}
+        }
+    ],
+    "library": {
+        "tracks": [
+            {
+                "id": 1,
+                "videoId": "dQw4w9WgXcQ",
+                "spotifyId": null,
+                "isrc": null,
+                "localUri": null,
+                "path": null,
+                "title": "Never Gonna Give You Up",
+                "artist": "Rick Astley",
+                "artistId": "UCuAXFkgsw1L7xaCfnd5JJOw",
+                "album": "Whenever You Need Somebody",
+                "albumId": "MPREb_abc",
+                "thumbnailUrl": "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
+                "durationMs": 213000,
+                "durationText": "3:33",
+                "trackNumber": 1,
+                "discNumber": 1,
+                "albumArtist": "Rick Astley",
+                "genre": null,
+                "year": 1987,
+                "folder": null,
+                "sizeBytes": null,
+                "modifiedAt": null,
+                "isVideo": false,
+                "origin": "YTM",
+                "addedAt": 1762300000000,
+                "identStatus": null,
+                "identSource": null,
+                "suggestedVideoId": null,
+                "suggestedTitle": null,
+                "suggestedArtist": null,
+                "identifiedAt": null
+            },
+            {
+                "id": 2,
+                "videoId": null,
+                "spotifyId": null,
+                "isrc": null,
+                "localUri": "auden-file://root-1/Music/Some Artist/Song from file.mp3",
+                "path": null,
+                "title": "Song from file",
+                "artist": "Some Artist",
+                "artistId": null,
+                "album": null,
+                "albumId": null,
+                "thumbnailUrl": null,
+                "durationMs": 201500,
+                "durationText": null,
+                "trackNumber": null,
+                "discNumber": null,
+                "albumArtist": null,
+                "genre": null,
+                "year": null,
+                "folder": "Music/Some Artist",
+                "sizeBytes": 4821033,
+                "modifiedAt": 1729990000000,
+                "isVideo": false,
+                "origin": "LOCAL",
+                "addedAt": 1762300100000,
+                "identStatus": null,
+                "identSource": null,
+                "suggestedVideoId": null,
+                "suggestedTitle": null,
+                "suggestedArtist": null,
+                "identifiedAt": null
+            }
+        ],
+        "playlists": [
+            {
+                "id": "sp_local_1762074000000",
+                "title": "Web picks",
+                "createdAt": 1762074000000,
+                "updatedAt": 1762300200000,
+                "pinned": false,
+                "sourceId": null,
+                "coverUrl": null
+            }
+        ],
+        "entries": [
+            {
+                "entryId": 1,
+                "playlistId": "sp_local_1762074000000",
+                "trackId": 1,
+                "position": 0
+            },
+            {
+                "entryId": 2,
+                "playlistId": "sp_local_1762074000000",
+                "trackId": 2,
+                "position": 1
+            }
+        ],
+        "lyricsVariants": [],
+        "lyricsPrefs": [],
+        "spotifyMatches": []
+    },
+    "origin": "web",
+    "settingsCapturedAt": "2026-11-01T08:00:00.000Z"
+}

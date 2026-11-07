@@ -169,6 +169,45 @@ object QueueShuffle {
     }
 
     /**
+     * A shuffled queue arrived from another device (Auden Connect: a takeover, or the phone mirroring one).
+     * [items] are the rows now in the player, in queue order; [order] is the unshuffled order the sender sent,
+     * as videoIds. Remembering it as the canonical context is what lets turning shuffle off here land on the
+     * same list as everywhere else. Without an order only the flag follows. Nothing is persisted.
+     */
+    fun adoptShared(items: List<MediaItem>, order: List<String>?) {
+        if (order == null || items.isEmpty()) {
+            original = emptyList()
+            clearCanonicalContext()
+            _enabled.value = true
+            return
+        }
+        val ranks = com.music.bitchord.data.connect.ConnectShuffleOrder.ranks(items.map { it.mediaId }, order)
+        val ordered = arrayOfNulls<MediaItem>(items.size)
+        items.forEachIndexed { i, item -> ordered[ranks[i]] = item }
+        val inOrder = ordered.filterNotNull()
+        setCanonicalContext(inOrder)
+        original = inOrder.map { it.key() }
+        _enabled.value = true
+    }
+
+    /** The sender's queue is not shuffled: forget any remembered order, the queue is already the list. */
+    fun adoptUnshuffled() {
+        original = emptyList()
+        clearCanonicalContext()
+        _enabled.value = false
+    }
+
+    /**
+     * The unshuffled order of [window] (the videoIds being published, in queue order) for the other devices, or
+     * null when none is remembered (a shuffle that was carried in without one).
+     */
+    internal fun sharedOrder(player: Player, window: List<String>): List<String>? {
+        if (!_enabled.value) return null
+        val rows = player.queueItems().map { com.music.bitchord.data.connect.ConnectShuffleOrder.Row(it.key(), it.mediaId) }
+        return com.music.bitchord.data.connect.ConnectShuffleOrder.publish(original, rows, window)
+    }
+
+    /**
      * Turns shuffle on without touching the current queue — for the Shuffle
      * button on an album or playlist page, where the queue it applies to is the
      * one about to replace this one. [playSongs] builds that one shuffled.

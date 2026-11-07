@@ -6,6 +6,7 @@ import {
   useQuery,
   type InfiniteData,
 } from '@tanstack/react-query';
+import { isSyntheticId } from '@/playback/source';
 import { useEffect, useState } from 'react';
 import type { DetectedExtension } from '@bitchord/shared/bridge';
 import { extensionQueryKey, useExtension } from '@/extension/useExtension';
@@ -204,7 +205,8 @@ export function useLikeStatus(videoId: string | null) {
   return useQuery({
     queryKey: likeKey(videoId ?? ''),
     queryFn: () => fetchLikeStatus(videoId!),
-    enabled: signedIn && !!videoId,
+    // A local file or DJ clip has a synthetic id: YouTube has never heard of it.
+    enabled: signedIn && !!videoId && !isSyntheticId(videoId),
     staleTime: 5 * 60_000,
   });
 }

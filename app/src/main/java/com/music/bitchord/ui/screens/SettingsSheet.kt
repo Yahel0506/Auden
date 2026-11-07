@@ -250,6 +250,7 @@ fun SettingsScreen(
     val spatialAudio by AppSettings.spatialAudio.collectAsStateWithLifecycle()
     val nerdStats by AppSettings.showNerdStats.collectAsStateWithLifecycle()
     val listenTogetherButton by AppSettings.showListenTogetherButton.collectAsStateWithLifecycle()
+    val connectEnabled by AppSettings.connectEnabled.collectAsStateWithLifecycle()
     val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val disableBlendEffects by AppSettings.disableBlendEffects.collectAsStateWithLifecycle()
@@ -1916,6 +1917,21 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setShowListenTogetherButton(!listenTogetherButton) },
+                )
+            }
+            val connectTitle = stringResource(R.string.connect_enabled)
+            row(connectTitle, "connect", "devices", "other devices", "transfer", "handoff", "remote", "player") {
+                SettingsRow(
+                    icon = SfIcons.PlayCircle,
+                    title = connectTitle,
+                    subtitle = stringResource(R.string.connect_enabled_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = connectEnabled,
+                            onCheckedChange = AppSettings::setConnectEnabled,
+                        )
+                    },
+                    onClick = { AppSettings.setConnectEnabled(!connectEnabled) },
                 )
             }
             val hideStatusBarTitle = stringResource(R.string.hide_status_bar_in_player)

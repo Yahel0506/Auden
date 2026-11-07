@@ -49,5 +49,15 @@ jobs:
         run: pnpm test
 
       # The app's build runs tsc then vite; the extension's builds Chrome and Firefox.
+      # vite build refuses to run without the Listen Together server URL; any
+      # well-formed value does for a CI build (it is only baked into the bundle).
       - name: Build
         run: pnpm build
+        env:
+          VITE_PARTY_SERVER_URL: https://example.invalid
+
+      # What Cloudflare Pages runs: package the extension zips, then build the site.
+      - name: Build the site (as deployed)
+        run: pnpm build:site
+        env:
+          VITE_PARTY_SERVER_URL: https://example.invalid

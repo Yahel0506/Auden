@@ -53,7 +53,7 @@ con consultas. Por eso la base de datos va primero.
 - Tablas iniciales:
   - `track` (id interno, `videoId?`, `spotifyId?`, `isrc?`, `localUri?`, ruta,
     hash/fingerprint, título, artistas, álbum, duración, número de pista,
-    origen: `YTM | LOCAL | DOWNLOAD | SPOTIFY_MAP`)
+    origen: `YTM | LOCAL | DOWNLOAD | SPOTIFY`)
   - `album`, `artist` y `track_artist` (N:M)
   - `playlist`, `playlist_entry` (orden estable, `entryId` propio)
   - `lyrics_variant` (ver Fase 3)

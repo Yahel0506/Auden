@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import type { DetectedExtension, SpotifyAuthState } from '@bitchord/shared/bridge';
+import { accountKeyOf, reconcileLibraryCache } from '@/data/spotify/libraryCache';
 import { queryClient } from '@/lib/queryClient';
 import { extensionQueryKey, useExtension } from './useExtension';
 
@@ -20,11 +21,28 @@ function detected(): DetectedExtension | null {
 
 const supported = (extension: DetectedExtension | null) => !!extension?.info.capabilities.includes('spotify');
 
+/** An older extension has no album/artist methods; the library page offers those tabs only when it has. */
+export const supportsSpotifyLibrary = (extension: DetectedExtension | null) => !!extension?.info.capabilities.includes('spotify.library');
+
+/** A throttle or a dropped connection: the account is still there, only this reading failed. */
+export const isTransientProblem = (state: SpotifyAuthState): boolean =>
+  state.browserSignedIn && state.connected && (state.problemKind === 'network' || state.problemKind === 'rate_limited');
+
+/** Test seam: what the extension's push and a successful read both do. */
+export const adoptForTest = (state: SpotifyAuthState): void => adopt(state);
+
 function adopt(state: SpotifyAuthState): void {
   const before = queryClient.getQueryData<SpotifyAuthState>(spotifyAuthQueryKey);
+  // A reading that failed for a passing reason says nothing about the account (an older extension reports it as
+  // signed out): keep the account that was read, note the problem, and leave every list where it is.
+  if (before?.signedIn && isTransientProblem(state) && !state.signedIn) {
+    queryClient.setQueryData(spotifyAuthQueryKey, { ...before, problem: state.problem, problemKind: state.problemKind });
+    return;
+  }
   queryClient.setQueryData(spotifyAuthQueryKey, state);
+  reconcileLibraryCache(state);
   // Another account, or none: every list read as the old one goes.
-  if (before && (before.signedIn !== state.signedIn || before.user?.name !== state.user?.name)) {
+  if (before && (before.signedIn !== state.signedIn || accountKeyOf(before) !== accountKeyOf(state))) {
     void queryClient.resetQueries({ queryKey: ['spotify', 'data'] });
   }
 }

@@ -1,6 +1,7 @@
+import { useHomeSettings } from '@/auden/home/settings';
 import { PrefetchLink } from '@/components/PrefetchLink';
 import { PlayIcon } from '@/components/icons/Transport';
-import type { MusicItem } from '@/data/music/types';
+import type { MusicItem, Track } from '@/data/music/types';
 import { Artwork } from './Artwork';
 import { ExplicitBadge } from './ExplicitBadge';
 import { artistHref, hrefFor } from './links';
@@ -110,9 +111,11 @@ export function SquareLockup({ item, width = 220 }: { item: MusicItem; width?: n
 
 /** 16:9 video lockup (report §2, type C). */
 export function VideoLockup({ item, width = 300 }: { item: MusicItem; width?: number }) {
+  // Square wherever videos show, when the listener asks (Settings > Home); a square at 300px would be tall, so it takes the square size.
+  const square = useHomeSettings((s) => s.squareVideoThumbnails);
   return (
     <div className={lockup}>
-      <LockupArtwork item={item} width={width} aspect={16 / 9} />
+      <LockupArtwork item={item} width={square ? Math.min(width, 220) : width} aspect={square ? 1 : 16 / 9} />
       <div className={caption}>
         <div className={title}>
           <span>{item.title}</span>
@@ -135,7 +138,8 @@ export function CircleLockup({ item, width = 160 }: { item: MusicItem; width?: n
 }
 
 /** A song row inside a shelf (report §2, track lockup): 40px art, title, byline. */
-export function TrackLockup({ item, onPlay }: { item: MusicItem; onPlay?: () => void }) {
+/** [track] is the real track when the caller has one: the menu must see its `source` and synthetic id, which a MusicItem cannot carry. */
+export function TrackLockup({ item, onPlay, track }: { item: MusicItem; onPlay?: () => void; track?: Track }) {
   const play = onPlay ?? (() => playTrack(item));
   return (
     // 52px art column (40 + 12 gap), content, menu; 55px tall.
@@ -165,7 +169,7 @@ export function TrackLockup({ item, onPlay }: { item: MusicItem; onPlay?: () => 
           always reserved so the title doesn't jump when it appears. */}
       {isPlayable(item) && (
         <TrackMenu
-          track={toTrack(item)}
+          track={track ?? toTrack(item)}
           className="grid size-7 place-items-center rounded-full text-key opacity-0 transition-opacity duration-100 ease-in group-hover/track:opacity-100 focus-visible:opacity-100 hover:bg-quinary data-open:opacity-100"
         />
       )}

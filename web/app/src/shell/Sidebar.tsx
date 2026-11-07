@@ -16,6 +16,7 @@ import {
 } from '@/components/icons/NavIcons';
 import { hrefFor } from '@/components/music/links';
 import { config } from '@/config';
+import { useOfflineSettings } from '@/auden/offline/settings';
 import { LIBRARY_SECTIONS, type LibrarySection } from '@/data/music/library';
 import { useLibraryPlaylists, useSignedIn } from '@/data/music/queries';
 import { useSpotifyPlaylists } from '@/data/spotify/queries';
@@ -23,6 +24,7 @@ import { useExtensionUpdate } from '@/extension/useExtensionUpdate';
 import { useSpotifySignedIn } from '@/extension/useSpotifyAuth';
 import { useUi } from '@/state/ui';
 import { AccountButton } from './AccountButton';
+import { useLocalPlaylists } from '@/auden/playlists/store';
 
 interface NavItem {
   to: string;
@@ -44,11 +46,41 @@ const LIBRARY_ICONS: Record<Exclude<LibrarySection, 'playlists'>, NavItem['Icon'
   'made-for-you': MadeForYouIcon,
 };
 
-const LIBRARY: NavItem[] = (Object.keys(LIBRARY_ICONS) as (keyof typeof LIBRARY_ICONS)[]).map((section) => ({
-  to: `/library/${section}`,
-  label: LIBRARY_SECTIONS[section].title,
-  Icon: LIBRARY_ICONS[section],
-}));
+// Songs from the user's own folders: no account needed, so it is also shown signed out.
+/** The playlists kept on this device, under "On This Device" for everyone. */
+function LocalPlaylistNav({ onNavigate }: { onNavigate: () => void }) {
+  const lists = useLocalPlaylists();
+  if (!lists.data?.length) return null;
+  return (
+    <ul className={list} aria-label="Playlists on this device">
+      {lists.data.map(({ playlist }) => (
+        <li key={playlist.id}>
+          <PrefetchNavLink to={`/local/playlist/${encodeURIComponent(playlist.id)}`} className={item} onClick={onNavigate}>
+            <span className={navLabel + ' ps-8'}>{playlist.title}</span>
+          </PrefetchNavLink>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const ON_DEVICE: NavItem = { to: '/local', label: 'On This Device', Icon: SongsIcon };
+const OFFLINE: NavItem = { to: '/offline', label: 'Offline', Icon: SongsIcon };
+
+/** The offline manager's row, once the listener has switched offline copies on (Settings › Offline copies). */
+function OfflineNav({ onNavigate }: { onNavigate: () => void }) {
+  const enabled = useOfflineSettings((s) => s.enabled);
+  return enabled ? <NavList items={[OFFLINE]} onNavigate={onNavigate} /> : null;
+}
+
+const LIBRARY: NavItem[] = [
+  ...(Object.keys(LIBRARY_ICONS) as (keyof typeof LIBRARY_ICONS)[]).map((section) => ({
+    to: `/library/${section}`,
+    label: LIBRARY_SECTIONS[section].title,
+    Icon: LIBRARY_ICONS[section],
+  })),
+  ON_DEVICE,
+];
 
 // A sidebar row; NavLink sets aria-current on the page's own row.
 const item =
@@ -82,6 +114,8 @@ function LibraryNav({ onNavigate }: { onNavigate: () => void }) {
     <>
       <h2 className={sectionHeader}>Library</h2>
       <NavList items={LIBRARY} onNavigate={onNavigate} />
+      <LocalPlaylistNav onNavigate={onNavigate} />
+      <OfflineNav onNavigate={onNavigate} />
       <h2 className={sectionHeader}>Playlists</h2>
       <ul className={list}>
         <li>
@@ -151,15 +185,24 @@ export function Sidebar() {
         aria-label="Main"
       >
         <div className="mt-2 ml-2 flex h-18 items-center px-5">
-          <PrefetchLink to="/home" className="inline-flex items-center gap-2 rounded-[6px]" aria-label="BitChord, Home" onClick={close}>
+          <PrefetchLink to="/home" className="inline-flex items-center gap-2 rounded-[6px]" aria-label="Auden, Home" onClick={close}>
             {/* White on dark, as Apple's own wordmark; it follows the label colour so it stays visible in light. */}
             <LogoMark size={22} className="text-primary" />
-            <span className="type-[700_19px/24px] tracking-[-0.01em]">BitChord</span>
+            <span className="type-[700_19px/24px] tracking-[-0.01em]">Auden</span>
           </PrefetchLink>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto pr-3 pl-5 [scrollbar-width:none]">
           <NavList items={PRIMARY} onNavigate={close} />
-          {signedIn && <LibraryNav onNavigate={close} />}
+          {signedIn ? (
+            <LibraryNav onNavigate={close} />
+          ) : (
+            <>
+              <h2 className={sectionHeader}>Library</h2>
+              <NavList items={[ON_DEVICE]} onNavigate={close} />
+              <LocalPlaylistNav onNavigate={close} />
+              <OfflineNav onNavigate={close} />
+            </>
+          )}
           {spotifySignedIn && <SpotifyNav onNavigate={close} />}
         </div>
         <div className="flex flex-col gap-2 pt-3 pr-3 pb-5 pl-5">
@@ -168,7 +211,7 @@ export function Sidebar() {
             <span className={icon}>
               <MdOutlineExtension size={18} />
             </span>
-            <span className={navLabel}>BitChord Extension</span>
+            <span className={navLabel}>Auden Extension</span>
             {update.state === 'available' && (
               <span className="ml-auto rounded-[10px] bg-key px-[7px] py-0.5 type-subhead-emphasized text-white" title={`Version ${update.latest.version} is available`}>
                 Update

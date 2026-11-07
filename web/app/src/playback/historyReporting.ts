@@ -5,7 +5,7 @@ import { getBridge } from '@/extension/bridge';
 import { extensionQueryKey } from '@/extension/useExtension';
 import { ensureYtAuth } from '@/extension/useYtAuth';
 import { queryClient } from '@/lib/queryClient';
-import { getAudio, onTrackEnded, usePlayer } from '@/state/player';
+import { getAudio, isMirrored, onTrackEnded, usePlayer } from '@/state/player';
 import { getSignedInnertube } from './youtube/innertube';
 import { trackLog } from './trackLog';
 
@@ -198,15 +198,19 @@ function close(): void {
 function sample(): void {
   const { nowPlaying, status } = usePlayer.getState();
   const videoId = nowPlaying?.videoId ?? null;
+  // A song that plays on another device (Auden Connect's mirror) is not played here: what was heard here is closed, nothing opens.
+  if (isMirrored()) return close();
   if (session && session.videoId !== videoId) close();
   if (!videoId || status !== 'playing') return;
+  // A local file or a DJ clip is not a YouTube play (`shareable` is absent only in tests).
+  if (nowPlaying?.shareable === false) return;
 
   if (!session) {
     if (opening === videoId || !VIDEO_ID.test(videoId)) return;
     if (!useHistorySettings.getState().share || !extensionSupportsStats()) return;
     opening = videoId;
     void ensureYtAuth()
-      .then((auth) => (auth.signedIn ? open(videoId) : undefined))
+      .then((auth) => (auth.signedIn && !isMirrored() ? open(videoId) : undefined))
       .catch(() => undefined)
       .finally(() => {
         if (opening === videoId) opening = null;

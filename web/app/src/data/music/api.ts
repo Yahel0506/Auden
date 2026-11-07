@@ -383,6 +383,27 @@ export async function fetchTrackLinks(videoId: string): Promise<Track | null> {
 }
 
 /**
+ * The catalogue song a music video stands for ("Prefer music-only version",
+ * playback/musicOnly.ts): the song (ATV) cut of the watch-queue row holding
+ * [videoId]. Null when [videoId] is itself the song, or its row has no song.
+ */
+export async function audioVersionOf(videoId: string): Promise<Track | null> {
+  const yt = await getMusicClient();
+  const panel = await yt.music.getUpNext(videoId, false);
+  return audioCutIn(panel.contents as unknown[], videoId);
+}
+
+/** [audioVersionOf]'s choice among a watch queue's rows (pure, for tests). */
+export function audioCutIn(rows: readonly unknown[], videoId: string): Track | null {
+  const row = (rows as Raw[]).find((raw) => panelCuts(raw).some((cut) => cut.video_id === videoId));
+  if (!row) return null;
+  const cuts = panelCuts(row);
+  if (!isMusicVideo(cuts.find((cut) => cut.video_id === videoId)!)) return null;
+  const song = panelCandidate(row, false);
+  return song && !song.isVideo && song.track.videoId !== videoId ? song.track : null;
+}
+
+/**
  * The page of the artist called exactly [name] (YtMusicRepository.findArtistPageId):
  * a name is not an identity, so only a result that answers to it exactly is
  * opened, never the nearest one.

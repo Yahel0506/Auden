@@ -1,3 +1,4 @@
+import { heroFadeOverlay } from '@/lib/heroFade';
 import { useMemo, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router';
 import { PlayIcon } from '@/components/icons/Transport';
@@ -95,7 +96,9 @@ export default function ArtistPage() {
         </div>
         {/* The image melts into the page at the bottom (Apple's masked blur frame), into Apple's colour when the page is tinted with it. */}
         <div
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,transparent_45%,color-mix(in_srgb,var(--page-tint,var(--pageBG))_70%,transparent)_80%,var(--page-tint,var(--pageBG))_100%)]"
+          className="pointer-events-none absolute inset-0"
+          // Along Android's HeroFade curve (smootherstep over the bottom 52%) rather than a straight ramp.
+          style={{ backgroundImage: heroFadeOverlay('var(--page-tint,var(--pageBG))') }}
           aria-hidden="true"
         />
         <div className="absolute inset-x-0 bottom-6 flex flex-col items-center gap-1.5 px-(--body-gutter) text-center">

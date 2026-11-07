@@ -10,13 +10,13 @@
 export const BRIDGE_PROTOCOL = 1;
 
 /** Tags every window message so the relay ignores everything else on the page. */
-export const BRIDGE_CHANNEL = 'bitchord-bridge';
+export const BRIDGE_CHANNEL = 'auden-bridge';
 
 /** The long-lived port the extension pushes `BridgeEvent`s on. */
-export const EVENTS_PORT = 'bitchord-events';
+export const EVENTS_PORT = 'auden-events';
 
 /** What the installed extension can do; `ping` reports it. */
-export type Capability = 'yt' | 'yt.auth' | 'yt.stats' | 'addon' | 'lyrics' | 'spotify' | 'discord';
+export type Capability = 'yt' | 'yt.auth' | 'yt.stats' | 'addon' | 'lyrics' | 'spotify' | 'spotify.library' | 'discord';
 
 export type BrowserFamily = 'chromium' | 'firefox';
 
@@ -87,16 +87,40 @@ export interface SpotifyAuthState {
   connected: boolean;
   /** A token was minted for the account: library, playlists and canvas will work. */
   signedIn: boolean;
-  user: { name: string; avatarUrl: string | null } | null;
+  /** `id` is the account's stable Spotify username; absent from an older extension, so fall back to the name. */
+  user: { name: string; avatarUrl: string | null; id?: string } | null;
   /** Signed in to the browser but no token came back: what went wrong, for display. */
   problem: string | null;
+  /**
+   * What kind of problem it is, when there is one. A `network` or `rate_limited` one is passing: the
+   * account is still connected, and nothing already loaded should be thrown away over it.
+   */
+  problemKind?: SpotifyErrorKind;
 }
+
+/** How a Spotify call failed (Android's SpotifyException kinds). */
+export type SpotifyErrorKind = 'signed_out' | 'expired' | 'rate_limited' | 'network' | 'unknown';
 
 /** A playlist in the Spotify library; `id` is `liked` for Liked Songs. */
 export interface SpotifyPlaylist {
   id: string;
   name: string;
   owner: string | null;
+  imageUrl: string | null;
+}
+
+/** A saved album in the Spotify library. */
+export interface SpotifyAlbum {
+  id: string;
+  name: string;
+  artist: string | null;
+  imageUrl: string | null;
+}
+
+/** A followed artist. */
+export interface SpotifyArtist {
+  id: string;
+  name: string;
   imageUrl: string | null;
 }
 
@@ -211,6 +235,10 @@ export interface BridgeMethods {
     params: { playlistId: string };
     result: { name: string; owner: string | null; imageUrl: string | null; total: number };
   };
+  /** The saved albums, 50 at a time (needs the `spotify.library` capability). */
+  'spotify.albums': { params: { offset: number }; result: SpotifyPage<SpotifyAlbum> };
+  /** The followed artists, 50 at a time (needs the `spotify.library` capability). */
+  'spotify.artists': { params: { offset: number }; result: SpotifyPage<SpotifyArtist> };
   'spotify.searchTracks': { params: { query: string }; result: SpotifyTrack[] };
   /** The track's looping canvas video, or null when it has none. */
   'spotify.canvas': { params: { trackId: string }; result: { url: string | null } };
@@ -252,6 +280,11 @@ export type BridgeErrorCode =
 export interface BridgeError {
   code: BridgeErrorCode;
   message: string;
+  /**
+   * More than `code` says, added without a protocol bump: an older page reads only `code` and `message`
+   * and an older extension sends none. `retryAfterSec` is Spotify's own Retry-After, when it gave one.
+   */
+  detail?: { kind: SpotifyErrorKind; retryAfterSec?: number };
 }
 
 export type BridgeResponse<M extends BridgeMethod = BridgeMethod> = {

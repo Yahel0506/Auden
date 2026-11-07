@@ -1484,6 +1484,23 @@ object ListenTogether {
         )
     }
 
+    /**
+     * The account's room for Auden Connect: the same hash [identity] calls userId, so Listen Together and
+     * Connect (and the web player, which hashes the same string) agree on who is one account. Null when
+     * signed out. Like the party's, it is an unverified identifier, not a credential.
+     */
+    fun accountRoomId(): String? {
+        val store = BitChordApplication.authStore
+        if (!store.isSignedIn) return null
+        val account = store.activeSession ?: return null
+        val profile = account.profiles.firstOrNull { it.profileId == account.activeProfileId }
+            ?: account.profiles.firstOrNull()
+        return sha256("${account.accountId}:${profile?.profileId.orEmpty()}").take(32)
+    }
+
+    /** This install's id, the one Listen Together counts devices by; Connect lists devices under it too. */
+    fun installDeviceId(): String = deviceId()
+
     // ------------------------------------------------------- recent kicks --
 
     /**

@@ -64,8 +64,12 @@ export const IN_REGION_SEC = IN_SEARCH_SEC + 40;
 const HANDOVER_SEC = 0.025;
 const BASS_CUT_DB = -18;
 
-/** Where a song is sung, in its own seconds, from its synced lyrics. */
-export type SungSpans = [number, number][];
+/**
+ * Where a song is sung, in its own seconds, from its synced lyrics: [start, end, certainUntil]. `certainUntil` is how
+ * much of the span the lyrics vouch for: all of it (the default) for a line with a stated end, only the line's first
+ * OPEN_LINE_CERTAIN_SEC for one timed by its start alone, whose end is a guess (Android LoopMix.Span).
+ */
+export type SungSpans = [start: number, end: number, certainUntil?: number][];
 
 export interface LoopPick {
   key: string;
@@ -78,8 +82,8 @@ export interface LoopPick {
   bpm: number;
   /** Share of the loop that is sung (0-1); 0 when the lyrics vouch for it; null when nothing measured it. */
   vocal: number | null;
-  /** What said the loop is instrumental: the synced lyrics, or the vocal mask. */
-  checkedBy: 'lyrics' | 'mask';
+  /** What said the loop is instrumental: the synced lyrics, the vocal mask, or the lyrics with the mask past an open line. */
+  checkedBy: 'lyrics' | 'mask' | 'lyrics+mask';
 }
 
 export interface LoopMixPlan {
@@ -193,7 +197,7 @@ export function planLoopMix(
 }
 
 type Span = { start: number; end: number };
-type Clean = Span & { bars: number; vocal: number | null; checkedBy: 'lyrics' | 'mask' };
+type Clean = Span & { bars: number; vocal: number | null; checkedBy: LoopPick['checkedBy'] };
 
 /**
  * [bars]-bar loops lying in [from, to]. With the model's downbeats, each loop
@@ -252,8 +256,15 @@ function firstClean(
       if (louds[i]! < typical * MIN_LOUDNESS || louds[i]! <= 0.01) continue;
       if (sung) {
         const from = l.start - LYRIC_GUARD_SEC;
-        if (sung.some(([a, b]) => a < l.end && b > from)) continue;
-        return { ...l, bars, vocal: 0, checkedBy: 'lyrics' };
+        const touching = sung.filter(([a, b]) => a < l.end && b > from);
+        // Only a line whose end the lyrics state is vouched for whole. A line timed by its start alone is a guess (its
+        // first words are surely sung, its tail may not be), and line after line of those covers every loop in a song;
+        // the vocal mask rules on them instead, and a loop it calls clean is taken (Android LoopMix, v1.12).
+        if (touching.some(([, b, certain = b]) => certain >= b)) continue;
+        if (!touching.length) return { ...l, bars, vocal: 0, checkedBy: 'lyrics' };
+        const m = maskStats(vocals, l.start - beatSec, l.end);
+        if (!m || m.share > MAX_SUNG_SHARE || m.longestRunSec > MAX_SUNG_RUN_SEC) continue;
+        return { ...l, bars, vocal: m.share, checkedBy: 'lyrics+mask' };
       }
       const m = maskStats(vocals, l.start - beatSec, l.end);
       if (!m || m.share > MAX_SUNG_SHARE || m.longestRunSec > MAX_SUNG_RUN_SEC) continue;
@@ -295,11 +306,15 @@ export function sungShare(windows: VocalWindow[], from: number, to: number): num
   return maskStats(windows, from, to)?.share ?? null;
 }
 
+/** Of a line with no stated end, this much from its start is surely sung; the rest is for the vocal mask to judge. */
+export const OPEN_LINE_CERTAIN_SEC = 2;
+
 /**
  * A song's sung stretches from its synced lyric lines: each from just
  * before its start to just after its end. A line with no stated end is taken
- * as sung until the next line (at most 10 s), which can only make a loop
- * pickier, never let a word through.
+ * as sung until the next line (at most 10 s), but only its first
+ * OPEN_LINE_CERTAIN_SEC are certain: the rest is left to the vocal mask
+ * (a loop is ruled out by a line only when the line's end is known).
  */
 export function sungSpansFromLines(lines: { timeMs: number; endMs: number | null; blank: boolean }[]): SungSpans {
   const spans: SungSpans = [];
@@ -309,7 +324,9 @@ export function sungSpansFromLines(lines: { timeMs: number; endMs: number | null
     const start = l.timeMs / 1000;
     const next = sorted.slice(i + 1).find((n) => n.timeMs > l.timeMs)?.timeMs;
     const end = l.endMs !== null && l.endMs > l.timeMs ? l.endMs / 1000 : Math.min(start + 10, (next ?? l.timeMs + 10_000) / 1000);
-    spans.push([start - LYRIC_LEAD_SEC, end + LYRIC_TAIL_SEC]);
+    const stated = l.endMs !== null && l.endMs > l.timeMs;
+    const certain = stated ? end : Math.min(end, start + OPEN_LINE_CERTAIN_SEC);
+    spans.push([start - LYRIC_LEAD_SEC, end + LYRIC_TAIL_SEC, certain + LYRIC_TAIL_SEC]);
   });
   return spans;
 }

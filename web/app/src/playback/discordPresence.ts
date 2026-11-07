@@ -3,7 +3,7 @@ import type { DiscordNowPlaying } from '@bitchord/shared/bridge';
 import { getBridge } from '@/extension/bridge';
 import { useDiscord, useDiscordOptions } from '@/extension/useDiscord';
 import { sizedArtwork } from '@/lib/artwork';
-import { getAudio, usePlayer } from '@/state/player';
+import { getAudio, isMirrored, usePlayer } from '@/state/player';
 
 /**
  * Tells the extension what's playing, for the Discord card (prompt §7.2).
@@ -48,13 +48,23 @@ export function startPublisher(): () => void {
     const options = useDiscordOptions.getState().options;
     const bridge = getBridge();
     if (!bridge) return;
-    if (status === 'paused' || status === 'idle' || status === 'error') {
+    // Another device's song (Auden Connect's mirror) is not played here: the card comes down like a pause.
+    if (isMirrored() || status === 'paused' || status === 'idle' || status === 'error') {
       if (sent === 'clear') return;
       sent = 'clear';
       void bridge.call('discord.presence', { track: null, options }).catch(() => (sent = null));
       return;
     }
     if (status !== 'playing') return; // loading or buffering: wait for the music
+    const np = usePlayer.getState().nowPlaying;
+    if (np?.shareable === false) {
+      // The card links to YouTube, so a local file clears it; a DJ line leaves the last song's card up
+      // rather than flicker between lines.
+      if (np.source === 'clip' || sent === 'clear') return;
+      sent = 'clear';
+      void bridge.call('discord.presence', { track: null, options }).catch(() => (sent = null));
+      return;
+    }
     const track = nowPlaying();
     if (!track) return;
     const key = `${track.videoId}|${JSON.stringify(options)}`;

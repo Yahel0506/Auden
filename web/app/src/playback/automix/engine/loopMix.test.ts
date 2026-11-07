@@ -265,6 +265,42 @@ describe('loops never hold a sung word', () => {
   });
 });
 
+describe('line-synced lyrics without an end time (Android LoopMixTest, v1.12)', () => {
+  // A line every 4 s with no end: each one's first 2 s used to be certain, which covered every loop.
+  const open = Array.from({ length: 20 }, (_, i) => ({ timeMs: 120_000 + i * 4_000, endMs: null, blank: false }));
+  const stated = Array.from({ length: 20 }, (_, i) => ({ timeMs: 120_000 + i * 4_000, endMs: 120_000 + i * 4_000 + 3_900, blank: false }));
+  const clean = (): TrackAnalysis => analysis('out', 120, 200, [vocals(130, 200, 0.8, [[120, 200]])]);
+
+  it('lets the vocal mask rule on lines timed by their start alone', () => {
+    const plan = planLoopMix(clean(), buffer(200), analysis('in', 120, 180), buffer(180), 0, { out: sungSpansFromLines(open), in: [] })!;
+    expect(plan).not.toBeNull();
+    expect(plan.out.checkedBy).toBe('lyrics+mask');
+  });
+
+  it('still lets lines that state their end veto a loop: sung there, nothing to loop', () => {
+    expect(planLoopMix(clean(), buffer(200), analysis('in', 120, 180), buffer(180), 0, { out: sungSpansFromLines(stated), in: [] })).toBeNull();
+  });
+
+  it('skips the loop when the mask has nothing to say about an open line', () => {
+    expect(planLoopMix(analysis('out', 120, 200), buffer(200), analysis('in', 120, 180), buffer(180), 0, { out: sungSpansFromLines(open), in: [] })).toBeNull();
+  });
+
+  it('skips the loop when the mask calls the open line sung', () => {
+    const sungMask = analysis('out', 120, 200, [vocals(130, 200, 0.8, [])]);
+    expect(planLoopMix(sungMask, buffer(200), analysis('in', 120, 180), buffer(180), 0, { out: sungSpansFromLines(open), in: [] })).toBeNull();
+  });
+
+  it('vouches only for an open line’s first two seconds, and for the whole of a stated one', () => {
+    const [openSpan, statedSpan] = [
+      sungSpansFromLines([{ timeMs: 10_000, endMs: null, blank: false }, { timeMs: 20_000, endMs: null, blank: false }])[0]!,
+      sungSpansFromLines([{ timeMs: 10_000, endMs: 13_000, blank: false }])[0]!,
+    ];
+    expect(openSpan[1]).toBeCloseTo(20.35, 9);
+    expect(openSpan[2]).toBeCloseTo(12.35, 9);
+    expect(statedSpan[2]).toBeCloseTo(statedSpan[1], 9);
+  });
+});
+
 describe('music videos', () => {
   it('get no loop mix on either side: their lyrics are the album cut', () => {
     const video = { ...analysis('out', 120, 200), musicVideo: true };

@@ -7,7 +7,9 @@ export const config = {
   extensionFirefoxUrl: import.meta.env.VITE_EXTENSION_FIREFOX_URL || '/downloads/bitchord-extension-firefox.zip',
   /** The version the zips above hold, for the "update available" notice. */
   extensionManifestUrl: import.meta.env.VITE_EXTENSION_MANIFEST_URL || '/downloads/extension.json',
-  androidAppUrl: import.meta.env.VITE_ANDROID_APP_URL || 'https://github.com/kushagrasinghx/BitChord/releases/latest',
+  androidAppUrl: import.meta.env.VITE_ANDROID_APP_URL || 'https://github.com/Yahel0506/Auden/releases/latest',
   /** BitChord's Listen Together server. vite.config.ts refuses a production build without it. */
   partyServerUrl: import.meta.env.VITE_PARTY_SERVER_URL ?? '',
+  /** Auden Connect's server (web/connect), https://host. Empty turns the device switcher off. */
+  connectUrl: (import.meta.env.VITE_CONNECT_URL ?? '').replace(/\/+$/, ''),
 } as const;

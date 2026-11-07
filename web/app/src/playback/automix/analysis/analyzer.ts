@@ -3,6 +3,7 @@
 // BitChord: the audio comes from YouTube (fetchTrackAudio) instead of a local
 // file, the queue is keyed by video id and takes priorities, and results are
 // kept in memory as well as IndexedDB so the mix loop can read them synchronously.
+import { AnalysisQueue } from './analysisQueue';
 import { trackLog } from '@/playback/trackLog';
 import { getAnalysis, putAnalysis } from '../db';
 import { fetchTrackAudio, type TrackAudio } from '../fetchAudio';
@@ -35,9 +36,12 @@ const KEEP_BYTES_FOR = 6;
  * transfer to the essentia worker -> persist TrackAnalysis to IndexedDB. One
  * track at a time keeps peak memory at one decoded file.
  */
+/** Thrown inside an analysis that nobody wants any more. */
+class Skipped extends Error {}
+
 class Analyzer {
   private worker: Worker | null = null;
-  private queue: { videoId: string; tags: TrackTags }[] = [];
+  private readonly queue = new AnalysisQueue<{ videoId: string; tags: TrackTags }>();
   private running = false;
   private pendingResolve: ((r: AnalyzeResponse) => void) | null = null;
   private readonly results = new Map<string, TrackAnalysis>();
@@ -91,23 +95,35 @@ class Analyzer {
     // a failure (a refused download, a network blip) is tried again after a while, not given up on
     if (known === 'error' && Date.now() - (this.failedAt.get(videoId) ?? 0) < RETRY_FAILED_MS) return;
     if (known === 'pending') {
-      if (urgent) {
-        const at = this.queue.findIndex((q) => q.videoId === videoId);
-        if (at > 0) this.queue.unshift(...this.queue.splice(at, 1));
-      }
+      if (urgent) this.queue.add({ videoId, tags }, true);
       return;
     }
     this.setStatus(videoId, 'pending');
     void getAnalysis(videoId).then((cached) => {
       if (cached && cached.analysisVersion === ANALYSIS_VERSION) {
         this.results.set(videoId, cached);
-        this.queue = this.queue.filter((q) => q.videoId !== videoId);
+        this.queue.remove(videoId);
         this.setStatus(videoId, 'done');
       }
     });
-    if (urgent) this.queue.unshift({ videoId, tags });
-    else this.queue.push({ videoId, tags });
+    this.queue.add({ videoId, tags }, urgent);
     void this.run();
+  }
+
+  /**
+   * Names the songs worth analysing right now, most urgent first (the playing one and the one after it): work waiting for
+   * any other song is dropped (it was skipped past), and the one running stops at its next checkpoint if it is not named.
+   * A dropped song is asked for again, as new, if it comes back.
+   */
+  retain(videoIds: readonly string[]): void {
+    const dropped = this.queue.retain(videoIds);
+    for (const { videoId } of dropped) {
+      if (this.status.get(videoId) === 'pending') {
+        this.status.delete(videoId);
+        this.bytes.delete(videoId);
+      }
+    }
+    if (dropped.length) for (const l of this.listeners) l();
   }
 
   private setStatus(videoId: string, status: AnalysisStatus) {
@@ -135,8 +151,8 @@ class Analyzer {
     this.running = true;
     // Let the cache lookups above answer before downloading anything.
     await new Promise((r) => setTimeout(r, 50));
-    while (this.queue.length > 0) {
-      const { videoId, tags } = this.queue.shift()!;
+    for (let task = this.queue.take(); task; task = this.queue.take()) {
+      const { videoId, tags } = task;
       if (this.status.get(videoId) !== 'pending') continue;
       this.setStatus(videoId, 'analyzing');
       const started = performance.now();
@@ -150,6 +166,13 @@ class Analyzer {
         );
         this.setStatus(videoId, 'done');
       } catch (e) {
+        if (e instanceof Skipped) {
+          // Skipped past while it was being read: no result and no failure, so asking again starts clean.
+          this.status.delete(videoId);
+          this.bytes.delete(videoId);
+          for (const l of this.listeners) l();
+          continue;
+        }
         trackLog.w(`automix analysis failed: ${String(e)}`, videoId);
         this.failedAt.set(videoId, Date.now());
         this.bytes.delete(videoId);
@@ -159,10 +182,17 @@ class Analyzer {
     this.running = false;
   }
 
+  private keepGoing(videoId: string): void {
+    if (!this.queue.isWanted(videoId)) throw new Skipped();
+  }
+
   private async analyzeOne(videoId: string, tags: TrackTags): Promise<TrackAnalysis> {
     const { bytes: arrayBuffer, musicVideo } = await this.trackAudio(videoId);
+    // The download and the two decodes are most of the time and cannot be cut short from outside: look again between them.
+    this.keepGoing(videoId);
     const decodeCtx = new OfflineAudioContext({ numberOfChannels: 1, length: 1, sampleRate: ANALYSIS_SR });
     const buffer = await decodeCtx.decodeAudioData(arrayBuffer.slice(0));
+    this.keepGoing(videoId);
     const mono = downmixToMono(buffer);
     const durationSec = buffer.duration;
 
@@ -198,6 +228,7 @@ class Analyzer {
       }
     }
 
+    this.keepGoing(videoId);
     const worker = this.ensureWorker();
     const response = await new Promise<AnalyzeResponse>((resolve, reject) => {
       this.pendingResolve = resolve;

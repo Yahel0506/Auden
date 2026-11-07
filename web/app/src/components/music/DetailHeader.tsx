@@ -9,6 +9,9 @@ import { Artwork } from './Artwork';
 import { ExplicitBadge } from './ExplicitBadge';
 import { MotionArtwork } from './MotionArtwork';
 import { artistHref } from './links';
+import { DETAIL_FADE_FRACTION, heroFadeStyle } from '@/lib/heroFade';
+import { useNarrow } from '@/lib/useNarrow';
+import { usePlayerLook } from '@/shell/playerLook';
 
 interface DetailHeaderProps {
   info: HeaderInfo;
@@ -37,27 +40,37 @@ export function DetailHeader({ info, onPlay, onShuffle, canPlay, extra, motion }
   const signedIn = useSignedIn();
   const setSaved = useSetListSaved();
   const library = signedIn ? info.library : null;
+  // Full-screen covers (Android fullBleedDetailArtwork): on a narrow window the cover runs to the edges and off the top,
+  // up to 62% of the screen tall, and dissolves into the page; the title overlaps its foot by 44px.
+  const wantsBleed = usePlayerLook((s) => s.fullBleedCovers);
+  const narrow = useNarrow();
+  const bleed = wantsBleed && narrow && !!info.thumbnail;
   return (
     // Artwork beside the headings, description and actions; stacked and centred below 768px.
-    <div className="mx-(--body-gutter) mb-10 grid grid-cols-[auto_minmax(0,1fr)] grid-rows-[auto_1fr_auto] gap-x-[34px] pt-11 [grid-template-areas:'artwork_headings'_'artwork_description'_'artwork_actions'] max-md:grid-cols-[1fr] max-md:grid-rows-[auto] max-md:justify-items-center max-md:pt-4 max-md:text-center max-md:[grid-template-areas:'artwork'_'headings'_'actions'_'description']">
-      <div className="relative w-[270px] self-start rounded-artwork-lg shadow-[0_10px_20px_0_var(--radiosityShadowColor)] [grid-area:artwork] max-lg:w-[220px] max-md:w-[min(270px,70vw)]">
-        {info.thumbnail && (
+    <div
+      data-bleed={bleed || undefined}
+      className="group/hd mx-(--body-gutter) mb-10 grid grid-cols-[auto_minmax(0,1fr)] grid-rows-[auto_1fr_auto] gap-x-[34px] pt-11 [grid-template-areas:'artwork_headings'_'artwork_description'_'artwork_actions'] max-md:grid-cols-[1fr] max-md:grid-rows-[auto] max-md:justify-items-center max-md:pt-4 max-md:text-center max-md:[grid-template-areas:'artwork'_'headings'_'actions'_'description'] max-md:data-bleed:pt-0">
+      <div
+        className="relative w-[270px] self-start rounded-artwork-lg shadow-[0_10px_20px_0_var(--radiosityShadowColor)] [grid-area:artwork] max-lg:w-[220px] max-md:w-[min(270px,70vw)] max-md:group-data-bleed/hd:-mx-(--body-gutter) max-md:group-data-bleed/hd:max-h-[62dvh] max-md:group-data-bleed/hd:w-[calc(100%+2*var(--body-gutter))] max-md:group-data-bleed/hd:max-w-none max-md:group-data-bleed/hd:overflow-hidden max-md:group-data-bleed/hd:rounded-none max-md:group-data-bleed/hd:shadow-none max-sm:group-data-bleed/hd:-mt-(--mobile-top-bar-height)"
+        style={bleed ? heroFadeStyle(DETAIL_FADE_FRACTION) : undefined}
+      >
+        {info.thumbnail && !bleed && (
           // A blurred copy behind the artwork: Apple's radiosity glow.
           <div className="absolute inset-0 -z-1 scale-88 opacity-30 blur-[20px] saturate-200" aria-hidden="true">
             <Artwork src={info.thumbnail} displayWidth={80} radius="var(--radius-artwork-large)" />
           </div>
         )}
-        <Artwork src={info.thumbnail} displayWidth={270} radius="var(--radius-artwork-large)" eager />
+        <Artwork src={info.thumbnail} displayWidth={bleed ? 640 : 270} radius={bleed ? 0 : 'var(--radius-artwork-large)'} eager />
         {/* Apple's motion artwork, over the cover once it's playing. */}
         {motion && (
           <MotionArtwork
             key={motion.url}
             motion={motion}
-            className="absolute inset-0 size-full rounded-artwork-lg object-cover opacity-0 transition-opacity duration-600 ease-in data-ready:opacity-100"
+            className="absolute inset-0 size-full rounded-[inherit] object-cover opacity-0 transition-opacity duration-600 ease-in data-ready:opacity-100"
           />
         )}
       </div>
-      <div className="flex flex-col pt-[37px] [grid-area:headings] max-md:items-center max-md:pt-5">
+      <div className="flex flex-col pt-[37px] [grid-area:headings] max-md:items-center max-md:pt-5 max-md:group-data-bleed/hd:relative max-md:group-data-bleed/hd:-mt-11 max-md:group-data-bleed/hd:pt-0">
         <h1 className="flex items-center type-large-title-emphasized leading-[30px] max-md:justify-center">
           {info.title}
           {info.explicit && <ExplicitBadge size={16} />}

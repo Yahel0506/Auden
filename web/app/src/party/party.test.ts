@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { ServerClock } from './clock';
 import { cleanCode, inviteUrl, parseInvite } from './invite';
 import { EMPTY_PLAYBACK, type PartyMember, type PartyQueue, type PartyTrack } from './models';
-import { autoplaySupplierId, detectSingleMove, partyQueueIndexOf, partyUpcomingAfter } from './queueReading';
+import { autoplaySupplierId, detectSingleMove, partyLocalItems, partyQueueIndexOf, partyUpcomingAfter } from './queueReading';
+import type { QueueEntry } from '@/playback/queue/timeline';
 
 // ServerClockTest.kt, case for case.
 describe('ServerClock', () => {
@@ -122,5 +123,29 @@ describe('invites', () => {
   it('links to a custom server’s own invite page', () => {
     expect(inviteUrl('ab12cd', null)).toBe('https://bitchord.kushagrasingh.in/invite/AB12CD');
     expect(inviteUrl('AB12CD', 'https://jam.example.com/')).toBe('https://jam.example.com/invite/AB12CD');
+  });
+});
+
+describe('what a party carries of the local queue', () => {
+  const entry = (videoId: string, source?: 'local' | 'clip', tier: 'context' | 'user' = 'user'): QueueEntry =>
+    ({ entryId: videoId, tier, source: null, track: { videoId, source } }) as unknown as QueueEntry;
+
+  it('drops local files and clips, and moves the playing index with them', () => {
+    const queue = [entry('a'), entry('auden:local:1', 'local'), entry('b'), entry('auden:clip:1', 'clip'), entry('c')];
+    const { items, trackIndex } = partyLocalItems(queue, 2);
+    expect(items.map((e) => e.track.videoId)).toEqual(['a', 'b', 'c']);
+    expect(trackIndex).toBe(1);
+    expect(items[trackIndex]!.track.videoId).toBe('b');
+  });
+
+  it('keeps the playing entry even when it is not shareable (the caller never publishes it)', () => {
+    const { items, trackIndex } = partyLocalItems([entry('a'), entry('auden:local:1', 'local')], 1);
+    expect(items.map((e) => e.track.videoId)).toEqual(['a', 'auden:local:1']);
+    expect(trackIndex).toBe(1);
+  });
+
+  it('leaves out the context queue after the playing track, as before', () => {
+    const { items } = partyLocalItems([entry('a'), entry('b', undefined, 'context'), entry('c')], 0);
+    expect(items.map((e) => e.track.videoId)).toEqual(['a', 'c']);
   });
 });

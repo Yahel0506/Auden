@@ -21,7 +21,7 @@ const moveButton = 'grid size-[26px] place-items-center rounded-[6px] text-secon
  * page can't.
  */
 export function LyricsSettings({ onClose }: { onClose: () => void }) {
-  const { order, disabled, preferSyllables, paxsenixKey, setEnabled, move, setPreferSyllables, setPaxsenixKey, reset } =
+  const { order, disabled, preferSyllables, paxsenixKey, extras, setEnabled, move, setPreferSyllables, setPaxsenixKey, setExtra, reset } =
     useLyricsSettings();
   const [granted, setGranted] = useState<string[] | null>(null);
   const [key, setKey] = useState(paxsenixKey);
@@ -97,9 +97,22 @@ export function LyricsSettings({ onClose }: { onClose: () => void }) {
             </span>
           </label>
 
+          <h3 className={section}>Extra lyrics to keep</h3>
+          <p className={note}>The best match is always saved. Tick providers to also keep their versions when you save a song’s lyrics, so you can switch later.</p>
+          <ul className={group}>
+            {order.map((id) => (
+              <li key={id} className={`${row} [&+&]:border-t-[0.5px] [&+&]:border-t-divider`}>
+                <label className={toggle}>
+                  <input type="checkbox" className={checkbox} checked={extras.includes(id)} onChange={(e) => setExtra(id, e.currentTarget.checked)} />
+                  <span className="type-body">{sourceById(id)?.label}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+
           <h3 className={section}>Extension access</h3>
           {granted === null ? (
-            <p className={note}>KuGou, Musixmatch, Genius and PaxSenix need the BitChord extension.</p>
+            <p className={note}>KuGou, Musixmatch, Genius and PaxSenix need the Auden extension.</p>
           ) : missing.length ? (
             <div className="flex items-center gap-3">
               <p className={note}>
