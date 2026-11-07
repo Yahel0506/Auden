@@ -154,11 +154,17 @@ export async function sha256(value: string): Promise<string> {
  * (prompt §8; the phone requires a signed-in account too). The id is a hash of
  * the login and channel, never either of them.
  */
-/** The signed-in account's id hash, the one Listen Together and Auden Connect both key on; null when signed out. */
-export async function accountUserId(): Promise<string | null> {
+/**
+ * Auden Connect's room: a hash of the Google login's email, the one identifier the web and the phone both
+ * hold for the same account (their own account and channel ids are internal to each). Null when signed out
+ * or when the login's email is not known. Like the party's userId it is unverified, not a credential.
+ */
+export async function connectRoomId(): Promise<string | null> {
   const auth = ytAuthSnapshot();
   const active = auth.signedIn ? auth.active : null;
-  return active ? (await sha256(`${active.authUser}:${active.id}`)).slice(0, 32) : null;
+  if (!active) return null;
+  const email = auth.accounts.find((a) => a.authUser === active.authUser)?.email?.trim().toLowerCase();
+  return email ? (await sha256(`auden-connect:v1:${email}`)).slice(0, 32) : null;
 }
 
 async function identity(): Promise<Omit<JoinRequest, 'maxMembers' | 'autoplayEnabled'>> {
