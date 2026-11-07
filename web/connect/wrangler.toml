@@ -12,4 +12,4 @@ new_sqlite_classes = ["ConnectRoom"]
 
 [vars]
 # Comma-separated browser Origins allowed to open a socket; native apps send none.
-ALLOWED_ORIGINS = "https://auden-2x9.pages.dev,http://localhost:5173"
+ALLOWED_ORIGINS = "https://auden-2x9.pages.dev,https://audenplayer.yahel.dev,http://localhost:5173"
