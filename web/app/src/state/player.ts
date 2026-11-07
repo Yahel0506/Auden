@@ -1873,4 +1873,10 @@ export const sessionPlayer = {
     usePlayer.setState({ queue: entries });
     return startAt(index, { startSec, autoplay: false });
   },
+  /** Loads the restored song again, paused at [startSec], when it failed to load and nothing else has started since. */
+  retry(videoId: string, startSec: number): Promise<void> {
+    const s = usePlayer.getState();
+    if (s.mirror || s.status !== 'error' || s.nowPlaying?.videoId !== videoId || s.queue[s.index]?.track.videoId !== videoId) return Promise.resolve();
+    return startAt(s.index, { startSec, autoplay: false });
+  },
 };

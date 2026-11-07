@@ -91,26 +91,48 @@ function write(session: SavedSession | null): void {
 
 /** True while the last session is being put back: what is stored must not be overwritten by the half-loaded player. */
 let restoring = false;
+/**
+ * The position that was saved, kept until the restored song has really loaded there: a load that failed (the
+ * extension was not ready yet) leaves the player at 0, and that must not replace the remembered second.
+ */
+let pending: { videoId: string; sec: number } | null = null;
+const RETRY_EVERY_MS = 3000;
+const RETRIES = 10;
 
 function save(): void {
   if (restoring) return;
   const state = usePlayer.getState();
   // While something is loading the playhead still belongs to the previous song.
-  const sec = state.status === 'loading' ? 0 : (getPlayhead()?.sec ?? 0);
+  let sec = state.status === 'loading' ? 0 : (getPlayhead()?.sec ?? 0);
+  if (pending && state.nowPlaying?.videoId === pending.videoId) {
+    if (state.status === 'playing' || (state.status === 'paused' && sec > 0)) pending = null;
+    else sec = pending.sec;
+  } else {
+    pending = null;
+  }
   write(snapshotOf(state, sec, sessionPlayer.canonical()));
 }
 
 /** Puts the last session back (once, paused) and keeps it up to date until the returned function is called. */
 export function startLastSession(): () => void {
   const saved = parseSession(read());
+  let retryTimer: ReturnType<typeof setTimeout> | null = null;
   if (saved) {
+    const videoId = saved.entries[saved.index]!.track.videoId;
+    pending = { videoId, sec: saved.positionSec };
     restoring = true;
+    // The extension may not be ready when the page opens: load again a few times, paused at the same second.
+    const retry = (left: number) => {
+      if (usePlayer.getState().status !== 'error' || left <= 0) return;
+      retryTimer = setTimeout(() => void sessionPlayer.retry(videoId, saved.positionSec).catch(() => {}).finally(() => retry(left - 1)), RETRY_EVERY_MS);
+    };
     void sessionPlayer
       .restore(saved.entries, saved.index, saved.positionSec, saved.canonical)
       .catch(() => {})
       .finally(() => {
         restoring = false;
         save();
+        retry(RETRIES);
       });
   }
 
@@ -138,6 +160,7 @@ export function startLastSession(): () => void {
     off();
     clearInterval(every);
     if (timer) clearTimeout(timer);
+    if (retryTimer) clearTimeout(retryTimer);
     document.removeEventListener('visibilitychange', onHide);
     window.removeEventListener('pagehide', save);
   };

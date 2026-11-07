@@ -14,7 +14,7 @@ vi.mock('./player', () => ({
     },
   }),
   getPlayhead: () => ({ sec: 42.5, paused: false }),
-  sessionPlayer: { restore, canonical: () => [['e1', 0]] },
+  sessionPlayer: { restore, retry: vi.fn(async () => {}), canonical: () => [['e1', 0]] },
 }));
 
 const { parseSession, snapshotOf, startLastSession, KEEP_AHEAD, KEEP_BEHIND } = await import('./lastSession');
@@ -89,6 +89,22 @@ describe('startLastSession', () => {
     await Promise.resolve();
     await Promise.resolve();
     player = state(3, 1);
+    window.dispatchEvent(new Event('pagehide'));
+    expect(JSON.parse(localStorage.getItem('auden:last-session')!).positionSec).toBe(42.5);
+    stop();
+  });
+
+  it('keeps the remembered second when the restored song failed to load, and moves on once it has', async () => {
+    localStorage.setItem('auden:last-session', JSON.stringify(snapshotOf(state(3, 1) as never, 33, null)));
+    // The load fails (extension not ready): the player sits at 0 in an error state.
+    player = state(3, 1, { status: 'error' });
+    const stop = startLastSession();
+    await Promise.resolve();
+    await Promise.resolve();
+    window.dispatchEvent(new Event('pagehide'));
+    expect(JSON.parse(localStorage.getItem('auden:last-session')!).positionSec).toBe(33);
+    // It loaded and the listener played on.
+    player = state(3, 1, { status: 'playing' });
     window.dispatchEvent(new Event('pagehide'));
     expect(JSON.parse(localStorage.getItem('auden:last-session')!).positionSec).toBe(42.5);
     stop();
