@@ -12,7 +12,7 @@ package com.music.bitchord.ui.player
  */
 object HeroFade {
     /** Share of the banner's height the dissolve takes, from its bottom edge upwards. */
-    const val FRACTION = 0.62f
+    const val FRACTION = 0.52f
 
     private const val STEPS = 16
 

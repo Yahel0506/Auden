@@ -1036,7 +1036,7 @@ fun SettingsScreen(
             }
         }
 
-        if (shows(SettingsCategory.CONTENT_PREFERENCES)) SearchableSettingsGroup(search, header = stringResource(R.string.content_preferences)) {
+        if (shows(SettingsCategory.HOME)) SearchableSettingsGroup(search, header = stringResource(R.string.home_section)) {
             val preferMusicOnlyTitle = stringResource(R.string.prefer_music_only)
             row(preferMusicOnlyTitle, "video", "audio", "music video", "convert", "song") {
                 SettingsRow(
@@ -1108,6 +1108,64 @@ fun SettingsScreen(
                     },
                     onClick = { AppSettings.setHideHomeMoods(!hideHomeMoods) },
                 )
+            }
+            val homeMixTitle = stringResource(R.string.home_mix_title)
+            row(homeMixTitle, "home", "local", "library", "algorithm", "shelves") {
+                SliderRow(
+                    icon = Icons.Rounded.Home,
+                    title = homeMixTitle,
+                    subtitle = stringResource(R.string.home_mix_subtitle),
+                    value = stringResource(R.string.home_mix_value, homeWeight),
+                    sliderValue = homeWeight.toFloat(),
+                    onSliderValue = { AppSettings.setHomeLocalWeight((it / 5f).roundToInt() * 5) },
+                    valueRange = 0f..100f,
+                    steps = 19,
+                )
+            }
+            val homeShelvesTitle = stringResource(R.string.home_shelves_title)
+            row(homeShelvesTitle, "home", "shelves", "mix", "playlists", "rediscover", "repeat") {
+                SettingsRow(
+                    icon = Icons.Rounded.ViewCarousel,
+                    title = homeShelvesTitle,
+                    subtitle = stringResource(R.string.home_shelves_subtitle),
+                )
+            }
+            dev.auden.home.LocalShelfKind.entries.forEach { kind ->
+                val kindTitle = stringResource(
+                    when (kind) {
+                        dev.auden.home.LocalShelfKind.LOOP -> R.string.home_shelf_loop
+                        dev.auden.home.LocalShelfKind.REDISCOVER -> R.string.home_shelf_rediscover
+                        dev.auden.home.LocalShelfKind.RECENTLY_ADDED -> R.string.home_shelf_recently_added
+                        dev.auden.home.LocalShelfKind.PLAYLISTS -> R.string.home_shelf_playlists
+                        dev.auden.home.LocalShelfKind.ARTIST_MIX -> R.string.home_shelf_artist_mix_toggle
+                        dev.auden.home.LocalShelfKind.LIBRARY_SHUFFLE -> R.string.home_shelf_library
+                    },
+                )
+                val on = kind.name in homeShelfKinds
+                row(kindTitle, "home", "shelf") {
+                    SettingsRow(
+                        icon = when (kind) {
+                            dev.auden.home.LocalShelfKind.LOOP -> Icons.Rounded.Repeat
+                            dev.auden.home.LocalShelfKind.REDISCOVER -> Icons.Rounded.History
+                            dev.auden.home.LocalShelfKind.RECENTLY_ADDED -> Icons.Rounded.Download
+                            dev.auden.home.LocalShelfKind.PLAYLISTS -> Icons.AutoMirrored.Rounded.PlaylistPlay
+                            dev.auden.home.LocalShelfKind.ARTIST_MIX -> Icons.Rounded.Person
+                            dev.auden.home.LocalShelfKind.LIBRARY_SHUFFLE -> Icons.Rounded.Shuffle
+                        },
+                        title = kindTitle,
+                        trailing = {
+                            Switch(
+                                checked = on,
+                                onCheckedChange = { AppSettings.setHomeLocalShelf(kind, it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
+                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            )
+                        },
+                        onClick = { AppSettings.setHomeLocalShelf(kind, !on) },
+                    )
+                }
             }
             val squareVideoThumbnailsTitle = stringResource(R.string.square_video_thumbnails)
             row(squareVideoThumbnailsTitle, "video", "thumbnail", "cover", "artwork", "player") {
@@ -1289,64 +1347,6 @@ fun SettingsScreen(
                     onSelect = { AppSettings.setPlayerTheme(PlayerTheme.entries[it]) },
                     modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
                 )
-            }
-            val homeMixTitle = stringResource(R.string.home_mix_title)
-            row(homeMixTitle, "home", "local", "library", "algorithm", "shelves") {
-                SliderRow(
-                    icon = Icons.Rounded.Home,
-                    title = homeMixTitle,
-                    subtitle = stringResource(R.string.home_mix_subtitle),
-                    value = stringResource(R.string.home_mix_value, homeWeight),
-                    sliderValue = homeWeight.toFloat(),
-                    onSliderValue = { AppSettings.setHomeLocalWeight((it / 5f).roundToInt() * 5) },
-                    valueRange = 0f..100f,
-                    steps = 19,
-                )
-            }
-            val homeShelvesTitle = stringResource(R.string.home_shelves_title)
-            row(homeShelvesTitle, "home", "shelves", "mix", "playlists", "rediscover", "repeat") {
-                SettingsRow(
-                    icon = Icons.Rounded.ViewCarousel,
-                    title = homeShelvesTitle,
-                    subtitle = stringResource(R.string.home_shelves_subtitle),
-                )
-            }
-            dev.auden.home.LocalShelfKind.entries.forEach { kind ->
-                val kindTitle = stringResource(
-                    when (kind) {
-                        dev.auden.home.LocalShelfKind.LOOP -> R.string.home_shelf_loop
-                        dev.auden.home.LocalShelfKind.REDISCOVER -> R.string.home_shelf_rediscover
-                        dev.auden.home.LocalShelfKind.RECENTLY_ADDED -> R.string.home_shelf_recently_added
-                        dev.auden.home.LocalShelfKind.PLAYLISTS -> R.string.home_shelf_playlists
-                        dev.auden.home.LocalShelfKind.ARTIST_MIX -> R.string.home_shelf_artist_mix_toggle
-                        dev.auden.home.LocalShelfKind.LIBRARY_SHUFFLE -> R.string.home_shelf_library
-                    },
-                )
-                val on = kind.name in homeShelfKinds
-                row(kindTitle, "home", "shelf") {
-                    SettingsRow(
-                        icon = when (kind) {
-                            dev.auden.home.LocalShelfKind.LOOP -> Icons.Rounded.Repeat
-                            dev.auden.home.LocalShelfKind.REDISCOVER -> Icons.Rounded.History
-                            dev.auden.home.LocalShelfKind.RECENTLY_ADDED -> Icons.Rounded.Download
-                            dev.auden.home.LocalShelfKind.PLAYLISTS -> Icons.AutoMirrored.Rounded.PlaylistPlay
-                            dev.auden.home.LocalShelfKind.ARTIST_MIX -> Icons.Rounded.Person
-                            dev.auden.home.LocalShelfKind.LIBRARY_SHUFFLE -> Icons.Rounded.Shuffle
-                        },
-                        title = kindTitle,
-                        trailing = {
-                            Switch(
-                                checked = on,
-                                onCheckedChange = { AppSettings.setHomeLocalShelf(kind, it) },
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    checkedBorderColor = MaterialTheme.colorScheme.primary,
-                                ),
-                            )
-                        },
-                        onClick = { AppSettings.setHomeLocalShelf(kind, !on) },
-                    )
-                }
             }
             val animatedCoverArtTitle = stringResource(R.string.animated_cover_art)
             // Carries the keywords of the rows that only appear once it is on,
@@ -3132,7 +3132,7 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
     DOWNLOADS(R.string.downloads),
     PLAYBACK(R.string.playback),
     DJ(R.string.dj_title),
-    CONTENT_PREFERENCES(R.string.content_preferences),
+    HOME(R.string.home_section),
     APPEARANCE(R.string.appearance),
     PERFORMANCE(R.string.performance),
     LOCAL_MUSIC(R.string.local_music),
@@ -3147,7 +3147,7 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
             DOWNLOADS -> SfIcons.Download
             PLAYBACK -> SfIcons.PlayCircle
             DJ -> SfIcons.GraphicEq
-            CONTENT_PREFERENCES -> SfIcons.Video
+            HOME -> Icons.Rounded.Home
             APPEARANCE -> SfIcons.Appearance
             PERFORMANCE -> SfIcons.Performance
             LOCAL_MUSIC -> SfIcons.LibraryMusic

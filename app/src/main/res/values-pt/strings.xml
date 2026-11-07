@@ -1078,7 +1078,7 @@
     <string name="settings_search_empty">No settings match “%1$s”</string>
 
 
-    <string name="content_preferences">Content Preferences</string>
+    <string name="home_section">Início</string>
     <string name="hide_recents">Hide Recents</string>
     <string name="hide_home_videos">Hide videos from Home</string>
     <string name="hide_home_videos_subtitle">Shelves of only videos go too. Search, artists and playlists still show them</string>

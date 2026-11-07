@@ -6,8 +6,6 @@ import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.offset
 import androidx.compose.ui.unit.constrain
 import androidx.compose.ui.unit.Constraints
-import com.music.bitchord.ui.graphics.FADE_CURVE_STOPS
-import com.music.bitchord.ui.graphics.smootherStep
 import com.music.bitchord.playback.PlaybackPosition
 import com.music.bitchord.sharedui.resources.*
 
@@ -271,6 +269,16 @@ private const val QUEUE_FLICK_VELOCITY = 450f
 private val DISMISS_STRIP_HEIGHT = 32.dp
 /** The breathing room above the sleeve, needed twice: once to apply, once to measure past. */
 private val ART_BOX_TOP_PAD = 8.dp
+
+/** Between the credits row and the lyric strip and scrubber under it. */
+private val ART_BOX_BOTTOM_PAD = 4.dp
+
+/**
+ * How far the card may run into the player's side gutter on each side. The card is the width of
+ * the content column otherwise, so any height the controls give back could only go to empty space;
+ * this lets it take that height, up to a margin of PLAYER_GUTTER minus this.
+ */
+private val CARD_GUTTER_BLEED = 16.dp
 /**
  * How far below the sleeve's top edge the video/audio pill floats.
  *
@@ -285,7 +293,7 @@ private val VERSION_PILL_ART_INSET = 12.dp
  * short enough to still be reading as artwork where it ends reads as a picture
  * that was cut off rather than one that ran out.
  */
-private const val HERO_FADE_FRACTION = 0.42f
+private const val HERO_FADE_FRACTION = HeroFade.FRACTION
 /** Kept transparent so the cover remains edge-to-edge, while aiding icon contrast. */
 /** A modest floor while a subview replaces the hero with its blurred artwork backdrop. */
 private const val SUBVIEW_STATUS_SCRIM_MIN_ALPHA = 0.40f
@@ -456,15 +464,9 @@ private const val ARTWORK_DRAG_SHRINK_SCALE = 0.94f
 private val ArtworkScaleEasing = CubicBezierEasing(0.215f, 0.61f, 0.355f, 1f)
 private const val ARTWORK_SCALE_DURATION_MS = 500
 
-/**
- * How far a tall screen is allowed to push the transport from the blocks either
- * side of it.
- *
- * The spare height has to land somewhere, and above and below the play button is
- * where it reads as room rather than as a hole. Past this it stops reading as one
- * group of controls, so the rest goes back to the artwork block.
- */
-private val CONTROL_GAP_SPREAD_MAX = 24.dp
+/** The gaps either side of the transport row, which sits close to the scrubber and the volume bar. */
+private val TRANSPORT_GAP_ABOVE = 2.dp
+private val TRANSPORT_GAP_BELOW = 4.dp
 /**
  * The spread [NowPlayingScreen] settled on the last time it was laid out.
  *
@@ -2869,7 +2871,7 @@ fun NowPlayingScreen(
                             .weight(1f)
                             .widthIn(max = PLAYER_MAX_WIDTH)
                             .fillMaxWidth()
-                            .padding(top = ART_BOX_TOP_PAD, bottom = 18.dp),
+                            .padding(top = ART_BOX_TOP_PAD, bottom = ART_BOX_BOTTOM_PAD),
                     ) {
                         if (spotifyCanvasPresentation && playerDeckSettledOpen &&
                             maxHeight != spotifyCanvasExpandedTopHeight
@@ -2899,7 +2901,7 @@ fun NowPlayingScreen(
                         // over once the credits row and the gap above it have had
                         // theirs. Sizing it off the width alone is what pushed the
                         // credits down across the scrubber on anything but a phone.
-                        val wantArt = minOf(maxWidth, roomy - ART_TITLE_GAP - HEADER_HEIGHT)
+                        val wantArt = minOf(maxWidth + CARD_GUTTER_BLEED * 2, roomy - ART_TITLE_GAP - HEADER_HEIGHT)
                         // Held to what the box has actually got, for the single frame it
                         // takes the gaps below to catch up with a change in their own
                         // height: a sleeve a few dp under for one frame is a better
@@ -2951,12 +2953,11 @@ fun NowPlayingScreen(
                         // listened for here at all.
                         if (!lyricsOpen && !queueOpen && !queueDragging && collapseAtRest && controlDeckIsMeasured) {
                             val target = with(density) {
-                                val half = slack
-                                    .coerceAtMost(CONTROL_GAP_SPREAD_MAX * 2)
-                                    .toPx()
-                                    .div(2f)
-                                    .roundToInt()
-                                (half * 2).toDp()
+                                // Nothing is granted to the gaps any more: the transport
+                                // sits close to the scrubber and the volume bar on every
+                                // screen, and whatever height is left goes above the cover
+                                // (see [groupTop]).
+                                0.dp
                             }
                             // Stepped towards [target] rather than jumped there in one
                             // grant, so a late cancellation (see above) decays instead of
@@ -2981,7 +2982,7 @@ fun NowPlayingScreen(
                         // the controls couldn't take, which on all but the tallest
                         // screens is nothing.
                         val groupTop = (maxHeight - fullArt - ART_TITLE_GAP - HEADER_HEIGHT)
-                            .coerceAtLeast(0.dp) / 2
+                            .coerceAtLeast(0.dp)
                         // Functions of the collapse, called at placement and measure
                         // — see [p]. Composition never reads them.
                         fun artSize(): Dp = lerp(fullArt, THUMB_SIZE, p())
@@ -3309,12 +3310,14 @@ fun NowPlayingScreen(
                                     val shown = sleeveShown()
                                     if (shown > 0f) {
                                         drawRect(
-                                            // Along smootherstep, not a straight ramp,
-                                            // so neither end of the dissolve shows as a line.
+                                            // Eased, and as long as [HeroFade] says; `shown`
+                                            // pulls every stop back towards opaque as the
+                                            // banner collapses into the card's hard edge.
                                             brush = Brush.verticalGradient(
-                                                colorStops = Array(FADE_CURVE_STOPS + 1) { i ->
-                                                    val t = i / FADE_CURVE_STOPS.toFloat()
-                                                    t to Color.Black.copy(alpha = 1f - shown * smootherStep(t))
+                                                colorStops = Array(HeroFade.positions.size) { i ->
+                                                    HeroFade.positions[i] to Color.Black.copy(
+                                                        alpha = 1f - shown * (1f - HeroFade.alphas[i]),
+                                                    )
                                                 },
                                                 startY = size.height * (1f - stillFadeFraction()),
                                                 endY = size.height,
@@ -4155,9 +4158,9 @@ fun NowPlayingScreen(
                         // as one. Both of its own gaps take half the spread, so on a
                         // tall screen it holds the centre rather than drifting up
                         // under the seek bar.
-                        Spacer(Modifier.height(8.dp + controlSpread / 2))
+                        Spacer(Modifier.height(TRANSPORT_GAP_ABOVE + controlSpread / 2))
                         transport()
-                        Spacer(Modifier.height(12.dp + controlSpread / 2))
+                        Spacer(Modifier.height(TRANSPORT_GAP_BELOW + controlSpread / 2))
                         VolumeRow(
                             value = { volume.level.value },
                             onValueChange = onVolumeChange,

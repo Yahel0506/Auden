@@ -283,7 +283,7 @@ fun rememberArtworkMesh(
  *
  * One bilinear draw of a 32-texel texture, stretched by the sampler, and no
  * `RenderEffect`. The softness a full-screen blur used to supply is baked into
- * that texture off the main thread when it is read — see [MESH_BLUR_RADIUS] — so
+ * that texture off the main thread when it is read — see [MESH_BLUR_RADIUS_TOP] — so
  * nothing here has to be re-blurred as it changes, whatever it is sitting under.
  * A skip or a clip's new colours cost one fade of two such draws, and between
  * them the backdrop is only composited, however the player above it moves.
@@ -351,15 +351,14 @@ fun ArtworkMeshBackdrop(
         // draw lambda invalidates the drawing and leaves composition out of it.
         incoming?.let { drawMesh(it, seamY, alpha = fade.value) }
 
-        // Enough of a scrim to keep white text off a bright sleeve, and no
-        // more. The old backdrop needed a heavier one because it lightened
-        // every colour it drew to a fixed band; these are the sleeve's own,
-        // and a sleeve that ends dark should leave a dark screen.
+        // Vivid at the top and progressively darker toward the controls, so the
+        // transport buttons keep their contrast without the foot going near
+        // black. Linear from the first stop to the last.
         drawRect(
             brush = Brush.verticalGradient(
                 colors = listOf(
-                    Color.Black.copy(alpha = 0.06f),
-                    Color.Black.copy(alpha = 0.30f),
+                    Color.Black.copy(alpha = 0.04f),
+                    Color.Black.copy(alpha = 0.58f),
                 ),
             ),
         )
@@ -555,8 +554,12 @@ private const val MESH_TEX = 32
  * a Gaussian of about 1.4 texels, the same softness on a phone as the 32dp live
  * blur this replaces, for the same clamped edges and so the same opaque ones.
  */
-private const val MESH_BLUR_RADIUS = 1
-private const val MESH_BLUR_PASSES = 3
+private const val MESH_BLUR_RADIUS_TOP = 1
+private const val MESH_BLUR_RADIUS_BOTTOM = 3
+private const val MESH_BLUR_PASSES = 2
+
+/** How far down the surface the blur has finished deepening; the rest holds the heavy blur. */
+private const val MESH_BLUR_PEAK = 0.5f
 
 /**
  * How long the backdrop takes to change colour, whether that is a track skip or
@@ -636,11 +639,18 @@ private fun meshOf(source: ImageBitmap, seed: Int): ArtworkMesh? {
         val n = count[cell].coerceAtLeast(1)
         argb((red[cell] / n).toInt(), (green[cell] / n).toInt(), (blue[cell] / n).toInt()).lifted()
     }
-    val texels = grid.rotatedBelowSeam(cols, rows, seed).resampled(cols, rows, MESH_TEX)
-    val scratch = IntArray(texels.size)
-    repeat(MESH_BLUR_PASSES) {
-        boxBlurPass(texels, scratch, MESH_TEX, MESH_TEX, MESH_BLUR_RADIUS, horizontal = true)
-        boxBlurPass(scratch, texels, MESH_TEX, MESH_TEX, MESH_BLUR_RADIUS, horizontal = false)
+    val base = grid.rotatedBelowSeam(cols, rows, seed).resampled(cols, rows, MESH_TEX)
+    val texels = base.blurred(MESH_BLUR_RADIUS_TOP, MESH_BLUR_PASSES)
+    val soft = base.blurred(MESH_BLUR_RADIUS_BOTTOM, MESH_BLUR_PASSES)
+    // Blur that deepens down the screen: each row blends from the light blur to the
+    // heavy one, reaching it by MESH_BLUR_PEAK of the way down and holding it after.
+    for (row in 0 until MESH_TEX) {
+        val weight = smoothstep(row / (MESH_TEX - 1).toFloat() / MESH_BLUR_PEAK)
+        if (weight <= 0f) continue
+        for (col in 0 until MESH_TEX) {
+            val i = row * MESH_TEX + col
+            texels[i] = lerpArgb(texels[i], soft[i], weight)
+        }
     }
     return ArtworkMesh(imageBitmapOf(texels, MESH_TEX, MESH_TEX))
 }
@@ -710,6 +720,16 @@ private fun IntArray.resampled(cols: Int, rows: Int, size: Int): IntArray {
             val bottom = lerpArgb(this[y1 * cols + x0], this[y1 * cols + x1], wx)
             out[ty * size + tx] = lerpArgb(top, bottom, wy)
         }
+    }
+    return out
+}
+
+private fun IntArray.blurred(radius: Int, passes: Int): IntArray {
+    val out = copyOf()
+    val scratch = IntArray(size)
+    repeat(passes) {
+        boxBlurPass(out, scratch, MESH_TEX, MESH_TEX, radius, horizontal = true)
+        boxBlurPass(scratch, out, MESH_TEX, MESH_TEX, radius, horizontal = false)
     }
     return out
 }
