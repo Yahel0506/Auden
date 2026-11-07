@@ -4,7 +4,8 @@ name: Release
 # carries that tag yet, the phone, TV and watch apps are built, signed and
 # published as a GitHub release — which is exactly what the in-app updater
 # polls (AppUpdateChecker). To ship: bump bitchordVersionName / VersionCode
-# (and blank or bump bitchordBetaSuffix) in build.gradle.kts and push to main.
+# (and blank or bump bitchordBetaSuffix) in build.gradle.kts, add the version's
+# changelog (changelog/<version>/en.md, see changelog/README.md) and push to main.
 # A version that was already released is skipped, so ordinary commits only run
 # the checks in check.yml.
 on:
@@ -28,6 +29,7 @@ jobs:
       name: ${{ steps.v.outputs.name }}
       prerelease: ${{ steps.v.outputs.prerelease }}
       release: ${{ steps.v.outputs.release }}
+      base: ${{ steps.v.outputs.base }}
     steps:
       - uses: actions/checkout@v4
 
@@ -44,11 +46,18 @@ jobs:
           if [ -n "$beta" ]; then full="$name-$beta"; pre=true; fi
           echo "tag=v$full" >> "$GITHUB_OUTPUT"
           echo "name=$full" >> "$GITHUB_OUTPUT"
+          echo "base=$name" >> "$GITHUB_OUTPUT"
           echo "prerelease=$pre" >> "$GITHUB_OUTPUT"
           if gh release view "v$full" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
             echo "release=false" >> "$GITHUB_OUTPUT"
             echo "v$full is already released; nothing to do."
           else
+            # The notes come from the repo, not from GitHub's generator; a
+            # release without them is stopped here, before anything is built.
+            [ -f "changelog/$name/en.md" ] || {
+              echo "::error::changelog/$name/en.md is missing. Add the release notes for $name (see changelog/README.md)."
+              exit 1
+            }
             echo "release=true" >> "$GITHUB_OUTPUT"
           fi
 
@@ -129,6 +138,29 @@ jobs:
           ls -la dist
           ls dist/Auden-v$NAME.apk   # the universal phone APK must exist
 
+      # The release body is the version's English changelog plus the install
+      # notes. The app does not read this body: it fetches
+      # changelog/<version>/<language>.md from the tagged commit.
+      - name: Write the release notes
+        env:
+          BASE: ${{ needs.version.outputs.base }}
+          NAME: ${{ needs.version.outputs.name }}
+        run: |
+          {
+            cat "changelog/$BASE/en.md"
+            cat <<EOF
+
+          ## Install
+
+          **Android** (8.0 / API 26+): installs straight over your current Auden with the same signing key, or updates from inside the app. Not sure which APK to take? Use the universal \`Auden-v$NAME.apk\`. The smaller ones are \`arm64-v8a\` (most phones), \`armeabi-v7a\` (old 32-bit phones) and \`x86_64\` (emulators, Chromebooks).
+
+          **Android TV / Google TV / Fire TV** (8.0 / API 26+): use the universal \`AudenTV-v$NAME.apk\`, or the smaller \`AudenTV-v${NAME}_armeabi-v7a.apk\`, which suits most TVs and streaming sticks (\`arm64-v8a\` for newer boxes like the Shield or Chromecast with Google TV).
+
+          **Wear OS** (Wear OS 3+): the watch app ships inside the phone app. Install or update it from the phone app's settings.
+          EOF
+          } > release-notes.md
+          cat release-notes.md
+
       - name: Publish the release
         uses: softprops/action-gh-release@v2
         with:
@@ -136,5 +168,6 @@ jobs:
           name: Auden ${{ needs.version.outputs.name }}
           target_commitish: ${{ github.sha }}
           prerelease: ${{ needs.version.outputs.prerelease == 'true' }}
-          generate_release_notes: true
+          body_path: release-notes.md
+          generate_release_notes: false
           files: dist/*.apk

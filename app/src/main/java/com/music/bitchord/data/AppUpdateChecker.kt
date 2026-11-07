@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.FileProvider
 import com.music.bitchord.BuildConfig
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +21,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.Request
 import java.io.File
+import java.util.Locale
 
 /**
  * Auden ships as a sideloaded APK off GitHub Releases rather than through
@@ -38,7 +40,10 @@ object AppUpdateChecker {
         val version: String,
         val releaseUrl: String,
         val apkUrl: String?,
-        /** The release's own Markdown body, shown as this update's "what's new". */
+        /**
+         * This update's "what's new": the changelog from the release's source tree, in the
+         * app's language (see [changelogUrls]), or the release body when neither file loads.
+         */
         val notes: String?,
     )
 
@@ -50,7 +55,40 @@ object AppUpdateChecker {
     /** Newest first, pre-releases included — what a beta build follows, since "latest" skips them. */
     private const val RELEASES_URL = "https://api.github.com/repos/$REPO/releases?per_page=10"
 
+    private const val RAW_BASE = "https://raw.githubusercontent.com/$REPO"
+
     private val json = Json { ignoreUnknownKeys = true }
+
+    /**
+     * Where a release's changelog lives, most preferred first: the app's language, then English.
+     * Files are `changelog/<version>/<language>.md` at the release's tag; a beta suffix is not
+     * part of the folder name, so betas read the notes of the version they lead up to.
+     */
+    internal fun changelogUrls(tag: String, version: String, language: String): List<String> {
+        val folder = version.substringBefore('-')
+        return listOf(language.lowercase(Locale.ROOT), "en")
+            .filter { it.isNotBlank() }
+            .distinct()
+            .map { "$RAW_BASE/$tag/changelog/$folder/$it.md" }
+    }
+
+    private fun appLanguage(): String {
+        val chosen = AppCompatDelegate.getApplicationLocales()
+        return (if (chosen.isEmpty) Locale.getDefault() else chosen[0])?.language.orEmpty()
+    }
+
+    /** The first changelog file that loads and isn't empty; null if none does. */
+    private fun fetchChangelog(tag: String, version: String): String? {
+        for (url in changelogUrls(tag, version, appLanguage())) {
+            val text = runCatching {
+                Http.client.newCall(Request.Builder().url(url).build()).execute().use { response ->
+                    if (response.isSuccessful) response.body?.string() else null
+                }
+            }.getOrNull()
+            if (!text.isNullOrBlank()) return text
+        }
+        return null
+    }
 
     private val _available = MutableStateFlow<UpdateInfo?>(null)
     val available = _available.asStateFlow()
@@ -92,9 +130,11 @@ object AppUpdateChecker {
             val tag = release["tag_name"]?.jsonPrimitive?.contentOrNull ?: return@runCatching
             val url = release["html_url"]?.jsonPrimitive?.contentOrNull ?: return@runCatching
             val apkUrl = apkAssetUrl(release)
-            val notes = release["body"]?.jsonPrimitive?.contentOrNull
             val latest = tag.removePrefix("v")
             if (isNewer(latest, BuildConfig.VERSION_NAME)) {
+                // Only read once an update is certain. The release's own body is the
+                // last resort, for a release whose changelog files can't be fetched.
+                val notes = fetchChangelog(tag, latest) ?: release["body"]?.jsonPrimitive?.contentOrNull
                 _available.value = UpdateInfo(latest, url, apkUrl, notes)
             }
         }
