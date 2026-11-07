@@ -13,3 +13,5 @@ minimumReleaseAgeExclude:
 # unapproved install script, so it is declined here, explicitly.
 allowBuilds:
   protobufjs: false
+  esbuild: false
+  workerd: false

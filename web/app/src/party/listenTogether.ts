@@ -155,14 +155,17 @@ export async function sha256(value: string): Promise<string> {
  * the login and channel, never either of them.
  */
 /**
- * Auden Connect's room: a hash of the Google login's email, the one identifier the web and the phone both
- * hold for the same account (their own account and channel ids are internal to each). Null when signed out
- * or when the login's email is not known. Like the party's userId it is unverified, not a credential.
+ * Auden Connect's room: a hash of the active channel's @handle (else the login's email), the identifiers the
+ * web and the phone both read from YouTube for the same account (their own account and channel ids are internal
+ * to each). Null when signed out or when neither is known. Like the party's userId it is unverified, not a credential.
  */
 export async function connectRoomId(): Promise<string | null> {
   const auth = ytAuthSnapshot();
   const active = auth.signedIn ? auth.active : null;
   if (!active) return null;
+  // `handle` falls back to the email for a channel without one, so only an @name counts.
+  const handle = active.handle?.trim().toLowerCase();
+  if (handle?.startsWith('@') && handle.length > 1) return (await sha256(`auden-connect:v2:${handle.slice(1)}`)).slice(0, 32);
   const email = auth.accounts.find((a) => a.authUser === active.authUser)?.email?.trim().toLowerCase();
   return email ? (await sha256(`auden-connect:v1:${email}`)).slice(0, 32) : null;
 }
