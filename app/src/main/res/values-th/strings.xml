@@ -1621,4 +1621,6 @@
     <string name="diwali_cta">Let\'s Celebrate</string>
     <string name="background_video">วิดีโอพื้นหลัง</string>
     <string name="background_video_subtitle">Plays Spotify\'s short vertical loop behind the player</string>
+    <string name="hide_mini_lyrics">ซ่อนเนื้อเพลงขนาดเล็ก</string>
+    <string name="hide_mini_lyrics_subtitle">Removes the one-line synced lyric above the progress bar; the controls spread out to fill its place</string>
 </resources>

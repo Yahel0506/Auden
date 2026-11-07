@@ -1638,4 +1638,6 @@
     <string name="player_theme_simple">Blur</string>
     <string name="background_video">बैकग्राउंड वीडियो</string>
     <string name="background_video_subtitle">Plays Spotify\'s short vertical loop behind the player</string>
+    <string name="hide_mini_lyrics">मिनी लिरिक्स छिपाएं</string>
+    <string name="hide_mini_lyrics_subtitle">Removes the one-line synced lyric above the progress bar; the controls spread out to fill its place</string>
 </resources>

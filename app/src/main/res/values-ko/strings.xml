@@ -1488,4 +1488,6 @@
     <string name="dj_speech_error">The DJ could not speak: %1$s</string>
     <string name="background_video">배경 비디오</string>
     <string name="background_video_subtitle">Plays Spotify\'s short vertical loop behind the player</string>
+    <string name="hide_mini_lyrics">미니 가사 숨기기</string>
+    <string name="hide_mini_lyrics_subtitle">Removes the one-line synced lyric above the progress bar; the controls spread out to fill its place</string>
 </resources>

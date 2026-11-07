@@ -463,6 +463,13 @@ object AppSettings {
     /** Hides the volume slider on the main player, leaving the rest of the layout to reflow. */
     val hideVolumeBar = MutableStateFlow(false)
 
+    /**
+     * Hides the one-line synced lyric above the scrubber on the main player. The room it
+     * took is shared out among the controls, so the player is as tall as before and the
+     * title stays where it was.
+     */
+    val hideMiniLyrics = MutableStateFlow(false)
+
     /** Hides the device status bar (clock, battery, notifications) while the main player is open. */
     val hideStatusBarInPlayer = MutableStateFlow(false)
 
@@ -1076,6 +1083,7 @@ object AppSettings {
         )
         stopOnTaskRemoved.value = prefs.getBoolean(KEY_STOP_ON_TASK_REMOVED, true)
         hideVolumeBar.value = prefs.getBoolean(KEY_HIDE_VOLUME_BAR, false)
+        hideMiniLyrics.value = prefs.getBoolean(KEY_HIDE_MINI_LYRICS, false)
         hideStatusBarInPlayer.value = prefs.getBoolean(KEY_HIDE_STATUS_BAR_IN_PLAYER, false)
         hideSongStatus.value = prefs.getBoolean(KEY_HIDE_SONG_STATUS, false)
         showQueueHistory.value = prefs.getBoolean(KEY_SHOW_QUEUE_HISTORY, false)
@@ -1496,6 +1504,11 @@ object AppSettings {
     fun setHideVolumeBar(value: Boolean) {
         hideVolumeBar.value = value
         prefs.edit().putBoolean(KEY_HIDE_VOLUME_BAR, value).apply()
+    }
+
+    fun setHideMiniLyrics(value: Boolean) {
+        hideMiniLyrics.value = value
+        prefs.edit().putBoolean(KEY_HIDE_MINI_LYRICS, value).apply()
     }
 
     fun setHideStatusBarInPlayer(value: Boolean) {
@@ -2426,6 +2439,7 @@ object AppSettings {
     private const val KEY_PERFORMANCE_REFRESH_RATE = "performance_refresh_rate"
     private const val KEY_STOP_ON_TASK_REMOVED = "stop_on_task_removed"
     private const val KEY_HIDE_VOLUME_BAR = "hide_volume_bar"
+    private const val KEY_HIDE_MINI_LYRICS = "hide_mini_lyrics"
     private const val KEY_HIDE_STATUS_BAR_IN_PLAYER = "hide_status_bar_in_player"
     private const val KEY_HIDE_SONG_STATUS = "hide_song_status"
     private const val KEY_SHOW_QUEUE_HISTORY = "show_queue_history"

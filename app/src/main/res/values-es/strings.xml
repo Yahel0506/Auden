@@ -1610,4 +1610,6 @@
     <string name="diwali_cta">Let\'s Celebrate</string>
     <string name="background_video">Video de fondo</string>
     <string name="background_video_subtitle">Reproduce el breve bucle vertical de Spotify detrás del reproductor</string>
+    <string name="hide_mini_lyrics">Ocultar mini letra</string>
+    <string name="hide_mini_lyrics_subtitle">Quita la línea de letra sincronizada sobre la barra de progreso; los controles se reparten su espacio</string>
 </resources>

@@ -931,6 +931,7 @@ fun NowPlayingScreen(
         onSeek(adjustedLyricsSeekTarget(lineTimeMs, lyricsOffsetMs))
     }
     val hideVolumeBar by PlayerSettings.hideVolumeBar.collectAsStateWithLifecycle()
+    val hideMiniLyrics by PlayerSettings.hideMiniLyrics.collectAsStateWithLifecycle()
     val disableBlendEffects by PlayerSettings.disableBlendEffects.collectAsStateWithLifecycle()
     // The lyric slot above the scrubber: the tallest line it holds — titleMedium's
     // own line box — and the 4dp each of them is padded by above and below.
@@ -938,7 +939,6 @@ fun NowPlayingScreen(
         MaterialTheme.typography.titleMedium.lineHeight.takeIf { it.isSpecified }?.toDp() ?: 24.dp
     } + 8.dp
     val hideSongStatus by PlayerSettings.hideSongStatus.collectAsStateWithLifecycle()
-
     // Animated cover art: the looping video some labels publish alongside a
     // release, laid over the sleeve. A miss is the normal answer — see
     // CanvasRepository, which is also where the "is this actually the right
@@ -1037,6 +1037,18 @@ fun NowPlayingScreen(
     var lyricsOpen by remember {
         mutableStateOf(restoredPlayerScreen == LastPlayerScreen.LYRICS)
     }
+    // How far the lyric slot has given its height to the controls (0 = the slot as it is, 1 =
+    // gone). Out while the lyrics panel is open, which needs the slot for its source label.
+    // The slot loses exactly what the gaps below gain, so the controls' block never changes
+    // height and the title above it stays where it is, mid-animation as well.
+    val lyricSlotGone by animateFloatAsState(
+        targetValue = if (hideMiniLyrics && !lyricsOpen) 1f else 0f,
+        animationSpec = tween(durationMillis = 220),
+        label = "lyricSlotGone",
+    )
+    // The freed height is shared out evenly by the four gaps around the controls: above the
+    // scrubber, and between it, the transport, the volume bar and the buttons row.
+    val lyricShare = lyricSlotHeight * lyricSlotGone / 4
     val queueSlide = remember { mutableFloatStateOf(0f) }
     // Expensive, song-scoped preparation is deliberately staggered. The small
     // backdrop decode runs after the track hand-off has settled; lyrics and
@@ -2205,7 +2217,7 @@ fun NowPlayingScreen(
                                     onOpenArtist = onOpenArtist,
                                 )
                             },
-                            lyricStrip = if (syncedLyricsEnabled) {
+                            lyricStrip = if (syncedLyricsEnabled && !hideMiniLyrics) {
                                 {
                                     CurrentLyricStrip(
                                         lines = lyricsTranslation.displayedLyrics,
@@ -4073,10 +4085,10 @@ fun NowPlayingScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(lyricSlotHeight),
+                            .height(lyricSlotHeight * (1f - lyricSlotGone) + lyricShare),
                         contentAlignment = Alignment.CenterStart,
                     ) {
-                    if (!lyricsOpen && syncedLyricsEnabled) {
+                    if (!lyricsOpen && syncedLyricsEnabled && !hideMiniLyrics) {
                         CurrentLyricStrip(
                             lines = lyricsTranslation.displayedLyrics,
                             trackKey = song.videoId,
@@ -4092,7 +4104,7 @@ fun NowPlayingScreen(
                             onClick = openLyrics,
                         )
                     }
-                    if (!lyricsOpen && !syncedLyricsEnabled) {
+                    if (!lyricsOpen && !syncedLyricsEnabled && !hideMiniLyrics) {
                         Text(
                             text = "\u00A0",
                             style = MaterialTheme.typography.titleMedium,
@@ -4158,9 +4170,9 @@ fun NowPlayingScreen(
                         // as one. Both of its own gaps take half the spread, so on a
                         // tall screen it holds the centre rather than drifting up
                         // under the seek bar.
-                        Spacer(Modifier.height(TRANSPORT_GAP_ABOVE + controlSpread / 2))
+                        Spacer(Modifier.height(TRANSPORT_GAP_ABOVE + controlSpread / 2 + lyricShare))
                         transport()
-                        Spacer(Modifier.height(TRANSPORT_GAP_BELOW + controlSpread / 2))
+                        Spacer(Modifier.height(TRANSPORT_GAP_BELOW + controlSpread / 2 + lyricShare))
                         VolumeRow(
                             value = { volume.level.value },
                             onValueChange = onVolumeChange,
@@ -4168,7 +4180,7 @@ fun NowPlayingScreen(
                         )
                         // The volume slider already has 13dp below its drawn track.
                         // Balance that invisible inset with the caption gap below the icons.
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.height(6.dp + lyricShare))
                     } else {
                         // No volume bar: the transport centres itself in the whole run
                         // between the scrubber and the bottom row instead. The run is
@@ -4177,7 +4189,7 @@ fun NowPlayingScreen(
                         // The scrubber draws its times 9dp above their slot, which
                         // leaves that much more visible room above; half of it moves
                         // from the top gap to the bottom one.
-                        val run = 8.dp + 12.dp + 6.dp + controlSpread + VOLUME_ROW_HEIGHT
+                        val run = 8.dp + 12.dp + 6.dp + controlSpread + VOLUME_ROW_HEIGHT + lyricShare * 3
                         val lift = SCRUBBER_LABEL_LIFT / 2
                         Spacer(Modifier.height(run / 2 - lift))
                         transport()
