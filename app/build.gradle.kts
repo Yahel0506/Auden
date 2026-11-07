@@ -42,15 +42,17 @@ val lastfmSecret: String = (
  * deployment-specific rather than a property of the source, which is what puts
  * it here beside the others instead of in a constant.
  *
- * Empty is a supported state, not a broken build: the field below is only the
- * *default* the address box on the Listen Together screen starts with, and
- * anything typed there wins and persists. So a fresh checkout without this line
- * builds and runs, and simply asks for an address the first time somebody opens
- * the screen. See ListenTogether.DEFAULT_SERVER.
+ * A blank value counts as missing. CI writes this line from a secret, and an
+ * unset secret yields `LISTEN_TOGETHER_SERVER=` — present but empty — which
+ * used to win over the built-in address and shipped a release whose Create and
+ * Join buttons were permanently disabled. Falling through to the built-in
+ * address keeps every build on the same server as every other, so invites and
+ * codes keep working between them. Anything typed into the Listen Together
+ * screen still wins and persists. See ListenTogether.DEFAULT_SERVER.
  */
 val listenTogetherServer: String = (
-    localProps.getProperty("LISTEN_TOGETHER_SERVER")
-        ?: System.getenv("LISTEN_TOGETHER_SERVER")
+    localProps.getProperty("LISTEN_TOGETHER_SERVER")?.takeIf { it.isNotBlank() }
+        ?: System.getenv("LISTEN_TOGETHER_SERVER")?.takeIf { it.isNotBlank() }
         ?: "https://auden-listen-together.onrender.com"
     ).trim().trimEnd('/')
 
@@ -63,6 +65,18 @@ val connectServer: String = (
     localProps.getProperty("CONNECT_SERVER")
         ?: System.getenv("CONNECT_SERVER")
         ?: "https://auden-connect.yahelloppez.workers.dev"
+    ).trim().trimEnd('/')
+
+/*
+ * The service that checks this app's hardware key attestation and issues addon
+ * tokens. See AddonAuth. Overridable for a staging deployment. A fork that
+ * points this at its own server gains nothing: addons only trust tokens signed
+ * by the official service's key.
+ */
+val addonAuthServer: String = (
+    localProps.getProperty("ADDON_AUTH_SERVER")
+        ?: System.getenv("ADDON_AUTH_SERVER")
+        ?: "https://bitchord-auth.kushagrasingh.in"
     ).trim().trimEnd('/')
 
 // See the root build.gradle.kts: one version for the phone and its watch app.
@@ -100,6 +114,11 @@ android {
         )
         buildConfigField("String", "CONNECT_SERVER", "\"${connectServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         buildConfigField("String", "CONNECT_PLATFORM", "\"android\"")
+        buildConfigField(
+            "String",
+            "ADDON_AUTH_URL",
+            "\"${addonAuthServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
+        )
         // Which release assets are this app's: the phone and TV APKs ship in
         // the same GitHub release, told apart by file name. See
         // AppUpdateChecker.apkAssetUrl.
@@ -188,7 +207,9 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
+                // Strips every android.util.Log call; the benchmark build leaves it out.
+                "proguard-release-logs.pro"
             )
             // Null without a keystore to sign with: the build then produces
             // app-release-unsigned.apk instead of failing outright.
@@ -204,6 +225,14 @@ android {
          */
         create("benchmark") {
             initWith(getByName("release"))
+            // Without the release's log stripping, so what the analyzer and the crossfade
+            // controller write can be read over adb from a build that runs like a release.
+            setProguardFiles(
+                listOf(
+                    getDefaultProguardFile("proguard-android-optimize.txt"),
+                    "proguard-rules.pro",
+                ),
+            )
             signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".benchmark"
             matchingFallbacks += listOf("release")

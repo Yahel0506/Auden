@@ -37,6 +37,13 @@ object LocalPlaylists {
 
     @Volatile private var db: AudenDb? = null
 
+    /**
+     * Told, with the playlist's id, whenever songs are added to one that already existed: by hand, or
+     * by a sync of its Spotify or YouTube Music original. The download side listens, so a playlist
+     * downloaded whole takes its new songs without being asked.
+     */
+    @Volatile var onSongsAdded: ((String) -> Unit)? = null
+
     /** Loads the playlists; safe to call again. */
     fun init(context: Context) {
         val database = AudenDb.get(context)
@@ -179,8 +186,13 @@ object LocalPlaylists {
     }
 
     private fun replace(updated: LocalPlaylist) {
+        val before = _playlists.value.firstOrNull { it.id == updated.id }
         _playlists.value = _playlists.value.map { if (it.id == updated.id) updated else it }
         persist(updated, insert = false)
+        if (before != null) {
+            val had = before.songs.mapTo(HashSet()) { it.videoId }
+            if (updated.songs.any { it.videoId !in had }) onSongsAdded?.invoke(updated.id)
+        }
     }
 
     private fun persist(playlist: LocalPlaylist, insert: Boolean) {

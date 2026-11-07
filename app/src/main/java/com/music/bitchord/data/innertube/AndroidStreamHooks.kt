@@ -25,7 +25,7 @@ object AndroidStreamHooks {
         MonotonicClock.nowMs = SystemClock::elapsedRealtime
         // logcat on debug builds only; a release build keeps the lines for Copy
         // Log and writes them nowhere else.
-        if (BuildConfig.DEBUG) {
+        if (BuildConfig.DEBUG || BuildConfig.BUILD_TYPE == "benchmark") {
             TrackLog.echo = { level, tag, message, error ->
                 when (level) {
                     'D' -> Log.d(tag, message, error)

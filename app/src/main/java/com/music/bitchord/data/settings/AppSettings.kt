@@ -1,6 +1,7 @@
 package com.music.bitchord.data.settings
 
 import com.music.bitchord.data.webdav.update
+import com.music.bitchord.ui.components.VideoThumbnails
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.ConnectivityManager
@@ -254,10 +255,12 @@ object AppSettings {
     val downloadTemplate = MutableStateFlow(com.music.bitchord.download.DownloadLayout.DEFAULT_TEMPLATE)
     /**
      * Check the playlists downloaded whole for newly added songs and download
-     * them, in the background. Off by default: it spends data and storage
-     * without being asked each time. See [com.music.bitchord.download.PlaylistSync].
+     * them, in the background: YouTube Music playlists, and the device copies of
+     * Spotify and YouTube Music playlists and the ones made here. On by default,
+     * so a downloaded playlist stays downloaded; Wi-Fi only downloads still apply.
+     * See [com.music.bitchord.download.PlaylistSync].
      */
-    val syncDownloadedPlaylists = MutableStateFlow(false)
+    val syncDownloadedPlaylists = MutableStateFlow(true)
 
     /** Whether the active network charges for data. `null` while offline. */
     val meteredConnection = MutableStateFlow<Boolean?>(null)
@@ -448,6 +451,9 @@ object AppSettings {
      */
     val onboardingComplete = MutableStateFlow(false)
 
+    /** Whether the one-time Diwali 2026 greeting has been seen and dismissed. */
+    val diwaliGreetingShown = MutableStateFlow(false)
+
     /** Requests a sustained high-refresh UI. Off keeps Android's automatic policy. */
     val highPerformanceMode = MutableStateFlow(false)
 
@@ -459,6 +465,13 @@ object AppSettings {
 
     /** Hides the volume slider on the main player, leaving the rest of the layout to reflow. */
     val hideVolumeBar = MutableStateFlow(false)
+
+    /**
+     * Hides the one-line synced lyric above the scrubber on the main player. The room it
+     * took is shared out among the controls, so the player is as tall as before and the
+     * title stays where it was.
+     */
+    val hideMiniLyrics = MutableStateFlow(false)
 
     /** Hides the device status bar (clock, battery, notifications) while the main player is open. */
     val hideStatusBarInPlayer = MutableStateFlow(false)
@@ -474,14 +487,45 @@ object AppSettings {
     /** Once a song has been suggested or played this session, AutoPlay won't offer it again. */
     val dontRepeatSuggestions = MutableStateFlow(false)
 
+    /** Music videos play as their audio version — see [com.music.bitchord.playback.MusicOnlyPlayback]. */
+    val preferMusicOnly = MutableStateFlow(false)
+
+    /** Home's Recents shelf. */
+    val hideRecents = MutableStateFlow(false)
+
+    /** Music videos come off the Home feed, along with any shelf left with nothing else on it. */
+    val hideHomeVideos = MutableStateFlow(false)
+
+    /** Home's Top Picks for You shelf. */
+    val hideTopPicks = MutableStateFlow(false)
+
+    /** Home's Find Your Mood shelf. Explore's moods are a page the listener opened, so they stay. */
+    val hideHomeMoods = MutableStateFlow(false)
+
+    /** Music videos are square wherever they show — see [com.music.bitchord.ui.components.VideoThumbnails]. */
+    val squareVideoThumbnails = MutableStateFlow(false)
+
     /** Analyzes audio waveform/envelope to align matching playback moment between versions. */
     val smartVersionAlignment = MutableStateFlow(true)
 
     /** Drops haze blur (status bar, mini player, bottom fade, lyrics focus) for a solid-fill look. */
     val reduceDynamicBlur = MutableStateFlow(false)
 
+    /**
+     * Draws the player's glyphs and text, and the dark menus' rows, in plain white
+     * over what is behind them instead of blending the artwork's colour into them.
+     */
+    val disableBlendEffects = MutableStateFlow(false)
+
     /** Real backdrop-sampled glass (blur, lens refraction) on the floating nav bar, Android 12+ only. */
     val liquidGlass = MutableStateFlow(false)
+
+    /**
+     * Frosts the glass instead of refracting it, for phones the lens shader is too
+     * much for: the bar's rim, shadow, tint and motion all stay. A Liquid Glass
+     * option, honoured only while [liquidGlass] is on.
+     */
+    val glassPerformance = MutableStateFlow(false)
 
     /**
      * Blurs what scrolls under the status bar and the top controls, easing out
@@ -518,6 +562,17 @@ object AppSettings {
      * all. See [CanvasRepository][com.music.bitchord.data.canvas.CanvasRepository].
      */
     val animatedCanvas = MutableStateFlow(true)
+
+    /**
+     * Spotify's Canvas: the short vertical video that plays behind the player.
+     * Split from [animatedCover][animatedCanvas], which covers the square motion
+     * artwork of Apple, Tidal and the community index. Starts from whatever the
+     * single switch was set to before the two were separated.
+     */
+    val backgroundVideo = MutableStateFlow(true)
+
+    /** Either kind of clip allowed: what the player asks before looking one up. */
+    val anyCanvas = MutableStateFlow(true)
 
     /**
      * Whether [animatedCanvas] is allowed to actually stream on a metered
@@ -578,6 +633,28 @@ object AppSettings {
     val djBlockSize = MutableStateFlow(8)
 
     val homeLocalWeight = MutableStateFlow(dev.auden.home.HomeSettings.DEFAULT_WEIGHT)
+    /**
+     * The album and playlist page's answer to [fullBleedArtwork]: the sleeve
+     * runs edge to edge off the top of the screen and dissolves into the page
+     * colour, instead of sitting framed in the middle. Everything under it —
+     * the page colour, title, credit and buttons — stays as it is. Off by
+     * default, the framed sleeve being the page's own look.
+     */
+    val fullBleedDetailArtwork = MutableStateFlow(false)
+
+    /**
+     * What the main player stands on below the artwork.
+     *
+     * [PlayerTheme.DEFAULT] because that is the look people asked to have back,
+     * and because the alternatives each give something up: see
+     * [ArtworkMesh][com.music.bitchord.ui.player.ArtworkMesh] for what
+     * [PlayerTheme.LEGACY]'s quantiser does to a cover that is nine-tenths black
+     * with a red stripe (a red screen), and
+     * [ArtworkMeshBackdrop][com.music.bitchord.ui.player.ArtworkMeshBackdrop] for
+     * its cost (blobs that drift are a full-screen blur redrawn while they move,
+     * where a mesh is drawn once per track and then composited).
+     */
+    val playerTheme = MutableStateFlow(PlayerTheme.DEFAULT)
 
     /** Restores the expanded player to the surface the listener left open. */
     val lastPlayerScreen = MutableStateFlow(LastPlayerScreen.MAIN)
@@ -812,6 +889,17 @@ object AppSettings {
     val smartMixProgress = MutableStateFlow(0f)
 
     /**
+     * The *next* Automix transition laid out for the mix popup, as the plan
+     * stands right now — for a popup opened by hand from the player's menu
+     * between blends. Only published while [mixViewOpen], and null whenever
+     * [smartMixView] has a blend to show instead.
+     */
+    val smartMixPreview = MutableStateFlow<MixTransitionView?>(null)
+
+    /** The mix popup is up. Written by the player; tells the crossfade controller someone is looking. */
+    val mixViewOpen = MutableStateFlow(false)
+
+    /**
      * True while a version switch is fetching and analysing the other cut
      * before playback actually moves. Drains into the loading bar drawn along
      * the scrubber itself — `ThinSlider.loading` — so the wait reads as work
@@ -941,7 +1029,7 @@ object AppSettings {
         downloadTemplate.value = prefs.getString(KEY_DOWNLOAD_TEMPLATE, null)
             ?.takeIf(com.music.bitchord.download.DownloadLayout::valid)
             ?: com.music.bitchord.download.DownloadLayout.DEFAULT_TEMPLATE
-        syncDownloadedPlaylists.value = prefs.getBoolean(KEY_SYNC_DOWNLOADED_PLAYLISTS, false)
+        syncDownloadedPlaylists.value = prefs.getBoolean(KEY_SYNC_DOWNLOADED_PLAYLISTS, true)
         crossfadeSeconds.value = prefs.getInt(KEY_CROSSFADE, 0)
         smartFadeEnabled.value = prefs.getBoolean(KEY_SMART_FADE, false)
         automixPerformanceMode.value = runCatching {
@@ -992,20 +1080,31 @@ object AppSettings {
         connectEnabled.value = prefs.getBoolean(KEY_CONNECT_ENABLED, true)
         reduceAnimation.value = prefs.getBoolean(KEY_REDUCE_ANIMATION, false)
         onboardingComplete.value = prefs.getBoolean(KEY_ONBOARDING_COMPLETE, false)
+        diwaliGreetingShown.value = prefs.getBoolean(KEY_DIWALI_GREETING_SHOWN, false)
         highPerformanceMode.value = prefs.getBoolean(KEY_HIGH_PERFORMANCE_MODE, false)
         performanceRefreshRate.value = normalizePerformanceRefreshRate(
             prefs.getInt(KEY_PERFORMANCE_REFRESH_RATE, DEFAULT_PERFORMANCE_REFRESH_RATE),
         )
         stopOnTaskRemoved.value = prefs.getBoolean(KEY_STOP_ON_TASK_REMOVED, true)
         hideVolumeBar.value = prefs.getBoolean(KEY_HIDE_VOLUME_BAR, false)
+        hideMiniLyrics.value = prefs.getBoolean(KEY_HIDE_MINI_LYRICS, false)
         hideStatusBarInPlayer.value = prefs.getBoolean(KEY_HIDE_STATUS_BAR_IN_PLAYER, false)
         hideSongStatus.value = prefs.getBoolean(KEY_HIDE_SONG_STATUS, false)
         showQueueHistory.value = prefs.getBoolean(KEY_SHOW_QUEUE_HISTORY, false)
         swipeToPlayNext.value = prefs.getBoolean(KEY_SWIPE_TO_PLAY_NEXT, false)
         dontRepeatSuggestions.value = prefs.getBoolean(KEY_DONT_REPEAT_SUGGESTIONS, false)
+        preferMusicOnly.value = prefs.getBoolean(KEY_PREFER_MUSIC_ONLY, false)
+        hideRecents.value = prefs.getBoolean(KEY_HIDE_RECENTS, false)
+        hideHomeVideos.value = prefs.getBoolean(KEY_HIDE_HOME_VIDEOS, false)
+        hideTopPicks.value = prefs.getBoolean(KEY_HIDE_TOP_PICKS, false)
+        hideHomeMoods.value = prefs.getBoolean(KEY_HIDE_HOME_MOODS, false)
+        squareVideoThumbnails.value = prefs.getBoolean(KEY_SQUARE_VIDEO_THUMBNAILS, false)
+        VideoThumbnails.square = squareVideoThumbnails.value
         smartVersionAlignment.value = prefs.getBoolean(KEY_SMART_VERSION_ALIGNMENT, true)
         reduceDynamicBlur.value = prefs.getBoolean(KEY_REDUCE_BLUR, false)
+        disableBlendEffects.value = prefs.getBoolean(KEY_DISABLE_BLEND_EFFECTS, false)
         liquidGlass.value = prefs.getBoolean(KEY_LIQUID_GLASS, false)
+        glassPerformance.value = prefs.getBoolean(KEY_GLASS_PERFORMANCE, false)
         progressiveBlur.value = prefs.getBoolean(KEY_PROGRESSIVE_BLUR, false)
         lyricsBlur.value = prefs.getBoolean(KEY_LYRICS_BLUR, true)
         lyricsOffsetMs.value = prefs.getInt(KEY_LYRICS_OFFSET_MS, 0)
@@ -1016,6 +1115,8 @@ object AppSettings {
             reduceDynamicBlur.value = false
         }
         animatedCanvas.value = prefs.getBoolean(KEY_ANIMATED_CANVAS, true)
+        backgroundVideo.value = prefs.getBoolean(KEY_BACKGROUND_VIDEO, animatedCanvas.value)
+        anyCanvas.value = animatedCanvas.value || backgroundVideo.value
         canvasOverCellular.value = prefs.getBoolean(KEY_CANVAS_OVER_CELLULAR, false)
         spotifyCanvasAutoHide.value = prefs.getBoolean(KEY_SPOTIFY_CANVAS_AUTO_HIDE, true)
         prioritizeSpotifyCanvas.value = prefs.getBoolean(KEY_PRIORITIZE_SPOTIFY_CANVAS, false)
@@ -1029,6 +1130,13 @@ object AppSettings {
         djLanguage.value = prefs.getString(KEY_DJ_LANGUAGE, null)?.takeIf { it == "es" || it == "en" } ?: djLanguage.value
         djBlockSize.value = prefs.getInt(KEY_DJ_BLOCK_SIZE, 8).coerceIn(5, 12)
         homeLocalWeight.value = prefs.getInt(KEY_HOME_LOCAL_WEIGHT, dev.auden.home.HomeSettings.DEFAULT_WEIGHT).coerceIn(0, 100)
+        fullBleedDetailArtwork.value = prefs.getBoolean(KEY_FULL_BLEED_DETAIL_ARTWORK, false)
+        // The old legacy mesh switch answers until a theme has been picked.
+        playerTheme.value = runCatching {
+            PlayerTheme.valueOf(prefs.getString(KEY_PLAYER_THEME, null).orEmpty())
+        }.getOrElse {
+            if (prefs.getBoolean(KEY_LEGACY_MESH_GRADIENT, false)) PlayerTheme.LEGACY else PlayerTheme.DEFAULT
+        }
         lastPlayerScreen.value = runCatching {
             LastPlayerScreen.valueOf(
                 prefs.getString(KEY_LAST_PLAYER_SCREEN, null) ?: LastPlayerScreen.MAIN.name,
@@ -1392,6 +1500,11 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETE, true).apply()
     }
 
+    fun setDiwaliGreetingShown() {
+        diwaliGreetingShown.value = true
+        prefs.edit().putBoolean(KEY_DIWALI_GREETING_SHOWN, true).apply()
+    }
+
     fun setStopOnTaskRemoved(value: Boolean) {
         stopOnTaskRemoved.value = value
         prefs.edit().putBoolean(KEY_STOP_ON_TASK_REMOVED, value).apply()
@@ -1400,6 +1513,11 @@ object AppSettings {
     fun setHideVolumeBar(value: Boolean) {
         hideVolumeBar.value = value
         prefs.edit().putBoolean(KEY_HIDE_VOLUME_BAR, value).apply()
+    }
+
+    fun setHideMiniLyrics(value: Boolean) {
+        hideMiniLyrics.value = value
+        prefs.edit().putBoolean(KEY_HIDE_MINI_LYRICS, value).apply()
     }
 
     fun setHideStatusBarInPlayer(value: Boolean) {
@@ -1427,9 +1545,45 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_DONT_REPEAT_SUGGESTIONS, value).apply()
     }
 
+    fun setPreferMusicOnly(value: Boolean) {
+        preferMusicOnly.value = value
+        prefs.edit().putBoolean(KEY_PREFER_MUSIC_ONLY, value).apply()
+    }
+
+    fun setHideRecents(value: Boolean) {
+        hideRecents.value = value
+        prefs.edit().putBoolean(KEY_HIDE_RECENTS, value).apply()
+    }
+
+    fun setHideHomeVideos(value: Boolean) {
+        hideHomeVideos.value = value
+        prefs.edit().putBoolean(KEY_HIDE_HOME_VIDEOS, value).apply()
+    }
+
+    fun setHideTopPicks(value: Boolean) {
+        hideTopPicks.value = value
+        prefs.edit().putBoolean(KEY_HIDE_TOP_PICKS, value).apply()
+    }
+
+    fun setHideHomeMoods(value: Boolean) {
+        hideHomeMoods.value = value
+        prefs.edit().putBoolean(KEY_HIDE_HOME_MOODS, value).apply()
+    }
+
+    fun setSquareVideoThumbnails(value: Boolean) {
+        squareVideoThumbnails.value = value
+        VideoThumbnails.square = value
+        prefs.edit().putBoolean(KEY_SQUARE_VIDEO_THUMBNAILS, value).apply()
+    }
+
     fun setSmartVersionAlignment(value: Boolean) {
         smartVersionAlignment.value = value
         prefs.edit().putBoolean(KEY_SMART_VERSION_ALIGNMENT, value).apply()
+    }
+
+    fun setDisableBlendEffects(value: Boolean) {
+        disableBlendEffects.value = value
+        prefs.edit().putBoolean(KEY_DISABLE_BLEND_EFFECTS, value).apply()
     }
 
     fun setReduceDynamicBlur(value: Boolean) {
@@ -1443,6 +1597,11 @@ object AppSettings {
     fun setLiquidGlass(value: Boolean) {
         liquidGlass.value = value
         prefs.edit().putBoolean(KEY_LIQUID_GLASS, value).apply()
+    }
+
+    fun setGlassPerformance(value: Boolean) {
+        glassPerformance.value = value
+        prefs.edit().putBoolean(KEY_GLASS_PERFORMANCE, value).apply()
     }
 
     fun setProgressiveBlur(value: Boolean) {
@@ -1596,8 +1755,15 @@ object AppSettings {
         setPrioritizeSyllableSync(false)
     }
 
+    fun setBackgroundVideo(value: Boolean) {
+        backgroundVideo.value = value
+        anyCanvas.value = animatedCanvas.value || value
+        prefs.edit().putBoolean(KEY_BACKGROUND_VIDEO, value).apply()
+    }
+
     fun setAnimatedCanvas(value: Boolean) {
         animatedCanvas.value = value
+        anyCanvas.value = value || backgroundVideo.value
         prefs.edit().putBoolean(KEY_ANIMATED_CANVAS, value).apply()
     }
 
@@ -1665,6 +1831,16 @@ object AppSettings {
     fun setFullBleedArtwork(value: Boolean) {
         fullBleedArtwork.value = value
         prefs.edit().putBoolean(KEY_FULL_BLEED_ARTWORK, value).apply()
+    }
+
+    fun setFullBleedDetailArtwork(value: Boolean) {
+        fullBleedDetailArtwork.value = value
+        prefs.edit().putBoolean(KEY_FULL_BLEED_DETAIL_ARTWORK, value).apply()
+    }
+
+    fun setPlayerTheme(value: PlayerTheme) {
+        playerTheme.value = value
+        prefs.edit().putString(KEY_PLAYER_THEME, value.name).apply()
     }
 
     fun setLastPlayerScreen(value: LastPlayerScreen) {
@@ -2268,23 +2444,34 @@ object AppSettings {
     private const val KEY_CACHE_LIMIT = "audio_cache_limit_bytes"
     private const val KEY_REDUCE_ANIMATION = "reduce_animation"
     private const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
+    private const val KEY_DIWALI_GREETING_SHOWN = "diwali_greeting_2026_shown"
     private const val KEY_HIGH_PERFORMANCE_MODE = "high_performance_mode"
     private const val KEY_PERFORMANCE_REFRESH_RATE = "performance_refresh_rate"
     private const val KEY_STOP_ON_TASK_REMOVED = "stop_on_task_removed"
     private const val KEY_HIDE_VOLUME_BAR = "hide_volume_bar"
+    private const val KEY_HIDE_MINI_LYRICS = "hide_mini_lyrics"
     private const val KEY_HIDE_STATUS_BAR_IN_PLAYER = "hide_status_bar_in_player"
     private const val KEY_HIDE_SONG_STATUS = "hide_song_status"
     private const val KEY_SHOW_QUEUE_HISTORY = "show_queue_history"
     private const val KEY_SWIPE_TO_PLAY_NEXT = "swipe_to_play_next"
     private const val KEY_DONT_REPEAT_SUGGESTIONS = "dont_repeat_suggestions"
+    private const val KEY_PREFER_MUSIC_ONLY = "prefer_music_only"
+    private const val KEY_HIDE_RECENTS = "hide_recents"
+    private const val KEY_HIDE_HOME_VIDEOS = "hide_home_videos"
+    private const val KEY_HIDE_TOP_PICKS = "hide_top_picks"
+    private const val KEY_HIDE_HOME_MOODS = "hide_home_moods"
+    private const val KEY_SQUARE_VIDEO_THUMBNAILS = "square_video_thumbnails"
     private const val KEY_SMART_VERSION_ALIGNMENT = "smart_version_alignment"
     private const val KEY_REDUCE_BLUR = "reduce_dynamic_blur"
+    private const val KEY_DISABLE_BLEND_EFFECTS = "disable_blend_effects"
     private const val KEY_LIQUID_GLASS = "liquid_glass"
+    private const val KEY_GLASS_PERFORMANCE = "glass_performance"
     private const val KEY_PROGRESSIVE_BLUR = "progressive_blur"
     private const val KEY_LYRICS_BLUR = "lyrics_blur"
     private const val KEY_LYRICS_OFFSET_MS = "lyrics_offset_ms"
     private const val KEY_TRANSLATION_LANGUAGE = "translation_language"
     private const val KEY_ANIMATED_CANVAS = "animated_canvas"
+    private const val KEY_BACKGROUND_VIDEO = "background_video"
     private const val KEY_CANVAS_OVER_CELLULAR = "canvas_over_cellular"
     private const val KEY_SPOTIFY_CANVAS_AUTO_HIDE = "spotify_canvas_auto_hide"
     private const val KEY_PRIORITIZE_SPOTIFY_CANVAS = "prioritize_spotify_canvas"
@@ -2297,6 +2484,9 @@ object AppSettings {
     private const val KEY_DJ_CHATTY = "dj_chatty"
     private const val KEY_DJ_LANGUAGE = "dj_language"
     private const val KEY_DJ_BLOCK_SIZE = "dj_block_size"
+    private const val KEY_FULL_BLEED_DETAIL_ARTWORK = "full_bleed_detail_artwork"
+    private const val KEY_PLAYER_THEME = "player_theme"
+    private const val KEY_LEGACY_MESH_GRADIENT = "legacy_mesh_gradient"
     private const val KEY_LAST_PLAYER_SCREEN = "last_player_screen"
     private const val KEY_SYNCED_LYRICS = "synced_lyrics"
     private const val KEY_LYRICS_SOURCES = "lyrics_sources"

@@ -35,7 +35,7 @@ object AndroidAppUiHost : AppUiHost {
     }
 
     override suspend fun releaseMotion(album: String, artist: String): CanvasArtwork? {
-        if (!AppSettings.animatedCanvas.value || album.isBlank() || artist.isBlank()) return null
+        if (!AppSettings.anyCanvas.value || album.isBlank() || artist.isBlank()) return null
         return CanvasRepository.canvasForAlbum(album, artist)
     }
 
