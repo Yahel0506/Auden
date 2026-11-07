@@ -344,12 +344,16 @@ object LoopMix {
                 if (sung != null) {
                     val from = loop.start - LYRIC_GUARD_SEC
                     val touching = sung.filter { it.start < loop.end && it.end > from }
-                    if (touching.any { it.start < loop.end && it.certainUntil > from }) {
+                    // Only a line whose end the lyrics state is vouched for whole. A line timed by
+                    // its start alone is a guess (its first words are surely sung, its tail may not
+                    // be), and line after line of those covers every loop in a song; the vocal mask
+                    // rules on them instead, and a loop it calls clean is taken.
+                    if (touching.any { it.certainUntil >= it.end && it.start < loop.end && it.end > from }) {
                         count.lyrics++
                         continue
                     }
                     if (touching.isEmpty()) return Clean(loop.start, loop.end, bars, 0.0, Check.LYRICS)
-                    // Only the guessed tails of open lines reach it: the mask decides those.
+                    // Only lines timed by their start alone reach it: the mask decides those.
                     val mask = maskStats(analysis.vocalWindows, loop.start - beatSec, loop.end)
                     if (mask == null) {
                         count.unmasked++

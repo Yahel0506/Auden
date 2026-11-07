@@ -269,10 +269,23 @@ class LoopMixTest {
         val out = analysis(120.0, 200.0, listOf(vocals(130.0, 200.0, 0.8f, quiet)))
         val plan = assertNotNull(plan(out, analysis(120.0, 180.0), spans, clear))
         assertEquals(LoopMix.Check.LYRICS_AND_MASK, plan.out.checkedBy)
-        // never over a line's first words
-        for (span in spans) assertTrue(plan.out.loopStart - 0.3 >= span.certainUntil || plan.out.loopEnd <= span.start)
         // and without a mask, the guessed tails still block it
         assertNull(plan(analysis(120.0, 200.0, quiet = listOf(176.0 to 200.0)), analysis(120.0, 180.0), spans, clear))
+    }
+
+    @Test
+    fun lineSyncedLyricsDoNotVetoALoopTheMaskCallsClean() {
+        // A line every 4 s with no end: each one's first 2 s used to be certain, which covered every
+        // loop. The mask says the stretch is instrumental, so the loop is taken.
+        val lines = (0 until 20).map { LoopMix.Line((120_000 + it * 4_000).toLong(), null, blank = false) }
+        val spans = LoopMix.sungSpans(lines)
+        val clean = listOf(120.0 to 200.0)
+        val out = analysis(120.0, 200.0, listOf(vocals(130.0, 200.0, 0.8f, clean)))
+        val plan = assertNotNull(plan(out, analysis(120.0, 180.0), spans, clear))
+        assertEquals(LoopMix.Check.LYRICS_AND_MASK, plan.out.checkedBy)
+        // and lines that state their end still veto: sung there, nothing to loop
+        val stated = (0 until 20).map { LoopMix.Line((120_000 + it * 4_000).toLong(), (120_000 + it * 4_000 + 3_900).toLong(), blank = false) }
+        assertNull(plan(out, analysis(120.0, 180.0), LoopMix.sungSpans(stated), clear))
     }
 
     @Test

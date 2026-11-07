@@ -154,6 +154,12 @@ class CrossfadeController(
      */
     private val requestAnalysis: (MediaItem, Long) -> Unit = { _, _ -> },
     /**
+     * The media ids worth analysing right now, most urgent first: the track playing and the one
+     * after it. Whatever the analyzer was working through for a track not named here belongs to
+     * a song that has been skipped past, and gives way.
+     */
+    private val retainAnalysis: (List<String>) -> Unit = {},
+    /**
      * The low-pass and high-pass riding each side of a transition. This is what
      * makes a plan's
      * [com.music.bitchord.playback.smart.TransitionPlan.transitionStyle] audible
@@ -628,6 +634,9 @@ class CrossfadeController(
     private var easeStepMs = 0L
     private var easeNextAtMs = 0L
     private var easeItemIndex = 0
+
+    /** The tempo ease-back was started inside the blend, so [finish] must not start it again. */
+    private var easeBackStarted = false
     private var softSpeedJob: Job? = null
 
     /**
@@ -859,7 +868,9 @@ class CrossfadeController(
         publishAutomixDetail()
         expireMixPreview()
 
-        if (easing != null && phase == Phase.IDLE) driveEase()
+        // Also in the closing stretch of a blend, once the incoming track is the session's:
+        // the tempo walks back while the old track is still fading out, not after it is gone.
+        if (easing != null && (phase == Phase.IDLE || (phase == Phase.FADING && handedOff))) driveEase()
 
         when (phase) {
             Phase.IDLE -> considerAutoTransition()
@@ -1283,6 +1294,14 @@ class CrossfadeController(
     private fun requestAnalysisAround(player: ExoPlayer, duration: Long) {
         val currentItem = player.currentMediaItem ?: return
         val nextIndex = player.nextMediaItemIndex
+        // Before any early return below: a skip to the last track, or onto a video, has to
+        // release whatever was being measured for the songs left behind.
+        retainAnalysis(
+            listOfNotNull(
+                currentItem.mediaId,
+                if (nextIndex == C.INDEX_UNSET) null else player.getMediaItemAt(nextIndex).mediaId,
+            ),
+        )
         if (nextIndex == C.INDEX_UNSET) return
         val nextItem = player.getMediaItemAt(nextIndex)
         if (currentItem.isVideoOrigin || nextItem.isVideoOrigin) return
@@ -1430,6 +1449,7 @@ class CrossfadeController(
         incomingCueTimeMs = cueTimeMs.coerceAtLeast(0L)
         incomingPlaybackRate = playbackRate
         outgoingPlaybackRate = outgoingRate
+        easeBackStarted = false
         rampSteps = if (beatMs > 0L) rampStepsFor(outgoingRate) else 0
         rampStepMs = beatMs
         rampStartMs = endMs - fade - rampSteps * beatMs
@@ -1833,6 +1853,16 @@ class CrossfadeController(
             headroomFor(mixRise(outgoingAt), outgoingLevel(elapsed / wallSpan + tracks.outgoingLeadMs() / span.toFloat(), wallSpan)),
         )
         if (render.phaseLock) holdPhase(out, player, progress)
+        // The beat only has to match while the old track is clearly audible. Past
+        // EASE_BACK_FROM the incoming tempo starts walking back to the listener's,
+        // so the new song is not left running fast for seconds once it is alone.
+        // Not while a phase-lock pulse is still in flight: it would put the speed back.
+        if (handedOff && !easeBackStarted && easing == null && progress >= EASE_BACK_FROM && nudgeUntil == 0L &&
+            abs(incomingPlaybackRate - 1.0) >= EASE_DONE
+        ) {
+            easeBackStarted = true
+            beginEase(player, incomingPlaybackRate, incomingAnalysis, availableMs = (wallSpan * (1f - progress)).toLong())
+        }
 
         // The midpoint, or sooner if the outgoing track is about to run out
         // from under it: until the handoff its queue still runs on past the
@@ -3002,7 +3032,8 @@ class CrossfadeController(
                 // walked back a beat at a time over a few bars rather than in
                 // one jump — the tempo lurch a DJ never lets anyone hear. An
                 // unstretched track goes straight to the listener's speed.
-                beginEase(it, incomingPlaybackRate, incomingAnalysis)
+                // Already under way if the blend got far enough to start it itself.
+                if (!easeBackStarted) beginEase(it, incomingPlaybackRate, incomingAnalysis)
             }
             outgoing?.let(::retire)
         } else {
@@ -3026,6 +3057,7 @@ class CrossfadeController(
         incomingCueTimeMs = 0L
         incomingPlaybackRate = 1.0
         outgoingPlaybackRate = 1.0
+        easeBackStarted = false
         rampSteps = 0
         outgoingAnalysis = TrackAnalysis()
         incomingAnalysis = TrackAnalysis()
@@ -3695,7 +3727,7 @@ class CrossfadeController(
      * Plain speed changes, like [rampOutgoing]'s, not [setPlaybackSpeedClickless]:
      * its gain notch on every beat was the audible part, heard as a pump.
      */
-    private fun beginEase(player: ExoPlayer, rate: Double, analysis: TrackAnalysis) {
+    private fun beginEase(player: ExoPlayer, rate: Double, analysis: TrackAnalysis, availableMs: Long = 0L) {
         val stretch = rate - 1.0
         if (abs(stretch) < EASE_DONE) {
             player.setPlaybackSpeed(AppSettings.playbackSpeed.value)
@@ -3706,10 +3738,20 @@ class CrossfadeController(
             analysis.bpm > 0.0 -> 60.0 / analysis.bpm
             else -> 0.0
         }
-        val steps = rampStepsFor(rate)
+        easeStepMs = if (beat > 0.0) (beat * 1000).roundToLong() else EASE_FALLBACK_STEP_MS
+        // Started inside a blend, [availableMs] is what is left of it: the walk-back
+        // takes as few beats as fit there, at no more than EASE_MAX_STEP a beat, and
+        // otherwise runs on gently past the blend's end.
+        val steps = if (availableMs > 0L) {
+            maxOf(
+                ceil(abs(stretch) / EASE_MAX_STEP).toInt(),
+                minOf(rampStepsFor(rate), (availableMs / easeStepMs).toInt()),
+            ).coerceAtLeast(1)
+        } else {
+            rampStepsFor(rate)
+        }
         easeStep = stretch / steps
         easeRate = rate
-        easeStepMs = if (beat > 0.0) (beat * 1000).roundToLong() else EASE_FALLBACK_STEP_MS
         easeItemIndex = player.currentMediaItemIndex
         easeNextAtMs = player.currentPosition + easeStepMs
         easing = player
@@ -4038,7 +4080,13 @@ class CrossfadeController(
         const val MAX_NUDGE_MS = 1_500L
 
         /** Past this much of the blend the outgoing track is too far gone for its beat to matter. */
-        const val LOCK_UNTIL = 0.9f
+        const val LOCK_UNTIL = 0.7f
+
+        /** From here the incoming tempo walks back to the listener's, with the old track on its way out. */
+        const val EASE_BACK_FROM = 0.7f
+
+        /** The most the tempo moves in one beat when it has to be eased back within a blend. */
+        const val EASE_MAX_STEP = 0.02
 
         /**
          * More than this far apart — in beats of the shared pulse — is two grids

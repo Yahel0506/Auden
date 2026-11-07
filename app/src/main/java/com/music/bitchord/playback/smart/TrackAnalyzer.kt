@@ -47,7 +47,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.max
@@ -238,12 +237,33 @@ class TrackAnalyzer(private val context: Context, private val cache: AudioCache)
 
     private fun discardsOf(key: String): Int = discarded[key] ?: 0
 
-    private val executor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "bitchord-smart-analysis").apply {
-            isDaemon = true
-            priority = Thread.NORM_PRIORITY
-        }
+    /**
+     * The tracks the listener is on and about to be on, most urgent first, as the crossfade
+     * controller last reported them; null until it has. The queue works through these before
+     * anything else, and an analysis of a track that is not among them is dropped — it belongs to
+     * a song that has been skipped past, and was holding up the one that is playing.
+     */
+    @Volatile private var wanted: List<String>? = null
+
+    /** Names the tracks worth analysing now, most urgent first. Cheap; called as the queue is read. */
+    fun retain(trackIds: List<String>) {
+        wanted = trackIds
     }
+
+    private fun unwanted(trackId: String): Boolean = wanted?.let { trackId !in it } == true
+
+    /** A party started, or the listener moved on from this track: either way, the work is for nothing. */
+    private fun cancelled(trackId: String): Boolean = stopped || unwanted(trackId)
+
+    private fun rankOf(trackId: String?): Int {
+        if (trackId == null) return -1
+        val list = wanted ?: return 0
+        val index = list.indexOf(trackId)
+        // Not wanted: first in line, so the task cancels itself at once instead of sitting in the way.
+        return if (index < 0) -2 else index
+    }
+
+    private val executor = AnalysisQueue("bitchord-smart-analysis", ::rankOf)
 
     /**
      * What is known about [trackId] right now: never a computation, never a
@@ -267,7 +287,7 @@ class TrackAnalyzer(private val context: Context, private val cache: AudioCache)
         // caller, so a track with nothing stored is looked for once per session
         // rather than on every tick.
         if (!restoreAttempted.add(trackId)) return
-        executor.execute {
+        executor.execute(null) {
             val stored = store.load(trackId) ?: return@execute
             Log.d(TAG, "Restored analysis for $trackId: bpm=${stored.bpm} conf=${stored.beatConfidence}")
             results.putIfAbsent(trackId, stored)
@@ -413,7 +433,7 @@ class TrackAnalyzer(private val context: Context, private val cache: AudioCache)
         }
         if (!running.add(trackId)) return
 
-        executor.execute {
+        executor.execute(trackId) {
             try {
                 // Efficient mode yields to decoding and playback rather than
                 // competing for a core. Thread count remains the speed knob.
@@ -437,7 +457,7 @@ class TrackAnalyzer(private val context: Context, private val cache: AudioCache)
                 // started while the track ahead of it was being measured. Every
                 // task behind that one turns into this return, which drains the
                 // backlog without needing to reach into the executor's queue.
-                if (stopped) return@execute
+                if (cancelled(trackId)) return@execute
                 if (usableComplete) {
                     val outcome = analyze(trackId, analysisUri, durationSeconds)
                     val whole = outcome.analysis
@@ -1083,7 +1103,7 @@ class TrackAnalyzer(private val context: Context, private val cache: AudioCache)
         // Read *before* the two lines below, not after, because an abort comes
         // back from [structure] as a decode that produced nothing, and that is
         // exactly what those lines write a permanent "cannot be analysed" for.
-        if (stopped) return WholeTrack(null)
+        if (cancelled(trackId)) return WholeTrack(null)
         if (structural.decodedShort) return WholeTrack(null, decodedShort = true)
         val features = structural.features ?: return WholeTrack(empty(trackId, effectiveDuration))
 
@@ -1105,10 +1125,10 @@ class TrackAnalyzer(private val context: Context, private val cache: AudioCache)
             // that would be published, and persisted, with the DSP estimate
             // standing in. A result assembled out of a half-finished analysis
             // is worse than none.
-            if (stopped) return WholeTrack(null)
+            if (cancelled(trackId)) return WholeTrack(null)
             region(openSource, from, to, features)?.let(regions::add)
         }
-        if (stopped) return WholeTrack(null)
+        if (cancelled(trackId)) return WholeTrack(null)
 
         val beats = seamBeats(regions)
         val headSide = beatSide(beats, 0.0, headEnd)

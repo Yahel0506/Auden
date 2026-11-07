@@ -192,7 +192,9 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
+                // Strips every android.util.Log call; the benchmark build leaves it out.
+                "proguard-release-logs.pro"
             )
             // Null without a keystore to sign with: the build then produces
             // app-release-unsigned.apk instead of failing outright.
@@ -208,6 +210,14 @@ android {
          */
         create("benchmark") {
             initWith(getByName("release"))
+            // Without the release's log stripping, so what the analyzer and the crossfade
+            // controller write can be read over adb from a build that runs like a release.
+            setProguardFiles(
+                listOf(
+                    getDefaultProguardFile("proguard-android-optimize.txt"),
+                    "proguard-rules.pro",
+                ),
+            )
             signingConfig = signingConfigs.getByName("debug")
             applicationIdSuffix = ".benchmark"
             matchingFallbacks += listOf("release")
