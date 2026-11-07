@@ -40,6 +40,7 @@ import { UpNext } from './UpNext';
 import { MixWindowHighlight, NerdStats } from './NerdStats';
 import { useScrubber } from './useScrubber';
 import { VideoQuality } from './VideoQuality';
+import { RetryImg } from '@/components/music/RetryImg';
 import { DevicePicker } from '@/auden/connect/ui/DevicePicker';
 import { fadeForVolume, VolumeControl } from './VolumeControl';
 
@@ -334,7 +335,8 @@ export function FullScreenPlayer() {
           >
             {nowPlaying.artworkUrl && (
               <>
-                <img
+                <RetryImg
+                  fallbackSrc={nowPlaying.artworkUrl}
                   key={`glow-${nowPlaying.artworkUrl}`}
                   // The radiosity glow: a small copy, blurred and saturated, behind the artwork.
                   className={`${artworkLayer} -z-1 translate-y-2 scale-96 blur-[20px] saturate-200 data-loaded:opacity-40`}
@@ -346,7 +348,8 @@ export function FullScreenPlayer() {
                 />
                 {/* The cover that was showing stays under the new one until that has loaded, so a track change fades across rather than through nothing. */}
                 {previousCover && (
-                  <img
+                  <RetryImg
+                    fallbackSrc={previousCover}
                     key={`prev-${previousCover}`}
                     className="absolute inset-0 size-full rounded-[inherit] object-cover"
                     src={sizedArtwork(previousCover, 600)}
@@ -355,7 +358,8 @@ export function FullScreenPlayer() {
                     decoding="async"
                   />
                 )}
-                <img
+                <RetryImg
+                  fallbackSrc={nowPlaying.artworkUrl}
                   key={nowPlaying.artworkUrl}
                   className={`${artworkLayer} bg-[#ffffff12] shadow-[0_4px_10px_#0000001a] data-loaded:opacity-100`}
                   src={sizedArtwork(nowPlaying.artworkUrl, 600)}
