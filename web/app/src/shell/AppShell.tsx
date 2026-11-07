@@ -22,6 +22,7 @@ import { useKeyboardShortcuts } from './useKeyboardShortcuts';
 import { Banner, bannerButtonClass } from './Banner';
 import { MobileTopBar } from './MobileTopBar';
 import { useConnectSession } from '@/auden/connect/useConnectSession';
+import { startLastSession } from '@/state/lastSession';
 import { PlayerBar } from './PlayerBar';
 import { SidePanel } from './SidePanel';
 import { Sidebar } from './Sidebar';
@@ -40,6 +41,8 @@ export function AppShell() {
   useDiscordPresence();
   // Auden Connect: this browser in the account's device list; while another device plays, the player below mirrors it.
   useConnectSession();
+  // What was playing comes back after a reload, paused where it was.
+  useEffect(() => startLastSession(), []);
   // Listen Together: pick a party back up after a reload, and keep the player in step with it.
   useEffect(() => {
     resumeSession();

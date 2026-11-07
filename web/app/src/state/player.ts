@@ -1855,3 +1855,22 @@ export const djPlayer = {
 
 // For browser-driven checks (a fake DJ voice through the real queue), next to __bcPlayer.
 if (import.meta.env.DEV && typeof window !== 'undefined') Object.assign(window, { __bcDjPlayer: djPlayer });
+
+// ---- The last session, restored after a reload (state/lastSession.ts) ---------------------------
+
+export const sessionPlayer = {
+  /** The shuffle's canonical positions by entryId, so turning shuffle off after a reload restores the list. */
+  canonical(): [string, number][] | null {
+    return canonical ? [...canonical] : null;
+  },
+  /**
+   * Puts a remembered session back on the player, paused at [startSec]: its rows as they were (tier, source and
+   * all), and the song loaded but not started. Does nothing when something is already queued.
+   */
+  restore(entries: QueueEntry[], index: number, startSec: number, order: [string, number][] | null): Promise<void> {
+    if (usePlayer.getState().queue.length > 0 || usePlayer.getState().mirror) return Promise.resolve();
+    canonical = order ? new Map(order) : null;
+    usePlayer.setState({ queue: entries });
+    return startAt(index, { startSec, autoplay: false });
+  },
+};
