@@ -2,6 +2,7 @@ package com.music.bitchord.playback
 
 import android.content.Context
 import android.media.AudioManager
+import android.os.SystemClock
 import android.net.ConnectivityManager
 import android.net.Network
 import android.os.Build
@@ -100,6 +101,7 @@ class ConnectSync(
             }
         }
         jobs += scope.launch { mirror() }
+        jobs += scope.launch { guardOwnVolume() }
         jobs += scope.launch {
             // Turning shuffle on with nothing left to reorder changes no timeline: the flag itself is the event.
             QueueShuffle.enabled.drop(1).collect { manager.onLocalChanged() }
@@ -126,6 +128,22 @@ class ConnectSync(
         unregisterNetwork()
         manager.stop()
         joinedRoom = null
+    }
+
+    /**
+     * The phone's media volume is its own: handing playback over from another device must not raise it
+     * (see [ConnectVolumeGuard]). Watches the music stream and undoes a jump to maximum after a hand-over.
+     */
+    private suspend fun guardOwnVolume() {
+        val guard = ConnectVolumeGuard()
+        val am = audio ?: return
+        while (true) {
+            val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            val current = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+            val restore = guard.tick(SystemClock.elapsedRealtime(), manager.isMirroring || manager.isRemote, current, max)
+            if (restore != null) runCatching { am.setStreamVolume(AudioManager.STREAM_MUSIC, restore, 0) }
+            delay(VOLUME_GUARD_POLL_MS)
+        }
     }
 
     /** Joins, leaves or moves between rooms to match the setting and the signed-in account. */
@@ -367,7 +385,8 @@ class ConnectSync(
             // so turning shuffle off here restores the very list every other device shows.
             if (state.shuffle) QueueShuffle.adoptShared(items, state.order) else QueueShuffle.adoptUnshuffled()
             adoptedShuffle = null
-            setVolume(state.volume)
+            // The volume stays this device's own: the sender's level (the web's is 1.0 by default) is not copied,
+            // it would set the phone's media volume to maximum. A remote moves it only by a volume command.
             exo.prepare()
             exo.playWhenReady = play
             done()
@@ -448,6 +467,7 @@ class ConnectSync(
 
     companion object {
         private const val TAG = "ConnectSync"
+        private const val VOLUME_GUARD_POLL_MS = 200L
         private const val ACCOUNT_POLL_MS = 5_000L
 
         private val RELEVANT_EVENTS = intArrayOf(
