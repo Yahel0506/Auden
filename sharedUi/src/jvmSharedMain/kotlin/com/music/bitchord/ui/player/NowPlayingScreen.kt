@@ -1046,9 +1046,15 @@ fun NowPlayingScreen(
         animationSpec = tween(durationMillis = 220),
         label = "lyricSlotGone",
     )
-    // The freed height is shared out evenly by the four gaps around the controls: above the
-    // scrubber, and between it, the transport, the volume bar and the buttons row.
-    val lyricShare = lyricSlotHeight * lyricSlotGone / 4
+    // Whatever the player no longer shows — the mini lyric line, the volume bar — gives its
+    // height back to the gaps between what is left, shared evenly, so the controls fill the
+    // same block as before and sit centred in it. The gaps are: under the title, between the
+    // lyric line and the scrubber (when there is one), between the scrubber and the transport,
+    // and around the volume bar (two gaps with the bar, one without).
+    val lyricStripGone = hideMiniLyrics && !lyricsOpen
+    val freedHeight = lyricSlotHeight * lyricSlotGone + if (hideVolumeBar) VOLUME_ROW_HEIGHT else 0.dp
+    val gapShare = freedHeight / ((if (lyricStripGone) 1 else 2) + 1 + (if (hideVolumeBar) 1 else 2))
+    val lyricSlotShare = gapShare * (if (lyricStripGone) 1 else 2)
     val queueSlide = remember { mutableFloatStateOf(0f) }
     // Expensive, song-scoped preparation is deliberately staggered. The small
     // backdrop decode runs after the track hand-off has settled; lyrics and
@@ -4085,7 +4091,7 @@ fun NowPlayingScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(lyricSlotHeight * (1f - lyricSlotGone) + lyricShare),
+                            .height(lyricSlotHeight * (1f - lyricSlotGone) + lyricSlotShare),
                         contentAlignment = Alignment.CenterStart,
                     ) {
                     if (!lyricsOpen && syncedLyricsEnabled && !hideMiniLyrics) {
@@ -4170,9 +4176,9 @@ fun NowPlayingScreen(
                         // as one. Both of its own gaps take half the spread, so on a
                         // tall screen it holds the centre rather than drifting up
                         // under the seek bar.
-                        Spacer(Modifier.height(TRANSPORT_GAP_ABOVE + controlSpread / 2 + lyricShare))
+                        Spacer(Modifier.height(TRANSPORT_GAP_ABOVE + controlSpread / 2 + gapShare))
                         transport()
-                        Spacer(Modifier.height(TRANSPORT_GAP_BELOW + controlSpread / 2 + lyricShare))
+                        Spacer(Modifier.height(TRANSPORT_GAP_BELOW + controlSpread / 2 + gapShare))
                         VolumeRow(
                             value = { volume.level.value },
                             onValueChange = onVolumeChange,
@@ -4180,20 +4186,15 @@ fun NowPlayingScreen(
                         )
                         // The volume slider already has 13dp below its drawn track.
                         // Balance that invisible inset with the caption gap below the icons.
-                        Spacer(Modifier.height(6.dp + lyricShare))
+                        Spacer(Modifier.height(6.dp + gapShare))
                     } else {
-                        // No volume bar: the transport centres itself in the whole run
-                        // between the scrubber and the bottom row instead. The run is
-                        // exactly as tall as with the bar, so the half-player's height
-                        // never depends on the setting — only where the transport sits.
-                        // The scrubber draws its times 9dp above their slot, which
-                        // leaves that much more visible room above; half of it moves
-                        // from the top gap to the bottom one.
-                        val run = 8.dp + 12.dp + 6.dp + controlSpread + VOLUME_ROW_HEIGHT + lyricShare * 3
-                        val lift = SCRUBBER_LABEL_LIFT / 2
-                        Spacer(Modifier.height(run / 2 - lift))
+                        // No volume bar: its height is shared out by the gaps instead (see
+                        // [gapShare]), so the transport sits centred between the scrubber and
+                        // the buttons row and nothing — not the buttons, not the title above —
+                        // moves for the setting.
+                        Spacer(Modifier.height(TRANSPORT_GAP_ABOVE + controlSpread / 2 + gapShare))
                         transport()
-                        Spacer(Modifier.height(run / 2 + lift))
+                        Spacer(Modifier.height(TRANSPORT_GAP_BELOW + controlSpread / 2 + 6.dp + gapShare))
                     }
 
                     playerActions()
