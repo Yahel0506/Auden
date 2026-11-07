@@ -255,10 +255,12 @@ object AppSettings {
     val downloadTemplate = MutableStateFlow(com.music.bitchord.download.DownloadLayout.DEFAULT_TEMPLATE)
     /**
      * Check the playlists downloaded whole for newly added songs and download
-     * them, in the background. Off by default: it spends data and storage
-     * without being asked each time. See [com.music.bitchord.download.PlaylistSync].
+     * them, in the background: YouTube Music playlists, and the device copies of
+     * Spotify and YouTube Music playlists and the ones made here. On by default,
+     * so a downloaded playlist stays downloaded; Wi-Fi only downloads still apply.
+     * See [com.music.bitchord.download.PlaylistSync].
      */
-    val syncDownloadedPlaylists = MutableStateFlow(false)
+    val syncDownloadedPlaylists = MutableStateFlow(true)
 
     /** Whether the active network charges for data. `null` while offline. */
     val meteredConnection = MutableStateFlow<Boolean?>(null)
@@ -1017,7 +1019,7 @@ object AppSettings {
         downloadTemplate.value = prefs.getString(KEY_DOWNLOAD_TEMPLATE, null)
             ?.takeIf(com.music.bitchord.download.DownloadLayout::valid)
             ?: com.music.bitchord.download.DownloadLayout.DEFAULT_TEMPLATE
-        syncDownloadedPlaylists.value = prefs.getBoolean(KEY_SYNC_DOWNLOADED_PLAYLISTS, false)
+        syncDownloadedPlaylists.value = prefs.getBoolean(KEY_SYNC_DOWNLOADED_PLAYLISTS, true)
         crossfadeSeconds.value = prefs.getInt(KEY_CROSSFADE, 0)
         smartFadeEnabled.value = prefs.getBoolean(KEY_SMART_FADE, false)
         automixPerformanceMode.value = runCatching {

@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.TimeUnit
 
 /**
@@ -78,6 +79,11 @@ object PlaylistSync {
     /** One check at a time, however many of the triggers fire together. */
     private val running = Mutex()
 
+    /** Lets a burst of edits to a device playlist finish before its new songs are looked at. */
+    private const val LOCAL_SETTLE_MILLIS = 3_000L
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
     /**
      * Follows the setting and the Wi-Fi rule its schedule depends on.
      *
@@ -85,6 +91,9 @@ object PlaylistSync {
      * that reason: a switch that defaults to off should cost a launch nothing.
      */
     fun init(app: Application) {
+        // A device playlist gaining songs (added by hand, or by a sync of its Spotify or
+        // YouTube Music original) is looked at straight away rather than at the next check.
+        dev.auden.library.LocalPlaylists.onSongsAdded = { id -> localPlaylistChanged(app, id) }
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             var wasOn: Boolean? = null
             AppSettings.syncDownloadedPlaylists
@@ -172,6 +181,12 @@ object PlaylistSync {
             Downloads.collections.value.keys.forEach { id ->
                 if (!AppSettings.syncDownloadedPlaylists.value || !AppSettings.downloadsAllowedNow) return
                 val record = Downloads.collections.value[id] ?: return@forEach
+                val device = devicePlaylistOf(record)
+                if (device != null) {
+                    // Nothing to ask anyone: the playlist is already here, and so is its listing.
+                    update(context, record, Listing(downloadable(device.songs), complete = true), approved)
+                    return@forEach
+                }
                 val browseId = syncableBrowseId(record) ?: return@forEach
                 val listing = readWholePlaylist(
                     first = { YtMusicRepository.browseSongs(browseId) },
@@ -186,6 +201,40 @@ object PlaylistSync {
             running.unlock()
         }
     }
+
+    /**
+     * A playlist on this device just gained songs. If it was downloaded whole, the new ones are
+     * downloaded too; otherwise this does nothing. Only that playlist is looked at, with no
+     * request to YouTube.
+     */
+    internal fun localPlaylistChanged(context: Context, playlistId: String) {
+        if (!AppSettings.syncDownloadedPlaylists.value) return
+        val app = context.applicationContext
+        val recordId = Downloads.pageIdFor(playlistId.removePrefix(Downloads.PLAYLIST_PREFIX))
+        if (Downloads.collections.value[recordId] == null) return
+        scope.launch {
+            delay(LOCAL_SETTLE_MILLIS)
+            running.withLock {
+                if (!AppSettings.syncDownloadedPlaylists.value || !AppSettings.downloadsAllowedNow) return@withLock
+                if (!storageWritable(app)) return@withLock
+                val record = Downloads.collections.value[recordId] ?: return@withLock
+                val device = devicePlaylistOf(record) ?: return@withLock
+                update(app, record, Listing(downloadable(device.songs), complete = true), approved = false)
+            }
+        }
+    }
+
+    /** The device playlist a downloaded record stands for: a Spotify or YouTube Music copy, or one made here. */
+    internal fun devicePlaylistOf(record: SavedCollection): com.music.bitchord.data.spotify.LocalPlaylist? =
+        if (record.playlist && record.id.startsWith(Downloads.PLAYLIST_PREFIX + dev.auden.library.LocalPlaylists.ID_PREFIX)) {
+            dev.auden.library.LocalPlaylists.get(record.id)
+        } else {
+            null
+        }
+
+    /** Files already on the device have nothing to download, and nothing to be named by. */
+    internal fun downloadable(songs: List<Song>): List<Song> =
+        songs.filter { it.videoId.isNotBlank() && it.localUri == null && it.localPath == null }
 
     private suspend fun update(context: Context, record: SavedCollection, listing: Listing, approved: Boolean) {
         val fresh = newTracks(listing.songs, record)

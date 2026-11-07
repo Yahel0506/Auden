@@ -130,4 +130,19 @@ class PlaylistSyncTest {
         val saved = mapOf("video" to "file:x", "track" to "file:x", "a" to "file:a")
         assertEquals(listOf("a"), Downloads.tracksOnlyIn("one", collections, saved))
     }
+
+    @Test
+    fun `a device playlist is not the kind a YouTube check can read`() {
+        assertNull(PlaylistSync.syncableBrowseId(record("local:playlist:sp_local_1")))
+        assertNull(PlaylistSync.devicePlaylistOf(record("VLPL1")))
+        assertNull(PlaylistSync.devicePlaylistOf(record("local:playlist:sp_local_1", playlist = false)))
+        // Recognised as a device playlist by its id; with none stored under it, there is nothing to read.
+        assertNull(PlaylistSync.devicePlaylistOf(record("local:playlist:sp_local_1")))
+    }
+
+    @Test
+    fun `files already on the device are never queued for download`() {
+        val onDevice = Song(videoId = "file:///a.mp3", title = "a", artist = "x", thumbnailUrl = null, localUri = "file:///a.mp3")
+        assertEquals(listOf("b"), ids(PlaylistSync.downloadable(listOf(onDevice, song("b"), song(""))))) 
+    }
 }
