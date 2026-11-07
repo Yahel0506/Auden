@@ -1492,13 +1492,23 @@ object ListenTogether {
     fun accountRoomId(): String? {
         val store = BitChordApplication.authStore
         if (!store.isSignedIn) return null
-        val email = store.activeSession?.email?.trim()?.lowercase().orEmpty()
-        return connectRoomIdFor(email)
+        val account = store.activeSession ?: return null
+        val profile = account.profiles.firstOrNull { it.profileId == account.activeProfileId }
+            ?: account.profiles.firstOrNull()
+        return connectRoomIdFor(email = account.email, handle = profile?.handle.orEmpty())
     }
 
-    /** The room for a login email, as the web hashes it: `sha256("auden-connect:v1:<email>")`, first 32 hex digits. */
-    fun connectRoomIdFor(email: String): String? =
-        email.trim().lowercase().takeIf { it.isNotEmpty() }?.let { sha256("auden-connect:v1:$it").take(32) }
+    /**
+     * The room for a login, as the web hashes it: the active channel's @handle when it has one
+     * (`sha256("auden-connect:v2:<handle without @>")`), else the login email (`"auden-connect:v1:<email>"`),
+     * first 32 hex digits. Both are lower-cased; a "handle" that is not an @name does not count.
+     */
+    fun connectRoomIdFor(email: String, handle: String = ""): String? {
+        val h = handle.trim().lowercase()
+        if (h.startsWith("@") && h.length > 1) return sha256("auden-connect:v2:${h.substring(1)}").take(32)
+        val e = email.trim().lowercase()
+        return e.takeIf { it.isNotEmpty() }?.let { sha256("auden-connect:v1:$it").take(32) }
+    }
 
     /** This install's id, the one Listen Together counts devices by; Connect lists devices under it too. */
     fun installDeviceId(): String = deviceId()
