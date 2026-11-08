@@ -164,10 +164,10 @@ describe('mirror mode', () => {
     restoring.on = false;
   });
 
-  it('shows YouTube’s thumbnail for a song the phone sent with no cover (its art is a file on the phone)', async () => {
+  it('shows no invented cover for a song the phone sent with none (its real one is looked up, playback/coverFallback.ts)', async () => {
     await join({ state: phoneState({ queue: [ct('aaaaaaaaaaa'), ct('bbbbbbbbbbb', { artworkUrl: 'https://lh3.googleusercontent.com/own=w544-h544' })], index: 0 }) });
-    expect(usePlayer.getState().nowPlaying?.artworkUrl).toBe('https://i.ytimg.com/vi/aaaaaaaaaaa/hqdefault.jpg');
-    expect(usePlayer.getState().queue[0]?.track.thumbnail).toBe('https://i.ytimg.com/vi/aaaaaaaaaaa/hqdefault.jpg');
+    expect(usePlayer.getState().nowPlaying?.artworkUrl).toBeNull();
+    expect(usePlayer.getState().queue[0]?.track.thumbnail).toBeNull();
     expect(usePlayer.getState().queue[1]?.track.thumbnail).toBe('https://lh3.googleusercontent.com/own=w544-h544');
   });
 

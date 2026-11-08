@@ -6,6 +6,15 @@ export interface KeptFile {
   cover?: Blob | null;
 }
 
+/** A saved cover is shown while online only when it is sharp (coverQuality.ts GOOD_COVER_PX); otherwise the CDN's. */
+const GOOD_PX = 400;
+const coverPx = new Map<string, { size: number; px: number }>();
+
+/** Records how wide a copy's saved cover is, once measured. */
+export function setCoverPx(videoId: string, blob: Blob, px: number): void {
+  coverPx.set(videoId, { size: blob.size, px });
+}
+
 const kept = new Map<string, KeptFile>();
 /** The saved covers as object URLs, made when first asked for and let go when the copy is. */
 const coverUrls = new Map<string, { blob: Blob; url: string }>();
@@ -20,6 +29,10 @@ export const offlineFileOf = (videoId: string): KeptFile | undefined => kept.get
  */
 export function offlineCoverUrl(videoId: string): string | null {
   const blob = kept.get(videoId)?.cover;
+  // Online, a blurry saved cover is worse than the CDN's: it is for the times there is no network.
+  const measured = blob ? coverPx.get(videoId) : undefined;
+  const sharp = !!blob && measured?.size === blob.size && measured.px >= GOOD_PX;
+  if (blob && !sharp && (typeof navigator === 'undefined' || navigator.onLine !== false)) return null;
   if (!blob || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') return null;
   const known = coverUrls.get(videoId);
   if (known) return known.url;
@@ -38,4 +51,5 @@ export function replaceKept(entries: Iterable<[string, KeptFile]>): void {
       coverUrls.delete(id);
     }
   }
+  for (const id of coverPx.keys()) if (!kept.get(id)?.cover) coverPx.delete(id);
 }

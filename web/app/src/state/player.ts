@@ -3,7 +3,8 @@ import { create } from 'zustand';
 import { djStartQueue, introUnitEnd, removeFromQueue, steerQueue, type DjEntry } from '@/auden/dj/djQueue';
 import type { Track } from '@/data/music/types';
 import { extensionQueryKey } from '@/extension/useExtension';
-import { artworkAtPixels, youtubeThumbnail } from '@/lib/artwork';
+import { artworkAtPixels } from '@/lib/artwork';
+import { resolvedCoverOf } from '@/lib/resolvedCovers';
 import { offlineCoverUrl } from '@/auden/offline/kept';
 import { queryClient } from '@/lib/queryClient';
 import { extendStation } from '@/playback/queue/builder';
@@ -540,7 +541,7 @@ function hintOf(track: Track): NowPlaying {
     title: track.title,
     artist: artistNames(track),
     // A song with an offline copy shows the cover saved with it: no request, no refusal, no network needed.
-    artworkUrl: offlineCoverUrl(track.videoId) ?? track.thumbnail ?? youtubeThumbnail(track.videoId),
+    artworkUrl: offlineCoverUrl(track.videoId) ?? track.thumbnail ?? resolvedCoverOf(track.videoId),
     durationSec: track.durationSec ?? 0,
     streamInfo: null,
     stream: null,
@@ -1325,7 +1326,7 @@ function applyTrack(track: LoadedTrack, from?: Track) {
     title: from?.title || track.title,
     // Auto-generated YouTube channels are named "Artist - Topic".
     artist: (from && artistNames(from)) || track.author.replace(/ - Topic$/, ''),
-    artworkUrl: offlineCoverUrl(track.videoId) ?? from?.thumbnail ?? track.thumbnails[0]?.url ?? youtubeThumbnail(track.videoId),
+    artworkUrl: offlineCoverUrl(track.videoId) ?? from?.thumbnail ?? track.thumbnails[0]?.url ?? resolvedCoverOf(track.videoId),
     durationSec: track.durationSec || from?.durationSec || 0,
     streamInfo: `${track.format} via ${track.client}`,
     stream: { ...track.stream, client: track.client },

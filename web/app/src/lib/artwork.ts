@@ -27,14 +27,3 @@ export function artworkAtPixels(url: string, px: number): string {
   if (!RESIZABLE.test(url)) return url;
   return `${url.replace(/=[^/=]*$/, '')}=w${px}-h${px}-l90-rj`;
 }
-
-const YOUTUBE_ID = /^[\w-]{11}$/;
-
-/**
- * A cover for a song that arrived with none: YouTube's own thumbnail of its video. For a song it is the album art
- * centred on bars of its colour, so a square crop of it (object-cover) is the art. Null for anything that is not a
- * YouTube video id (a local file, a clip).
- */
-export function youtubeThumbnail(videoId: string): string | null {
-  return YOUTUBE_ID.test(videoId) ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : null;
-}

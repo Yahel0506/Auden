@@ -24,11 +24,15 @@ vi.mock('@/lib/queryClient', () => ({ queryClient: { getQueryData: () => ({ info
 vi.mock('@/data/music/api', () => ({ fetchRadio: async () => ({ candidates: [], seedIsVideo: false }), audioVersionOf: async () => null }));
 
 const { usePlayer } = await import('@/state/player');
+const { rememberCover, forgetCovers } = await import('@/lib/resolvedCovers');
 
 const track = (id: string): Track => ({ videoId: id, title: `T${id}`, artists: [{ name: 'Art', id: null }], album: null, durationSec: 200, explicit: false, thumbnail: `https://lh3.googleusercontent.com/${id}=w544-h544`, index: null, plays: null });
 const SOURCE = { title: 'Playlist', type: 'playlist' as const };
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => {
+  forgetCovers();
+  vi.useFakeTimers();
+});
 afterEach(() => vi.useRealTimers());
 
 describe('the cover of a song with an offline copy', () => {
@@ -44,9 +48,14 @@ describe('the cover of a song with an offline copy', () => {
     expect(usePlayer.getState().nowPlaying?.artworkUrl).toBe('https://lh3.googleusercontent.com/other=w544-h544');
   });
 
-  it('falls back to YouTube’s thumbnail of the song when the track came with no cover', async () => {
-    usePlayer.getState().playTracks([{ ...track('xxxxxxxxxxx'), thumbnail: null }], 0, SOURCE);
+  it('shows the cover found for a song that came with none, and none until it is found', async () => {
+    const song = { ...track('xxxxxxxxxxx'), thumbnail: null };
+    usePlayer.getState().playTracks([song], 0, SOURCE);
     await vi.advanceTimersByTimeAsync(0);
-    expect(usePlayer.getState().nowPlaying?.artworkUrl).toBe('https://i.ytimg.com/vi/xxxxxxxxxxx/hqdefault.jpg');
+    expect(usePlayer.getState().nowPlaying?.artworkUrl).toBeNull();
+    rememberCover('xxxxxxxxxxx', 'https://yt3.googleusercontent.com/found=w544-h544');
+    usePlayer.getState().playTracks([song], 0, SOURCE);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(usePlayer.getState().nowPlaying?.artworkUrl).toBe('https://yt3.googleusercontent.com/found=w544-h544');
   });
 });
