@@ -29,15 +29,21 @@ describe('offlineCoverUrl', () => {
     expect(offlineCoverUrl('nope')).toBeNull();
   });
 
-  it('lets the URL go when the copy goes or its picture changes, and keeps it while neither does', () => {
-    const one = new Blob(['1']);
-    const two = new Blob(['2']);
-    replaceKept([['a', copy(one)], ['b', copy(one)]]);
+  it('keeps the same URL when the store hands back a new Blob for the same copy', () => {
+    replaceKept([['a', copy(new Blob(['1']))]]);
+    expect(offlineCoverUrl('a')).toBe('blob:cover-1');
+    // Every read of the store makes a new Blob object: the cover on screen must not go blank.
+    replaceKept([['a', copy(new Blob(['1']))]]);
+    expect(revoked).toEqual([]);
+    expect(offlineCoverUrl('a')).toBe('blob:cover-1');
+  });
+
+  it('lets the URL go when the copy is removed or no longer has a cover', () => {
+    replaceKept([['a', copy(new Blob(['1']))], ['b', copy(new Blob(['2']))]]);
     offlineCoverUrl('a');
     offlineCoverUrl('b');
-    replaceKept([['a', copy(one)], ['b', copy(two)]]);
-    expect(revoked).toEqual(['blob:cover-2']);
-    replaceKept([['a', copy(one)]]);
-    expect(offlineCoverUrl('a')).toBe('blob:cover-1');
+    replaceKept([['a', copy(null)]]);
+    expect(revoked.sort()).toEqual(['blob:cover-1', 'blob:cover-2']);
+    expect(offlineCoverUrl('a')).toBeNull();
   });
 });
