@@ -100,11 +100,12 @@ function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps)
   const togglePlay = usePlayer((s) => s.togglePlay);
   const unavailable = track.unavailable;
   // A row with no cover (a Spotify row not yet matched, a queue the phone sent) gets its real one as it appears.
-  const cover = useResolvedCover(track.videoId, track.thumbnail ?? fallbackArtwork ?? null);
+  const { cover, ref: coverRef } = useResolvedCover(track.videoId, track.thumbnail ?? fallbackArtwork ?? null);
   const onPlay = () => (unavailable ? undefined : current ? togglePlay() : onPlayRow());
 
   return (
     <div
+      ref={coverRef}
       className={`${row} ${rowVariant[variant]}`}
       data-variant={variant}
       data-current={current || undefined}

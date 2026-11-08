@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore, type RefCallback } from 'react';
 import { fetchTrackLinks } from '@/data/music/api';
 import { coversVersion, rememberCover, resolvedCoverOf, subscribeCovers } from '@/lib/resolvedCovers';
 
@@ -48,11 +48,28 @@ function pump(): void {
   }
 }
 
-/** [src] when the row has one; else the cover found for the song (asked for once the row is on screen), else null. */
-export function useResolvedCover(videoId: string, src: string | null | undefined): string | null {
+/**
+ * [src] when the row has one; else the cover found for the song, asked for only while the row is on screen (attach
+ * [ref] to the row's element): a queue of a hundred songs asks for the dozen that can be seen, not all of them.
+ */
+export function useResolvedCover(videoId: string, src: string | null | undefined): { cover: string | null; ref: RefCallback<HTMLElement> } {
   useSyncExternalStore(subscribeCovers, coversVersion);
-  useEffect(() => (src ? undefined : requestCover(videoId)), [videoId, src]);
-  return src ?? resolvedCoverOf(videoId);
+  const [element, setElement] = useState<HTMLElement | null>(null);
+  const [visible, setVisible] = useState(false);
+  const ref = useCallback<RefCallback<HTMLElement>>((node) => setElement(node), []);
+  useEffect(() => {
+    if (src || !element) return;
+    // No IntersectionObserver (an old browser, a test): the row counts as seen.
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => setVisible(entries.some((e) => e.isIntersecting)), { rootMargin: '120px' });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [src, element]);
+  useEffect(() => (src || !visible ? undefined : requestCover(videoId)), [videoId, src, visible]);
+  return { cover: src ?? resolvedCoverOf(videoId), ref };
 }
 
 /** For tests: swap the lookup and forget the queue. */
