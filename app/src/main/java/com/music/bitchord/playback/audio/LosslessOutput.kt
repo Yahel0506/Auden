@@ -44,7 +44,7 @@ import java.util.Locale
  */
 object LosslessOutput {
 
-    enum class Kind { WIRED, USB, HDMI, DOCK, BLUETOOTH }
+    enum class Kind { WIRED, USB, HDMI, DOCK, BLUETOOTH, ASSUMED }
 
     data class State(
         val capable: Boolean = false,
@@ -61,6 +61,23 @@ object LosslessOutput {
 
     /** The answer every gate reads. False until [init] has looked. */
     val capable: Boolean get() = _state.value.capable
+
+    /**
+     * The listener's own say-so that the output is lossless — for a DAC,
+     * streamer or Bluetooth codec Android reports in a way [decide] does not
+     * recognise. Nothing about the connected hardware is checked while it is
+     * on; the addon is simply served as if a lossless output were present.
+     * Set from the setting, see [com.music.bitchord.data.settings.AppSettings.assumeLosslessOutput].
+     */
+    @Volatile
+    private var assumed = false
+
+    /** Turns the override on or off and re-evaluates [state]. */
+    fun setAssumed(value: Boolean) {
+        if (assumed == value) return
+        assumed = value
+        recompute()
+    }
 
     private var audioManager: AudioManager? = null
     private var tracker: BluetoothAudioTracker? = null
@@ -101,7 +118,8 @@ object LosslessOutput {
             .toSet()
         val telemetry = tracker?.telemetry?.value
         val named = telemetry?.takeIf { it.hasNamedCodec }
-        val next = decide(outputs, named?.codecName, named?.sampleRateHz)
+        val real = decide(outputs, named?.codecName, named?.sampleRateHz)
+        val next = if (assumed && !real.capable) real.copy(capable = true, via = Kind.ASSUMED) else real
         if (next != _state.value) {
             // The rate is here for codecs we have never seen a phone name —
             // Wi-Fi earbuds, vendor codecs — so a pasted log shows what to match.

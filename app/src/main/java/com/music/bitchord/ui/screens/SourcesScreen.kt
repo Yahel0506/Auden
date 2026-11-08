@@ -298,6 +298,9 @@ fun SourcesScreen(
             }
 
             RowDivider()
+            AssumeLosslessRow()
+
+            RowDivider()
             AddSourceRow(
                 onClick = { onEditSource(SourceConfig(kind = SourceKind.ADDON)) },
             )
@@ -760,6 +763,38 @@ private fun BluetoothCodecPermissionRow() {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+/**
+ * The override for [LosslessOutput]: serve lossless-only addons even when no
+ * lossless output was recognised.
+ */
+@Composable
+private fun AssumeLosslessRow() {
+    val on by AppSettings.assumeLosslessOutput.collectAsStateWithLifecycle()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { AppSettings.setAssumeLosslessOutput(!on) }
+            .heightIn(min = 60.dp)
+            .padding(horizontal = ROW_INSET, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Spacer(Modifier.width(24.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.assume_lossless_output),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = stringResource(R.string.assume_lossless_output_detail),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        IosSwitch(checked = on, onCheckedChange = { AppSettings.setAssumeLosslessOutput(it) })
     }
 }
 

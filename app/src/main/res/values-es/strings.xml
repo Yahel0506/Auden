@@ -1252,6 +1252,8 @@
     <string name="source_needs_lossless_bt_unknown">Necesita una salida sin pérdida · no se puede saber qué códec Bluetooth se usa</string>
     <string name="source_downloads_on">Descargas permitidas</string>
     <string name="source_downloads_off">Solo streaming</string>
+    <string name="assume_lossless_output">Asumir salida sin pérdida</string>
+    <string name="assume_lossless_output_detail">Usa los complementos solo sin pérdida aunque no se detecte una salida sin pérdida. El audio puede seguir saliendo por una ruta con pérdida.</string>
     <string name="lossless_output_permission">Comprobar códec Bluetooth</string>
     <string name="lossless_output_permission_detail">Permite Dispositivos cercanos para que los auriculares LDAC o LHDC desbloqueen los complementos sin pérdida</string>
     <string name="cached_songs">Canciones en caché</string>

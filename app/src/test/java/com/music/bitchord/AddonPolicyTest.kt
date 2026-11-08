@@ -137,4 +137,17 @@ class AddonPolicyTest {
     fun `the phone speaker alone does not qualify`() {
         assertEquals(LosslessOutput.State(), LosslessOutput.decide(setOf(AudioDeviceInfo.TYPE_BUILTIN_SPEAKER), null))
     }
+
+    @Test
+    fun `assuming a lossless output opens the gate with nothing connected and closes it again`() {
+        assertFalse(LosslessOutput.capable)
+        LosslessOutput.setAssumed(true)
+        try {
+            assertTrue(LosslessOutput.capable)
+            assertEquals(LosslessOutput.Kind.ASSUMED, LosslessOutput.state.value.via)
+        } finally {
+            LosslessOutput.setAssumed(false)
+        }
+        assertFalse(LosslessOutput.capable)
+    }
 }

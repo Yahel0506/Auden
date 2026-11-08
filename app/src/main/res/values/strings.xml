@@ -1227,6 +1227,8 @@
     <string name="source_needs_lossless_bt_unknown">Needs a lossless output · can’t tell which Bluetooth codec is in use</string>
     <string name="source_downloads_on">Downloads allowed</string>
     <string name="source_downloads_off">Streaming only</string>
+    <string name="assume_lossless_output">Assume a lossless output</string>
+    <string name="assume_lossless_output_detail">Serve lossless-only addons even when no lossless output is detected. Audio may still play through a lossy route.</string>
     <string name="lossless_output_permission">Check Bluetooth codec</string>
     <string name="lossless_output_permission_denied">Nearby devices permission is off</string>
     <string name="lossless_output_permission_denied_detail">Tap to open Settings and allow Nearby devices — without it we can’t read your Bluetooth codec</string>
