@@ -8,6 +8,7 @@ import { changeBus, dbStore, type ChangeBus, type OfflineStore } from './store';
 import type { OfflineItem, OfflineSong } from './types';
 import { requestPersistence } from '../db/persist';
 import { onLyricsBatchDone, saveLyricsFor } from './lyrics';
+import { artworkAtPixels } from '@/lib/artwork';
 import { hasOfflineCopy, offlineFileOf, replaceKept } from './kept';
 
 /**
@@ -50,10 +51,10 @@ export const songOf = (track: Track): OfflineSong => ({
 
 async function fetchCover(url: string): Promise<Blob | null> {
   try {
-    const response = await fetch(url, { credentials: 'omit' });
+    // Big enough for the full-screen player (a standard size the CDN has cached), small enough to keep.
+    const response = await fetch(artworkAtPixels(url, 544), { credentials: 'omit' });
     const blob = response.ok ? await response.blob() : null;
-    // A cover is a small picture; anything big or not an image isn't worth keeping.
-    return blob && blob.type.startsWith('image/') && blob.size <= 512 * 1024 ? blob : null;
+    return blob && blob.type.startsWith('image/') && blob.size <= 768 * 1024 ? blob : null;
   } catch {
     return null;
   }
@@ -92,7 +93,7 @@ export function installOffline(): () => void {
   const refresh = async () => {
     const items = await rt.store.items().catch(() => [] as OfflineItem[]);
     if (disposed) return;
-    replaceKept(items.map((i) => [i.videoId, { file: i.file, mime: i.mime }]));
+    replaceKept(items.map((i) => [i.videoId, { file: i.file, mime: i.mime, cover: i.cover }]));
   };
   setOfflineProvider({
     has: (track) => hasOfflineCopy(track.videoId),
