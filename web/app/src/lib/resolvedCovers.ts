@@ -6,5 +6,26 @@
 const covers = new Map<string, string>();
 
 export const resolvedCoverOf = (videoId: string): string | null => covers.get(videoId) ?? null;
-export const rememberCover = (videoId: string, url: string): void => void covers.set(videoId, url);
-export const forgetCovers = (): void => covers.clear();
+let version = 0;
+const listeners = new Set<() => void>();
+const changed = () => {
+  version++;
+  for (const l of listeners) l();
+};
+
+export const rememberCover = (videoId: string, url: string): void => {
+  if (covers.get(videoId) === url) return;
+  covers.set(videoId, url);
+  changed();
+};
+export const forgetCovers = (): void => {
+  covers.clear();
+  changed();
+};
+
+/** For useSyncExternalStore: rows re-render when a cover turns up. */
+export const subscribeCovers = (listener: () => void): (() => void) => {
+  listeners.add(listener);
+  return () => void listeners.delete(listener);
+};
+export const coversVersion = (): number => version;

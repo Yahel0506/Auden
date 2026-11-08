@@ -3,6 +3,7 @@ import { Infinity as InfinityIcon, MoreHorizontal, X } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { Menu, MenuHeader, MenuItem, MenuSeparator } from '@/components/Menu';
 import { Artwork } from '@/components/music/Artwork';
+import { useResolvedCover } from '@/playback/coverLookup';
 import { formatDuration } from '@/components/music/links';
 import { autoplaySectionStart, upcomingUserQueueIndices, type QueueEntry } from '@/playback/queue/timeline';
 import { CROSSFADE_CHOICES, usePlayer } from '@/state/player';
@@ -31,6 +32,7 @@ function Row({
   const close = useCallback(() => setAnchor(null), []);
   const { track } = entry;
 
+  const cover = useResolvedCover(track.videoId, track.thumbnail);
   return (
     <li
       className="group/row relative grid h-[55px] grid-cols-[40px_minmax(0,1fr)_40px] items-center gap-x-3 rounded-row px-2.5 hover:bg-quinary data-dragging:opacity-40 data-over:before:absolute data-over:before:inset-x-2.5 data-over:before:-top-px data-over:before:border-t-2 data-over:before:border-t-key"
@@ -54,7 +56,7 @@ function Row({
       onDoubleClick={() => jumpTo(at)}
     >
       <div className="relative size-10">
-        <Artwork src={track.thumbnail} displayWidth={40} radius="var(--radius-artwork-small)" />
+        <Artwork src={cover} displayWidth={40} radius="var(--radius-artwork-small)" />
         {/* The ✕ over the artwork's top-left, on hover. */}
         <button
           className="absolute -top-1.5 -left-1.5 hidden size-[22px] place-items-center rounded-full bg-thick-material text-primary shadow-[0_1px_3px_#0004] [backdrop-filter:blur(10px)] group-hover/row:grid"
