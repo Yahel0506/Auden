@@ -5,6 +5,7 @@ import { PrefetchLink } from '@/components/PrefetchLink';
 import { PauseIcon, PlayIcon } from '@/components/icons/Transport';
 import type { ArtistRef, Track } from '@/data/music/types';
 import { usePlayer } from '@/state/player';
+import { useResolvedCover } from '@/playback/coverLookup';
 import { Artwork } from './Artwork';
 import { ExplicitBadge } from './ExplicitBadge';
 import { albumHref, artistHref, formatDuration } from './links';
@@ -98,6 +99,8 @@ function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps)
   const playing = usePlayer((s) => s.nowPlaying?.videoId === track.videoId && (s.status === 'playing' || s.status === 'buffering'));
   const togglePlay = usePlayer((s) => s.togglePlay);
   const unavailable = track.unavailable;
+  // A row with no cover (a Spotify row not yet matched, a queue the phone sent) gets its real one as it appears.
+  const cover = useResolvedCover(track.videoId, track.thumbnail ?? fallbackArtwork ?? null);
   const onPlay = () => (unavailable ? undefined : current ? togglePlay() : onPlayRow());
 
   return (
@@ -113,7 +116,7 @@ function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps)
         <div className={`relative grid w-10 shrink-0 place-items-center${variant === 'playlist' ? ' ms-[7px]' : ''}`}>
           {variant === 'playlist' ? (
             <>
-              <Artwork src={track.thumbnail ?? fallbackArtwork ?? null} displayWidth={40} radius="var(--radius-artwork-small)" />
+              <Artwork src={cover} displayWidth={40} radius="var(--radius-artwork-small)" />
               {current && (
                 // The playing row's marker: a still play glyph over the artwork (or where the number was).
                 <span
