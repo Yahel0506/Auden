@@ -9,7 +9,8 @@ import type { OfflineItem, OfflineSong } from './types';
 import { requestPersistence } from '../db/persist';
 import { onLyricsBatchDone, saveLyricsFor } from './lyrics';
 import { artworkAtPixels } from '@/lib/artwork';
-import { hasOfflineCopy, offlineFileOf, replaceKept } from './kept';
+import { coverWidth, upgradeLowCovers } from './coverQuality';
+import { hasOfflineCopy, offlineFileOf, replaceKept, setCoverPx } from './kept';
 
 /**
  * The wiring: the real store, the OPFS folder, the player's own byte source and the queue, created once. Every tab
@@ -94,7 +95,12 @@ export function installOffline(): () => void {
     const items = await rt.store.items().catch(() => [] as OfflineItem[]);
     if (disposed) return;
     replaceKept(items.map((i) => [i.videoId, { file: i.file, mime: i.mime, cover: i.cover }]));
+    // How sharp each saved cover is decides whether the player shows it while online (kept.ts offlineCoverUrl).
+    for (const i of items) if (i.cover) void coverWidth(i.cover).then((px) => !disposed && setCoverPx(i.videoId, i.cover!, px));
   };
+  // Copies saved with a small cover get a sharp one once, in the background.
+  const upgrade = () =>
+    void upgradeLowCovers({ items: () => rt.store.items(), putItem: (i) => rt.store.putItem(i), fetchCover, width: coverWidth, onUpgraded: () => void refresh() });
   setOfflineProvider({
     has: (track) => hasOfflineCopy(track.videoId),
     read: async (track) => {
@@ -104,7 +110,9 @@ export function installOffline(): () => void {
       return file && kept ? new Blob([file], { type: kept.mime.split(';')[0] }) : null;
     },
   });
-  void refresh();
+  void refresh().then(() => {
+    if (typeof navigator === 'undefined' || navigator.onLine !== false) upgrade();
+  });
   onLyricsBatchDone((ids) => void import('./folder/state').then((m) => m.refreshSidecars(ids)));
   // Songs that were waiting for the folder (a closed tab, a missing permission) are tried again when the app starts.
   void import('./folder/state').then((m) => m.loadFolder().then(() => m.flushPending()));
