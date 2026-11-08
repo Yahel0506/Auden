@@ -43,4 +43,10 @@ describe('the cover of a song with an offline copy', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(usePlayer.getState().nowPlaying?.artworkUrl).toBe('https://lh3.googleusercontent.com/other=w544-h544');
   });
+
+  it('falls back to YouTube’s thumbnail of the song when the track came with no cover', async () => {
+    usePlayer.getState().playTracks([{ ...track('xxxxxxxxxxx'), thumbnail: null }], 0, SOURCE);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(usePlayer.getState().nowPlaying?.artworkUrl).toBe('https://i.ytimg.com/vi/xxxxxxxxxxx/hqdefault.jpg');
+  });
 });
