@@ -7,6 +7,7 @@ import {
   type PlaybackState,
   type ServerMessage,
 } from '@bitchord/shared/connect';
+import { youtubeThumbnail } from '@/lib/artwork';
 import { config } from '@/config';
 import type { Track } from '@/data/music/types';
 import { connectRoomId, deviceId, useParty } from '@/party/listenTogether';
@@ -82,7 +83,8 @@ const toTrack = (c: ConnectTrack): Track => ({
   album: c.album ? { name: c.album, id: null } : null,
   durationSec: c.durationSec ?? null,
   explicit: false,
-  thumbnail: c.artworkUrl ?? null,
+  // The phone sends no cover for a song whose art is a file on it: YouTube's own thumbnail of the song stands in.
+  thumbnail: c.artworkUrl ?? youtubeThumbnail(c.videoId),
   index: null,
   plays: null,
 });

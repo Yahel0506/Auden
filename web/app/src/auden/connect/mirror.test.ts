@@ -164,6 +164,13 @@ describe('mirror mode', () => {
     restoring.on = false;
   });
 
+  it('shows YouTube’s thumbnail for a song the phone sent with no cover (its art is a file on the phone)', async () => {
+    await join({ state: phoneState({ queue: [ct('aaaaaaaaaaa'), ct('bbbbbbbbbbb', { artworkUrl: 'https://lh3.googleusercontent.com/own=w544-h544' })], index: 0 }) });
+    expect(usePlayer.getState().nowPlaying?.artworkUrl).toBe('https://i.ytimg.com/vi/aaaaaaaaaaa/hqdefault.jpg');
+    expect(usePlayer.getState().queue[0]?.track.thumbnail).toBe('https://i.ytimg.com/vi/aaaaaaaaaaa/hqdefault.jpg');
+    expect(usePlayer.getState().queue[1]?.track.thumbnail).toBe('https://lh3.googleusercontent.com/own=w544-h544');
+  });
+
   it('a song that is only loading (the last session put back) does not claim a session nobody plays', async () => {
     usePlayer.getState().playTracks([track('restored')], 0, SOURCE);
     await flush();
