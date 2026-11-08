@@ -32,9 +32,10 @@ function Row({
   const close = useCallback(() => setAnchor(null), []);
   const { track } = entry;
 
-  const cover = useResolvedCover(track.videoId, track.thumbnail);
+  const { cover, ref: coverRef } = useResolvedCover(track.videoId, track.thumbnail);
   return (
     <li
+      ref={coverRef}
       className="group/row relative grid h-[55px] grid-cols-[40px_minmax(0,1fr)_40px] items-center gap-x-3 rounded-row px-2.5 hover:bg-quinary data-dragging:opacity-40 data-over:before:absolute data-over:before:inset-x-2.5 data-over:before:-top-px data-over:before:border-t-2 data-over:before:border-t-key"
       data-over={over || undefined}
       data-dragging={dragging || undefined}

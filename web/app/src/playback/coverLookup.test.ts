@@ -1,9 +1,13 @@
 // @vitest-environment happy-dom
+import { act, createElement } from 'react';
+import { createRoot } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 import { forgetCovers, resolvedCoverOf } from '@/lib/resolvedCovers';
 
 vi.mock('@/data/music/api', () => ({ fetchTrackLinks: vi.fn() }));
-const { requestCover, setCoverLookup } = await import('./coverLookup');
+const { requestCover, setCoverLookup, useResolvedCover } = await import('./coverLookup');
 
 const flush = () => vi.advanceTimersByTimeAsync(0);
 const ids = (n: number) => Array.from({ length: n }, (_, i) => `id${String(i).padStart(9, '0')}`);
@@ -89,5 +93,55 @@ describe('requestCover', () => {
     for (const id of ids(60)) requestCover(id);
     // Two went out at once; of the rest, only the newest 40 wait.
     expect(asked).toHaveLength(2);
+  });
+});
+
+describe('useResolvedCover', () => {
+  let intersect: (visible: boolean) => void = () => {};
+  beforeEach(() => {
+    vi.stubGlobal('IntersectionObserver', class {
+      constructor(cb: (entries: { isIntersecting: boolean }[]) => void) {
+        intersect = (visible) => cb([{ isIntersecting: visible }]);
+      }
+      observe() {}
+      disconnect() {}
+    });
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  async function mount(src: string | null) {
+    const lookup = vi.fn(async () => ({ thumbnail: 'https://yt3.googleusercontent.com/found' }));
+    setCoverLookup(lookup);
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const root = createRoot(host);
+    let seen: string | null = null;
+    function Row() {
+      const { cover, ref } = useResolvedCover('aaaaaaaaaaa', src);
+      seen = cover;
+      return createElement('li', { ref });
+    }
+    await act(async () => root.render(createElement(Row)));
+    return { lookup, cover: () => seen, unmount: () => act(async () => root.unmount()) };
+  }
+
+  it('asks only once its row is on screen, and then shows the cover found', async () => {
+    const row = await mount(null);
+    await flush();
+    expect(row.lookup).not.toHaveBeenCalled();
+    await act(async () => intersect(true));
+    await flush();
+    expect(row.lookup).toHaveBeenCalledTimes(1);
+    expect(row.cover()).toBe('https://yt3.googleusercontent.com/found');
+    await row.unmount();
+  });
+
+  it('never asks for a row that has its cover', async () => {
+    const row = await mount('https://yt3.googleusercontent.com/own');
+    await act(async () => intersect(true));
+    await flush();
+    expect(row.lookup).not.toHaveBeenCalled();
+    expect(row.cover()).toBe('https://yt3.googleusercontent.com/own');
+    await row.unmount();
   });
 });
