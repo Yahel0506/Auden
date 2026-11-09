@@ -4754,6 +4754,19 @@ class PlaybackService : MediaLibraryService() {
             )
             return
         }
+        // A download plays from its file, and a file has no stream for the
+        // search to upgrade. On Wi-Fi it is streamed from here on, from the same
+        // place in the track, and the better copy is looked for against that
+        // stream. Off Wi-Fi nothing changes.
+        val current = player.currentMediaItem
+        val scheme = current?.localConfiguration?.uri?.scheme
+        if (current != null && (scheme == "file" || scheme == "content")) {
+            if (AppSettings.meteredConnection.value != false || mediaId !in Downloads.savedMetadata.value) return
+            val index = player.currentMediaItemIndex
+            val position = player.currentPosition
+            player.replaceMediaItem(index, current.toSong().copy(localUri = null, localPath = null).toMediaItem())
+            player.seekTo(index, position)
+        }
         OriginalVersion.unpin(mediaId)
         // A manual retry is a request for the addon's state *now*. In
         // particular, do not replay a successful empty search cached while one

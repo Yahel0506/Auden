@@ -137,7 +137,12 @@ android {
     // The phone <-> watch protocol, one file shared with the watch app so the
     // two cannot drift. See wearos/protocol/.../WearProtocol.kt.
     sourceSets {
-        getByName("main") { java.srcDir("../wearos/protocol") }
+        getByName("main") {
+            java.srcDir("../wearos/protocol")
+            // The changelogs, for the "What's new" section in Settings. Packed
+            // as <version>/<language>.md, so the notes shown are the build's own.
+            assets.srcDir("../changelog")
+        }
     }
 
     externalNativeBuild {

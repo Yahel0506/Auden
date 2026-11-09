@@ -244,6 +244,7 @@ import com.music.bitchord.playback.smart.VersionAudioAligner
 import com.music.bitchord.download.DownloadSession
 import com.music.bitchord.download.DownloadStore
 import com.music.bitchord.download.MediaTagger
+import com.music.bitchord.download.MetadataRepair
 import com.music.bitchord.download.DownloadTarget
 import com.music.bitchord.download.Downloads
 import com.music.bitchord.ui.components.BrowseActionsMenu
@@ -4715,6 +4716,15 @@ private fun BitChordApp(
             }
             SongActionsMenu(
                 onFixSpotifyMatch = song.spotifyId?.let { { songActions = null; fixingSpotifyMatch = song } },
+                // Offered for a song that is a file: a download, or a file on the device.
+                onRepairMetadata = if (song.localUri != null || song.videoId in Downloads.savedMetadata.value) {
+                    {
+                        songActions = null
+                        MetadataRepair.start(context, listOf(song))
+                    }
+                } else {
+                    null
+                },
                 playingUri = player.song?.takeIf { it.videoId == song.videoId }?.localUri,
                 song = song,
                 signedIn = signedIn,
@@ -4855,15 +4865,20 @@ private fun BitChordApp(
                 // takes a broken track off the automatic path for the rest
                 // of the session, and `askByHand` is what clears that.
                 onUpgradeQuality = if (fromPlayer &&
+                    controller?.currentMediaItem?.mediaId == song.videoId &&
                     (
-                        song.videoId in pinnedToOriginal ||
-                            playingYouTubesOwn(song.videoId, controller)
-                        ) &&
-                    // A track playing off a file the listener saved is not
-                    // playing a stream anything could upgrade — the pin on
-                    // it is only waiting for the day it is streamed again.
-                    song.localUri == null &&
-                    controller?.currentMediaItem?.mediaId == song.videoId
+                        // A download, on Wi-Fi: it is streamed from here on and
+                        // a better copy is looked for, so the listener can hear
+                        // the superior version over Wi-Fi.
+                        (song.videoId in Downloads.savedMetadata.value && AppSettings.meteredConnection.value == false) ||
+                            (
+                                (song.videoId in pinnedToOriginal || playingYouTubesOwn(song.videoId, controller)) &&
+                                    // A track playing off a file the listener saved is not
+                                    // playing a stream anything could upgrade — the pin on
+                                    // it is only waiting for the day it is streamed again.
+                                    song.localUri == null
+                                )
+                        )
                 ) {
                     {
                         controller.upgradeQuality()
@@ -5503,6 +5518,9 @@ private fun BitChordApp(
                 // What the target carries that the tracks don't is the
                 // release's own name and cover, which is exactly what the
                 // record wants.
+                // Every playlist and folder has it: the files among its songs are
+                // checked, and a song that only streams is left alone.
+                onRepairMetadata = act { songs -> MetadataRepair.start(context, songs) },
                 onDownloadAll = act { songs ->
                     startDownload(
                         songs,

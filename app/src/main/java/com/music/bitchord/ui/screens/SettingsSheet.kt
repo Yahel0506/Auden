@@ -1,5 +1,11 @@
 package com.music.bitchord.ui.screens
 
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.runtime.CompositionLocalProvider
+import com.halilibo.richtext.markdown.Markdown
+import com.halilibo.richtext.ui.RichTextStyle
+import com.halilibo.richtext.ui.material3.RichText
+import com.music.bitchord.data.ReleaseNotes
 import com.music.bitchord.ui.icons.SfIcons
 import com.music.bitchord.wear.WatchInstaller
 import android.content.Context
@@ -1825,6 +1831,10 @@ fun SettingsScreen(
         // No footer: it only restated the stop-on-close row's own subtitle,
         // which sits four rows above it and says the same thing in fewer words.
         if (shows(SettingsCategory.MISCELLANEOUS)) SearchableSettingsGroup(search, header = stringResource(R.string.miscellaneous)) {
+            val whatsNewTitle = stringResource(R.string.whats_new_update)
+            row(whatsNewTitle, "changelog", "update", "release notes") {
+                WhatsNewSection(title = whatsNewTitle)
+            }
             val playNextOnSwipeTitle = stringResource(R.string.play_next_on_swipe)
             row(playNextOnSwipeTitle, "swipe", "queue") {
                 SettingsRow(
@@ -3516,6 +3526,39 @@ private fun DownloadLayoutSheet(selected: String, onSelect: (String) -> Unit) {
                 enabled = customValid,
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 8.dp),
             ) { Text(stringResource(R.string.save)) }
+        }
+    }
+}
+
+/**
+ * The changelog of the version running now, rendered as Markdown, in the app's
+ * language. Shipped with the build, so it shows without a connection.
+ */
+@Composable
+private fun WhatsNewSection(title: String) {
+    val context = LocalContext.current
+    val notes = remember(context) { ReleaseNotes.forInstalledVersion(context) }
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Spacer(Modifier.height(8.dp))
+        if (notes == null) {
+            Text(
+                text = stringResource(R.string.whats_new_none),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else {
+            // RichText draws with LocalContentColor, which this list does not set,
+            // so without this the notes render black whatever the theme.
+            CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
+                RichText(style = RichTextStyle.Default) {
+                    Markdown(notes)
+                }
+            }
         }
     }
 }

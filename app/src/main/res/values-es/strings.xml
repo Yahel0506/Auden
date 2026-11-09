@@ -1616,4 +1616,9 @@
     <string name="background_video_subtitle">Reproduce el breve bucle vertical de Spotify detrás del reproductor</string>
     <string name="hide_mini_lyrics">Ocultar mini letra</string>
     <string name="hide_mini_lyrics_subtitle">Quita la línea de letra sincronizada sobre la barra de progreso; los controles se reparten su espacio</string>
+    <string name="whats_new_update">Novedades de la actualización</string>
+    <string name="whats_new_none">Sin notas para esta versión.</string>
+    <string name="metadata_repair">Reparar metadatos</string>
+    <string name="metadata_repair_done">%1$d reparadas · %2$d ya completas · %3$d sin datos disponibles</string>
+    <string name="metadata_repair_nothing">No hay archivos descargados que reparar</string>
 </resources>

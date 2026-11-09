@@ -149,6 +149,12 @@ fun BrowseActionsMenu(
      */
     onDeleteDownload: (() -> Unit)? = null,
     /**
+     * Repairs the missing tags of the downloaded and device files in this list —
+     * see [com.music.bitchord.download.MetadataRepair]. Offered on every playlist
+     * and folder; a song that only streams is skipped.
+     */
+    onRepairMetadata: (() -> Unit)? = null,
+    /**
      * Rename: a text field and its keyboard have no place on a menu floating
      * over the page, so the row hands the job to the host, which raises a
      * sheet holding only the form — this, composed again with [startRenaming].
@@ -297,6 +303,9 @@ fun BrowseActionsMenu(
                 } else {
                     ActionRow(Icons.Rounded.FileUpload, stringResource(R.string.export_playlist)) { exporting = true }
                 }
+            }
+            onRepairMetadata?.let {
+                ActionRow(SfIcons.Upgrade, stringResource(R.string.metadata_repair), onClick = it)
             }
             if (onDelete != null) {
                 if (confirmingDelete) {

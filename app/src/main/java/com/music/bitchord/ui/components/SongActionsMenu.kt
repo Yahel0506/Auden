@@ -111,6 +111,8 @@ fun SongActionsMenu(
     onAddToQueue: () -> Unit,
     onStartRadio: () -> Unit,
     onDownload: () -> Unit,
+    /** Repairs this song's file's missing tags; offered only for a song that is a file. */
+    onRepairMetadata: (() -> Unit)? = null,
     /**
      * Copies this track to the WebDAV server. Null hides the row — the caller
      * passes one only for a readable device file while a server is
@@ -338,6 +340,14 @@ fun SongActionsMenu(
             onClick = onAddToQueue,
         )
         DownloadRow(song, palette, isOffline, onDownload, playingUri)
+        onRepairMetadata?.let {
+            ActionRow(
+                icon = SfIcons.Upgrade,
+                label = stringResource(R.string.metadata_repair),
+                accent = palette.accent,
+                onClick = it,
+            )
+        }
         onRemoveFromCache?.let {
             ActionRow(
                 icon = SfIcons.Trash,
