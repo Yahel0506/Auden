@@ -90,6 +90,7 @@ class ConnectSync(
     private var adoptedShuffle: Pair<List<String>, List<String>>? = null
 
     fun start() {
+        ConnectSongs.load(context)
         jobs += scope.launch {
             AppSettings.connectEnabled.collect { reconcile() }
         }
@@ -218,12 +219,30 @@ class ConnectSync(
                 val was = mirrorWas
                 val before = sessionWas
                 if (mirroring && !was) enterMirror()
-                if (mirroring && session != null) hydrator.apply(session, manager.remotePlayheadMs())
+                if (mirroring && session != null) {
+                    hydrator.apply(session, manager.remotePlayheadMs())
+                    // Each song's own record, asked for here: what is drawn does not depend on what the sender attached.
+                    ConnectSongs.resolveMissing(scope, session.state.queue.map { it.videoId }, ::refreshRows)
+                }
                 if (!mirroring && was) exitMirror()
                 mirrorWas = mirroring
                 sessionWas = session
                 speaker.announce(before, session, was, mirroring)
             }
+    }
+
+    /** A song's own record arrived: the rows of the idle player that hold it are drawn from it from now on. */
+    private fun refreshRows(videoId: String) {
+        if (!manager.isMirroring) return
+        val exo = player() ?: return
+        val song = ConnectSongs.cached(videoId) ?: return
+        for (i in 0 until exo.mediaItemCount) {
+            val row = exo.getMediaItemAt(i)
+            if (row.mediaId != videoId) continue
+            // Keeps what the sender told about this row (its length), takes the phone's own cover and pages.
+            val length = row.toSong().durationText
+            exo.replaceMediaItem(i, song.copy(durationText = song.durationText ?: length).toMediaItem())
+        }
     }
 
     /** The phone just became a mirror: whatever it was playing stops (a release already paused it) and nothing is read ahead. */
@@ -511,13 +530,21 @@ internal fun Song.toConnectTrack(playerDurationMs: Long?): ConnectTrack = Connec
         ?: TrackMatcher.secondsOf(durationText),
 )
 
-internal fun ConnectTrack.toSong(): Song = Song(
-    videoId = videoId,
-    title = title,
-    artist = artist,
-    thumbnailUrl = artworkUrl,
-    // What a cross-source match is made on, as in PartyTrack.toSong.
-    durationText = durationSec?.let { "%d:%02d".format(it / 60, it % 60) },
-    albumName = album,
-    queueTier = QueueTier.CONTEXT,
-)
+internal fun ConnectTrack.toSong(): Song {
+    // What the phone already knows of the song wins over what the sender put in the queue: its own cover, album
+    // and artist pages. The sender's fields stand in until the phone has asked for them (see [ConnectSongs]).
+    val own = ConnectSongs.cached(videoId)
+    return Song(
+        videoId = videoId,
+        title = own?.title?.takeIf { it.isNotBlank() } ?: title,
+        artist = own?.artist?.takeIf { it.isNotBlank() } ?: artist,
+        thumbnailUrl = own?.thumbnailUrl ?: artworkUrl,
+        // What a cross-source match is made on, as in PartyTrack.toSong.
+        durationText = durationSec?.let { "%d:%02d".format(it / 60, it % 60) } ?: own?.durationText,
+        albumName = own?.albumName ?: album,
+        artistId = own?.artistId,
+        artists = own?.artists.orEmpty(),
+        albumId = own?.albumId,
+        queueTier = QueueTier.CONTEXT,
+    )
+}
