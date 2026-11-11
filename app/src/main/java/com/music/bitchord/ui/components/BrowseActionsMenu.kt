@@ -176,8 +176,8 @@ fun BrowseActionsMenu(
      */
     onRenameInSheet: (() -> Unit)? = null,
     startRenaming: Boolean = false,
-    /** Playlists kept on this device: writes the playlist to a file in the chosen format. */
-    onExport: ((dev.auden.library.io.PlaylistFormat) -> Unit)? = null,
+    /** Playlists kept on this device: opens the picker of formats to write the playlist as. */
+    onExport: (() -> Unit)? = null,
     /** Playlists kept on this device: makes a copy to change without touching the original. */
     onDuplicate: (() -> Unit)? = null,
     /** Looks up and keeps lyrics for every track of the release, in the background. */
@@ -188,7 +188,6 @@ fun BrowseActionsMenu(
     savingOnDevice: Boolean = false,
 ) {
     var renaming by remember { mutableStateOf(startRenaming) }
-    var exporting by remember { mutableStateOf(false) }
 
 
     val playlist = target.playlist
@@ -310,13 +309,8 @@ fun BrowseActionsMenu(
                 ActionRow(BitChordIcons.Lyrics, stringResource(R.string.find_lyrics_for_all), onClick = it)
             }
             onExport?.let { export ->
-                if (exporting) {
-                    ActionRow(Icons.Rounded.FileUpload, stringResource(R.string.export_as_m3u8), onClick = { export(dev.auden.library.io.PlaylistFormat.M3U8) })
-                    ActionRow(Icons.Rounded.FileUpload, stringResource(R.string.export_as_xspf), onClick = { export(dev.auden.library.io.PlaylistFormat.XSPF) })
-                    ActionRow(Icons.Rounded.FileUpload, stringResource(R.string.export_as_auden), onClick = { export(dev.auden.library.io.PlaylistFormat.AUDEN) })
-                } else {
-                    ActionRow(Icons.Rounded.FileUpload, stringResource(R.string.export_playlist)) { exporting = true }
-                }
+                // The formats are chosen in a picker of their own, in the middle of the screen.
+                ActionRow(Icons.Rounded.FileUpload, stringResource(R.string.export_playlist), onClick = export)
             }
             onRepairMetadata?.let {
                 ActionRow(SfIcons.Upgrade, stringResource(R.string.metadata_repair), onClick = it)

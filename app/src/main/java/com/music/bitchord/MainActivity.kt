@@ -259,6 +259,7 @@ import com.music.bitchord.ui.player.DjNowPlayingScreen
 import com.music.bitchord.ui.components.InfoAlert
 import com.music.bitchord.ui.components.DeleteRequest
 import com.music.bitchord.ui.components.FrostedDeleteConfirm
+import com.music.bitchord.ui.components.FrostedExportPicker
 import com.music.bitchord.ui.components.MetadataRepairDialog
 import com.music.bitchord.ui.components.YtSyncRowState
 import com.music.bitchord.ui.icons.SfIcons
@@ -1479,6 +1480,7 @@ private fun BitChordApp(
     }
     // Playlist files: the system file dialog does the picking, so Auden never
     // needs storage access of its own for them.
+    var exportingPlaylistId by remember { mutableStateOf<String?>(null) }
     var pendingExport by remember { mutableStateOf<Pair<LocalPlaylist, dev.auden.library.io.PlaylistFormat>?>(null) }
     val exportLauncher = rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.CreateDocument("*/*"),
@@ -5707,12 +5709,9 @@ private fun BitChordApp(
                     }
                 },
                 onExport = playlist?.takeIf { it.isOnDevice }?.let { p ->
-                    { format: dev.auden.library.io.PlaylistFormat ->
+                    {
                         browseActions = null
-                        dev.auden.library.LocalPlaylists.get(p.playlistId)?.let { local ->
-                            pendingExport = local to format
-                            exportLauncher.launch(dev.auden.library.io.PlaylistTransfer.fileNameFor(local, format))
-                        }
+                        exportingPlaylistId = p.playlistId
                     }
                 },
                 onDeleteDownload = target.downloadId?.let { id ->
@@ -6367,6 +6366,20 @@ private fun BitChordApp(
             }
 
             MetadataRepairDialog(hazeState)
+
+            exportingPlaylistId?.let { id ->
+                FrostedExportPicker(
+                    hazeState = hazeState,
+                    onPick = { format ->
+                        exportingPlaylistId = null
+                        dev.auden.library.LocalPlaylists.get(id)?.let { local ->
+                            pendingExport = local to format
+                            exportLauncher.launch(dev.auden.library.io.PlaylistTransfer.fileNameFor(local, format))
+                        }
+                    },
+                    onDismiss = { exportingPlaylistId = null },
+                )
+            }
 
             deleteRequest?.let { request ->
                 FrostedDeleteConfirm(hazeState = hazeState, request = request, onDismiss = { deleteRequest = null })

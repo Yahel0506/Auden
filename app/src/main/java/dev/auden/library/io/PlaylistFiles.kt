@@ -97,11 +97,14 @@ object M3u {
                 else -> {
                     val (seconds, artist, title) = parseInfo(info)
                     info = null
+                    val path = resolve(line, baseDir)
                     entries += PlaylistEntry(
-                        path = resolve(line, baseDir),
+                        path = path,
                         title = title,
                         artist = artist,
                         durationSec = seconds,
+                        // A YouTube address names the song itself, so it needs no search to be found again.
+                        videoId = youtubeIdOf(path),
                     )
                 }
             }
@@ -118,6 +121,12 @@ object M3u {
         return if (split > 0) Triple(seconds, label.take(split).trim(), label.drop(split + 3).trim())
         else Triple(seconds, null, label)
     }
+
+    /** The video id a YouTube or YouTube Music watch address names, or null. */
+    fun youtubeIdOf(path: String): String? =
+        Regex("^https?://(?:www\\.|music\\.|m\\.)?youtube\\.com/watch\\?(?:[^#]*&)?v=([A-Za-z0-9_-]{11})")
+            .find(path)?.groupValues?.get(1)
+            ?: Regex("^https?://youtu\\.be/([A-Za-z0-9_-]{11})").find(path)?.groupValues?.get(1)
 
     private fun resolve(line: String, baseDir: String?): String {
         if (PlaylistEntry(path = line).isUrl && !line.startsWith("file://")) return line

@@ -1346,6 +1346,14 @@
     <string name="signed_by">Signed by %1$s</string>
     <string name="genre">Genre</string>
     <string name="genres">Genres</string>
+    <string name="export_playlist_title">Export playlist</string>
+    <string name="export_playlist_hint">Choose the format of the file.</string>
+    <string name="export_format_m3u8">M3U8</string>
+    <string name="export_format_m3u8_detail">For other players and apps. Songs that stream are written as YouTube Music links.</string>
+    <string name="export_format_xspf">XSPF</string>
+    <string name="export_format_xspf_detail">Open XML format with title, artist and album, read by players like VLC.</string>
+    <string name="export_format_auden">Auden</string>
+    <string name="export_format_auden_detail">Auden\'s own file. Keeps streamed songs exactly, so importing it back loses nothing.</string>
     <string name="export_playlist">Export playlist…</string>
     <string name="export_as_m3u8">M3U8 (other players)</string>
     <string name="export_as_xspf">XSPF</string>

@@ -40,6 +40,7 @@ data class ImportSummary(
 /** Writes playlists to, and reads them from, files the listener picks with the system file dialog. */
 object PlaylistTransfer {
     private const val MAX_BYTES = 8 * 1024 * 1024
+    private val YOUTUBE_ID = Regex("^[A-Za-z0-9_-]{11}$")
 
     /** Suggested file name for the system "save as" dialog. */
     fun fileNameFor(playlist: LocalPlaylist, format: PlaylistFormat) =
@@ -132,8 +133,13 @@ object PlaylistTransfer {
         }
     }
 
+    /**
+     * A song as a playlist line. One that streams has no file, and a line with no location is no line at
+     * all to other players: it is written as its YouTube Music address, which they list and Auden reads
+     * back as the same song.
+     */
     private fun entryOf(song: Song) = PlaylistEntry(
-        path = song.localPath,
+        path = song.localPath ?: song.videoId.takeIf { YOUTUBE_ID.matches(it) }?.let { "https://music.youtube.com/watch?v=$it" },
         title = song.title,
         artist = song.artist,
         album = song.albumName,

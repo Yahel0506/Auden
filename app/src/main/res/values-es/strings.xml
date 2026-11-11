@@ -1394,6 +1394,14 @@
     <string name="genres">Géneros</string>
     <string name="folder">Carpeta</string>
     <string name="folders">Carpetas</string>
+    <string name="export_playlist_title">Exportar playlist</string>
+    <string name="export_playlist_hint">Elige el formato del archivo.</string>
+    <string name="export_format_m3u8">M3U8</string>
+    <string name="export_format_m3u8_detail">Para otros reproductores y apps. Las canciones en streaming se escriben como enlaces de YouTube Music.</string>
+    <string name="export_format_xspf">XSPF</string>
+    <string name="export_format_xspf_detail">Formato XML abierto con título, artista y álbum, que leen reproductores como VLC.</string>
+    <string name="export_format_auden">Auden</string>
+    <string name="export_format_auden_detail">El archivo propio de Auden. Conserva las canciones en streaming tal cual, así al importarlo no se pierde nada.</string>
     <string name="export_playlist">Exportar playlist…</string>
     <string name="export_as_m3u8">M3U8 (otros reproductores)</string>
     <string name="export_as_xspf">XSPF</string>
