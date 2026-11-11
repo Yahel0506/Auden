@@ -4,6 +4,13 @@ import com.music.bitchord.ui.components.trackArtSize
 import com.music.bitchord.ui.components.contextClick
 import com.music.bitchord.ui.AppUi
 import com.music.bitchord.sharedui.resources.*
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.buildAnnotatedString
+import com.music.bitchord.sharedui.resources.spotify_logo
+import com.music.bitchord.sharedui.resources.ytmusic_logo
 import org.jetbrains.compose.resources.painterResource
 import com.music.bitchord.ui.festive.GoldenLogo
 import org.jetbrains.compose.resources.DrawableResource
@@ -1058,16 +1065,52 @@ internal fun ShelfCard(
                 modifier = Modifier.weight(1f, fill = false),
             )
         }
-        val displaySubtitle = localizeCardSubtitle(item.subtitle)
-        Text(
-            text = displaySubtitle,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        val logo = when (item.platform) {
+            ShelfItem.PLATFORM_SPOTIFY -> Res.drawable.spotify_logo
+            ShelfItem.PLATFORM_YT_MUSIC -> Res.drawable.ytmusic_logo
+            else -> null
+        }
+        if (logo != null && item.subtitle.contains(LOGO_MARK)) {
+            // "12 songs · [logo] Synced with Spotify": the logo sits in the line, at the mark.
+            val before = item.subtitle.substringBefore(LOGO_MARK)
+            val after = item.subtitle.substringAfter(LOGO_MARK)
+            val size = MaterialTheme.typography.bodyMedium.fontSize
+            Text(
+                text = buildAnnotatedString {
+                    append(before)
+                    appendInlineContent("platform", "[logo]")
+                    append(after)
+                },
+                inlineContent = mapOf(
+                    "platform" to InlineTextContent(
+                        Placeholder(size, size, PlaceholderVerticalAlign.TextCenter),
+                    ) {
+                        Image(
+                            painter = painterResource(logo),
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize().padding(end = 2.dp),
+                        )
+                    },
+                ),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        } else {
+            Text(
+                text = localizeCardSubtitle(item.subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
+
+/** Where a platform logo goes in a card subtitle. */
+private const val LOGO_MARK = "\uFFFC"
 
 /**
  * The way into the DJ: a big card at the top of Home, on the app's own moving mesh like the sign-in card,

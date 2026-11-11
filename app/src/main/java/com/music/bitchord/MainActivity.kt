@@ -1104,9 +1104,26 @@ private fun BitChordApp(
     val coverRevision by dev.auden.library.PlaylistCovers.revision.collectAsStateWithLifecycle()
     val localPlaylistItems = localPlaylists.map { playlist ->
         coverRevision
+        // A copy saved from Spotify or YouTube Music says which, with its logo; one
+        // made on the device has no origin and stays "On this device".
+        val source = playlist.sourceId
+        val platform = when {
+            source == null -> null
+            source.startsWith(SPOTIFY_PAGE_PREFIX) -> ShelfItem.PLATFORM_SPOTIFY
+            else -> ShelfItem.PLATFORM_YT_MUSIC
+        }
         ShelfItem(
             title = playlist.title,
-            subtitle = stringResource(R.string.local_playlist_subtitle, playlist.songs.size),
+            platform = platform,
+            subtitle = when (platform) {
+                null -> stringResource(R.string.local_playlist_subtitle, playlist.songs.size)
+                else -> stringResource(
+                    R.string.local_playlist_synced,
+                    playlist.songs.size,
+                    "\uFFFC",
+                    if (platform == ShelfItem.PLATFORM_SPOTIFY) "Spotify" else "YT Music",
+                )
+            },
             thumbnailUrl = dev.auden.library.PlaylistCovers.coverFor(context, playlist)
                 ?: playlist.songs.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl,
             videoId = null,

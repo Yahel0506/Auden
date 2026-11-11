@@ -426,7 +426,18 @@ data class ShelfItem(
      * picture the player can show. Drawn as a 16:9 card, as the web player does.
      */
     val isVideo: Boolean = false,
-)
+    /**
+     * The service a library copy is kept in sync with — [PLATFORM_SPOTIFY] or
+     * [PLATFORM_YT_MUSIC] — so its card can show that service's logo. The
+     * subtitle carries a `\uFFFC` where the logo goes.
+     */
+    val platform: String? = null,
+) {
+    companion object {
+        const val PLATFORM_SPOTIFY = "spotify"
+        const val PLATFORM_YT_MUSIC = "ytmusic"
+    }
+}
 
 /** How a shelf's items are laid out — the web player's `ShelfLayout`, by the same rules. */
 enum class ShelfLayout {
