@@ -590,7 +590,8 @@ private fun BitChordApp(
     // What folds [GlassNavBar] between its expanded and inline shapes. Held here
     // rather than inside the bar because the page's scroll is what drives it,
     // and the page is a sibling of the bar rather than a child.
-    val navBarScroll = rememberFloatingTabBarScrollConnection()
+    // Apple Music folds its bar after only a little scrolling: 12dp rather than the library's 50.
+    val navBarScroll = rememberFloatingTabBarScrollConnection(scrollThreshold = 12.dp)
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     // Explore loads the first time it's shown, not at launch beside Home.
     LaunchedEffect(selectedTab) {
@@ -6898,12 +6899,14 @@ private val PLAYER_SHEET_CORNER_RAMP = 48.dp
 /**
  * The card the mini player becomes, in the pixels of whatever draws it, from [bar] (the mini player) at 0 to the
  * whole of [width] down to [bottom] (the screen's bottom) at 1: its top rides with the player (local 0 is the
- * player's top edge once the content rides it), its sides open out, and its bottom drops to the screen's bottom
- * at once — rising back into the bar only in the last stretch of a close, as Apple Music's does.
+ * player's top edge once the content rides it), its sides open out, and its bottom reaches the screen's bottom in
+ * the first stretch of an open — and comes back up into the bar over the last stretch of a close, so the card
+ * closes onto the bar itself rather than leaving a piece of itself over the tab bar.
  */
 internal fun morphCard(bar: Rect, width: Float, bottom: Float, t: Float): Rect {
     val k = t.coerceIn(0f, 1f)
-    val floor = if (k >= MORPH_FLOOR_SPAN) bottom else bar.bottom + (bottom - bar.bottom) * (k / MORPH_FLOOR_SPAN)
+    val f = (k / MORPH_FLOOR_SPAN).coerceIn(0f, 1f)
+    val floor = bar.bottom + (bottom - bar.bottom) * (f * f * (3f - 2f * f))
     return Rect(
         bar.left * (1f - k),
         bar.top * (1f - k),
@@ -6922,4 +6925,4 @@ internal fun morphCorner(barHeight: Float, sheetCorner: Float, t: Float): Float 
     }
 }
 
-private const val MORPH_FLOOR_SPAN = 0.08f
+private const val MORPH_FLOOR_SPAN = 0.3f

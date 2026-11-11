@@ -873,7 +873,8 @@ fun PlayerMorphGlass(
     val k = t.coerceIn(0f, 1f)
     val top = full.top - at.y
     val floor = screenHeight.toFloat().takeIf { it > 0f } ?: (full.bottom - at.y)
-    val bottom = if (k >= 0.08f) floor else local.bottom + (floor - local.bottom) * (k / 0.08f)
+    val f = (k / 0.3f).coerceIn(0f, 1f)
+    val bottom = local.bottom + (floor - local.bottom) * smooth(f)
     val rect = Rect(local.left * (1f - k), top, local.right + ((full.right - at.x) - local.right) * k, bottom)
     val radius = with(density) {
         val sheet = MORPH_SHEET_CORNER.toPx()
