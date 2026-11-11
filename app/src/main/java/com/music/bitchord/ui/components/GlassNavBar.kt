@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBarInlineBehavior
 import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.Spring
@@ -177,17 +178,29 @@ fun GlassNavBar(
     // the now playing bar narrowing first and then dropping (and rising first, then widening, on the
     // way back) — so nothing is handed between two layouts and nothing lands on anything else.
     val compact = scrollConnection.isInline
-    val morph = remember { Animatable(if (compact) 1f else 0f) }
-    var towardCompact by remember { mutableStateOf(compact) }
+    // Three movements on Apple Music's own timings, measured frame by frame off its bar (60 fps):
+    //  - [fold]: the tab bar folding into the open tab's circle and Search splitting off (under 0.1 s), and
+    //    back out of them;
+    //  - [narrow]: the now playing bar's width — collapsing it leads (half done in 80 ms, done by 200 ms);
+    //    expanding it follows the rise (from 60 ms to 250 ms);
+    //  - [drop]: its fall to the collapsed row — after the narrowing has a head start (80 ms to 420 ms) —
+    //    and, expanding, its rise, which leads (done by 180 ms).
+    // Eased in and out, no overshoot: the bar arrives, it does not bounce.
+    val fold = remember { Animatable(if (compact) 1f else 0f) }
+    val narrow = remember { Animatable(if (compact) 1f else 0f) }
+    val drop = remember { Animatable(if (compact) 1f else 0f) }
     LaunchedEffect(compact) {
-        towardCompact = compact
-        // A spring with some give, as liquid glass has: quick, a little past its mark, and back.
-        morph.animateTo(
-            if (compact) 1f else 0f,
-            spring(dampingRatio = MORPH_DAMPING, stiffness = MORPH_STIFFNESS),
-        )
+        if (compact) {
+            launch { fold.animateTo(1f, tween(FOLD_IN_MS, easing = FastOutSlowInEasing)) }
+            launch { narrow.animateTo(1f, tween(NARROW_IN_MS, easing = FastOutSlowInEasing)) }
+            launch { drop.animateTo(1f, tween(DROP_IN_MS, delayMillis = DROP_IN_DELAY_MS, easing = FastOutSlowInEasing)) }
+        } else {
+            launch { drop.animateTo(0f, tween(RISE_MS, easing = FastOutSlowInEasing)) }
+            launch { narrow.animateTo(0f, tween(WIDEN_MS, delayMillis = WIDEN_DELAY_MS, easing = FastOutSlowInEasing)) }
+            launch { fold.animateTo(0f, tween(FOLD_OUT_MS, delayMillis = FOLD_OUT_DELAY_MS, easing = FastOutSlowInEasing)) }
+        }
     }
-    val m: () -> Float = { morph.value }
+    val m: () -> Float = { fold.value }
     // The tab the collapsed circle shows: the open one, or the last one before Search was opened.
     var inlineIndex by remember { mutableIntStateOf(selectedIndex.takeIf { it != standaloneIndex } ?: 0) }
     if (selectedIndex != standaloneIndex) inlineIndex = selectedIndex
@@ -210,30 +223,18 @@ fun GlassNavBar(
     val geometry = remember(density) { NavMorphGeometry() }
     val boxSize = remember { FloatArray(2) }
     fun frame(width: Float, height: Float): NavMorphGeometry = geometry.apply {
-        val p = m()
-        val e = eased(p)
+        val p = fold.value
         val tabH = tabBarHeight.toFloat().takeIf { it > 0f } ?: rowPx
         tabExpanded = Rect(0f, height - tabH, width, height)
         val rowTop = height - liftPx - rowPx
         home = Rect(gutterPx, rowTop, gutterPx + rowPx, rowTop + rowPx)
         searchCircle = Rect(width - gutterPx - rowPx, rowTop, width - gutterPx, rowTop + rowPx)
-        tab = lerp(tabExpanded, home, e)
-        // The bar as two halves, each folding into its circle — the open tab's on the left, Search's on the
-        // right — and opening back out of them into the whole bar.
-        val middle = tabExpanded.center.x
-        leftPiece = lerp(Rect(tabExpanded.left, tabExpanded.top, middle, tabExpanded.bottom), home, e)
-        rightPiece = lerp(Rect(middle, tabExpanded.top, tabExpanded.right, tabExpanded.bottom), searchCircle, e)
-        piecesShown = (p / 0.25f).coerceIn(0f, 1f)
+        tab = lerp(tabExpanded, home, p)
+        piecesShown = (p / 0.3f).coerceIn(0f, 1f)
         val accExpanded = Rect(0f, tabExpanded.top - gapPx - accessoryPx, width, tabExpanded.top - gapPx)
         val accCompact = Rect(home.right + spacingPx, rowTop, searchCircle.left - spacingPx, rowTop + rowPx)
-        // Two movements: towards the collapsed row the width leads and the drop follows; back out, the
-        // rise leads and the width follows.
-        val (h, v) = if (towardCompact) {
-            phase(p, 0f, 0.62f) to phase(p, 0.28f, 0.72f)
-        } else {
-            val q = 1f - p
-            (1f - phase(q, 0.28f, 0.72f)) to (1f - phase(q, 0f, 0.62f))
-        }
+        val h = narrow.value
+        val v = drop.value
         accessory = Rect(
             lerpF(accExpanded.left, accCompact.left, h),
             lerpF(accExpanded.top, accCompact.top, v),
@@ -241,15 +242,16 @@ fun GlassNavBar(
             lerpF(accExpanded.bottom, accCompact.bottom, v),
         )
         accessoryInline = h >= 0.5f
-        searchGlass = ((p - 0.18f) / 0.42f).coerceIn(0f, 1f)
-        tabsShown = 1f - (p / 0.38f).coerceIn(0f, 1f)
+        searchGlass = p
+        tabsShown = 1f - (p / 0.5f).coerceIn(0f, 1f)
     }
     fun now(): NavMorphGeometry = frame(boxSize[0], boxSize[1])
-    fun heightFor(p: Float): Float {
+    fun heightFor(@Suppress("UNUSED_PARAMETER") unused: Float = 0f): Float {
+        val p = drop.value
         val tabH = tabBarHeight.toFloat().takeIf { it > 0f } ?: rowPx
         val expanded = tabH + if (hasAccessory) gapPx + accessoryPx else 0f
         val collapsed = rowPx + liftPx
-        return lerpF(expanded, collapsed, eased(p))
+        return lerpF(expanded, collapsed, p)
     }
 
     val innerScroll = remember { FloatingTabBarScrollConnection(false, Float.MAX_VALUE, FloatingTabBarInlineBehavior.Never) }
@@ -390,7 +392,7 @@ fun GlassNavBar(
             Modifier
                 .placeAt { w, h ->
                     val g = frame(w, h)
-                    lerp(Rect(g.searchCircle.center, 0f), g.searchCircle, eased(g.searchGlass))
+                    lerp(Rect(g.searchCircle.center, 0f), g.searchCircle, g.searchGlass)
                 }
                 .graphicsLayer { alpha = now().searchGlass.coerceIn(0f, 1f) }
                 .then(glassSurface())
@@ -409,7 +411,7 @@ fun GlassNavBar(
             at = { w, h ->
                 val g = frame(w, h)
                 val from = iconSpots[inlineIndex]?.let { spot -> centreIn(box[0], spot) } ?: g.tabExpanded.center
-                lerpO(from, g.home.center, eased(m()))
+                lerpO(from, g.home.center, m())
             },
         )
         TravellingGlyph(
@@ -420,7 +422,7 @@ fun GlassNavBar(
             at = { w, h ->
                 val g = frame(w, h)
                 val from = iconSpots[standaloneIndex]?.let { spot -> centreIn(box[0], spot) } ?: g.searchCircle.center
-                lerpO(from, g.searchCircle.center, eased(m()))
+                lerpO(from, g.searchCircle.center, m())
             },
         )
         // The now playing bar.
@@ -431,7 +433,7 @@ fun GlassNavBar(
                 derivedStateOf { dock != null && dock.morphing() && dock.coversMiniArt }
             }
             Box(Modifier.placeAt { w, h -> frame(w, h).accessory }) {
-                val inline by remember { derivedStateOf { morph.value >= 0.5f } }
+                val inline by remember { derivedStateOf { narrow.value >= 0.5f } }
                 GlassNowPlaying(
                     song = song,
                     isInline = inline,
@@ -814,9 +816,16 @@ private fun BoxScope.TravellingGlyph(
     )
 }
 
-/** The fold's spring: brisk, with a little bounce past its mark. */
-private const val MORPH_DAMPING = com.music.bitchord.ui.player.PlayerSheetMotion.MORPH_DAMPING
-private const val MORPH_STIFFNESS = com.music.bitchord.ui.player.PlayerSheetMotion.MORPH_STIFFNESS
+/** Apple Music's timings, in ms — see the fold in [GlassNavBar]. */
+private const val FOLD_IN_MS = 110
+private const val NARROW_IN_MS = 200
+private const val DROP_IN_MS = 340
+private const val DROP_IN_DELAY_MS = 80
+private const val RISE_MS = 180
+private const val WIDEN_MS = 190
+private const val WIDEN_DELAY_MS = 60
+private const val FOLD_OUT_MS = 120
+private const val FOLD_OUT_DELAY_MS = 30
 
 /**
  * A stretch of the fold's value, eased within its span — and past either end, carried on as it is, so the
@@ -857,22 +866,30 @@ fun PlayerMorphGlass(
     val density = LocalDensity.current
     val origin = remember { arrayOfNulls<LayoutCoordinates>(1) }
     val at = origin[0]?.takeIf { it.isAttached }?.positionOnScreen() ?: Offset.Zero
-    // Grown and shrunk from its top edge only: the bottom stays on the bar's, so the glass never comes down
-    // over the tab bar beneath it.
-    val rect = Rect(
-        lerpF(bar.left, full.left, t),
-        lerpF(bar.top, full.top, t),
-        lerpF(bar.right, full.right, t),
-        bar.bottom,
-    ).translate(-at.x, -at.y)
+    var screenHeight by remember { mutableIntStateOf(0) }
+    // The card in this layer's pixels: its top is the player's top (the player rides it), its sides and its
+    // floor as [com.music.bitchord.morphCard] has them.
+    val local = bar.translate(-at.x, -at.y)
     val k = t.coerceIn(0f, 1f)
-    val radius = with(density) { (minOf(bar.width, bar.height) / 2f * (1f - k) + MORPH_SHEET_CORNER.toPx() * k * (1f - k) * 2f).toDp() }
+    val top = full.top - at.y
+    val floor = screenHeight.toFloat().takeIf { it > 0f } ?: (full.bottom - at.y)
+    val bottom = if (k >= 0.08f) floor else local.bottom + (floor - local.bottom) * (k / 0.08f)
+    val rect = Rect(local.left * (1f - k), top, local.right + ((full.right - at.x) - local.right) * k, bottom)
+    val radius = with(density) {
+        val sheet = MORPH_SHEET_CORNER.toPx()
+        val half = bar.height / 2f
+        when {
+            k < 0.3f -> half + (sheet - half) * (k / 0.3f)
+            k > 0.85f -> sheet * (1f - (k - 0.85f) / 0.15f)
+            else -> sheet
+        }.toDp()
+    }
     val shape = RoundedCornerShape(radius)
     Box(
         modifier
             .fillMaxSize()
-            .onPlaced { origin[0] = it }
-            .drawBehind { drawRect(Color.Black.copy(alpha = MORPH_SCRIM_ALPHA * t.coerceIn(0f, 1f))) },
+            .onPlaced { origin[0] = it; screenHeight = it.size.height }
+            .drawBehind { drawRect(Color.Black.copy(alpha = MORPH_SCRIM_ALPHA * k)) },
     ) {
         Box(
             Modifier
@@ -886,23 +903,18 @@ fun PlayerMorphGlass(
                     },
                 ),
         )
+        // The mini player's lines, riding the card's top edge and fading as the player comes through (Apple
+        // Music's mini row at the top of the card), and back in at the end of a close.
         val mini = dock.miniCreditsOnScreen()
-        if (song != null && mini != null && mini.height > 0f) {
-            val target = dock.playerCreditsOnScreen() ?: mini
-            val k = 1f + (target.height / mini.height - 1f) * t
-            val left = lerpF(mini.left, target.left, t) - at.x
-            val top = lerpF(mini.top, target.top, t) - at.y
-            val base = glassContentColor()
-            val color = androidx.compose.ui.graphics.lerp(base, Color.White, t)
+        val shown = 1f - smooth((k / 0.25f).coerceIn(0f, 1f))
+        if (song != null && mini != null && shown > 0f) {
+            val left = mini.left - at.x
+            val y = mini.top - at.y + (top - local.top)
             Column(
                 Modifier
-                    .offset { IntOffset(left.roundToInt(), top.roundToInt()) }
+                    .offset { IntOffset(left.roundToInt(), y.roundToInt()) }
                     .width(with(density) { mini.width.toDp() })
-                    .graphicsLayer {
-                        scaleX = k
-                        scaleY = k
-                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
-                    },
+                    .graphicsLayer { alpha = shown },
             ) {
                 Text(
                     text = song.title,
@@ -911,7 +923,7 @@ fun PlayerMorphGlass(
                         fontWeight = ACCESSORY_TITLE_WEIGHT,
                         letterSpacing = ACCESSORY_TITLE_TRACKING,
                     ),
-                    color = color,
+                    color = glassContentColor(),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -921,7 +933,7 @@ fun PlayerMorphGlass(
                         fontSize = ACCESSORY_ARTIST_SIZE,
                         letterSpacing = ACCESSORY_ARTIST_TRACKING,
                     ),
-                    color = color.copy(alpha = 0.7f),
+                    color = glassContentColor().copy(alpha = 0.7f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -929,6 +941,8 @@ fun PlayerMorphGlass(
         }
     }
 }
+
+private fun smooth(x: Float) = x * x * (3f - 2f * x)
 
 private val MORPH_SHEET_CORNER = 40.dp
 private const val TRANSPORT_FADE_SPAN = 0.25f

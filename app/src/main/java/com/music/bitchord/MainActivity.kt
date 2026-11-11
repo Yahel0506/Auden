@@ -5044,6 +5044,7 @@ private fun BitChordApp(
                     playerDock.fractionOverride = playerSheetMotion::morphFraction
                     playerDock.placementOverride = playerSheetMotion::morphPlacement
                     playerDock.morphing = { playerSheetMotion.holding }
+                    playerSheetMotion.miniTop = { playerDock.miniContainerOnScreen()?.top }
                 }
                 onDispose {
                     playerDock.fractionOverride = null
@@ -5141,17 +5142,14 @@ private fun BitChordApp(
                             val box = playerSheetBox[0]?.takeIf { it.isAttached }
                             if (!reducePlayerMotion && playerSheetMotion.holding && t < 1f && bar != null && box != null) {
                                 val origin = box.positionOnScreen()
-                                // The player comes through the glass's top and sides; its bottom is never cut.
-                                val from = bar.translate(-origin.x, -origin.y)
-                                val shape = Rect(
-                                    from.left * (1f - t),
-                                    from.top * (1f - t),
-                                    from.right + (size.width - from.right) * t,
-                                    size.height,
-                                )
-                                val radius = (minOf(bar.height, bar.width) / 2f) * (1f - t)
+                                val card = morphCard(bar.translate(-origin.x, -origin.y), size.width, size.height - origin.y, t)
                                 val path = androidx.compose.ui.graphics.Path().apply {
-                                    addRoundRect(androidx.compose.ui.geometry.RoundRect(shape, androidx.compose.ui.geometry.CornerRadius(radius)))
+                                    addRoundRect(
+                                        androidx.compose.ui.geometry.RoundRect(
+                                            card,
+                                            androidx.compose.ui.geometry.CornerRadius(morphCorner(bar.height, PLAYER_SHEET_CORNER.toPx(), t)),
+                                        ),
+                                    )
                                 }
                                 clipPath(path) { this@drawWithContent.drawContent() }
                             } else {
@@ -6896,3 +6894,32 @@ private const val AUDEN_FESTIVE_GREETINGS = false
 /** The top corners of the player while a finger slides it as a sheet, and how far it takes to round them. */
 private val PLAYER_SHEET_CORNER = 38.dp
 private val PLAYER_SHEET_CORNER_RAMP = 48.dp
+
+/**
+ * The card the mini player becomes, in the pixels of whatever draws it, from [bar] (the mini player) at 0 to the
+ * whole of [width] down to [bottom] (the screen's bottom) at 1: its top rides with the player (local 0 is the
+ * player's top edge once the content rides it), its sides open out, and its bottom drops to the screen's bottom
+ * at once — rising back into the bar only in the last stretch of a close, as Apple Music's does.
+ */
+internal fun morphCard(bar: Rect, width: Float, bottom: Float, t: Float): Rect {
+    val k = t.coerceIn(0f, 1f)
+    val floor = if (k >= MORPH_FLOOR_SPAN) bottom else bar.bottom + (bottom - bar.bottom) * (k / MORPH_FLOOR_SPAN)
+    return Rect(
+        bar.left * (1f - k),
+        bar.top * (1f - k),
+        bar.right + (width - bar.right) * k,
+        floor,
+    )
+}
+
+/** The card's corner: the pill's half height, opening to a sheet's corner, squaring off as it fills the screen. */
+internal fun morphCorner(barHeight: Float, sheetCorner: Float, t: Float): Float {
+    val k = t.coerceIn(0f, 1f)
+    return when {
+        k < 0.3f -> barHeight / 2f + (sheetCorner - barHeight / 2f) * (k / 0.3f)
+        k > 0.85f -> sheetCorner * (1f - (k - 0.85f) / 0.15f)
+        else -> sheetCorner
+    }
+}
+
+private const val MORPH_FLOOR_SPAN = 0.08f

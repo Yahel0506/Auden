@@ -106,8 +106,15 @@ class PlayerSheetMotion(
     /** Where the player's content stands during the morph, below fully open; null when the sheet places it. */
     fun morphPlacement(): Float? {
         if (held.isNaN()) return null
-        return closeFrom.takeUnless { it.isNaN() } ?: 0f
+        val base = closeFrom.takeUnless { it.isNaN() } ?: 0f
+        // The player rides the morph's top edge, as Apple Music's does: its header comes down with the card
+        // into the bar, and goes up with it out of the bar.
+        val barTop = miniTop?.invoke() ?: return base
+        return base + (1f - morphFraction()) * (barTop - base)
     }
+
+    /** The mini player's top on screen, from the host: where the card's top edge starts and ends. */
+    var miniTop: (() -> Float?)? = null
 
     /** The sheet, while it is up. Set by the host. */
     var sheet: SheetState? = null
@@ -374,31 +381,27 @@ class PlayerSheetMotion(
 
     private suspend fun slide(from: Float, to: Float, velocity: Float = 0f) {
         val travel = travel()
+        // Measured off Apple Music frame by frame: opening is a critically damped spring of about 0.33 s
+        // (61% at 117 ms, 88% at 200 ms); a close runs faster, about 0.2 s, carrying the finger's speed.
+        val stiffness = if (to < from) OPEN_STIFFNESS else CLOSE_STIFFNESS
         animate(
             initialValue = from,
             targetValue = to,
             initialVelocity = velocity,
-            // The navigation bar's spring, so the player opens and closes as the bar folds: the same speed and the
-            // same little give at the end, which the glass carries (see [rawMorphFraction]).
             animationSpec = spring(
-                dampingRatio = MORPH_DAMPING,
-                stiffness = MORPH_STIFFNESS,
+                dampingRatio = Spring.DampingRatioNoBouncy,
+                stiffness = stiffness,
                 visibilityThreshold = SLIDE_SETTLED_PX,
             ),
         ) { value, _ ->
-            // Past open or past the bar only by the spring's overshoot: the player stands still meanwhile (it is
-            // placed by the morph), and only the glass moves with it.
-            held = value.coerceIn(-travel * MAX_OVERSHOOT, travel * (1f + MAX_OVERSHOOT))
+            held = value.coerceIn(0f, travel)
         }
     }
 
     companion object {
-        /** The spring the navigation bar folds on and the player opens and closes on. */
-        const val MORPH_DAMPING = 0.84f
-        const val MORPH_STIFFNESS = 165f
-
-        /** The most the spring may carry past either end, as a share of the travel. */
-        private const val MAX_OVERSHOOT = 0.12f
+        /** Apple Music's player: opening ω ≈ 18 rad/s, closing ω ≈ 23 rad/s, both critically damped. */
+        private const val OPEN_STIFFNESS = 324f
+        private const val CLOSE_STIFFNESS = 520f
     }
 
     /** Gone — with the window's own exit animation already off (see [quietWindow]). */

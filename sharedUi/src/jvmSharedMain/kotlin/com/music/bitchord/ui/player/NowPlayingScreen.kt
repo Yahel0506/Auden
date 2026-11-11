@@ -498,6 +498,7 @@ private const val DOCK_FADE_FLOOR = 1f / 255f
 
 /** How much of the morph the player takes to become opaque inside the growing surface. */
 private const val MORPH_FADE_SPAN = 0.3f
+private const val MORPH_FADE_FROM = 0.12f
 
 /**
  * What one frame of docking into the mini player worked out — see
@@ -1887,7 +1888,9 @@ fun NowPlayingScreen(
         if (dock?.morphing?.invoke() == true) {
             // The morph: the mini player's glass grows into the player's shape (drawn by the host), and the
             // player itself only comes through it at the end — and leaves first on the way down.
-            val f = ((dockT() - (1f - MORPH_FADE_SPAN)) / MORPH_FADE_SPAN).coerceIn(0f, 1f)
+            // As Apple Music's: the player comes through the card from an eighth of the way, fully by about
+            // two fifths, and leaves the same way on a close.
+            val f = ((dockT() - MORPH_FADE_FROM) / MORPH_FADE_SPAN).coerceIn(0f, 1f)
             f * f * (3f - 2f * f)
         } else {
             ((dockT() - DOCK_FADE_LEAD) / (1f - DOCK_FADE_LEAD)).coerceIn(0f, 1f)
