@@ -156,7 +156,9 @@ class LoopMixTest {
         for (side in LoopMix.Side.entries) {
             val pick = if (side == LoopMix.Side.OUT) plan.out else plan.inn
             var previous = LoopMix.positionAt(clock, side, 0.0)!!
-            for (k in 1 until clock.beats) {
+            // the outgoing deck stops wrapping where it lets go and plays on
+            val until = if (side == LoopMix.Side.OUT) clock.outReleaseBeat.coerceAtMost(clock.beats) else clock.beats
+            for (k in 1 until until) {
                 val position = LoopMix.positionAt(clock, side, clock.beatTimes[k])!!
                 val step = if (side == LoopMix.Side.OUT) pick.beatSec else plan.fold * pick.beatSec
                 var expected = previous + step
@@ -185,6 +187,24 @@ class LoopMixTest {
     }
 
     @Test
+    fun theOutgoingLoopRepeatsOnePassFewerAndThenPlaysOnPastItsEnd() {
+        val plan = assertNotNull(plan(analysis(111.0, 200.0), analysis(169.0, 180.0)))
+        val clock = LoopMix.Clock(plan)
+        val per = plan.out.beats
+        val before = kotlin.math.ceil(clock.beats.toDouble() / per).toInt()
+        val release = clock.outReleaseBeat
+        // never more repeats than before, and a whole number of passes
+        assertTrue(release <= clock.beats)
+        if (clock.beats > per) {
+            assertEquals(0, release % per)
+            assertEquals(before - 1, release / per)
+            // the last stretch is the song itself continuing past the loop's end, not another repeat
+            val after = LoopMix.positionAt(clock, LoopMix.Side.OUT, clock.beatTimes[release] + 0.01)!!
+            assertTrue(after >= plan.out.loopEnd - 1e-9)
+        }
+    }
+
+    @Test
     fun positionIsNothingBeforeTheMixAndTheLoopStartOnItsFirstBeat() {
         val plan = assertNotNull(plan(analysis(111.0, 200.0), analysis(169.0, 180.0)))
         val clock = LoopMix.Clock(plan)
@@ -202,8 +222,10 @@ class LoopMixTest {
         var t = 0.0
         while (t < clock.releaseAt) {
             val out = LoopMix.positionAt(clock, LoopMix.Side.OUT, t)!!
-            assertTrue(out >= plan.out.loopStart - 1e-9 && out <= plan.out.loopEnd + 1e-9)
-            if (out < last - 1) sawWrap = true
+            if (t < clock.beatTimes[clock.outReleaseBeat.coerceAtMost(clock.beats)]) {
+                assertTrue(out >= plan.out.loopStart - 1e-9 && out <= plan.out.loopEnd + 1e-9)
+                if (out < last - 1) sawWrap = true
+            }
             last = out
             val inn = LoopMix.positionAt(clock, LoopMix.Side.IN, t)!!
             assertTrue(inn >= plan.inn.loopStart - 1e-9 && inn <= plan.inn.loopEnd + 1e-9)

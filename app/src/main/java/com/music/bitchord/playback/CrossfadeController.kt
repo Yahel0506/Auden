@@ -2423,6 +2423,7 @@ class CrossfadeController(
     private var loopRefusal: String? = null
     private var lastLoopVerdict = ""
     private var loopIncomingStarted = false
+    private var loopIncomingChecked = false
     private var lastLoopPositionMs = -1L
     private var lastLoopAnnounceAt = 0L
     private var lastLoopBeat = -1
@@ -2647,6 +2648,7 @@ class CrossfadeController(
         session.attach(outPort, inPort)
         loopSession = session
         loopIncomingStarted = false
+        loopIncomingChecked = false
         lastLoopPositionMs = -1L
         lastLoopBeat = -1
         Log.d(
@@ -2706,6 +2708,16 @@ class CrossfadeController(
             session.inPort.positionUs != C.TIME_UNSET && m >= session.inStartAt + LOOP_ALIGN_SETTLE_SECONDS
         ) {
             startLoopAlignment(session)
+        }
+        // The incoming player has to be really playing, in step with the deck, for the handover at the
+        // end to be there: one that is still loading would leave the mix running out into silence and
+        // then start its song from where it was parked. Found early, the mix is dropped while the
+        // outgoing song can still carry on as itself.
+        if (loopIncomingStarted && !loopIncomingChecked && m >= session.inStartAt + LOOP_INCOMING_READY_SECONDS) {
+            loopIncomingChecked = true
+            if (!into.isPlaying) {
+                return loopBail("the incoming song was not playing ${LOOP_INCOMING_READY_SECONDS}s after its start", settle = true)
+            }
         }
         if (!handedOff && m >= session.clock.handoffAt) {
             handOff(out, into)
@@ -2805,6 +2817,27 @@ class CrossfadeController(
     /** The mix played out: the incoming player is the song, the outgoing one is retired. */
     private fun finishLoop() {
         val session = loopSession
+        // The song must be where the deck left it. If its player has fallen out of step (still loading,
+        // or parked at its start), it is put there now rather than left to play from the wrong place.
+        val into = incoming
+        if (session != null && into != null) {
+            val m = session.mixSeconds(System.nanoTime(), outgoing?.isPlaying ?: true)
+            val expectedMs = if (m != null) {
+                ((session.handoverTrack + (m - session.clock.elementAt).coerceAtLeast(0.0)) * 1000).roundToLong()
+            } else {
+                null
+            }
+            Log.d(
+                TAG,
+                "loop handover: incoming ${if (into.isPlaying) "playing" else "state ${into.playbackState}"} at " +
+                    "${into.currentPosition}ms, expected ${expectedMs}ms",
+            )
+            if (expectedMs != null && (!into.isPlaying || abs(into.currentPosition - expectedMs) > LOOP_HANDOVER_TOLERANCE_MS)) {
+                Log.w(TAG, "loop handover: incoming out of step, moved to ${expectedMs}ms")
+                into.seekTo(expectedMs)
+                into.playWhenReady = true
+            }
+        }
         Log.d(
             TAG,
             "loop mix done: incoming ${"%+.2f".format(Locale.ROOT, session?.alignedErrorMs ?: Double.NaN)}ms " +
@@ -4340,6 +4373,12 @@ class CrossfadeController(
 
         /** Past the incoming player's takeover, before the outgoing one is retired. */
         const val LOOP_END_MARGIN_SECONDS = 0.3
+
+        /** The incoming player must be playing this long after it is started, or the mix is dropped. */
+        const val LOOP_INCOMING_READY_SECONDS = 4.0
+
+        /** The most its position may be from the deck's at the handover before it is moved there. */
+        const val LOOP_HANDOVER_TOLERANCE_MS = 400L
 
         /** A position this far back is a loop wrap; and how often the ramp re-anchors controllers. */
         const val LOOP_WRAP_MS = 400L

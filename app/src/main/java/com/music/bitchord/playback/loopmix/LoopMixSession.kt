@@ -126,16 +126,27 @@ class LoopMixSession private constructor(
         ): LoopMixSession? {
             if (!LoopMixRenderer.available || sampleRate <= 0) return null
             val clock = LoopMix.Clock(plan)
+            // The outgoing deck lets go of its loop at [LoopMix.Clock.outReleaseBeat] and plays on into
+            // the rest of the song for as long as the mix runs after it.
+            val outReleaseBeat = clock.outReleaseBeat
+            val outRunOnSeconds = (clock.beats - outReleaseBeat) * plan.out.beatSec
             val outRegion = decode(
                 LoopMix.Side.OUT,
                 plan.out.loopStart - PREROLL_SECONDS,
-                plan.out.loopEnd + 0.5,
+                plan.out.loopEnd + 0.5 + outRunOnSeconds,
             ) ?: return null
             val inRegion = decode(
                 LoopMix.Side.IN,
                 plan.inn.loopStart - PREROLL_SECONDS,
                 clock.elementTrackTime + TAIL_SECONDS,
             ) ?: return null
+            // A region cut short would leave its deck silent where the mix still needs it: the mix
+            // would stop dead there, so it is not started.
+            val inCovers = inRegion.start + inRegion.left.size.toDouble() / sampleRate
+            if (inCovers < clock.elementTrackTime + 1.0) {
+                Log.w(TAG, "the incoming region ends at ${"%.2f".format(inCovers)}s, before the handover at ${"%.2f".format(clock.elementTrackTime)}s")
+                return null
+            }
             if (outRegion.start > plan.out.loopStart || inRegion.start > plan.inn.loopStart) {
                 Log.w(TAG, "a region starts after its loop: out ${outRegion.start}, in ${inRegion.start}")
                 return null
@@ -147,7 +158,7 @@ class LoopMixSession private constructor(
 
             fun samplesOf(region: LoopRegion, trackSeconds: Double) = (trackSeconds - region.start) * sr
 
-            // Outgoing: its loop, knot by knot, looping forever (it stops at the release).
+            // Outgoing: its loop, knot by knot, until it lets go and plays on into the rest of its song.
             val outKnotFrames = DoubleArray(beats + 1) { clock.beatTimes[it] * sr }
             val outKnotPositions = DoubleArray(beats + 1) { samplesOf(outRegion, clock.outPositionAt(it)) }
             renderer.setDeck(
@@ -158,7 +169,7 @@ class LoopMixSession private constructor(
                     regionStart = outRegion.start,
                     loopStart = samplesOf(outRegion, plan.out.loopStart).roundToLong(),
                     loopEnd = samplesOf(outRegion, plan.out.loopEnd).roundToLong(),
-                    releaseAt = 1e18,
+                    releaseAt = if (outReleaseBeat >= clock.beats) 1e18 else samplesOf(outRegion, clock.outPositionAt(outReleaseBeat)),
                     knotFrames = outKnotFrames,
                     knotPositions = outKnotPositions,
                     runOn = false,

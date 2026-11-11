@@ -512,6 +512,19 @@ object LoopMix {
         val elementAt: Double get() = beatTimes[beats + settleBeats]
         val elementTrackTime: Double get() = plan.inn.loopEnd + (elementAt - releaseAt)
 
+        /**
+         * The beat at which the outgoing deck lets go of its loop and plays on past the loop's end,
+         * from there to [releaseAt] — the rest of the song, fading, instead of one more repeat that is
+         * cut at the loop's end. One pass fewer than the mix would otherwise loop, and never fewer than
+         * one; [beats] when the mix is no longer than the loop and there is nothing to play on into.
+         */
+        val outReleaseBeat: Int
+            get() {
+                val per = plan.out.beats
+                val passes = max(1, ceil(beats.toDouble() / per).toInt() - 1)
+                return min(passes * per, beats)
+            }
+
         /** The unwrapped track position each deck plays at beat [k] (for k up to [beats]). */
         fun outPositionAt(k: Int): Double = plan.out.loopStart + k * plan.out.beatSec
         fun inPositionAt(k: Int): Double = plan.inn.loopStart + k * plan.fold * plan.inn.beatSec
@@ -550,7 +563,12 @@ object LoopMix {
         val (k, frac) = clock.beatAt(t)
         if (k >= clock.beats) return null
         return if (side == Side.OUT) {
-            plan.out.loopStart + ((k % plan.out.beats) + frac) * plan.out.beatSec
+            // Past the release beat the outgoing deck has let go and plays on from the loop's end.
+            if (k >= clock.outReleaseBeat && clock.outReleaseBeat < clock.beats) {
+                plan.out.loopEnd + ((k - clock.outReleaseBeat) + frac) * plan.out.beatSec
+            } else {
+                plan.out.loopStart + ((k % plan.out.beats) + frac) * plan.out.beatSec
+            }
         } else {
             plan.inn.loopStart + (((k * plan.fold) % plan.inn.beats) + frac * plan.fold) * plan.inn.beatSec
         }
