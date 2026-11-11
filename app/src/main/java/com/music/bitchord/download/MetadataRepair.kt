@@ -231,8 +231,10 @@ object MetadataRepair {
         withContext(Dispatchers.IO) {
             val saved = Downloads.savedMetadata.value[song.videoId]
             val downloaded = saved != null
-            fun result(outcome: Outcome, gaps: Set<Gap> = emptySet(), filled: Set<Gap> = emptySet(), reason: Reason? = null) =
-                SongResult(song.title, song.artist, outcome, gaps, filled, reason)
+            fun result(outcome: Outcome, gaps: Set<Gap> = emptySet(), filled: Set<Gap> = emptySet(), reason: Reason? = null): SongResult {
+                if (outcome == Outcome.UNAVAILABLE) Log.w(TAG, "repair of '${song.title}' left as it was: $reason, gaps=$gaps")
+                return SongResult(song.title, song.artist, outcome, gaps, filled, reason)
+            }
 
             val uri: Uri = (if (downloaded) Downloads.savedUri(context, song.videoId) else null)
                 ?: song.localUri?.let(Uri::parse)
@@ -263,15 +265,25 @@ object MetadataRepair {
                 albumName = base.albumName?.takeIf { it.isNotBlank() } ?: found?.albumName,
             )
 
+            // No certain match on YouTube Music: Apple's catalogue may still know the song.
+            var itunes: ItunesLookup.Hit? = null
+            val needsAlbum = Gap.ALBUM in gaps && track.albumName.isNullOrBlank()
+            if ((needsAlbum || Gap.COVER in gaps) && (found == null || found.thumbnailUrl.isNullOrBlank())) {
+                itunes = ItunesLookup.find(track.title.ifBlank { before.title.orEmpty() }, track.artist.ifBlank { before.artist.orEmpty() })
+            }
+            val trackWithAlbum = if (needsAlbum && itunes?.album != null) track.copy(albumName = itunes.album) else track
+
             var cover: MediaTagger.Artwork? = null
             if (Gap.COVER in gaps) {
                 onStep(Step.DOWNLOADING_COVER)
-                cover = coverFor(song.videoId, listOfNotNull(base.thumbnailUrl, found?.thumbnailUrl))
+                // A device file's own thumbnail is a content address, not something to download.
+                val urls = listOfNotNull(base.thumbnailUrl, found?.thumbnailUrl, itunes?.artworkUrl).filter { it.startsWith("http") }
+                cover = coverFor(song.videoId, urls)
             }
             val filled = buildSet {
                 if (Gap.TITLE in gaps && track.title.isNotBlank()) add(Gap.TITLE)
                 if (Gap.ARTIST in gaps && track.artist.isNotBlank()) add(Gap.ARTIST)
-                if (Gap.ALBUM in gaps && !track.albumName.isNullOrBlank()) add(Gap.ALBUM)
+                if (Gap.ALBUM in gaps && !trackWithAlbum.albumName.isNullOrBlank()) add(Gap.ALBUM)
                 if (Gap.COVER in gaps && cover != null) add(Gap.COVER)
             }
             if (filled.isEmpty()) {
@@ -287,7 +299,7 @@ object MetadataRepair {
             // in: the file's own values win, the new ones fill what was missing, and
             // the cover and lyrics are passed through rather than dropped.
             onStep(Step.WRITING)
-            val merged = track.copy(
+            val merged = trackWithAlbum.copy(
                 title = before.title?.takeIf { it.isNotBlank() } ?: track.title,
                 artist = before.artist?.takeIf { it.isNotBlank() } ?: track.artist,
                 albumName = before.album?.takeIf { it.isNotBlank() } ?: track.albumName,

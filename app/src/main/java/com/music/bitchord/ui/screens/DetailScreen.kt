@@ -1,5 +1,9 @@
 package com.music.bitchord.ui.screens
 
+import androidx.compose.foundation.text.appendInlineContent
+import com.music.bitchord.sharedui.resources.Res
+import com.music.bitchord.sharedui.resources.spotify_mono
+import com.music.bitchord.sharedui.resources.ytmusic_mono
 import com.music.bitchord.ui.components.trackArtSize
 import android.os.Build
 import com.music.bitchord.R
@@ -1069,12 +1073,49 @@ private fun ReleaseHeader(
         )
         if (credit.isNotBlank()) {
             Spacer(Modifier.height(2.dp))
+            // "[logo] Synced with Spotify" on a copy of another service's playlist: the logo is
+            // drawn in the text's own colour, at the mark the page's subtitle carries.
+            val syncLogo = if (credit.contains("\uFFFC")) {
+                when (dev.auden.library.LocalPlaylists.get(page.browseId)?.sourceId) {
+                    null -> null
+                    else -> if (dev.auden.library.LocalPlaylists.get(page.browseId)?.sourceId
+                            ?.startsWith(com.music.bitchord.data.spotify.SPOTIFY_PAGE_PREFIX) == true
+                    ) Res.drawable.spotify_mono else Res.drawable.ytmusic_mono
+                }
+            } else {
+                null
+            }
+            val creditStyle = MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.Normal,
+                fontSize = 19.sp,
+            )
             Text(
-                text = credit,
-                style = MaterialTheme.typography.titleLarge.copy(
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 19.sp,
-                ),
+                text = if (syncLogo != null) {
+                    androidx.compose.ui.text.buildAnnotatedString {
+                        append(credit.substringBefore("\uFFFC"))
+                        appendInlineContent("platform", "[logo]")
+                        append(credit.substringAfter("\uFFFC"))
+                    }
+                } else {
+                    androidx.compose.ui.text.AnnotatedString(credit)
+                },
+                inlineContent = if (syncLogo != null) {
+                    mapOf(
+                        "platform" to androidx.compose.foundation.text.InlineTextContent(
+                            androidx.compose.ui.text.Placeholder(creditStyle.fontSize, creditStyle.fontSize, androidx.compose.ui.text.PlaceholderVerticalAlign.TextCenter),
+                        ) {
+                            Icon(
+                                painter = org.jetbrains.compose.resources.painterResource(syncLogo),
+                                contentDescription = null,
+                                tint = palette.onBackgroundVariant,
+                                modifier = Modifier.fillMaxSize().padding(end = 3.dp),
+                            )
+                        },
+                    )
+                } else {
+                    emptyMap()
+                },
+                style = creditStyle,
                 color = palette.onBackgroundVariant,
                 textAlign = TextAlign.Center,
                 maxLines = 1,

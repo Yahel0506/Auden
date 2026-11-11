@@ -44,6 +44,17 @@ interface TrackDao {
     @Query("UPDATE track SET localUri = NULL, path = NULL, folder = NULL, sizeBytes = NULL, modifiedAt = NULL WHERE id IN (:ids)")
     suspend fun detachFiles(ids: List<Long>)
 
+    /**
+     * A song that streams but kept the MediaStore cover of a file it was once linked to has an
+     * address nothing answers: the file is gone, and so is what [thumbnailUrl] pointed at.
+     * Gives it YouTube's own thumbnail of the video instead.
+     */
+    @Query(
+        "UPDATE track SET thumbnailUrl = 'https://i.ytimg.com/vi/' || videoId || '/hqdefault.jpg' " +
+            "WHERE localUri IS NULL AND videoId IS NOT NULL AND length(videoId) = 11 AND thumbnailUrl LIKE 'content:%'",
+    )
+    suspend fun repairStrandedCovers(): Int
+
     @Query("SELECT * FROM track WHERE localUri IS NOT NULL")
     fun observeLocal(): Flow<List<TrackEntity>>
 

@@ -3143,7 +3143,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
             if (localPlaylist != null) {
                 name = localPlaylist.title
-                credit = getApplication<Application>().getString(R.string.local_playlist_subtitle, localPlaylist.songs.size)
+                val source = localPlaylist.sourceId
+                credit = if (source == null) {
+                    getApplication<Application>().getString(R.string.local_playlist_subtitle, localPlaylist.songs.size)
+                } else {
+                    // A copy of a Spotify or YouTube Music playlist says so under its title; the
+                    // header draws the service's logo at the mark.
+                    "\uFFFC " + getApplication<Application>().getString(
+                        R.string.synced_with,
+                        if (source.startsWith(SPOTIFY_PAGE_PREFIX)) "Spotify" else "YT Music",
+                    )
+                }
                 artwork = dev.auden.library.PlaylistCovers.coverFor(getApplication(), localPlaylist)
                     ?: localPlaylist.songs.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl
             }

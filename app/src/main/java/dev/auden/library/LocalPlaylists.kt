@@ -48,7 +48,10 @@ object LocalPlaylists {
     fun init(context: Context) {
         val database = AudenDb.get(context)
         db = database
-        scope.launch { reload(database) }
+        scope.launch {
+            database.tracks().repairStrandedCovers()
+            reload(database)
+        }
     }
 
     suspend fun reload(database: AudenDb? = db) {

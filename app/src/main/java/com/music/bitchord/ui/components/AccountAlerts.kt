@@ -937,6 +937,10 @@ internal fun AlertScaffold(
      * surface the reduced-blur setting uses; see [InfoAlert]'s `inOwnWindow`.
      */
     frosted: Boolean = true,
+    /** The card's width; a decision with more to say than an OK takes more room. */
+    width: androidx.compose.ui.unit.Dp = ALERT_WIDTH,
+    /** Softly blurs the screen behind as well as dimming it. */
+    blurBackdrop: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -945,6 +949,21 @@ internal fun AlertScaffold(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .then(
+                if (blurBackdrop && frosted && !reduceDynamicBlur) {
+                    Modifier.optimizedHazeEffect(
+                        state = hazeState,
+                        style = dev.chrisbanes.haze.HazeStyle(
+                            backgroundColor = Color.Transparent,
+                            tints = emptyList(),
+                            blurRadius = 6.dp,
+                            noiseFactor = 0f,
+                        ),
+                    )
+                } else {
+                    Modifier
+                },
+            )
             .background(SCRIM_COLOR)
             .clickable(
                 indication = null,
@@ -955,7 +974,7 @@ internal fun AlertScaffold(
     ) {
         Column(
             modifier = Modifier
-                .width(ALERT_WIDTH)
+                .width(width)
                 .clip(shape)
                 .then(
                     if (reduceDynamicBlur || !frosted) {

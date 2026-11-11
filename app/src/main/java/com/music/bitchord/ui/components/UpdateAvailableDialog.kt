@@ -281,11 +281,14 @@ internal fun AlertAction(
     onClick: () -> Unit,
     enabled: Boolean = true,
     destructive: Boolean = false,
+    modifier: Modifier = Modifier,
+    /** Overrides the action's colour, for the one that has to be the strongest red. */
+    color: Color? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(ACTION_HEIGHT)
             // iOS washes the whole row instead of drawing a ripple inside it.
@@ -306,7 +309,7 @@ internal fun AlertAction(
                 fontSize = 17.sp,
                 fontWeight = if (emphasised) FontWeight.W600 else FontWeight.W400,
             ),
-            color = (if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
+            color = (color ?: if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
                 .copy(alpha = if (enabled) 1f else 0.4f),
         )
     }

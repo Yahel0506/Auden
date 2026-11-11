@@ -1,14 +1,13 @@
 package com.music.bitchord.ui.components
 
-import org.jetbrains.compose.resources.painterResource
-import com.music.bitchord.sharedui.resources.ytmusic_logo
+import org.jetbrains.compose.resources.vectorResource
+import com.music.bitchord.sharedui.resources.ytmusic_mono
 import com.music.bitchord.sharedui.resources.Res
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.Image
 import com.music.bitchord.ui.icons.SfIcons
 import com.music.bitchord.ui.icons.BitChordIcons
 import androidx.compose.foundation.rememberScrollState
@@ -352,44 +351,31 @@ data class YtSyncRowState(
 @Composable
 private fun YtSyncRow(state: YtSyncRowState, onClick: () -> Unit) {
     val running = state.percent != null
-    val label = when {
-        running -> stringResource(R.string.yt_sync_running)
-        state.associated -> stringResource(R.string.yt_sync_retry)
-        else -> stringResource(R.string.yt_sync)
-    }
     val description = when {
         running -> null
         state.error != null -> state.error
         state.skipped > 0 -> stringResource(R.string.yt_sync_skipped, state.skipped)
-        state.associated -> stringResource(R.string.yt_sync_linked)
         else -> null
     }
+    // The YouTube Music mark until the playlist is linked, then the sync arrows; the label
+    // stays the same, so a linked playlist does not read as one that failed.
     ActionRow(
-        icon = Icons.Rounded.Refresh,
-        label = label,
+        icon = if (state.associated) Icons.Rounded.Sync else vectorResource(Res.drawable.ytmusic_mono),
+        label = if (running) stringResource(R.string.yt_sync_running) else stringResource(R.string.yt_sync),
         value = state.percent?.let { "$it%" },
         description = description,
         enabled = !running,
         onClick = onClick,
-        leading = {
-            when {
-                running -> CircularProgressIndicator(
+        leading = if (running) {
+            {
+                CircularProgressIndicator(
                     progress = { (state.percent ?: 0) / 100f },
                     strokeWidth = 2.5.dp,
                     modifier = Modifier.size(20.dp),
                 )
-                state.associated -> Icon(
-                    Icons.Rounded.Refresh,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(21.dp),
-                )
-                else -> Image(
-                    painter = painterResource(Res.drawable.ytmusic_logo),
-                    contentDescription = null,
-                    modifier = Modifier.size(21.dp),
-                )
             }
+        } else {
+            null
         },
     )
 }

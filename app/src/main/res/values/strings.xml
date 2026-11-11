@@ -1275,7 +1275,8 @@
     <string name="no_local_folders">No folders with music in them</string>
     <string name="offline_playlist_empty">Nothing in this playlist yet. Add songs to it from their menu.</string>
     <string name="offline_liked_empty">Songs you like on this device show up here</string>
-    <string name="local_playlist_synced">%1$d songs · %2$s Synced with %3$s</string>
+    <string name="local_playlist_synced">%1$d songs · %2$s</string>
+    <string name="synced_with">Synced with %1$s</string>
     <string name="yt_sync">Sync with YouTube Music</string>
     <string name="yt_sync_running">Syncing with YouTube Music</string>
     <string name="yt_sync_retry">Retry sync</string>

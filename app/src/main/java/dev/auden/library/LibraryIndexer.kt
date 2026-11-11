@@ -83,7 +83,13 @@ object LibraryIndexer {
                             // Same song already known from streaming: link the file to that row.
                             val linked = song.videoId.takeIf { !it.startsWith("content:") }?.let { db.tracks().byVideoId(it) }
                             if (linked != null && linked.localUri == null) {
-                                db.tracks().update(entity.copy(id = linked.id, addedAt = linked.addedAt, videoId = linked.videoId, origin = linked.origin))
+                                // The streamed song keeps its own cover: the file's is a MediaStore address that dies with the file.
+                                db.tracks().update(
+                                    entity.copy(
+                                        id = linked.id, addedAt = linked.addedAt, videoId = linked.videoId, origin = linked.origin,
+                                        thumbnailUrl = linked.thumbnailUrl?.takeIf { it.startsWith("http") } ?: entity.thumbnailUrl,
+                                    ),
+                                )
                             } else {
                                 db.tracks().insert(entity)
                             }
@@ -108,6 +114,7 @@ object LibraryIndexer {
                 val streamable = gone.filter { it.videoId != null && !it.videoId.startsWith("content:") }.map { it.id }
                 val vanished = gone.map { it.id } - streamable.toSet()
                 streamable.chunked(500).forEach { db.tracks().detachFiles(it) }
+                db.tracks().repairStrandedCovers()
                 vanished.chunked(500).forEach { db.tracks().delete(it) }
             }
             dev.auden.library.links.LocalLinks.rebuild(context)

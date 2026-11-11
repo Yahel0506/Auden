@@ -1122,7 +1122,6 @@ private fun BitChordApp(
                     R.string.local_playlist_synced,
                     playlist.songs.size,
                     "\uFFFC",
-                    if (platform == ShelfItem.PLATFORM_SPOTIFY) "Spotify" else "YT Music",
                 )
             },
             thumbnailUrl = dev.auden.library.PlaylistCovers.coverFor(context, playlist)
