@@ -642,7 +642,8 @@ private fun BitChordApp(
         derivedStateOf {
             // The sheet's real place, not the morph's fraction: a finger sliding the player down shows the page.
             val sliding = !playerSheetMotion.holding && (playerSheetMotion.position().takeUnless { it.isNaN() } ?: 0f) > 0.5f
-            showNowPlaying && playerDock.attached && playerDock.openFraction() >= 1f && !sliding
+            // Nor while the app moves it (the morph): the page shows round the player from its first frame.
+            showNowPlaying && playerDock.attached && playerDock.openFraction() >= 1f && !sliding && !playerSheetMotion.holding
         }
     }
     // "Reduce animation" keeps the player as it always was: M3's own slide up
@@ -4447,6 +4448,27 @@ private fun BitChordApp(
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
 
+                // Under the bars: the glass grows behind them, and their buttons stay on top of it.
+                // The mini player's glass growing into the player and back — see [PlayerMorphGlass].
+                if (!reducePlayerMotion) {
+                    Isolated {
+                        PlayerMorphGlass(
+                            dock = playerDock,
+                            song = player.song,
+                            glass = glassActive,
+                            fraction = {
+                                if (showNowPlaying && playerSheetMotion.holding && playerDock.attached) playerSheetMotion.rawMorphFraction() else null
+                            },
+                            playerRect = {
+                                playerSheetBox[0]?.takeIf { it.isAttached }?.let { box ->
+                                    val at = box.positionOnScreen()
+                                    Rect(at, Size(box.size.width.toFloat(), box.size.height.toFloat()))
+                                }
+                            },
+                        )
+                    }
+                }
+
                 // Whichever bar is drawing reports its height here, for the
                 // guard to read at layout — never in composition, see the guard.
                 val floatingBarsHeight = remember { mutableIntStateOf(0) }
@@ -4555,26 +4577,6 @@ private fun BitChordApp(
                 }
             }
 
-        }
-
-        // The mini player's glass growing into the player and back — see [PlayerMorphGlass].
-        if (!reducePlayerMotion) {
-            Isolated {
-                PlayerMorphGlass(
-                    dock = playerDock,
-                    song = player.song,
-                    glass = glassActive,
-                    fraction = {
-                        if (showNowPlaying && playerSheetMotion.holding && playerDock.attached) playerDock.openFraction() else null
-                    },
-                    playerRect = {
-                        playerSheetBox[0]?.takeIf { it.isAttached }?.let { box ->
-                            val at = box.positionOnScreen()
-                            Rect(at, Size(box.size.width.toFloat(), box.size.height.toFloat()))
-                        }
-                    },
-                )
-            }
         }
 
         // The DJ can be asked for with nothing loaded: its player is up while it chooses.

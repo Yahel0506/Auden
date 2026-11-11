@@ -87,7 +87,10 @@ class PlayerSheetMotion(
     private var closeFrom by mutableFloatStateOf(Float.NaN)
 
     /** The morph's own fraction: 1 open, 0 on the mini player. 1 while a finger slides the sheet itself. */
-    fun morphFraction(): Float {
+    fun morphFraction(): Float = rawMorphFraction().coerceIn(0f, 1f)
+
+    /** The same, with the spring's overshoot past either end kept — for the glass, which bounces with it. */
+    fun rawMorphFraction(): Float {
         val at = held
         if (at.isNaN()) return 1f
         val travel = travel().takeIf { it > 0f } ?: return 1f
@@ -97,7 +100,7 @@ class PlayerSheetMotion(
         } else {
             val span = (travel - from).takeIf { it > 1f } ?: return 0f
             1f - (at - from) / span
-        }.coerceIn(0f, 1f)
+        }
     }
 
     /** Where the player's content stands during the morph, below fully open; null when the sheet places it. */
@@ -375,17 +378,27 @@ class PlayerSheetMotion(
             initialValue = from,
             targetValue = to,
             initialVelocity = velocity,
+            // The navigation bar's spring, so the player opens and closes as the bar folds: the same speed and the
+            // same little give at the end, which the glass carries (see [rawMorphFraction]).
             animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = SLIDE_STIFFNESS,
+                dampingRatio = MORPH_DAMPING,
+                stiffness = MORPH_STIFFNESS,
                 visibilityThreshold = SLIDE_SETTLED_PX,
             ),
         ) { value, _ ->
-            // Critically damped never bounces from rest, but thrown hard
-            // enough at its target it can pass it once: never past open or
-            // past the bar.
-            held = value.coerceIn(0f, travel)
+            // Past open or past the bar only by the spring's overshoot: the player stands still meanwhile (it is
+            // placed by the morph), and only the glass moves with it.
+            held = value.coerceIn(-travel * MAX_OVERSHOOT, travel * (1f + MAX_OVERSHOOT))
         }
+    }
+
+    companion object {
+        /** The spring the navigation bar folds on and the player opens and closes on. */
+        const val MORPH_DAMPING = 0.84f
+        const val MORPH_STIFFNESS = 165f
+
+        /** The most the spring may carry past either end, as a share of the travel. */
+        private const val MAX_OVERSHOOT = 0.12f
     }
 
     /** Gone — with the window's own exit animation already off (see [quietWindow]). */

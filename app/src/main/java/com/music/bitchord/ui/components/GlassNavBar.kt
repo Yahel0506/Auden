@@ -181,7 +181,11 @@ fun GlassNavBar(
     var towardCompact by remember { mutableStateOf(compact) }
     LaunchedEffect(compact) {
         towardCompact = compact
-        morph.animateTo(if (compact) 1f else 0f, tween(MORPH_MS, easing = LinearEasing))
+        // A spring with some give, as liquid glass has: quick, a little past its mark, and back.
+        morph.animateTo(
+            if (compact) 1f else 0f,
+            spring(dampingRatio = MORPH_DAMPING, stiffness = MORPH_STIFFNESS),
+        )
     }
     val m: () -> Float = { morph.value }
     // The tab the collapsed circle shows: the open one, or the last one before Search was opened.
@@ -207,7 +211,7 @@ fun GlassNavBar(
     val boxSize = remember { FloatArray(2) }
     fun frame(width: Float, height: Float): NavMorphGeometry = geometry.apply {
         val p = m()
-        val e = FastOutSlowInEasing.transform(p)
+        val e = eased(p)
         val tabH = tabBarHeight.toFloat().takeIf { it > 0f } ?: rowPx
         tabExpanded = Rect(0f, height - tabH, width, height)
         val rowTop = height - liftPx - rowPx
@@ -225,12 +229,10 @@ fun GlassNavBar(
         // Two movements: towards the collapsed row the width leads and the drop follows; back out, the
         // rise leads and the width follows.
         val (h, v) = if (towardCompact) {
-            FastOutSlowInEasing.transform((p / 0.62f).coerceIn(0f, 1f)) to
-                FastOutSlowInEasing.transform(((p - 0.28f) / 0.72f).coerceIn(0f, 1f))
+            phase(p, 0f, 0.62f) to phase(p, 0.28f, 0.72f)
         } else {
             val q = 1f - p
-            (1f - FastOutSlowInEasing.transform(((q - 0.28f) / 0.72f).coerceIn(0f, 1f))) to
-                (1f - FastOutSlowInEasing.transform((q / 0.62f).coerceIn(0f, 1f)))
+            (1f - phase(q, 0.28f, 0.72f)) to (1f - phase(q, 0f, 0.62f))
         }
         accessory = Rect(
             lerpF(accExpanded.left, accCompact.left, h),
@@ -247,7 +249,7 @@ fun GlassNavBar(
         val tabH = tabBarHeight.toFloat().takeIf { it > 0f } ?: rowPx
         val expanded = tabH + if (hasAccessory) gapPx + accessoryPx else 0f
         val collapsed = rowPx + liftPx
-        return lerpF(expanded, collapsed, FastOutSlowInEasing.transform(p))
+        return lerpF(expanded, collapsed, eased(p))
     }
 
     val innerScroll = remember { FloatingTabBarScrollConnection(false, Float.MAX_VALUE, FloatingTabBarInlineBehavior.Never) }
@@ -267,11 +269,11 @@ fun GlassNavBar(
             }
             .onPlaced { box[0] = it },
     ) {
-        // The two halves of the bar's glass: the open tab's circle and Search's, folding out of the bar and
-        // back into it the same way. At rest expanded they are not drawn: the bar's own glass is the bar.
+        // The tab bar's glass, from the whole bar into the open tab's circle and back out of it. At rest
+        // expanded the bar's own glass is the bar, so this one comes in only as that one goes.
         Box(
             Modifier
-                .placeAt { w, h -> frame(w, h).leftPiece }
+                .placeAt { w, h -> frame(w, h).tab }
                 .graphicsLayer { alpha = now().piecesShown }
                 .then(glassSurface())
                 .clickable(
@@ -283,24 +285,19 @@ fun GlassNavBar(
                     if (inlineIndex != selectedIndex) currentOnTabSelected(inlineIndex)
                 },
         )
-        Box(
-            Modifier
-                .placeAt { w, h -> frame(w, h).rightPiece }
-                .graphicsLayer { alpha = now().piecesShown }
-                .then(glassSurface())
-                .clickable(
-                    enabled = compact,
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) { currentOnTabSelected(standaloneIndex) },
-        )
         // The expanded bar itself, laid out at its full size where it rests, fading out as its halves take
         // over (and back in as they meet).
         Box(
             Modifier
                 .placeAtBottom()
                 .onSizeChanged { tabBarHeight = it.height }
-                .graphicsLayer { alpha = now().tabsShown },
+                .graphicsLayer {
+                    val g = now()
+                    alpha = g.tabsShown
+                    // Cut down to the shrinking glass, so the bar folds into the circle rather than fading in place.
+                    clip = g.tabsShown < 1f
+                    shape = RoundRectShape(g.tab.translate(-g.tabExpanded.left, -g.tabExpanded.top))
+                },
         ) {
             FloatingTabBar(
                 selectedTabKey = selectedIndex,
@@ -388,6 +385,21 @@ fun GlassNavBar(
         }
     }
         }
+        // Search's own circle, growing round its glyph as it leaves the bar, and merging back into it.
+        Box(
+            Modifier
+                .placeAt { w, h ->
+                    val g = frame(w, h)
+                    lerp(Rect(g.searchCircle.center, 0f), g.searchCircle, eased(g.searchGlass))
+                }
+                .graphicsLayer { alpha = now().searchGlass.coerceIn(0f, 1f) }
+                .then(glassSurface())
+                .clickable(
+                    enabled = compact,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) { currentOnTabSelected(standaloneIndex) },
+        )
         // The two glyphs that travel: the open tab's, into its circle, and Search's, into its own.
         TravellingGlyph(
             tab = tabs[inlineIndex],
@@ -397,7 +409,7 @@ fun GlassNavBar(
             at = { w, h ->
                 val g = frame(w, h)
                 val from = iconSpots[inlineIndex]?.let { spot -> centreIn(box[0], spot) } ?: g.tabExpanded.center
-                lerpO(from, g.home.center, FastOutSlowInEasing.transform(m()))
+                lerpO(from, g.home.center, eased(m()))
             },
         )
         TravellingGlyph(
@@ -408,7 +420,7 @@ fun GlassNavBar(
             at = { w, h ->
                 val g = frame(w, h)
                 val from = iconSpots[standaloneIndex]?.let { spot -> centreIn(box[0], spot) } ?: g.searchCircle.center
-                lerpO(from, g.searchCircle.center, FastOutSlowInEasing.transform(m()))
+                lerpO(from, g.searchCircle.center, eased(m()))
             },
         )
         // The now playing bar.
@@ -675,10 +687,10 @@ internal fun Modifier.navAccent(): Modifier = this
 
 // Blue throughout; a breath of blue violet and a very light blue only at the far corner, never leading.
 private val NAV_ACCENT = arrayOf(
-    0.00f to Color(0xFF2F7DFF),
-    0.55f to Color(0xFF3D8CFF),
-    0.80f to Color(0xFF5F86FF),
-    1.00f to Color(0xFF8CCDFF),
+    0.00f to Color(0xFF5C9DFF),
+    0.55f to Color(0xFF6FAAFF),
+    0.80f to Color(0xFF8A9DFF),
+    1.00f to Color(0xFFB0DDFF),
 )
 
 /** The collapsed row's margin at either side of the screen, and its items' spacing. */
@@ -802,7 +814,21 @@ private fun BoxScope.TravellingGlyph(
     )
 }
 
-private const val MORPH_MS = 340
+/** The fold's spring: brisk, with a little bounce past its mark. */
+private const val MORPH_DAMPING = com.music.bitchord.ui.player.PlayerSheetMotion.MORPH_DAMPING
+private const val MORPH_STIFFNESS = com.music.bitchord.ui.player.PlayerSheetMotion.MORPH_STIFFNESS
+
+/**
+ * A stretch of the fold's value, eased within its span — and past either end, carried on as it is, so the
+ * spring's overshoot reaches the shapes instead of being cut off as a hard stop.
+ */
+private fun phase(p: Float, start: Float, span: Float): Float = when {
+    p > 1f -> 1f + (p - 1f) / span
+    p < 0f -> p / span
+    else -> FastOutSlowInEasing.transform(((p - start) / span).coerceIn(0f, 1f))
+}
+
+private fun eased(p: Float): Float = phase(p, 0f, 1f)
 private val INLINE_ROW = 48.dp
 private val ACCESSORY_HEIGHT = 48.dp
 private val ACCESSORY_GAP = 8.dp
@@ -839,13 +865,14 @@ fun PlayerMorphGlass(
         lerpF(bar.right, full.right, t),
         bar.bottom,
     ).translate(-at.x, -at.y)
-    val radius = with(density) { (minOf(bar.width, bar.height) / 2f * (1f - t) + MORPH_SHEET_CORNER.toPx() * t * (1f - t) * 2f).toDp() }
+    val k = t.coerceIn(0f, 1f)
+    val radius = with(density) { (minOf(bar.width, bar.height) / 2f * (1f - k) + MORPH_SHEET_CORNER.toPx() * k * (1f - k) * 2f).toDp() }
     val shape = RoundedCornerShape(radius)
     Box(
         modifier
             .fillMaxSize()
             .onPlaced { origin[0] = it }
-            .drawBehind { drawRect(Color.Black.copy(alpha = MORPH_SCRIM_ALPHA * t)) },
+            .drawBehind { drawRect(Color.Black.copy(alpha = MORPH_SCRIM_ALPHA * t.coerceIn(0f, 1f))) },
     ) {
         Box(
             Modifier
