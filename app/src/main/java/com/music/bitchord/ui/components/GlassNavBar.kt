@@ -895,6 +895,9 @@ fun PlayerMorphGlass(
             Modifier
                 .offset { IntOffset(rect.left.roundToInt(), rect.top.roundToInt()) }
                 .size(with(density) { rect.width.toDp() }, with(density) { rect.height.toDp() })
+                // Only at about the bar's size: the glass is the bar the card starts from and ends as, never a
+                // big grey card of its own (which read as a flash at the end of a close).
+                .graphicsLayer { alpha = 1f - smooth((k / GLASS_SPAN).coerceIn(0f, 1f)) }
                 .then(
                     if (glass && isGlassSupported()) {
                         Modifier.liquidGlass(shape = shape)
@@ -906,7 +909,7 @@ fun PlayerMorphGlass(
         // The mini player's lines, riding the card's top edge and fading as the player comes through (Apple
         // Music's mini row at the top of the card), and back in at the end of a close.
         val mini = dock.miniCreditsOnScreen()
-        val shown = 1f - smooth((k / 0.25f).coerceIn(0f, 1f))
+        val shown = 1f - smooth((k / GLASS_SPAN).coerceIn(0f, 1f))
         if (song != null && mini != null && shown > 0f) {
             val left = mini.left - at.x
             val y = mini.top - at.y + (top - local.top)
@@ -943,6 +946,9 @@ fun PlayerMorphGlass(
 }
 
 private fun smooth(x: Float) = x * x * (3f - 2f * x)
+
+/** How much of the morph the bar's glass and lines last: while the card is still about the bar's size. */
+private const val GLASS_SPAN = 0.14f
 
 private val MORPH_SHEET_CORNER = 40.dp
 private const val TRANSPORT_FADE_SPAN = 0.25f
