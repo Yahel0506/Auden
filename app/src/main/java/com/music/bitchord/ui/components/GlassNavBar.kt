@@ -214,6 +214,12 @@ fun GlassNavBar(
         home = Rect(gutterPx, rowTop, gutterPx + rowPx, rowTop + rowPx)
         searchCircle = Rect(width - gutterPx - rowPx, rowTop, width - gutterPx, rowTop + rowPx)
         tab = lerp(tabExpanded, home, e)
+        // The bar as two halves, each folding into its circle — the open tab's on the left, Search's on the
+        // right — and opening back out of them into the whole bar.
+        val middle = tabExpanded.center.x
+        leftPiece = lerp(Rect(tabExpanded.left, tabExpanded.top, middle, tabExpanded.bottom), home, e)
+        rightPiece = lerp(Rect(middle, tabExpanded.top, tabExpanded.right, tabExpanded.bottom), searchCircle, e)
+        piecesShown = (p / 0.25f).coerceIn(0f, 1f)
         val accExpanded = Rect(0f, tabExpanded.top - gapPx - accessoryPx, width, tabExpanded.top - gapPx)
         val accCompact = Rect(home.right + spacingPx, rowTop, searchCircle.left - spacingPx, rowTop + rowPx)
         // Two movements: towards the collapsed row the width leads and the drop follows; back out, the
@@ -261,10 +267,12 @@ fun GlassNavBar(
             }
             .onPlaced { box[0] = it },
     ) {
-        // The tab bar's glass, from the whole bar to the open tab's circle.
+        // The two halves of the bar's glass: the open tab's circle and Search's, folding out of the bar and
+        // back into it the same way. At rest expanded they are not drawn: the bar's own glass is the bar.
         Box(
             Modifier
-                .placeAt { w, h -> frame(w, h).tab }
+                .placeAt { w, h -> frame(w, h).leftPiece }
+                .graphicsLayer { alpha = now().piecesShown }
                 .then(glassSurface())
                 .clickable(
                     enabled = compact,
@@ -275,19 +283,24 @@ fun GlassNavBar(
                     if (inlineIndex != selectedIndex) currentOnTabSelected(inlineIndex)
                 },
         )
-        // The expanded bar itself, laid out at its full size where it rests, faded and cut down to the
-        // shrinking glass as it folds. Its own glass is the first thing to go, so the two never double.
+        Box(
+            Modifier
+                .placeAt { w, h -> frame(w, h).rightPiece }
+                .graphicsLayer { alpha = now().piecesShown }
+                .then(glassSurface())
+                .clickable(
+                    enabled = compact,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) { currentOnTabSelected(standaloneIndex) },
+        )
+        // The expanded bar itself, laid out at its full size where it rests, fading out as its halves take
+        // over (and back in as they meet).
         Box(
             Modifier
                 .placeAtBottom()
                 .onSizeChanged { tabBarHeight = it.height }
-                .graphicsLayer {
-                    val g = now()
-                    alpha = g.tabsShown
-                    val r = g.tab.translate(-g.tabExpanded.left, -g.tabExpanded.top)
-                    clip = g.tabsShown < 1f
-                    shape = RoundRectShape(r)
-                },
+                .graphicsLayer { alpha = now().tabsShown },
         ) {
             FloatingTabBar(
                 selectedTabKey = selectedIndex,
@@ -375,22 +388,6 @@ fun GlassNavBar(
         }
     }
         }
-        // Search's own circle, growing round its glyph as it leaves the bar.
-        Box(
-            Modifier
-                .placeAt { w, h ->
-                    val g = frame(w, h)
-                    val t = g.searchGlass
-                    lerp(Rect(g.searchCircle.center, 0f), g.searchCircle, FastOutSlowInEasing.transform(t))
-                }
-                .graphicsLayer { alpha = now().searchGlass.coerceIn(0f, 1f) }
-                .then(glassSurface())
-                .clickable(
-                    enabled = compact,
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) { currentOnTabSelected(standaloneIndex) },
-        )
         // The two glyphs that travel: the open tab's, into its circle, and Search's, into its own.
         TravellingGlyph(
             tab = tabs[inlineIndex],
@@ -416,6 +413,11 @@ fun GlassNavBar(
         )
         // The now playing bar.
         if (song != null) {
+            // In the morph the glass is drawn growing out of here (see [PlayerMorphGlass]), so this bar's own
+            // glass stands aside meanwhile; the artwork, the lines and the buttons see to themselves.
+            val morphHidesGlass by remember(dock) {
+                derivedStateOf { dock != null && dock.morphing() && dock.coversMiniArt }
+            }
             Box(Modifier.placeAt { w, h -> frame(w, h).accessory }) {
                 val inline by remember { derivedStateOf { morph.value >= 0.5f } }
                 GlassNowPlaying(
@@ -432,7 +434,7 @@ fun GlassNavBar(
                     onBlockedControl = onBlockedControl,
                     dock = dock,
                     pull = pull,
-                    modifier = Modifier.fillMaxSize().clip(pillShape).then(glassSurface()),
+                    modifier = Modifier.fillMaxSize().clip(pillShape).then(if (morphHidesGlass) Modifier else glassSurface()),
                 )
             }
         }
@@ -489,6 +491,14 @@ private fun GlassNowPlaying(
         letterSpacing = ACCESSORY_ARTIST_TRACKING,
     )
     val glyphSlot = if (isInline) 32.dp else 40.dp
+    // The transport fades as the bar opens into the player, and comes back as it closes into the bar.
+    val transport = Modifier.graphicsLayer {
+        alpha = if (dock != null && dock.morphing() && dock.coversMiniArt) {
+            (1f - dock.openFraction() / TRANSPORT_FADE_SPAN).coerceIn(0f, 1f)
+        } else {
+            1f
+        }
+    }
     val glyphSize = if (isInline) 24.dp else EXPANDED_GLYPH_SIZE
 
     Box(
@@ -522,8 +532,6 @@ private fun GlassNowPlaying(
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
-                // The morph draws this bar's glass growing into the player; the bar itself stands aside.
-                alpha = if (dock != null && dock.morphing() && dock.coversMiniArt) 0f else 1f
             }
             .then(modifier)
             .playerDockContainer(dock)
@@ -601,7 +609,7 @@ private fun GlassNowPlaying(
                 )
             }
             if (isLoading) {
-                Box(Modifier.size(glyphSlot), contentAlignment = Alignment.Center) {
+                Box(Modifier.size(glyphSlot).then(transport), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(
                         color = contentColor,
                         strokeWidth = 2.dp,
@@ -614,7 +622,7 @@ private fun GlassNowPlaying(
                         haptics.play(if (isPlaying) Haptic.Pause else Haptic.Resume)
                         onPlayPause()
                     },
-                    modifier = Modifier.size(glyphSlot),
+                    modifier = Modifier.size(glyphSlot).then(transport),
                 ) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
@@ -636,7 +644,7 @@ private fun GlassNowPlaying(
                         onNext()
                     },
                     enabled = !controlsLocked,
-                    modifier = Modifier.size(glyphSlot),
+                    modifier = Modifier.size(glyphSlot).then(transport),
                 ) {
                     MiniPlayerNextGlyph(
                         tint = contentColor.copy(alpha = if (controlsLocked) 0.3f else 1f),
@@ -719,6 +727,9 @@ private class NavMorphGeometry {
     var accessoryInline = false
     var searchGlass = 0f
     var tabsShown = 1f
+    var leftPiece = Rect.Zero
+    var rightPiece = Rect.Zero
+    var piecesShown = 0f
 }
 
 private fun lerpF(a: Float, b: Float, t: Float) = a + (b - a) * t
@@ -820,7 +831,14 @@ fun PlayerMorphGlass(
     val density = LocalDensity.current
     val origin = remember { arrayOfNulls<LayoutCoordinates>(1) }
     val at = origin[0]?.takeIf { it.isAttached }?.positionOnScreen() ?: Offset.Zero
-    val rect = lerp(bar, full, t).translate(-at.x, -at.y)
+    // Grown and shrunk from its top edge only: the bottom stays on the bar's, so the glass never comes down
+    // over the tab bar beneath it.
+    val rect = Rect(
+        lerpF(bar.left, full.left, t),
+        lerpF(bar.top, full.top, t),
+        lerpF(bar.right, full.right, t),
+        bar.bottom,
+    ).translate(-at.x, -at.y)
     val radius = with(density) { (minOf(bar.width, bar.height) / 2f * (1f - t) + MORPH_SHEET_CORNER.toPx() * t * (1f - t) * 2f).toDp() }
     val shape = RoundedCornerShape(radius)
     Box(
@@ -886,4 +904,5 @@ fun PlayerMorphGlass(
 }
 
 private val MORPH_SHEET_CORNER = 40.dp
+private const val TRANSPORT_FADE_SPAN = 0.25f
 private const val MORPH_SCRIM_ALPHA = 0.35f

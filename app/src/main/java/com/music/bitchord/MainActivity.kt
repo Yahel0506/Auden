@@ -5139,7 +5139,14 @@ private fun BitChordApp(
                             val box = playerSheetBox[0]?.takeIf { it.isAttached }
                             if (!reducePlayerMotion && playerSheetMotion.holding && t < 1f && bar != null && box != null) {
                                 val origin = box.positionOnScreen()
-                                val shape = androidx.compose.ui.geometry.lerp(bar.translate(-origin.x, -origin.y), Rect(Offset.Zero, size), t)
+                                // The player comes through the glass's top and sides; its bottom is never cut.
+                                val from = bar.translate(-origin.x, -origin.y)
+                                val shape = Rect(
+                                    from.left * (1f - t),
+                                    from.top * (1f - t),
+                                    from.right + (size.width - from.right) * t,
+                                    size.height,
+                                )
                                 val radius = (minOf(bar.height, bar.width) / 2f) * (1f - t)
                                 val path = androidx.compose.ui.graphics.Path().apply {
                                     addRoundRect(androidx.compose.ui.geometry.RoundRect(shape, androidx.compose.ui.geometry.CornerRadius(radius)))
