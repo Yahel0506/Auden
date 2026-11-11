@@ -114,10 +114,10 @@ object LibraryIndexer {
                 val streamable = gone.filter { it.videoId != null && !it.videoId.startsWith("content:") }.map { it.id }
                 val vanished = gone.map { it.id } - streamable.toSet()
                 streamable.chunked(500).forEach { db.tracks().detachFiles(it) }
-                db.tracks().repairStrandedCovers()
                 vanished.chunked(500).forEach { db.tracks().delete(it) }
             }
             dev.auden.library.links.LocalLinks.rebuild(context)
+            LibraryCovers.repairAsync(context)
             State.Done(added, changed, gone.size).also {
                 _state.value = it
                 Log.i(TAG, "indexed: +$added ~$changed -${gone.size}")

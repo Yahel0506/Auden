@@ -41,19 +41,21 @@ interface TrackDao {
     suspend fun delete(ids: List<Long>)
 
     /** A file that is gone but whose song can still be streamed stays, as a streamable row. */
-    @Query("UPDATE track SET localUri = NULL, path = NULL, folder = NULL, sizeBytes = NULL, modifiedAt = NULL WHERE id IN (:ids)")
+    @Query("UPDATE track SET localUri = NULL, path = NULL, folder = NULL, sizeBytes = NULL, modifiedAt = NULL, thumbnailUrl = CASE WHEN thumbnailUrl LIKE 'content:%' THEN NULL ELSE thumbnailUrl END WHERE id IN (:ids)")
     suspend fun detachFiles(ids: List<Long>)
 
     /**
-     * A song that streams but kept the MediaStore cover of a file it was once linked to has an
-     * address nothing answers: the file is gone, and so is what [thumbnailUrl] pointed at.
-     * Gives it YouTube's own thumbnail of the video instead.
+     * Streamed songs whose cover is not a real one: none, the address of a file's MediaStore
+     * art, or a video frame an earlier repair stood in with. Their official cover is asked for.
      */
     @Query(
-        "UPDATE track SET thumbnailUrl = 'https://i.ytimg.com/vi/' || videoId || '/hqdefault.jpg' " +
-            "WHERE localUri IS NULL AND videoId IS NOT NULL AND length(videoId) = 11 AND thumbnailUrl LIKE 'content:%'",
+        "SELECT * FROM track WHERE localUri IS NULL AND videoId IS NOT NULL AND length(videoId) = 11 AND isVideo = 0 AND " +
+            "(thumbnailUrl IS NULL OR thumbnailUrl = '' OR thumbnailUrl LIKE 'content:%' OR thumbnailUrl LIKE 'https://i.ytimg.com/vi/%')",
     )
-    suspend fun repairStrandedCovers(): Int
+    suspend fun needingCover(): List<TrackEntity>
+
+    @Query("UPDATE track SET thumbnailUrl = :url WHERE id = :id")
+    suspend fun setCover(id: Long, url: String?)
 
     @Query("SELECT * FROM track WHERE localUri IS NOT NULL")
     fun observeLocal(): Flow<List<TrackEntity>>
