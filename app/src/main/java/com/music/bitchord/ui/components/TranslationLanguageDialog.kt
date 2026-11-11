@@ -103,20 +103,17 @@ fun TranslationLanguageDialog(
         }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(SCRIM_COLOR)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-                onClick = onDismiss,
-            ),
-        contentAlignment = Alignment.Center,
+    val motion = rememberPopupMotion()
+    PopupBox(
+        motion = motion,
+        onDismiss = onDismiss,
+        modifier = modifier,
+        scrim = SCRIM_COLOR,
     ) {
         Column(
             modifier = Modifier
                 .width(ALERT_WIDTH)
+                .popupCard(motion)
                 .clip(shape)
                 .then(
                     if (reduceDynamicBlur) {
@@ -220,7 +217,7 @@ fun TranslationLanguageDialog(
             AlertAction(
                 label = stringResource(R.string.done),
                 emphasised = true,
-                onClick = onDismiss,
+                onClick = animatedExit(onDismiss),
             )
         }
     }

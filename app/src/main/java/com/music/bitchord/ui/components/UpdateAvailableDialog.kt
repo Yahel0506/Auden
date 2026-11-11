@@ -95,24 +95,17 @@ fun UpdateAvailableDialog(
     val state by AppUpdateChecker.download.collectAsStateWithLifecycle()
     val shape = RoundedCornerShape(ALERT_CORNER)
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(SCRIM_COLOR)
-            // Tapping the scrim reads the same as Remind Me Later — nothing
-            // about this update is mandatory, so backing out of it should be as
-            // easy as getting into it. Mid-download it only closes the sheet;
-            // the download keeps going and the top-bar icon reopens this.
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-                onClick = onDismiss,
-            ),
-        contentAlignment = Alignment.Center,
+    val motion = rememberPopupMotion()
+    PopupBox(
+        motion = motion,
+        onDismiss = onDismiss,
+        modifier = modifier,
+        scrim = SCRIM_COLOR,
     ) {
         Column(
             modifier = Modifier
                 .width(ALERT_WIDTH)
+                .popupCard(motion)
                 .clip(shape)
                 .then(
                     if (reduceDynamicBlur) {
@@ -247,7 +240,7 @@ fun UpdateAvailableDialog(
                 is AppUpdateChecker.DownloadState.Ready -> {
                     AlertAction(label = stringResource(R.string.install_now), emphasised = true, onClick = onInstall)
                     AlertRule()
-                    AlertAction(label = stringResource(R.string.later), emphasised = false, onClick = onDismiss)
+                    AlertAction(label = stringResource(R.string.later), emphasised = false, onClick = animatedExit(onDismiss))
                 }
                 is AppUpdateChecker.DownloadState.Failed -> {
                     AlertAction(label = stringResource(R.string.try_again), emphasised = true, onClick = onDownload)
@@ -257,7 +250,7 @@ fun UpdateAvailableDialog(
                 else -> {
                     AlertAction(label = stringResource(R.string.download_now), emphasised = true, onClick = onDownload)
                     AlertRule()
-                    AlertAction(label = stringResource(R.string.remind_me_later), emphasised = false, onClick = onDismiss)
+                    AlertAction(label = stringResource(R.string.remind_me_later), emphasised = false, onClick = animatedExit(onDismiss))
                 }
             }
         }

@@ -54,17 +54,18 @@ fun FrostedExportPicker(
         FormatRow(PlaylistFormat.XSPF, R.string.export_format_xspf, R.string.export_format_xspf_detail, onPick)
         FormatRow(PlaylistFormat.AUDEN, R.string.export_format_auden, R.string.export_format_auden_detail, onPick)
         AlertRule()
-        AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = onDismiss)
+        AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
     }
 }
 
 @Composable
 private fun FormatRow(format: PlaylistFormat, name: Int, detail: Int, onPick: (PlaylistFormat) -> Unit) {
     AlertRule()
+    val pick = animatedExit { onPick(format) }
     Column(
         Modifier
             .fillMaxWidth()
-            .clickable { onPick(format) }
+            .clickable(onClick = pick)
             .padding(horizontal = 20.dp, vertical = 12.dp),
     ) {
         Text(

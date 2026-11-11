@@ -1,5 +1,8 @@
 package com.music.bitchord.ui.components
 
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -86,9 +89,12 @@ fun AccountProfileSelector(
             fallbackTint = material.fallbackTint,
         )
     }
+    val motion = rememberPopupMotion()
+    BackHandler { motion.exit(onDismiss) }
+    CompositionLocalProvider(LocalPopupExit provides motion::exit) {
     Column(
-        modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.scrim.copy(alpha = .48f))
-            .clickable(onClick = onDismiss),
+        modifier = modifier.fillMaxSize().popupScrim(motion, MaterialTheme.colorScheme.scrim.copy(alpha = .48f))
+            .clickable { motion.exit(onDismiss) },
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Surface(
@@ -98,6 +104,7 @@ fun AccountProfileSelector(
             modifier = Modifier
                 .padding(top = 56.dp, start = 20.dp, end = 20.dp)
                 .fillMaxWidth()
+                .popupCard(motion, from = 0.94f, origin = TransformOrigin(0.5f, 0f))
                 .clip(shape)
                 .then(
                     if (reduceDynamicBlur) {
@@ -143,6 +150,7 @@ fun AccountProfileSelector(
                 item { SelectorAction(SfIcons.Settings, stringResource(R.string.settings), onClick = onOpenSettings) }
             }
         }
+    }
     }
 }
 

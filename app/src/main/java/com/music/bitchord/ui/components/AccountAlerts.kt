@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -101,7 +102,7 @@ fun ListenBrainzTokenAlert(
         AlertRule()
         AlertAction(label = stringResource(R.string.save), emphasised = true, onClick = onSave)
         AlertRule()
-        AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = onDismiss)
+        AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
     }
 }
 
@@ -169,7 +170,7 @@ fun LastfmLoginAlert(
         AlertAction(
             label = stringResource(R.string.cancel),
             emphasised = false,
-            onClick = onDismiss,
+            onClick = animatedExit(onDismiss),
             enabled = !loading,
         )
     }
@@ -235,7 +236,7 @@ fun DiscordTokenAlert(
         AlertAction(
             label = stringResource(R.string.cancel),
             emphasised = false,
-            onClick = onDismiss,
+            onClick = animatedExit(onDismiss),
             enabled = !loading,
         )
     }
@@ -303,7 +304,7 @@ fun TextValueAlert(
             AlertAction(label = stringResource(R.string.remove), emphasised = false, onClick = onRemove)
         }
         AlertRule()
-        AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = onDismiss)
+        AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
     }
 }
 
@@ -420,7 +421,7 @@ fun ServerEditorAlert(
         AlertAction(
             label = stringResource(R.string.cancel),
             emphasised = false,
-            onClick = onDismiss,
+            onClick = animatedExit(onDismiss),
             enabled = !testing,
         )
     }
@@ -694,9 +695,9 @@ fun ConfirmationAlert(
             )
         }
         AlertRule()
-        AlertAction(label = confirmLabel, emphasised = true, onClick = onConfirm)
+        AlertAction(label = confirmLabel, emphasised = true, onClick = animatedExit(onConfirm))
         AlertRule()
-        AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = onDismiss)
+        AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
     }
 }
 
@@ -768,7 +769,7 @@ private fun InfoAlertFrame(
             )
         }
         AlertRule()
-        AlertAction(label = stringResource(android.R.string.ok), emphasised = true, onClick = onDismiss)
+        AlertAction(label = stringResource(android.R.string.ok), emphasised = true, onClick = animatedExit(onDismiss))
     }
 }
 
@@ -826,7 +827,7 @@ fun <T> ChoiceAlert(
             )
         }
         AlertRule()
-        AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = onDismiss)
+        AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
     }
 }
 
@@ -919,9 +920,9 @@ fun ConfirmAlert(
             )
         }
         AlertRule()
-        AlertAction(label = confirmLabel, emphasised = true, destructive = destructive, onClick = onConfirm)
+        AlertAction(label = confirmLabel, emphasised = true, destructive = destructive, onClick = animatedExit(onConfirm))
         AlertRule()
-        AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = onDismiss)
+        AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
     }
 }
 
@@ -945,13 +946,16 @@ internal fun AlertScaffold(
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val shape = RoundedCornerShape(ALERT_CORNER)
+    val motion = rememberPopupMotion()
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .then(
-                if (blurBackdrop && frosted && !reduceDynamicBlur) {
-                    Modifier.optimizedHazeEffect(
+    PopupBox(motion = motion, onDismiss = onDismiss) {
+        if (blurBackdrop && frosted && !reduceDynamicBlur) {
+            // The screen behind, softly blurred, arriving with the scrim.
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .graphicsLayer { alpha = motion.progress.value.coerceIn(0f, 1f) }
+                    .optimizedHazeEffect(
                         state = hazeState,
                         style = dev.chrisbanes.haze.HazeStyle(
                             backgroundColor = Color.Transparent,
@@ -959,22 +963,13 @@ internal fun AlertScaffold(
                             blurRadius = 6.dp,
                             noiseFactor = 0f,
                         ),
-                    )
-                } else {
-                    Modifier
-                },
+                    ),
             )
-            .background(SCRIM_COLOR)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-                onClick = onDismiss,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
+        }
         Column(
             modifier = Modifier
                 .width(width)
+                .popupCard(motion)
                 .clip(shape)
                 .then(
                     if (reduceDynamicBlur || !frosted) {

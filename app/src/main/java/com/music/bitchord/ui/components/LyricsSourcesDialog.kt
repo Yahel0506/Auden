@@ -95,20 +95,17 @@ fun LyricsSourcesDialog(
     var showPaxSenixKeyDialog by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(ALERT_CORNER)
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(SCRIM_COLOR)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-                onClick = onDismiss,
-            ),
-        contentAlignment = Alignment.Center,
+    val motion = rememberPopupMotion()
+    PopupBox(
+        motion = motion,
+        onDismiss = onDismiss,
+        modifier = modifier,
+        scrim = SCRIM_COLOR,
     ) {
         Column(
             modifier = Modifier
                 .width(ALERT_WIDTH)
+                .popupCard(motion)
                 .clip(shape)
                 .then(
                     if (reduceDynamicBlur) {
@@ -202,7 +199,7 @@ fun LyricsSourcesDialog(
                 onClick = AppSettings::resetLyricsSourceSettings,
             )
             AlertRule()
-            AlertAction(label = stringResource(R.string.done), emphasised = true, onClick = onDismiss)
+            AlertAction(label = stringResource(R.string.done), emphasised = true, onClick = animatedExit(onDismiss))
         }
     }
 

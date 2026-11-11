@@ -48,10 +48,13 @@ internal fun SongInfoDialog(song: Song, onDismiss: () -> Unit) {
     }
     val onSurface = MaterialTheme.colorScheme.onSurface
 
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(
+    val motion = rememberPopupMotion()
+    Dialog(onDismissRequest = { motion.exit(onDismiss) }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        CompositionLocalProvider(LocalPopupExit provides motion::exit) {
+                Column(
             Modifier
                 .width(ALERT_WIDTH)
+                .popupCard(motion)
                 .clip(RoundedCornerShape(ALERT_CORNER))
                 .background(MaterialTheme.colorScheme.surface),
         ) {
@@ -125,6 +128,7 @@ internal fun SongInfoDialog(song: Song, onDismiss: () -> Unit) {
                 AlertRule()
             }
             AlertAction(label = stringResource(R.string.done), emphasised = true, onClick = onDismiss)
+        }
         }
     }
 }

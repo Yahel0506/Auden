@@ -104,7 +104,7 @@ private fun Offer(items: List<MetadataRepair.Accepted>) {
         onClick = { MetadataRepair.startOffered(context) },
     )
     AlertRule()
-    AlertAction(label = stringResource(R.string.metadata_repair_not_now), emphasised = false, onClick = { MetadataRepair.dismiss() })
+    AlertAction(label = stringResource(R.string.metadata_repair_not_now), emphasised = false, onClick = animatedExit { MetadataRepair.dismiss() })
 }
 
 @Composable
@@ -182,7 +182,7 @@ private fun Summary(s: MetadataRepair.Session) {
         }
     }
     AlertRule()
-    AlertAction(label = stringResource(android.R.string.ok), emphasised = true, onClick = { MetadataRepair.dismiss() })
+    AlertAction(label = stringResource(android.R.string.ok), emphasised = true, onClick = animatedExit { MetadataRepair.dismiss() })
 }
 
 @Composable

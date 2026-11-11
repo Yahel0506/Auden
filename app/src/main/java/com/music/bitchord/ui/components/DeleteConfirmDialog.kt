@@ -66,7 +66,7 @@ fun FrostedDeleteConfirm(
             AlertAction(
                 label = stringResource(R.string.cancel),
                 emphasised = false,
-                onClick = onDismiss,
+                onClick = animatedExit(onDismiss),
                 modifier = Modifier.weight(1f),
             )
             Column(
@@ -75,7 +75,7 @@ fun FrostedDeleteConfirm(
             AlertAction(
                 label = stringResource(R.string.delete),
                 emphasised = true,
-                onClick = { onDismiss(); request.onConfirm() },
+                onClick = animatedExit { onDismiss(); request.onConfirm() },
                 modifier = Modifier.weight(1f),
                 color = red,
             )

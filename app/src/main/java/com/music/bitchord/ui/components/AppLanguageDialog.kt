@@ -129,20 +129,17 @@ fun AppLanguageDialog(
             ?: Locale.getDefault().toLanguageTag(),
     )
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(SCRIM_COLOR)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-                onClick = onDismiss,
-            ),
-        contentAlignment = Alignment.Center,
+    val motion = rememberPopupMotion()
+    PopupBox(
+        motion = motion,
+        onDismiss = onDismiss,
+        modifier = modifier,
+        scrim = SCRIM_COLOR,
     ) {
         Column(
             modifier = Modifier
                 .width(ALERT_WIDTH)
+                .popupCard(motion)
                 .clip(shape)
                 .then(
                     if (reduceDynamicBlur) {

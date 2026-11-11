@@ -65,21 +65,17 @@ internal fun AudioPopupCard(
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val frost = LocalPlayerFrost.current
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .containSheetGestures()
-            .background(POPUP_SCRIM_COLOR)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-                onClick = onDismiss,
-            ),
-        contentAlignment = Alignment.Center,
+    val motion = rememberPopupMotion()
+    PopupBox(
+        motion = motion,
+        onDismiss = onDismiss,
+        modifier = modifier.containSheetGestures(),
+        scrim = POPUP_SCRIM_COLOR,
     ) {
         Column(
             modifier = Modifier
                 .width(POPUP_WIDTH)
+                .popupCard(motion)
                 .clip(POPUP_CARD_SHAPE)
                 .then(
                     // The ⋯ menu's frost — see [PlayerDrawer], whose drawers

@@ -261,6 +261,10 @@ import com.music.bitchord.ui.components.DeleteRequest
 import com.music.bitchord.ui.components.FrostedDeleteConfirm
 import com.music.bitchord.ui.components.FrostedExportPicker
 import com.music.bitchord.ui.components.MetadataRepairDialog
+import com.music.bitchord.ui.components.PopupBox
+import com.music.bitchord.ui.components.animatedExit
+import com.music.bitchord.ui.components.popupCard
+import com.music.bitchord.ui.components.rememberPopupMotion
 import com.music.bitchord.ui.components.YtSyncRowState
 import com.music.bitchord.ui.icons.SfIcons
 import com.music.bitchord.ui.components.DownloadManagerPage
@@ -6606,12 +6610,12 @@ private fun FrostedMenuPanel(
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val shape = MaterialTheme.shapes.extraLarge
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.scrim.copy(alpha = .48f))
-            .clickable(onClick = onDismiss),
-        contentAlignment = Alignment.TopEnd,
+    val motion = rememberPopupMotion()
+    PopupBox(
+        motion = motion,
+        onDismiss = onDismiss,
+        scrim = MaterialTheme.colorScheme.scrim.copy(alpha = .48f),
+        alignment = Alignment.TopEnd,
     ) {
         Surface(
             color = Color.Transparent,
@@ -6620,6 +6624,7 @@ private fun FrostedMenuPanel(
             modifier = Modifier
                 .padding(top = 56.dp, end = 20.dp)
                 .width(IntrinsicSize.Max)
+                .popupCard(motion, from = 0.9f, origin = androidx.compose.ui.graphics.TransformOrigin(1f, 0f))
                 .clip(shape)
                 .then(
                     if (reduceDynamicBlur) {
@@ -6650,7 +6655,7 @@ private fun FrostedMenuRow(
         Modifier
             .fillMaxWidth()
             .heightIn(min = 44.dp)
-            .clickable(role = Role.Button, onClick = onClick)
+            .clickable(role = Role.Button, onClick = animatedExit(onClick))
             .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

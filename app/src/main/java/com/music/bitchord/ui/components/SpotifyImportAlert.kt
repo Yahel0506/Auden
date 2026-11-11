@@ -280,7 +280,7 @@ fun SpotifyImportAlert(
         }
         AlertRule()
         if (unmatched != null) {
-            AlertAction(label = stringResource(R.string.done), emphasised = true, onClick = onDismiss)
+            AlertAction(label = stringResource(R.string.done), emphasised = true, onClick = animatedExit(onDismiss))
         } else {
             AlertAction(
                 label = stringResource(R.string.spotify_import_button),
@@ -292,7 +292,7 @@ fun SpotifyImportAlert(
             AlertAction(
                 label = stringResource(R.string.cancel),
                 emphasised = false,
-                onClick = onDismiss,
+                onClick = animatedExit(onDismiss),
                 enabled = !working,
             )
         }

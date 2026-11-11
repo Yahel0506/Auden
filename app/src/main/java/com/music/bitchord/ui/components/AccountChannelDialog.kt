@@ -72,20 +72,17 @@ fun AccountChannelDialog(
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val shape = RoundedCornerShape(ALERT_CORNER)
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(SCRIM_COLOR)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-                onClick = onDismiss,
-            ),
-        contentAlignment = Alignment.Center,
+    val motion = rememberPopupMotion()
+    PopupBox(
+        motion = motion,
+        onDismiss = onDismiss,
+        modifier = modifier,
+        scrim = SCRIM_COLOR,
     ) {
         Column(
             modifier = Modifier
                 .width(ALERT_WIDTH)
+                .popupCard(motion)
                 .clip(shape)
                 .then(
                     if (reduceDynamicBlur) {
@@ -171,7 +168,7 @@ fun AccountChannelDialog(
                 onClick = onChooseInYouTube,
             )
             AlertRule()
-            AlertAction(label = "Close", emphasised = false, onClick = onDismiss)
+            AlertAction(label = "Close", emphasised = false, onClick = animatedExit(onDismiss))
         }
     }
 }
