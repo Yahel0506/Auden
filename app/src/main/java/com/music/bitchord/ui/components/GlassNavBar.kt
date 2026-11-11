@@ -802,7 +802,7 @@ private fun BoxScope.TravellingGlyph(
     )
 }
 
-private const val MORPH_MS = 520
+private const val MORPH_MS = 340
 private val INLINE_ROW = 48.dp
 private val ACCESSORY_HEIGHT = 48.dp
 private val ACCESSORY_GAP = 8.dp
