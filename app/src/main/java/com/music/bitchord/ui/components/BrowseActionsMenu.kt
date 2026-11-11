@@ -1,5 +1,14 @@
 package com.music.bitchord.ui.components
 
+import org.jetbrains.compose.resources.painterResource
+import com.music.bitchord.sharedui.resources.ytmusic_logo
+import com.music.bitchord.sharedui.resources.Res
+import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.Image
 import com.music.bitchord.ui.icons.SfIcons
 import com.music.bitchord.ui.icons.BitChordIcons
 import androidx.compose.foundation.rememberScrollState
@@ -155,6 +164,13 @@ fun BrowseActionsMenu(
      */
     onRepairMetadata: (() -> Unit)? = null,
     /**
+     * A playlist made on this device: sends it to YouTube Music, and — once that
+     * playlist exists — rewrites it to match this one again. Null for anything
+     * that came from YouTube Music, which is the one that depends on it.
+     */
+    onSyncYtMusic: (() -> Unit)? = null,
+    ytSync: YtSyncRowState = YtSyncRowState(),
+    /**
      * Rename: a text field and its keyboard have no place on a menu floating
      * over the page, so the row hands the job to the host, which raises a
      * sheet holding only the form — this, composed again with [startRenaming].
@@ -306,6 +322,7 @@ fun BrowseActionsMenu(
             onRepairMetadata?.let {
                 ActionRow(SfIcons.Upgrade, stringResource(R.string.metadata_repair), onClick = it)
             }
+            onSyncYtMusic?.let { sync -> YtSyncRow(ytSync, sync) }
             if (onDelete != null) {
                 ActionRow(SfIcons.Trash, stringResource(R.string.delete_playlist), tint = MaterialTheme.colorScheme.error, onClick = onDelete)
             }
@@ -322,4 +339,57 @@ private fun BrowseType.localizedOpenLabel(): String = when (this) {
     BrowseType.ARTIST -> stringResource(R.string.open_artist)
     BrowseType.PLAYLIST -> stringResource(R.string.open_playlist)
     BrowseType.OTHER -> stringResource(R.string.open)
+}
+
+/** What the YouTube Music sync row shows: not started, a percentage, or an associated playlist to retry. */
+data class YtSyncRowState(
+    val percent: Int? = null,
+    val associated: Boolean = false,
+    val error: String? = null,
+    val skipped: Int = 0,
+)
+
+@Composable
+private fun YtSyncRow(state: YtSyncRowState, onClick: () -> Unit) {
+    val running = state.percent != null
+    val label = when {
+        running -> stringResource(R.string.yt_sync_running)
+        state.associated -> stringResource(R.string.yt_sync_retry)
+        else -> stringResource(R.string.yt_sync)
+    }
+    val description = when {
+        running -> null
+        state.error != null -> state.error
+        state.skipped > 0 -> stringResource(R.string.yt_sync_skipped, state.skipped)
+        state.associated -> stringResource(R.string.yt_sync_linked)
+        else -> null
+    }
+    ActionRow(
+        icon = Icons.Rounded.Refresh,
+        label = label,
+        value = state.percent?.let { "$it%" },
+        description = description,
+        enabled = !running,
+        onClick = onClick,
+        leading = {
+            when {
+                running -> CircularProgressIndicator(
+                    progress = { (state.percent ?: 0) / 100f },
+                    strokeWidth = 2.5.dp,
+                    modifier = Modifier.size(20.dp),
+                )
+                state.associated -> Icon(
+                    Icons.Rounded.Refresh,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(21.dp),
+                )
+                else -> Image(
+                    painter = painterResource(Res.drawable.ytmusic_logo),
+                    contentDescription = null,
+                    modifier = Modifier.size(21.dp),
+                )
+            }
+        },
+    )
 }

@@ -260,6 +260,7 @@ import com.music.bitchord.ui.components.InfoAlert
 import com.music.bitchord.ui.components.DeleteRequest
 import com.music.bitchord.ui.components.FrostedDeleteConfirm
 import com.music.bitchord.ui.components.MetadataRepairDialog
+import com.music.bitchord.ui.components.YtSyncRowState
 import com.music.bitchord.ui.icons.SfIcons
 import com.music.bitchord.ui.components.DownloadManagerPage
 import com.music.bitchord.ui.components.PlaylistPickerSheet
@@ -5475,6 +5476,15 @@ private fun BitChordApp(
             // Compose. Both are read from collected state so this sheet actually
             // recomposes when the answer arrives.
             val ownedPlaylists by viewModel.playlistOwned.collectAsStateWithLifecycle()
+            // A playlist made on this device can be sent to YouTube Music and kept equal to
+            // it. One that came from YouTube Music is the dependent side, so it has no row.
+            val ytLinks by com.music.bitchord.data.YtPlaylistSync.links.collectAsStateWithLifecycle()
+            val ytProgress by com.music.bitchord.data.YtPlaylistSync.progress.collectAsStateWithLifecycle()
+            val ytFailures by com.music.bitchord.data.YtPlaylistSync.failures.collectAsStateWithLifecycle()
+            val ytSkipped by com.music.bitchord.data.YtPlaylistSync.skipped.collectAsStateWithLifecycle()
+            val syncLocalId = target.browseId?.takeIf { it.startsWith("local:playlist:") }?.removePrefix("local:playlist:")
+            val syncable = syncLocalId != null && dev.auden.library.LocalPlaylists.get(syncLocalId)
+                ?.sourceId.let { it == null || it.startsWith(SPOTIFY_PAGE_PREFIX) }
             val playlist = target.browseId?.let { viewModel.editablePlaylist(it).takeIf { _ -> it.startsWith("local:playlist:") } }
                 ?: target.browseId
                     ?.takeIf { signedIn && ownedPlaylists[it] == true }
@@ -5543,6 +5553,23 @@ private fun BitChordApp(
                 // Every playlist and folder has it: the files among its songs are
                 // checked, and a song that only streams is left alone.
                 onRepairMetadata = act { songs -> MetadataRepair.start(context, songs) },
+                onSyncYtMusic = if (syncable) {
+                    {
+                        if (signedIn) {
+                            com.music.bitchord.data.YtPlaylistSync.start(context, target.browseId.orEmpty())
+                        } else {
+                            Toast.makeText(context, R.string.yt_sync_sign_in, Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else {
+                    null
+                },
+                ytSync = YtSyncRowState(
+                    percent = syncLocalId?.let { ytProgress[it] },
+                    associated = syncLocalId != null && syncLocalId in ytLinks,
+                    error = syncLocalId?.let { ytFailures[it] },
+                    skipped = syncLocalId?.let { ytSkipped[it] } ?: 0,
+                ),
                 onDownloadAll = act { songs ->
                     startDownload(
                         songs,

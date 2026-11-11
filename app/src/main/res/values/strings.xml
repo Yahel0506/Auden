@@ -1276,6 +1276,14 @@
     <string name="offline_playlist_empty">Nothing in this playlist yet. Add songs to it from their menu.</string>
     <string name="offline_liked_empty">Songs you like on this device show up here</string>
     <string name="local_playlist_synced">%1$d songs · %2$s Synced with %3$s</string>
+    <string name="yt_sync">Sync with YouTube Music</string>
+    <string name="yt_sync_running">Syncing with YouTube Music</string>
+    <string name="yt_sync_retry">Retry sync</string>
+    <string name="yt_sync_linked">Synced with a YouTube Music playlist</string>
+    <string name="yt_sync_skipped">%1$d songs without a YouTube Music version were left out</string>
+    <string name="yt_sync_failed">The sync failed. Tap to retry.</string>
+    <string name="yt_sync_nothing">None of these songs exist on YouTube Music.</string>
+    <string name="yt_sync_sign_in">Sign in to YouTube Music to sync</string>
     <string name="saved_on_this_device">Saved on this device</string>
     <string name="spotify_import_empty_playlist">No songs in this playlist</string>
     <string name="spotify_import_language_preference" translatable="false">Language preference</string>

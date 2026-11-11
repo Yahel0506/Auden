@@ -1380,6 +1380,14 @@
     <string name="song_info_error">No se pudo cargar parte de la información.</string>
     <string name="song_info_retry">Reintentar</string>
     <string name="local_playlist_synced">%1$d canciones · %2$s Sincronizada con %3$s</string>
+    <string name="yt_sync">Sincronizar con YouTube Music</string>
+    <string name="yt_sync_running">Sincronizando con YouTube Music</string>
+    <string name="yt_sync_retry">Reintentar sincronización</string>
+    <string name="yt_sync_linked">Sincronizada con una playlist de YouTube Music</string>
+    <string name="yt_sync_skipped">%1$d canciones sin versión en YouTube Music se dejaron fuera</string>
+    <string name="yt_sync_failed">No se pudo sincronizar. Toca para reintentar.</string>
+    <string name="yt_sync_nothing">Ninguna de estas canciones existe en YouTube Music.</string>
+    <string name="yt_sync_sign_in">Inicia sesión en YouTube Music para sincronizar</string>
     <string name="saved_on_this_device">Guardada en este dispositivo</string>
     <string name="genre">Género</string>
     <string name="genres">Géneros</string>

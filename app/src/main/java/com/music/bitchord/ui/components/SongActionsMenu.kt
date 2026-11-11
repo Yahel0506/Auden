@@ -1,5 +1,6 @@
 package com.music.bitchord.ui.components
 
+import androidx.compose.foundation.layout.Box
 import com.music.bitchord.ui.icons.BrokenHeart
 import com.music.bitchord.ui.icons.BitChordIcons
 import com.music.bitchord.ui.icons.SfIcons
@@ -914,6 +915,8 @@ internal fun ActionRow(
     enabled: Boolean = true,
     /** A dimmer second line — only the popup draws it, as iOS menus do. */
     description: String? = null,
+    /** Drawn where the icon goes, when the icon is a logo or a progress ring rather than a tinted vector. */
+    leading: (@Composable () -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     if (LocalActionRowStyle.current == ActionRowStyle.Menu) {
@@ -926,6 +929,7 @@ internal fun ActionRow(
             iconTint = tint,
             valueColor = accent,
             enabled = enabled,
+            leading = leading,
         )
         return
     }
@@ -938,12 +942,16 @@ internal fun ActionRow(
             .padding(horizontal = 22.dp, vertical = 15.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = (tint ?: foreground).copy(alpha = alpha),
-            modifier = Modifier.size(22.dp),
-        )
+        if (leading != null) {
+            Box(Modifier.size(22.dp), contentAlignment = Alignment.Center) { leading() }
+        } else {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = (tint ?: foreground).copy(alpha = alpha),
+                modifier = Modifier.size(22.dp),
+            )
+        }
         Spacer(Modifier.width(18.dp))
         Text(
             text = label,

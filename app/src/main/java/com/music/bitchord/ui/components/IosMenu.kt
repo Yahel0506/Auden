@@ -331,6 +331,8 @@ fun IosMenuRow(
     valueColor: Color? = null,
     enabled: Boolean = true,
     trailing: (@Composable () -> Unit)? = null,
+    /** Drawn in the icon's place, for an icon that is not a tinted vector — a logo, a progress ring. */
+    leading: (@Composable () -> Unit)? = null,
 ) {
     val colors = iosMenuColors()
     val interaction = remember { MutableInteractionSource() }
@@ -360,7 +362,9 @@ fun IosMenuRow(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.width(28.dp), contentAlignment = Alignment.Center) {
-            if (icon != null) {
+            if (leading != null) {
+                leading()
+            } else if (icon != null) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
