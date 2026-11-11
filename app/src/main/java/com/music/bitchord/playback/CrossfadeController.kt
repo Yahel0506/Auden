@@ -2751,6 +2751,12 @@ class CrossfadeController(
                 )
                 session.recordAligned(error)
                 if (LoopMixSession.aligned(error)) return@launch
+                if (error > LoopMixSession.MAX_SILENCE_SECONDS) {
+                    // Cancelling this would mean seconds of silence with the player's position frozen,
+                    // which ExoPlayer fails as a stuck player.
+                    loopBail("the incoming player is ${"%.1f".format(Locale.ROOT, error)}s ahead of the deck", settle = true)
+                    return@launch
+                }
                 // A shift lands where the sink is processing, its lead ahead of
                 // what is heard, and runs for as long as it is: both have to
                 // have played out before the next reading means anything.

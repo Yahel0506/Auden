@@ -66,8 +66,19 @@ class LoopMixSession private constructor(
      * alignment inserts makes up the rest.
      */
     fun planIncomingStart() {
-        inStartAt = STARTUP_LEAD
-        inStartTrack = max(0.0, handoverTrack - (clock.elementAt - inStartAt))
+        val natural = handoverTrack - (clock.elementAt - STARTUP_LEAD)
+        if (natural >= 0) {
+            inStartAt = STARTUP_LEAD
+            inStartTrack = natural
+        } else {
+            // The mix runs longer than the incoming song's own timeline up to the handover (the deck
+            // loops, the player does not): starting the player at once would park it for the
+            // difference with silence inserted, its position frozen — and ExoPlayer's stuck-player
+            // detector fails a player that makes no progress for 10 s. It starts at the song's
+            // beginning only [SILENCE_LEAD] before it is due, and the silence left is short.
+            inStartTrack = 0.0
+            inStartAt = max(STARTUP_LEAD, clock.elementAt - handoverTrack - SILENCE_LEAD)
+        }
     }
 
     /**
@@ -105,6 +116,12 @@ class LoopMixSession private constructor(
 
         /** Mix seconds into the mix at which the incoming player starts, silent. */
         const val STARTUP_LEAD = 0.5
+
+        /** Silence the incoming player may be asked to insert before its song begins: far under the 10 s a player may stand still. */
+        const val SILENCE_LEAD = 2.0
+
+        /** More silence than this to insert would stall the player; the mix is dropped rather than asking for it. */
+        const val MAX_SILENCE_SECONDS = 6.0
 
         /** Seconds of each song decoded either side of what the decks play. */
         private const val PREROLL_SECONDS = 1.0
