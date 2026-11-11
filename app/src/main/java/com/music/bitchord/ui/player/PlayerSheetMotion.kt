@@ -79,6 +79,33 @@ class PlayerSheetMotion(
     /** Whether the app, not the sheet, is placing the player. */
     val holding: Boolean get() = !held.isNaN()
 
+    /**
+     * Where a close started, for a close that starts from wherever a finger left the sheet: the player stands
+     * there and morphs into the mini player from that place. NaN for an open or a pull from the mini player,
+     * which morph from the bar with the player standing fully open.
+     */
+    private var closeFrom by mutableFloatStateOf(Float.NaN)
+
+    /** The morph's own fraction: 1 open, 0 on the mini player. 1 while a finger slides the sheet itself. */
+    fun morphFraction(): Float {
+        val at = held
+        if (at.isNaN()) return 1f
+        val travel = travel().takeIf { it > 0f } ?: return 1f
+        val from = closeFrom
+        return if (from.isNaN()) {
+            1f - at / travel
+        } else {
+            val span = (travel - from).takeIf { it > 1f } ?: return 0f
+            1f - (at - from) / span
+        }.coerceIn(0f, 1f)
+    }
+
+    /** Where the player's content stands during the morph, below fully open; null when the sheet places it. */
+    fun morphPlacement(): Float? {
+        if (held.isNaN()) return null
+        return closeFrom.takeUnless { it.isNaN() } ?: 0f
+    }
+
     /** The sheet, while it is up. Set by the host. */
     var sheet: SheetState? = null
 
@@ -148,7 +175,10 @@ class PlayerSheetMotion(
             sampleSheet(sheetAt)
             return 0
         }
-        return target.toInt() - sheetAt.toInt()
+        // The morph: the player stands still (fully open, or where a finger let go of it) and the mini
+        // player's surface grows into it, or shrinks out of it, round its artwork and credits.
+        val placement = morphPlacement() ?: target
+        return placement.toInt() - sheetAt.toInt()
     }
 
     private fun sampleSheet(at: Float) {
@@ -175,6 +205,9 @@ class PlayerSheetMotion(
             if (closing && holding) {
                 settle?.cancel()
                 reopening()
+                // Back the way it came: as an open, from where it stands in the morph.
+                held = travel() * (1f - morphFraction())
+                closeFrom = Float.NaN
                 val from = held
                 settle = scope.launch {
                     slide(from = from, to = 0f)
@@ -185,6 +218,7 @@ class PlayerSheetMotion(
         }
         settle?.cancel()
         closing = false
+        closeFrom = Float.NaN
         val travel = travel()
         held = travel
         // Raised already open: [held] is what slides it up.
@@ -264,6 +298,9 @@ class PlayerSheetMotion(
             return
         }
         val velocity = if (holding) 0f else recentSheetVelocity()
+        // Let go of by a finger (or closed at rest): it morphs into the mini player from where it stands.
+        // Already held by the app — a pull from the mini player let go low — it carries on as it was.
+        if (!holding) closeFrom = from
         held = from
         settle = scope.launch {
             slide(from = from, to = travel(), velocity = velocity.coerceAtLeast(0f))
@@ -278,6 +315,7 @@ class PlayerSheetMotion(
             if (delta >= 0f || shown()) return
             settle?.cancel()
             closing = false
+            closeFrom = Float.NaN
             held = travel()
             pullStartAt = held
             pullStartNanos = System.nanoTime()
@@ -325,6 +363,7 @@ class PlayerSheetMotion(
         settle?.cancel()
         windowRestore?.cancel()
         held = Float.NaN
+        closeFrom = Float.NaN
         laidOut = false
         sheet = null
         window = null

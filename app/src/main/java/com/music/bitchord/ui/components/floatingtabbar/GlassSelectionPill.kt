@@ -141,6 +141,10 @@ internal class GlassPillMotion(
     private var liftVel = 0.0
 
     private var dragging = false
+
+    /** Whether a finger is carrying the pill: the bar grows and lights up under it. */
+    var held by mutableStateOf(false)
+        private set
     private var dragTarget = 0.0
     private var dragFollow = 0.0
 
@@ -179,6 +183,7 @@ internal class GlassPillMotion(
         travelVel = 0.0
         travelActive = false
         dragging = false
+        held = false
         lifted = false
         liftXPos = 0.0; liftXVel = 0.0
         liftYPos = 0.0; liftYVel = 0.0
@@ -195,6 +200,7 @@ internal class GlassPillMotion(
     /** A finger has picked the pill up where it stands. */
     fun startDrag() {
         dragging = true
+        held = true
         travelActive = false
         lifted = !reduceMotion
         // The hand takes the deformation back off the travel.
@@ -219,6 +225,7 @@ internal class GlassPillMotion(
         if (!dragging) return
         val from = dragFollow
         dragging = false
+        held = false
         index = next
         if (reduceMotion) {
             snapTo(next)

@@ -119,6 +119,9 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.positionOnScreen
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -5003,10 +5006,21 @@ private fun BitChordApp(
                     confirmValueChange = confirmSheetValue,
                 )
             }
+            val playerSheetBox = remember { arrayOfNulls<LayoutCoordinates>(1) }
             DisposableEffect(nowPlayingSheetState) {
                 playerSheetMotion.sheet = nowPlayingSheetState
                 playerDock.sheetOffset = playerSheetMotion::position
+                // The morph — see [PlayerSheetMotion.morphFraction]. Not under reduced player motion, where
+                // the sheet is M3's own.
+                if (!reducePlayerMotion) {
+                    playerDock.fractionOverride = playerSheetMotion::morphFraction
+                    playerDock.placementOverride = playerSheetMotion::morphPlacement
+                    playerDock.morphing = { playerSheetMotion.holding }
+                }
                 onDispose {
+                    playerDock.fractionOverride = null
+                    playerDock.placementOverride = null
+                    playerDock.morphing = { false }
                     playerDock.sheetOffset = null
                     playerSheetMotion.onSheetGone()
                 }
@@ -5067,18 +5081,46 @@ private fun BitChordApp(
                         // its bottom whatever the player's offset, and as deep
                         // as the player is open.
                         .drawBehind {
-                            val open = playerDock.openFraction()
+                            // Under a finger sliding the sheet, the dim follows the sheet itself; in the morph, the morph.
+                            val open = if (playerSheetMotion.holding) {
+                                playerDock.openFraction()
+                            } else {
+                                val travel = playerDock.sheetTravel
+                                val at = playerSheetMotion.position()
+                                if (travel > 0f && !at.isNaN()) (1f - at / travel).coerceIn(0f, 1f) else playerDock.openFraction()
+                            }
                             // Not at all under a portrait player that is fully up:
                             // its own background is opaque, and a full-screen
                             // blend behind it is paid on every frame the window
                             // draws for nothing anyone can see.
                             if (!reducePlayerMotion && open > 0f && !(open >= 1f && playerDock.attached)) {
-                                val top = playerSheetMotion.position().takeUnless { it.isNaN() } ?: 0f
+                                // Where the player's content stands: in the morph that is not the sheet's offset.
+                                val top = (playerSheetMotion.morphPlacement() ?: playerSheetMotion.position())
+                                    .takeUnless { it.isNaN() } ?: 0f
                                 drawRect(
                                     color = Color.Black.copy(alpha = PLAYER_SCRIM_ALPHA * open),
                                     topLeft = Offset(0f, -top.toInt().toFloat()),
                                     size = Size(size.width, size.height),
                                 )
+                            }
+                        }
+                        .onGloballyPositioned { playerSheetBox[0] = it }
+                        // The morph's surface: the mini player's shape growing into the whole player and back,
+                        // the player drawn only inside it. The artwork and the credits fly within it.
+                        .drawWithContent {
+                            val t = playerDock.openFraction()
+                            val bar = playerDock.miniContainerOnScreen()
+                            val box = playerSheetBox[0]?.takeIf { it.isAttached }
+                            if (!reducePlayerMotion && playerSheetMotion.holding && t < 1f && bar != null && box != null) {
+                                val origin = box.positionOnScreen()
+                                val shape = androidx.compose.ui.geometry.lerp(bar.translate(-origin.x, -origin.y), Rect(Offset.Zero, size), t)
+                                val radius = (minOf(bar.height, bar.width) / 2f) * (1f - t)
+                                val path = androidx.compose.ui.graphics.Path().apply {
+                                    addRoundRect(androidx.compose.ui.geometry.RoundRect(shape, androidx.compose.ui.geometry.CornerRadius(radius)))
+                                }
+                                clipPath(path) { this@drawWithContent.drawContent() }
+                            } else {
+                                drawContent()
                             }
                         }
                         .guardSheetFromContentTouches(nowPlayingSheetState)

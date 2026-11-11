@@ -45,6 +45,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
@@ -126,9 +127,8 @@ fun GlassNavBar(
     // handler out of the key.
     val currentOnTabSelected by rememberUpdatedState(onTabSelected)
 
-    // Search is the odd one out in the iOS 26 layout: a circle of its own beside
-    // the pill rather than a quarter of it. It is the last tab in BitChord's
-    // order, which is where the shape wants it anyway.
+    // Search: the last cell of the bar while it is expanded, and a circle of its own once it folds (Apple
+    // Music's iOS 26 bar). It is the last tab in BitChord's order, which is where the shape wants it anyway.
     val standaloneIndex = tabs.lastIndex
 
     // A factory, not a value — see the note in FloatingTabBar's header. Each of
@@ -226,6 +226,8 @@ fun GlassNavBar(
         contentKey = remember(selectedIndex, tabs, contentColor) {
             listOf(selectedIndex, tabs, contentColor)
         },
+        // Search is a cell of the bar while it is expanded, and splits off into its circle as it folds.
+        standaloneInExpandedBar = true,
     ) {
         tabs.forEachIndexed { index, tab ->
             val isSelected = index == selectedIndex
@@ -234,6 +236,8 @@ fun GlassNavBar(
                 if (!isSelected) haptics.play(Haptic.Select)
                 currentOnTabSelected(index)
             }
+            // The tab that is open wears the accent: a soft gradient over its glyph and its name.
+            val accent = if (isSelected) Modifier.navAccent() else Modifier
             if (index == standaloneIndex) {
                 standaloneTab(
                     key = index,
@@ -242,10 +246,20 @@ fun GlassNavBar(
                             imageVector = tab.icon,
                             contentDescription = tab.label,
                             tint = tint,
-                            modifier = Modifier.size(TAB_ICON_SIZE),
+                            modifier = Modifier.size(TAB_ICON_SIZE).then(accent),
                         )
                     },
                     onClick = onClick,
+                    title = {
+                        Text(
+                            text = tab.label,
+                            style = tabLabelStyle(),
+                            color = tint,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = TAB_ICON_LABEL_GAP).then(accent),
+                        )
+                    },
                 )
             } else {
                 tab(
@@ -255,7 +269,7 @@ fun GlassNavBar(
                             imageVector = tab.icon,
                             contentDescription = tab.label,
                             tint = tint,
-                            modifier = Modifier.size(TAB_ICON_SIZE),
+                            modifier = Modifier.size(TAB_ICON_SIZE).then(accent),
                         )
                     },
                     title = {
@@ -268,7 +282,7 @@ fun GlassNavBar(
                             // The library's Tab stacks the glyph and the label
                             // with nothing between them; the plain bar spaces
                             // them, and this is where that gap goes.
-                            modifier = Modifier.padding(top = TAB_ICON_LABEL_GAP),
+                            modifier = Modifier.padding(top = TAB_ICON_LABEL_GAP).then(accent),
                         )
                     },
                     onClick = onClick,
@@ -363,6 +377,7 @@ private fun GlassNowPlaying(
                 scaleY = pressScale
             }
             .then(modifier)
+            .playerDockContainer(dock)
             .clickable(
                 interactionSource = pressSource,
                 indication = null,
@@ -421,7 +436,7 @@ private fun GlassNowPlaying(
             // small, openly spaced type (see [ACCESSORY_TITLE_SIZE]). The inline
             // row shares its width with the tab pill and the Search circle, so
             // a long line fades out at its end, as Apple's does.
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).playerDockCredits(dock)) {
                 val secondary = contentColor.copy(alpha = 0.7f)
                 ExplicitSongTitle(
                     song = song,
@@ -482,6 +497,32 @@ private fun GlassNowPlaying(
         }
     }
 }
+
+/**
+ * The selected tab's accent: what is drawn is kept as a mask and filled with a soft gradient from blue through
+ * a hint of blue violet to a very light blue, blue for almost all of it — Apple Music's place for its red, in Auden's colours.
+ */
+internal fun Modifier.navAccent(): Modifier = this
+    .graphicsLayer(compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen)
+    .drawWithContent {
+        drawContent()
+        drawRect(
+            brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                colorStops = NAV_ACCENT,
+                start = androidx.compose.ui.geometry.Offset.Zero,
+                end = androidx.compose.ui.geometry.Offset(size.width, size.height),
+            ),
+            blendMode = androidx.compose.ui.graphics.BlendMode.SrcIn,
+        )
+    }
+
+// Blue throughout; a breath of blue violet and a very light blue only at the far corner, never leading.
+private val NAV_ACCENT = arrayOf(
+    0.00f to Color(0xFF2F7DFF),
+    0.55f to Color(0xFF3D8CFF),
+    0.80f to Color(0xFF5F86FF),
+    1.00f to Color(0xFF8CCDFF),
+)
 
 /** The collapsed row's margin at either side of the screen, and its items' spacing. */
 private val INLINE_GUTTER = 28.dp

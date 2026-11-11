@@ -96,7 +96,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.animation.BoundsTransform
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Shape
@@ -121,6 +127,42 @@ import com.music.bitchord.ui.components.isGlassSupported
 import com.music.bitchord.ui.haptics.Haptic
 import com.music.bitchord.ui.haptics.rememberHaptics
 import kotlin.math.roundToInt
+
+/** How much the whole bar swells while a finger carries the selection. */
+private const val HELD_BAR_SCALE = 1.045f
+
+/**
+ * The fold between the expanded and the collapsed bar, in two movements rather than one straight line, as
+ * Apple Music's: collapsing, the width goes first while the drop down lags, then the drop catches up;
+ * expanding, the rise goes first and the width opens out after it. A knee two thirds of the way along one
+ * axis and a quarter along the other, then both finish together.
+ */
+internal val TwoPhaseBounds = BoundsTransform { initial, target ->
+    val down = target.center.y > initial.center.y + 0.5f
+    val up = target.center.y < initial.center.y - 0.5f
+    val first = 0.72f
+    val second = 0.22f
+    val (horizontal, vertical) = when {
+        down -> first to second
+        up -> second to first
+        else -> 0.5f to 0.5f
+    }
+    fun mix(a: Float, b: Float, f: Float) = a + (b - a) * f
+    val knee = Rect(
+        mix(initial.left, target.left, horizontal),
+        mix(initial.top, target.top, vertical),
+        mix(initial.right, target.right, horizontal),
+        mix(initial.bottom, target.bottom, vertical),
+    )
+    keyframes {
+        durationMillis = TWO_PHASE_MS
+        initial at 0 using FastOutSlowInEasing
+        knee at (TWO_PHASE_MS * 0.5f).toInt() using LinearOutSlowInEasing
+        target at TWO_PHASE_MS
+    }
+}
+
+private const val TWO_PHASE_MS = 520
 
 /** Hoisted so the default is one stable lambda rather than a new one per call. */
 private val DefaultTabBarContentModifier: @Composable () -> Modifier = { Modifier }
@@ -155,6 +197,7 @@ fun FloatingTabBar(
     sizes: FloatingTabBarSizes = FloatingTabBarDefaults.sizes(),
     elevations: FloatingTabBarElevations = FloatingTabBarDefaults.elevations(),
     contentKey: Any? = null,
+    standaloneInExpandedBar: Boolean = false,
     content: FloatingTabBarScope.() -> Unit
 ) {
     val scrollConnection = rememberFloatingTabBarScrollConnection(
@@ -178,6 +221,7 @@ fun FloatingTabBar(
         sizes = sizes,
         elevations = elevations,
         contentKey = contentKey,
+        standaloneInExpandedBar = standaloneInExpandedBar,
         content = content
     )
 }
@@ -212,6 +256,11 @@ fun FloatingTabBar(
     sizes: FloatingTabBarSizes = FloatingTabBarDefaults.sizes(),
     elevations: FloatingTabBarElevations = FloatingTabBarDefaults.elevations(),
     contentKey: Any? = null,
+    /**
+     * Expanded, the standalone tab is one more cell of the tab pill (Apple Music's iOS 26 bar) rather than a
+     * circle beside it; collapsing, it splits off into its own circle out of that cell.
+     */
+    standaloneInExpandedBar: Boolean = false,
     content: FloatingTabBarScope.() -> Unit
 ) {
     val scope = remember(contentKey) { FloatingTabBarScopeImpl().apply { content() } }
@@ -242,6 +291,7 @@ fun FloatingTabBar(
                 ExpandedBar(
                     scope = scope,
                     selectedTabKey = selectedTabKey,
+                    standaloneInBar = standaloneInExpandedBar,
                     accessory = expandedAccessory,
                     isAccessoryShared = isAccessoryShared,
                     colors = colors,
@@ -401,7 +451,9 @@ interface FloatingTabBarScope {
         key: Any,
         icon: @Composable () -> Unit,
         onClick: () -> Unit,
-        indication: (@Composable () -> Indication)? = { LocalIndication.current }
+        indication: (@Composable () -> Indication)? = { LocalIndication.current },
+        /** Shown under the icon when the tab is a cell of the expanded pill. */
+        title: @Composable () -> Unit = {},
     )
 }
 
@@ -495,6 +547,7 @@ private fun SharedTransitionScope.InlineTab(
             .sharedElement(
                 sharedContentState = rememberSharedContentState("tabGroup"),
                 animatedVisibilityScope = animatedVisibilityScope,
+                boundsTransform = TwoPhaseBounds,
                 zIndexInOverlay = 1f
             )
             .shadow(
@@ -554,6 +607,7 @@ private fun SharedTransitionScope.InlineStandaloneTab(
             .sharedElement(
                 sharedContentState = rememberSharedContentState("standaloneTab"),
                 animatedVisibilityScope = animatedVisibilityScope,
+                boundsTransform = TwoPhaseBounds,
                 zIndexInOverlay = 1f
             )
             .shadow(
@@ -591,7 +645,8 @@ private fun SharedTransitionScope.InlineAccessory(
                     if (isAccessoryShared) {
                         Modifier.sharedElement(
                             sharedContentState = rememberSharedContentState("accessory"),
-                            animatedVisibilityScope = animatedVisibilityScope
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            boundsTransform = TwoPhaseBounds,
                         )
                     } else {
                         Modifier.animateEnterExitAccessory(
@@ -620,6 +675,7 @@ private fun SharedTransitionScope.InlineAccessory(
 private fun SharedTransitionScope.ExpandedBar(
     scope: FloatingTabBarScopeImpl,
     selectedTabKey: Any?,
+    standaloneInBar: Boolean,
     accessory: (@Composable SharedTransitionScope.(Modifier, AnimatedVisibilityScope) -> Unit)?,
     isAccessoryShared: Boolean,
     colors: FloatingTabBarColors,
@@ -667,6 +723,7 @@ private fun SharedTransitionScope.ExpandedBar(
                 ExpandedTabs(
                     scope = scope,
                     selectedTabKey = selectedTabKey,
+                    extraTab = standaloneTab?.takeIf { standaloneInBar },
                     shapes = shapes,
                     sizes = sizes,
                     colors = colors,
@@ -677,7 +734,7 @@ private fun SharedTransitionScope.ExpandedBar(
                 )
             }
 
-            if (standaloneTab != null) {
+            if (standaloneTab != null && !standaloneInBar) {
                 ExpandedStandaloneTab(
                     standaloneTab = standaloneTab,
                     shapes = shapes,
@@ -710,7 +767,8 @@ private fun SharedTransitionScope.ExpandedAccessory(
                 if (isAccessoryShared) {
                     Modifier.sharedElement(
                         sharedContentState = rememberSharedContentState("accessory"),
-                        animatedVisibilityScope = animatedVisibilityScope
+                        animatedVisibilityScope = animatedVisibilityScope,
+                        boundsTransform = TwoPhaseBounds,
                     )
                 } else {
                     Modifier.animateEnterExitAccessory(
@@ -736,6 +794,8 @@ private fun SharedTransitionScope.ExpandedAccessory(
 private fun SharedTransitionScope.ExpandedTabs(
     scope: FloatingTabBarScopeImpl,
     selectedTabKey: Any?,
+    /** The standalone tab, as the pill's last cell. */
+    extraTab: FloatingTabBarTab?,
     shapes: FloatingTabBarShapes,
     sizes: FloatingTabBarSizes,
     colors: FloatingTabBarColors,
@@ -745,7 +805,9 @@ private fun SharedTransitionScope.ExpandedTabs(
     tabBarContentModifier: @Composable () -> Modifier
 ) {
     val inlineTab = scope.getInlineTab(selectedTabKey)
-    val selectedTabIndex = scope.tabs.indexOfFirst { it.key == selectedTabKey }
+    // The cells of the pill: the grouped tabs, and the standalone one at the end when it lives in here.
+    val cells = scope.tabs.toList() + listOfNotNull(extraTab)
+    val selectedTabIndex = cells.indexOfFirst { it.key == selectedTabKey }
     val currentSelectedTabIndex by rememberUpdatedState(selectedTabIndex)
     val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -771,7 +833,7 @@ private fun SharedTransitionScope.ExpandedTabs(
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
     val isRtl = layoutDirection == LayoutDirection.Rtl
-    val tabCount = scope.tabs.size
+    val tabCount = cells.size
     val tabSpacingPx = with(density) { sizes.tabSpacing.toPx() }
     val tabWidthPx = if (rowSize.width > 0 && tabCount > 0) {
         (rowSize.width - tabSpacingPx * (tabCount - 1)) / tabCount
@@ -824,13 +886,30 @@ private fun SharedTransitionScope.ExpandedTabs(
         lastHapticTab = selectedTabIndex
     }
 
+    // Carried by a finger, the whole bar swells a little and lights up under the pill, as Apple's does.
+    val holdScale by animateFloatAsState(
+        targetValue = if (pill.held && !reduceAnimation) HELD_BAR_SCALE else 1f,
+        animationSpec = GlassSpring,
+        label = "heldBarScale",
+    )
+    val holdGlow by animateFloatAsState(
+        targetValue = if (pill.held && !reduceAnimation) 1f else 0f,
+        animationSpec = GlassSpring,
+        label = "heldBarGlow",
+    )
+
     // Unclipped: the lifted pill stands past the bar's edges, so it is drawn
     // here, over the bar, rather than inside the bar's clip.
     Box(
         modifier = modifier
+            .graphicsLayer {
+                scaleX = holdScale
+                scaleY = holdScale
+            }
             .sharedElement(
                 sharedContentState = rememberSharedContentState("tabGroup"),
                 animatedVisibilityScope = animatedVisibilityScope,
+                boundsTransform = TwoPhaseBounds,
                 zIndexInOverlay = 1f
             )
     ) {
@@ -848,6 +927,26 @@ private fun SharedTransitionScope.ExpandedTabs(
                     )
                     .clip(shapes.tabBarShape)
                     .then(tabBarContentModifier())
+                    .drawWithContent {
+                        drawContent()
+                        // The light the finger carries: a soft bloom round the pill, brightest at its centre.
+                        if (holdGlow > 0.01f && rowSize.width > 0) {
+                            val center = pillCenterInRow(pill.position) + Offset(padLeftPx, padTopPx)
+                            val radius = size.height * 1.6f
+                            drawRect(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(
+                                        Color.White.copy(alpha = 0.26f * holdGlow),
+                                        Color.White.copy(alpha = 0.08f * holdGlow),
+                                        Color.Transparent,
+                                    ),
+                                    center = center,
+                                    radius = radius,
+                                ),
+                                blendMode = BlendMode.Plus,
+                            )
+                        }
+                    }
                     .padding(contentPadding)
                     .animateContentSize()
             ) {
@@ -897,18 +996,18 @@ private fun SharedTransitionScope.ExpandedTabs(
                                     if (!holding) return@detectHorizontalDragGestures
                                     holding = false
                                     val absoluteIndexFloat = (dragStartIndex + totalDrag / step)
-                                        .coerceIn(0f, scope.tabs.lastIndex.toFloat())
+                                        .coerceIn(0f, cells.lastIndex.toFloat())
                                     val newIndex = absoluteIndexFloat.roundToInt()
                                     pill.release(newIndex)
                                     if (newIndex != currentSelectedTabIndex) {
-                                        scope.tabs[newIndex].onClick()
+                                        cells[newIndex].onClick()
                                     }
                                 },
                                 onHorizontalDrag = { _, delta ->
                                     if (!holding) return@detectHorizontalDragGestures
                                     totalDrag += delta * direction
                                     val absoluteIndexFloat = (dragStartIndex + totalDrag / step)
-                                        .coerceIn(0f, scope.tabs.lastIndex.toFloat())
+                                        .coerceIn(0f, cells.lastIndex.toFloat())
                                     pill.dragTo(absoluteIndexFloat)
 
                                     val approximateTab = absoluteIndexFloat.roundToInt()
@@ -920,8 +1019,9 @@ private fun SharedTransitionScope.ExpandedTabs(
                             )
                         }
                 ) {
-                    scope.tabs.forEach { tab ->
+                    cells.forEach { tab ->
                         val isSelected = tab.key == selectedTabKey
+                        val isExtra = tab.key == extraTab?.key
                         val iconScale by animateFloatAsState(
                             targetValue = if (isSelected) 1.08f else 1f,
                             animationSpec = selectionSpec,
@@ -930,7 +1030,15 @@ private fun SharedTransitionScope.ExpandedTabs(
                         Tab(
                             icon = {
                                 Box(
-                                    modifier = (if (tab.key == inlineTab?.key) {
+                                    modifier = (if (isExtra) {
+                                        // The cell the standalone circle splits off from, and folds back into.
+                                        Modifier.sharedElement(
+                                            sharedContentState = rememberSharedContentState("standaloneTab"),
+                                            animatedVisibilityScope = animatedVisibilityScope,
+                                            boundsTransform = TwoPhaseBounds,
+                                            zIndexInOverlay = 1f
+                                        )
+                                    } else if (tab.key == inlineTab?.key) {
                                         Modifier.sharedElement(
                                             sharedContentState = rememberSharedContentState("tab#${tab.key}-icon"),
                                             animatedVisibilityScope = animatedVisibilityScope,
@@ -1015,6 +1123,7 @@ private fun SharedTransitionScope.ExpandedStandaloneTab(
             .sharedElement(
                 sharedContentState = rememberSharedContentState("standaloneTab"),
                 animatedVisibilityScope = animatedVisibilityScope,
+                boundsTransform = TwoPhaseBounds,
                 zIndexInOverlay = 1f
             )
             .shadow(
@@ -1191,11 +1300,12 @@ private class FloatingTabBarScopeImpl : FloatingTabBarScope {
         key: Any,
         icon: @Composable () -> Unit,
         onClick: () -> Unit,
-        indication: (@Composable () -> Indication)?
+        indication: (@Composable () -> Indication)?,
+        title: @Composable () -> Unit,
     ) {
         standaloneTab = FloatingTabBarTab(
             key = key,
-            title = {},
+            title = title,
             icon = icon,
             onClick = onClick,
             indication = indication

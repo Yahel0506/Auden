@@ -342,6 +342,36 @@ internal fun Modifier.playerDockArt(dock: PlayerDock?, corner: Dp): Modifier {
         .graphicsLayer { alpha = if (dock.coversMiniArt) 0f else 1f }
 }
 
+/** The mini player's whole surface, the shape the player grows out of and shrinks back into — see [PlayerDock]. */
+@Composable
+internal fun Modifier.playerDockContainer(dock: PlayerDock?): Modifier {
+    if (dock == null) return this
+    val placed = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    DisposableEffect(dock) {
+        onDispose { placed[0]?.let(dock::releaseMiniContainer) }
+    }
+    return onPlaced { coordinates ->
+        placed[0] = coordinates
+        dock.reportMiniContainer(coordinates)
+    }
+}
+
+/** The mini player's title and artist lines, which fly to the player's in the morph and stand aside meanwhile. */
+@Composable
+internal fun Modifier.playerDockCredits(dock: PlayerDock?): Modifier {
+    if (dock == null) return this
+    val placed = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    DisposableEffect(dock) {
+        onDispose { placed[0]?.let(dock::releaseMiniCredits) }
+    }
+    return this
+        .onPlaced { coordinates ->
+            placed[0] = coordinates
+            dock.reportMiniCredits(coordinates)
+        }
+        .graphicsLayer { alpha = if (dock.coversMiniArt && dock.morphing()) 0f else 1f }
+}
+
 /** The mini player's cover for a music video: 16:9 at the cover's 40dp height. */
 private val VIDEO_ART_WIDTH = 71.dp
 
@@ -402,6 +432,7 @@ fun MiniPlayer(
                 },
             )
             .border(0.5.dp, Color.White.copy(alpha = 0.10f), shape)
+            .playerDockContainer(dock)
             // Deliberately silent: the whole bar is the target, so it catches
             // stray taps meant for the page behind it, and the sheet rising is
             // its own confirmation. The glyphs on it still buzz.
@@ -451,7 +482,7 @@ fun MiniPlayer(
                 }
             }
             Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
+            Column(Modifier.weight(1f).playerDockCredits(dock)) {
                 // The badge in the artist line's colour and a long line faded
                 // out at its end, as on the glass bar's mini player.
                 ExplicitSongTitle(

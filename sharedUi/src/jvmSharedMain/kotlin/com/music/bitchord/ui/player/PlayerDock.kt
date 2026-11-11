@@ -57,6 +57,47 @@ class PlayerDock {
     var attached by mutableStateOf(false)
         internal set
 
+    /** The mini player's whole surface, and the title and artist lines on it: the other ends of the morph. */
+    private var miniContainer: LayoutCoordinates? = null
+    private var miniCredits: LayoutCoordinates? = null
+
+    fun reportMiniContainer(coordinates: LayoutCoordinates) {
+        miniContainer = coordinates
+    }
+
+    fun releaseMiniContainer(coordinates: LayoutCoordinates) {
+        if (miniContainer === coordinates) miniContainer = null
+    }
+
+    fun reportMiniCredits(coordinates: LayoutCoordinates) {
+        miniCredits = coordinates
+    }
+
+    fun releaseMiniCredits(coordinates: LayoutCoordinates) {
+        if (miniCredits === coordinates) miniCredits = null
+    }
+
+    fun miniContainerOnScreen(): Rect? = miniContainer?.takeIf { it.isAttached }?.let(::screenRect)
+
+    fun miniCreditsOnScreen(): Rect? = miniCredits?.takeIf { it.isAttached }?.let(::screenRect)
+
+    private fun screenRect(coordinates: LayoutCoordinates): Rect {
+        val size = coordinates.size.toSize()
+        return Rect(coordinates.localToScreen(Offset.Zero), coordinates.localToScreen(Offset(size.width, size.height)))
+    }
+
+    /**
+     * Set by the host while it drives an open or a close itself (a tap, a pull on the mini player, a close
+     * from wherever the player was let go): the morph's own fraction, 1 open and 0 on the mini player, and
+     * where the player's content stands meanwhile. While the sheet is being dragged by a finger these say
+     * "fully open, where the sheet is" — the player slides as a sheet and nothing morphs.
+     */
+    var fractionOverride: (() -> Float?)? = null
+    var placementOverride: (() -> Float?)? = null
+
+    /** Whether the open or close on screen is the morph — the mini player becoming the player and back. */
+    var morphing: () -> Boolean = { false }
+
     /** Reported by the mini player's cover whenever it is placed. */
     fun reportMiniArt(coordinates: LayoutCoordinates, corner: Dp) {
         miniArt = coordinates
@@ -87,7 +128,10 @@ class PlayerDock {
     internal fun miniArtCorner(): Dp = miniArtCorner
 
     /** The sheet's offset this frame, or null with no sheet laid out. */
-    internal fun offset(): Float? = sheetOffset?.invoke()?.takeUnless { it.isNaN() }
+    internal fun offset(): Float? {
+        val raw = sheetOffset?.invoke()?.takeUnless { it.isNaN() } ?: return null
+        return placementOverride?.invoke() ?: raw
+    }
 
     /**
      * 1 with the player fully open, 0 down on the mini player. 0 too while
@@ -96,6 +140,7 @@ class PlayerDock {
     fun openFraction(): Float {
         val travel = sheetTravel
         val offset = offset() ?: return 0f
+        fractionOverride?.invoke()?.let { return it.coerceIn(0f, 1f) }
         if (travel <= 0f) return 0f
         return (1f - offset / travel).coerceIn(0f, 1f)
     }

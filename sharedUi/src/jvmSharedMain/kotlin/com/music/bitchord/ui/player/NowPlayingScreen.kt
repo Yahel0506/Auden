@@ -496,6 +496,9 @@ private const val DOCK_FADE_LEAD = 0.15f
 /** The least the faded player is drawn at while docking — see the player's fade. */
 private const val DOCK_FADE_FLOOR = 1f / 255f
 
+/** How much of the morph the player takes to become opaque inside the growing surface. */
+private const val MORPH_FADE_SPAN = 0.32f
+
 /**
  * What one frame of docking into the mini player worked out — see
  * [PlayerDock]. Written while the sleeve is laid out and read further down
@@ -514,6 +517,8 @@ private class DockFrame {
     var anchorFor = IntSize.Zero
     /** The mini player's cover, in the sleeve's box. */
     var miniInBox: Rect? = null
+    /** The title and artist lines, for their flight in the morph. */
+    var credits: LayoutCoordinates? = null
     /** The sheet's offset this frame, in the whole pixels it is placed at. */
     var offset = 0f
     /** How much of that the artwork rides — see `dockRide`. */
@@ -1872,7 +1877,15 @@ fun NowPlayingScreen(
     val dockMoving by remember { derivedStateOf { docking() } }
     // The rest of the player gets out of the way a little ahead of the artwork,
     // so the cover lands on the bar rather than on a ghost of the player.
-    val dockFade: () -> Float = { ((dockT() - DOCK_FADE_LEAD) / (1f - DOCK_FADE_LEAD)).coerceIn(0f, 1f) }
+    val dockFade: () -> Float = {
+        if (dock?.morphing?.invoke() == true) {
+            // The morph: the mini player's surface becomes the player's, so the player is there almost at once,
+            // inside a shape that grows from the bar — and gone only at the very end of a close.
+            (dockT() / MORPH_FADE_SPAN).coerceIn(0f, 1f)
+        } else {
+            ((dockT() - DOCK_FADE_LEAD) / (1f - DOCK_FADE_LEAD)).coerceIn(0f, 1f)
+        }
+    }
 
     // The clip's own frame, standing in for it while the sleeve moves — so
     // opening, closing, and collapsing into the lyrics or the queue carry
@@ -3222,7 +3235,11 @@ fun NowPlayingScreen(
                                     // within this, and for the player's own draw.
                                     val mini = miniInBox()
                                     val open = sleeveRect()
-                                    if (mini != null) dockFrame.ride = dockRide(open, mini)
+                                    // In the morph the player does not travel with the sheet, so the artwork
+                                    // goes the straight way between the bar and its place.
+                                    if (mini != null) {
+                                        dockFrame.ride = if (dock?.morphing?.invoke() == true) 1f else dockRide(open, mini)
+                                    }
                                     val rect = towardsDock(open, mini)
                                     dockFrame.miniInBox = mini
                                     dockFrame.sleeve = rect
@@ -3719,14 +3736,33 @@ fun NowPlayingScreen(
                             Column(
                                 Modifier
                                     .weight(1f)
+                                    .onGloballyPositioned { dockFrame.credits = it }
                                     // Scaling the already measured type is a draw-only
                                     // operation. Animating fontSize forced both marquee
                                     // texts through shaping and measurement every frame.
                                     .graphicsLayer {
                                         val scale = 1f - 0.2f * p()
-                                        scaleX = scale
-                                        scaleY = scale
-                                        transformOrigin = TransformOrigin(0f, 0.5f)
+                                        // In the morph the title and the artist travel between the mini player's
+                                        // lines and these, at the mini player's size there, as the artwork does.
+                                        val own = dockFrame.credits?.takeIf { it.isAttached }
+                                        val mini = dock?.takeIf { it.morphing() && docking() }?.miniCreditsOnScreen()
+                                        if (own != null && mini != null && own.size.height > 0) {
+                                            val t = dockT()
+                                            val at = own.positionOnScreen()
+                                            val from = mini.height / own.size.height
+                                            val k = from + (1f - from) * t
+                                            scaleX = scale * k
+                                            scaleY = scale * k
+                                            transformOrigin = TransformOrigin(0f, 0f)
+                                            translationX = (mini.left - at.x) * (1f - t)
+                                            translationY = (mini.top - at.y) * (1f - t)
+                                        } else {
+                                            scaleX = scale
+                                            scaleY = scale
+                                            translationX = 0f
+                                            translationY = 0f
+                                            transformOrigin = TransformOrigin(0f, 0.5f)
+                                        }
                                     },
                             ) {
                                 // Only the title's own overflow gates the artist's stagger
