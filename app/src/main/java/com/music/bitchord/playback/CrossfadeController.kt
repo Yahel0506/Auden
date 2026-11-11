@@ -2579,7 +2579,11 @@ class CrossfadeController(
         outgoing = out
         incoming = into
         outgoingItemIndex = out.currentMediaItemIndex
-        armDeadline = SystemClock.elapsedRealtime() + LOOP_BUILD_TIMEOUT_MS
+        // As long as the build is allowed, but never past the loop's start: after that the song has
+        // played through the place the mix was meant to take over.
+        val untilLoopMs = (plan.out.loopStart * 1000).roundToLong() - out.currentPosition
+        armDeadline = SystemClock.elapsedRealtime() +
+            minOf(LOOP_BUILD_TIMEOUT_MS, (untilLoopMs - LOOP_BUILD_MARGIN_MS).coerceAtLeast(2_000L))
         holdAtEnd(out)
         val sampleRate = outPort.sampleRate
         val inLevel = (loudnessGain(inItem.mediaId) / loudnessGain(outItem.mediaId))
@@ -4367,9 +4371,12 @@ class CrossfadeController(
 
         /** The loop mix's setup: how far ahead its loop must start, and when its decks start building. */
         const val LOOP_SETUP_SECONDS = 15.0
-        const val LOOP_ARM_LEAD_MS = 12_000L
+        const val LOOP_ARM_LEAD_MS = 30_000L
         const val LOOP_MIN_LEAD_MS = 9_000L
-        const val LOOP_BUILD_TIMEOUT_MS = 8_000L
+        const val LOOP_BUILD_TIMEOUT_MS = 25_000L
+
+        /** Kept free before the loop for the sink to be armed once the decks are built. */
+        const val LOOP_BUILD_MARGIN_MS = 1_500L
 
         /** After the incoming player starts, how long its clock settles before it is measured against the deck. */
         const val LOOP_ALIGN_SETTLE_SECONDS = 1.2

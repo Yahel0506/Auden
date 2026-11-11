@@ -147,16 +147,21 @@ class LoopMixSession private constructor(
             // the rest of the song for as long as the mix runs after it.
             val outReleaseBeat = clock.outReleaseBeat
             val outRunOnSeconds = (clock.beats - outReleaseBeat) * plan.out.beatSec
+            // Both regions are decoded at once: one after the other they were most of what the build
+            // took, and a build that is not done by the loop's start drops the mix for a shorter one.
+            val inDecode = java.util.concurrent.CompletableFuture.supplyAsync {
+                decode(
+                    LoopMix.Side.IN,
+                    plan.inn.loopStart - PREROLL_SECONDS,
+                    clock.elementTrackTime + TAIL_SECONDS,
+                )
+            }
             val outRegion = decode(
                 LoopMix.Side.OUT,
                 plan.out.loopStart - PREROLL_SECONDS,
                 plan.out.loopEnd + 0.5 + outRunOnSeconds,
-            ) ?: return null
-            val inRegion = decode(
-                LoopMix.Side.IN,
-                plan.inn.loopStart - PREROLL_SECONDS,
-                clock.elementTrackTime + TAIL_SECONDS,
-            ) ?: return null
+            ) ?: run { inDecode.cancel(true); return null }
+            val inRegion = runCatching { inDecode.get() }.getOrNull() ?: return null
             // A region cut short would leave its deck silent where the mix still needs it: the mix
             // would stop dead there, so it is not started.
             val inCovers = inRegion.start + inRegion.left.size.toDouble() / sampleRate
