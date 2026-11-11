@@ -497,7 +497,7 @@ private const val DOCK_FADE_LEAD = 0.15f
 private const val DOCK_FADE_FLOOR = 1f / 255f
 
 /** How much of the morph the player takes to become opaque inside the growing surface. */
-private const val MORPH_FADE_SPAN = 0.32f
+private const val MORPH_FADE_SPAN = 0.3f
 
 /**
  * What one frame of docking into the mini player worked out — see
@@ -1861,7 +1861,13 @@ fun NowPlayingScreen(
             1f
         } else {
             val open = dock.openFraction()
-            if (dockFrame.anchor != null && dock.hasMiniArt()) open else 1f
+            when {
+                dockFrame.anchor != null && dock.hasMiniArt() -> open
+                // In the morph, a player not yet placed (or with no bar to come from) is not there at all:
+                // drawn as if open, its first frame flashed across the whole screen.
+                dock.morphing() -> 0f
+                else -> 1f
+            }
         }
     }
     val docking: () -> Boolean = { dockT() < 1f }
@@ -1879,9 +1885,10 @@ fun NowPlayingScreen(
     // so the cover lands on the bar rather than on a ghost of the player.
     val dockFade: () -> Float = {
         if (dock?.morphing?.invoke() == true) {
-            // The morph: the mini player's surface becomes the player's, so the player is there almost at once,
-            // inside a shape that grows from the bar — and gone only at the very end of a close.
-            (dockT() / MORPH_FADE_SPAN).coerceIn(0f, 1f)
+            // The morph: the mini player's glass grows into the player's shape (drawn by the host), and the
+            // player itself only comes through it at the end — and leaves first on the way down.
+            val f = ((dockT() - (1f - MORPH_FADE_SPAN)) / MORPH_FADE_SPAN).coerceIn(0f, 1f)
+            f * f * (3f - 2f * f)
         } else {
             ((dockT() - DOCK_FADE_LEAD) / (1f - DOCK_FADE_LEAD)).coerceIn(0f, 1f)
         }
@@ -3736,33 +3743,18 @@ fun NowPlayingScreen(
                             Column(
                                 Modifier
                                     .weight(1f)
-                                    .onGloballyPositioned { dockFrame.credits = it }
+                                    .onGloballyPositioned {
+                                        dockFrame.credits = it
+                                        dock?.reportPlayerCredits(it)
+                                    }
                                     // Scaling the already measured type is a draw-only
                                     // operation. Animating fontSize forced both marquee
                                     // texts through shaping and measurement every frame.
                                     .graphicsLayer {
                                         val scale = 1f - 0.2f * p()
-                                        // In the morph the title and the artist travel between the mini player's
-                                        // lines and these, at the mini player's size there, as the artwork does.
-                                        val own = dockFrame.credits?.takeIf { it.isAttached }
-                                        val mini = dock?.takeIf { it.morphing() && docking() }?.miniCreditsOnScreen()
-                                        if (own != null && mini != null && own.size.height > 0) {
-                                            val t = dockT()
-                                            val at = own.positionOnScreen()
-                                            val from = mini.height / own.size.height
-                                            val k = from + (1f - from) * t
-                                            scaleX = scale * k
-                                            scaleY = scale * k
-                                            transformOrigin = TransformOrigin(0f, 0f)
-                                            translationX = (mini.left - at.x) * (1f - t)
-                                            translationY = (mini.top - at.y) * (1f - t)
-                                        } else {
-                                            scaleX = scale
-                                            scaleY = scale
-                                            translationX = 0f
-                                            translationY = 0f
-                                            transformOrigin = TransformOrigin(0f, 0.5f)
-                                        }
+                                        scaleX = scale
+                                        scaleY = scale
+                                        transformOrigin = TransformOrigin(0f, 0.5f)
                                     },
                             ) {
                                 // Only the title's own overflow gates the artist's stagger

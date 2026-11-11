@@ -77,6 +77,15 @@ class PlayerDock {
         if (miniCredits === coordinates) miniCredits = null
     }
 
+    /** The player's own title and artist lines, where the morph's credits land. */
+    private var playerCredits: LayoutCoordinates? = null
+
+    fun reportPlayerCredits(coordinates: LayoutCoordinates) {
+        playerCredits = coordinates
+    }
+
+    fun playerCreditsOnScreen(): Rect? = playerCredits?.takeIf { it.isAttached }?.let(::screenRect)
+
     fun miniContainerOnScreen(): Rect? = miniContainer?.takeIf { it.isAttached }?.let(::screenRect)
 
     fun miniCreditsOnScreen(): Rect? = miniCredits?.takeIf { it.isAttached }?.let(::screenRect)

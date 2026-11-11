@@ -10,6 +10,38 @@
 package com.music.bitchord.ui.components
 
 import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.ui.layout.positionOnScreen
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.lerp
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
+import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBarInlineBehavior
+import kotlin.math.roundToInt
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.Spring
@@ -136,99 +168,145 @@ fun GlassNavBar(
     // The theme's own glass tint, as the liquid top bar has it — no white wash.
     val glassSurface: @Composable () -> Modifier = { Modifier.liquidGlass(shape = pillShape) }
 
-    FloatingTabBar(
-        selectedTabKey = selectedIndex,
-        scrollConnection = scrollConnection,
+    // ---- The fold, as Apple Music's: one movement driven by one value -----------------------------
+    //
+    // [morph] runs from 0, expanded (the now playing bar full width over the tab bar, Search a cell of
+    // it), to 1, collapsed (one row: the open tab's circle, the now playing bar, Search's circle). Every
+    // piece is placed from it at layout and draw — the tab bar's glass shrinking into the tab's circle,
+    // the open tab's glyph travelling into it, Search's glyph leaving its cell for a circle of its own,
+    // the now playing bar narrowing first and then dropping (and rising first, then widening, on the
+    // way back) — so nothing is handed between two layouts and nothing lands on anything else.
+    val compact = scrollConnection.isInline
+    val morph = remember { Animatable(if (compact) 1f else 0f) }
+    var towardCompact by remember { mutableStateOf(compact) }
+    LaunchedEffect(compact) {
+        towardCompact = compact
+        morph.animateTo(if (compact) 1f else 0f, tween(MORPH_MS, easing = LinearEasing))
+    }
+    val m: () -> Float = { morph.value }
+    // The tab the collapsed circle shows: the open one, or the last one before Search was opened.
+    var inlineIndex by remember { mutableIntStateOf(selectedIndex.takeIf { it != standaloneIndex } ?: 0) }
+    if (selectedIndex != standaloneIndex) inlineIndex = selectedIndex
+    val searchSelected = selectedIndex == standaloneIndex
+
+    val density = LocalDensity.current
+    val rowPx = with(density) { INLINE_ROW.toPx() }
+    val liftPx = with(density) { INLINE_LIFT.toPx() }
+    val gutterPx = with(density) { (INLINE_GUTTER - NAV_BAR_GUTTER).toPx() }
+    val spacingPx = with(density) { INLINE_SPACING.toPx() }
+    val accessoryPx = with(density) { ACCESSORY_HEIGHT.toPx() }
+    val gapPx = with(density) { ACCESSORY_GAP.toPx() }
+    val hasAccessory = song != null
+
+    // Measured pieces, read at layout and draw only.
+    val box = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    val iconSpots = remember { HashMap<Int, LayoutCoordinates>() }
+    var tabBarHeight by remember { mutableIntStateOf(0) }
+
+    val geometry = remember(density) { NavMorphGeometry() }
+    val boxSize = remember { FloatArray(2) }
+    fun frame(width: Float, height: Float): NavMorphGeometry = geometry.apply {
+        val p = m()
+        val e = FastOutSlowInEasing.transform(p)
+        val tabH = tabBarHeight.toFloat().takeIf { it > 0f } ?: rowPx
+        tabExpanded = Rect(0f, height - tabH, width, height)
+        val rowTop = height - liftPx - rowPx
+        home = Rect(gutterPx, rowTop, gutterPx + rowPx, rowTop + rowPx)
+        searchCircle = Rect(width - gutterPx - rowPx, rowTop, width - gutterPx, rowTop + rowPx)
+        tab = lerp(tabExpanded, home, e)
+        val accExpanded = Rect(0f, tabExpanded.top - gapPx - accessoryPx, width, tabExpanded.top - gapPx)
+        val accCompact = Rect(home.right + spacingPx, rowTop, searchCircle.left - spacingPx, rowTop + rowPx)
+        // Two movements: towards the collapsed row the width leads and the drop follows; back out, the
+        // rise leads and the width follows.
+        val (h, v) = if (towardCompact) {
+            FastOutSlowInEasing.transform((p / 0.62f).coerceIn(0f, 1f)) to
+                FastOutSlowInEasing.transform(((p - 0.28f) / 0.72f).coerceIn(0f, 1f))
+        } else {
+            val q = 1f - p
+            (1f - FastOutSlowInEasing.transform(((q - 0.28f) / 0.72f).coerceIn(0f, 1f))) to
+                (1f - FastOutSlowInEasing.transform((q / 0.62f).coerceIn(0f, 1f)))
+        }
+        accessory = Rect(
+            lerpF(accExpanded.left, accCompact.left, h),
+            lerpF(accExpanded.top, accCompact.top, v),
+            lerpF(accExpanded.right, accCompact.right, h),
+            lerpF(accExpanded.bottom, accCompact.bottom, v),
+        )
+        accessoryInline = h >= 0.5f
+        searchGlass = ((p - 0.18f) / 0.42f).coerceIn(0f, 1f)
+        tabsShown = 1f - (p / 0.38f).coerceIn(0f, 1f)
+    }
+    fun now(): NavMorphGeometry = frame(boxSize[0], boxSize[1])
+    fun heightFor(p: Float): Float {
+        val tabH = tabBarHeight.toFloat().takeIf { it > 0f } ?: rowPx
+        val expanded = tabH + if (hasAccessory) gapPx + accessoryPx else 0f
+        val collapsed = rowPx + liftPx
+        return lerpF(expanded, collapsed, FastOutSlowInEasing.transform(p))
+    }
+
+    val innerScroll = remember { FloatingTabBarScrollConnection(false, Float.MAX_VALUE, FloatingTabBarInlineBehavior.Never) }
+
+    Box(
         modifier = modifier
             .windowInsetsPadding(floatingBarInsets)
             .padding(horizontal = NAV_BAR_GUTTER)
             .padding(bottom = NAV_BAR_LIFT)
-            .fillMaxWidth(),
-        tabBarContentModifier = glassSurface,
-        inlineAccessory = song?.let { current ->
-            { accessoryModifier, _ ->
-                GlassNowPlaying(
-                    song = current,
-                    isInline = true,
-                    isPlaying = isPlaying,
-                    isLoading = isLoading,
-                    contentColor = contentColor,
-                    onPlayPause = onPlayPause,
-                    onNext = onNext,
-                    onPrevious = onPrevious,
-                    onExpand = onExpand,
-                    controlsLocked = controlsLocked,
-                    onBlockedControl = onBlockedControl,
-                    dock = dock,
-                    pull = pull,
-                    modifier = accessoryModifier.then(glassSurface()),
-                )
+            .fillMaxWidth()
+            .layout { measurable, constraints ->
+                val height = heightFor(m()).roundToInt()
+                val placeable = measurable.measure(constraints.copy(minHeight = height, maxHeight = height))
+                boxSize[0] = placeable.width.toFloat()
+                boxSize[1] = height.toFloat()
+                layout(placeable.width, height) { placeable.place(0, 0) }
             }
-        },
-        expandedAccessory = song?.let { current ->
-            { accessoryModifier, _ ->
-                GlassNowPlaying(
-                    song = current,
-                    isInline = false,
-                    isPlaying = isPlaying,
-                    isLoading = isLoading,
-                    contentColor = contentColor,
-                    onPlayPause = onPlayPause,
-                    onNext = onNext,
-                    onPrevious = onPrevious,
-                    onExpand = onExpand,
-                    controlsLocked = controlsLocked,
-                    onBlockedControl = onBlockedControl,
-                    dock = dock,
-                    pull = pull,
-                    modifier = accessoryModifier.fillMaxWidth().then(glassSurface()),
-                )
-            }
-        },
-        // Transparent: the glass surface underneath is the background, and a
-        // colour over it would be the thing you saw instead of the backdrop.
-        colors = FloatingTabBarDefaults.colors(
-            backgroundColor = Color.Transparent,
-            accessoryBackgroundColor = Color.Transparent,
-            indicatorColor = glassIndicatorColor(),
-        ),
-        // Flat, because the glass is not. Every surface here already draws its
-        // own [Shadow.Default] as part of the backdrop pass, and the library's
-        // Modifier.shadow on top of that is a second offscreen layer and a
-        // second shadow render for each of them — three at rest, six mid-fold,
-        // paying twice for a shadow you can only see once.
-        elevations = FloatingTabBarDefaults.elevations(
-            inlineElevation = 0.dp,
-            expandedElevation = 0.dp,
-        ),
-        // Expanded, this is meant to be the plain [FloatingBottomBar] with a
-        // different material — same outer width, same pill inset, same tab
-        // padding, same glyph — so the two bars measure identically and the
-        // toggle changes the surface rather than the layout. The horizontal tab
-        // padding is gone with it: the tabs divide the pill by weight now, the
-        // way the plain bar's do, so a per-tab horizontal padding would only
-        // inset the ripple.
-        sizes = FloatingTabBarDefaults.sizes(
-            tabBarContentPadding = PaddingValues(PILL_INSET),
-            tabExpandedContentPadding = PaddingValues(vertical = TAB_VERTICAL_PADDING),
-            // Collapsed, Apple's row is narrower and more spaced: 48pt circles
-            // 28pt in from the screen's sides, 14pt apart, centred on the line
-            // the expanded bar's middle runs along.
-            inlineComponentSpacing = INLINE_SPACING,
-            inlineBarPadding = PaddingValues(
-                start = INLINE_GUTTER - NAV_BAR_GUTTER,
-                end = INLINE_GUTTER - NAV_BAR_GUTTER,
-                bottom = INLINE_LIFT,
-            ),
-        ),
-        // Held too: this is declared `Any?`, so a fresh list every pass is a
-        // changed argument by identity and defeats skipping on its own.
-        contentKey = remember(selectedIndex, tabs, contentColor) {
-            listOf(selectedIndex, tabs, contentColor)
-        },
-        // Search is a cell of the bar while it is expanded, and splits off into its circle as it folds.
-        standaloneInExpandedBar = true,
+            .onPlaced { box[0] = it },
     ) {
+        // The tab bar's glass, from the whole bar to the open tab's circle.
+        Box(
+            Modifier
+                .placeAt { w, h -> frame(w, h).tab }
+                .then(glassSurface())
+                .clickable(
+                    enabled = compact,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) {
+                    scrollConnection.expand()
+                    if (inlineIndex != selectedIndex) currentOnTabSelected(inlineIndex)
+                },
+        )
+        // The expanded bar itself, laid out at its full size where it rests, faded and cut down to the
+        // shrinking glass as it folds. Its own glass is the first thing to go, so the two never double.
+        Box(
+            Modifier
+                .placeAtBottom()
+                .onSizeChanged { tabBarHeight = it.height }
+                .graphicsLayer {
+                    val g = now()
+                    alpha = g.tabsShown
+                    val r = g.tab.translate(-g.tabExpanded.left, -g.tabExpanded.top)
+                    clip = g.tabsShown < 1f
+                    shape = RoundRectShape(r)
+                },
+        ) {
+            FloatingTabBar(
+                selectedTabKey = selectedIndex,
+                scrollConnection = innerScroll,
+                modifier = Modifier.fillMaxWidth(),
+                tabBarContentModifier = glassSurface,
+                colors = FloatingTabBarDefaults.colors(
+                    backgroundColor = Color.Transparent,
+                    accessoryBackgroundColor = Color.Transparent,
+                    indicatorColor = glassIndicatorColor(),
+                ),
+                elevations = FloatingTabBarDefaults.elevations(inlineElevation = 0.dp, expandedElevation = 0.dp),
+                sizes = FloatingTabBarDefaults.sizes(
+                    tabBarContentPadding = PaddingValues(PILL_INSET),
+                    tabExpandedContentPadding = PaddingValues(vertical = TAB_VERTICAL_PADDING),
+                ),
+                contentKey = remember(selectedIndex, tabs, contentColor) { listOf(selectedIndex, tabs, contentColor) },
+                standaloneInExpandedBar = true,
+            ) {
         tabs.forEachIndexed { index, tab ->
             val isSelected = index == selectedIndex
             val tint = if (isSelected) selectedColor else unselectedColor
@@ -238,6 +316,12 @@ fun GlassNavBar(
             }
             // The tab that is open wears the accent: a soft gradient over its glyph and its name.
             val accent = if (isSelected) Modifier.navAccent() else Modifier
+            // The glyphs that travel in the fold stand aside while their travelling copies are out, and say
+            // where they are for those copies to start from.
+            val travels = index == standaloneIndex || index == inlineIndex
+            val spot = Modifier
+                .onPlaced { iconSpots[index] = it }
+                .graphicsLayer { alpha = if (travels && m() > 0f) 0f else 1f }
             if (index == standaloneIndex) {
                 standaloneTab(
                     key = index,
@@ -246,7 +330,7 @@ fun GlassNavBar(
                             imageVector = tab.icon,
                             contentDescription = tab.label,
                             tint = tint,
-                            modifier = Modifier.size(TAB_ICON_SIZE).then(accent),
+                            modifier = Modifier.size(TAB_ICON_SIZE).then(spot).then(accent),
                         )
                     },
                     onClick = onClick,
@@ -269,7 +353,7 @@ fun GlassNavBar(
                             imageVector = tab.icon,
                             contentDescription = tab.label,
                             tint = tint,
-                            modifier = Modifier.size(TAB_ICON_SIZE).then(accent),
+                            modifier = Modifier.size(TAB_ICON_SIZE).then(spot).then(accent),
                         )
                     },
                     title = {
@@ -286,6 +370,69 @@ fun GlassNavBar(
                         )
                     },
                     onClick = onClick,
+                )
+            }
+        }
+    }
+        }
+        // Search's own circle, growing round its glyph as it leaves the bar.
+        Box(
+            Modifier
+                .placeAt { w, h ->
+                    val g = frame(w, h)
+                    val t = g.searchGlass
+                    lerp(Rect(g.searchCircle.center, 0f), g.searchCircle, FastOutSlowInEasing.transform(t))
+                }
+                .graphicsLayer { alpha = now().searchGlass.coerceIn(0f, 1f) }
+                .then(glassSurface())
+                .clickable(
+                    enabled = compact,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                ) { currentOnTabSelected(standaloneIndex) },
+        )
+        // The two glyphs that travel: the open tab's, into its circle, and Search's, into its own.
+        TravellingGlyph(
+            tab = tabs[inlineIndex],
+            tint = if (searchSelected) unselectedColor else selectedColor,
+            accent = !searchSelected,
+            shown = { m() > 0f },
+            at = { w, h ->
+                val g = frame(w, h)
+                val from = iconSpots[inlineIndex]?.let { spot -> centreIn(box[0], spot) } ?: g.tabExpanded.center
+                lerpO(from, g.home.center, FastOutSlowInEasing.transform(m()))
+            },
+        )
+        TravellingGlyph(
+            tab = tabs[standaloneIndex],
+            tint = if (searchSelected) selectedColor else unselectedColor,
+            accent = searchSelected,
+            shown = { m() > 0f },
+            at = { w, h ->
+                val g = frame(w, h)
+                val from = iconSpots[standaloneIndex]?.let { spot -> centreIn(box[0], spot) } ?: g.searchCircle.center
+                lerpO(from, g.searchCircle.center, FastOutSlowInEasing.transform(m()))
+            },
+        )
+        // The now playing bar.
+        if (song != null) {
+            Box(Modifier.placeAt { w, h -> frame(w, h).accessory }) {
+                val inline by remember { derivedStateOf { morph.value >= 0.5f } }
+                GlassNowPlaying(
+                    song = song,
+                    isInline = inline,
+                    isPlaying = isPlaying,
+                    isLoading = isLoading,
+                    contentColor = contentColor,
+                    onPlayPause = onPlayPause,
+                    onNext = onNext,
+                    onPrevious = onPrevious,
+                    onExpand = onExpand,
+                    controlsLocked = controlsLocked,
+                    onBlockedControl = onBlockedControl,
+                    dock = dock,
+                    pull = pull,
+                    modifier = Modifier.fillMaxSize().clip(pillShape).then(glassSurface()),
                 )
             }
         }
@@ -375,6 +522,8 @@ private fun GlassNowPlaying(
             .graphicsLayer {
                 scaleX = pressScale
                 scaleY = pressScale
+                // The morph draws this bar's glass growing into the player; the bar itself stands aside.
+                alpha = if (dock != null && dock.morphing() && dock.coversMiniArt) 0f else 1f
             }
             .then(modifier)
             .playerDockContainer(dock)
@@ -559,3 +708,182 @@ private val ACCESSORY_ART_CORNER = 5.7.dp
 
 /** The expanded play glyph: its triangle about Apple's 15pt tall. */
 private val EXPANDED_GLYPH_SIZE = 29.dp
+
+/** One frame of the fold, worked out from its single value — see [GlassNavBar]. */
+private class NavMorphGeometry {
+    var tabExpanded = Rect.Zero
+    var home = Rect.Zero
+    var searchCircle = Rect.Zero
+    var tab = Rect.Zero
+    var accessory = Rect.Zero
+    var accessoryInline = false
+    var searchGlass = 0f
+    var tabsShown = 1f
+}
+
+private fun lerpF(a: Float, b: Float, t: Float) = a + (b - a) * t
+
+private fun lerpO(a: Offset, b: Offset, t: Float) = Offset(lerpF(a.x, b.x, t), lerpF(a.y, b.y, t))
+
+/** The centre of [spot] in [box]'s pixels, or null before both are placed. */
+private fun centreIn(box: LayoutCoordinates?, spot: LayoutCoordinates): Offset? {
+    val parent = box?.takeIf { it.isAttached } ?: return null
+    if (!spot.isAttached) return null
+    return parent.localPositionOf(spot, Offset(spot.size.width / 2f, spot.size.height / 2f))
+}
+
+/** A pill (round ends) filling [rect]. */
+private class RoundRectShape(private val rect: Rect) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline =
+        Outline.Rounded(RoundRect(rect, CornerRadius(minOf(rect.width, rect.height) / 2f)))
+}
+
+/**
+ * Sized and placed in the parent at the rect [at] gives this frame, from the parent's size — at layout,
+ * so a frame of the fold relays out these pieces and recomposes nothing. [sizeOf] sizes it differently
+ * from where it is placed, when the two differ.
+ */
+private fun Modifier.placeAt(at: (Float, Float) -> Rect): Modifier = layout { measurable, constraints ->
+    val w = constraints.maxWidth.toFloat()
+    val h = constraints.maxHeight.toFloat()
+    val rect = at(w, h)
+    val placeable = measurable.measure(
+        Constraints.fixed(rect.width.roundToInt().coerceAtLeast(0), rect.height.roundToInt().coerceAtLeast(0)),
+    )
+    layout(constraints.maxWidth, constraints.maxHeight) { placeable.place(rect.left.roundToInt(), rect.top.roundToInt()) }
+}
+
+/** Full width, its own height, standing on the parent's bottom edge: where the expanded tab bar rests. */
+private fun Modifier.placeAtBottom(): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(
+        Constraints(minWidth = constraints.maxWidth, maxWidth = constraints.maxWidth),
+    )
+    layout(constraints.maxWidth, constraints.maxHeight) {
+        placeable.place(0, constraints.maxHeight - placeable.height)
+    }
+}
+
+/** A tab glyph carried through the fold on its own. */
+@Composable
+private fun BoxScope.TravellingGlyph(
+    tab: BottomTab,
+    tint: Color,
+    accent: Boolean,
+    shown: () -> Boolean,
+    at: (Float, Float) -> Offset,
+) {
+    val half = with(LocalDensity.current) { (TAB_ICON_SIZE / 2).roundToPx() }
+    Icon(
+        imageVector = tab.icon,
+        contentDescription = null,
+        tint = tint,
+        modifier = Modifier
+            .matchParentSize()
+            .layout { measurable, constraints ->
+                val placeable = measurable.measure(Constraints.fixed(half * 2, half * 2))
+                layout(constraints.maxWidth, constraints.maxHeight) {
+                    val c = at(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat())
+                    placeable.place(c.x.roundToInt() - half, c.y.roundToInt() - half)
+                }
+            }
+            .graphicsLayer { alpha = if (shown()) 1f else 0f }
+            .then(if (accent) Modifier.navAccent() else Modifier),
+    )
+}
+
+private const val MORPH_MS = 520
+private val INLINE_ROW = 48.dp
+private val ACCESSORY_HEIGHT = 48.dp
+private val ACCESSORY_GAP = 8.dp
+
+/**
+ * The mini player's glass becoming the player: drawn in the app's window, under the player's, from the bar to
+ * the whole of the player while it opens and back while it closes (see [com.music.bitchord.ui.player.PlayerDock]).
+ * The glass keeps sampling the page the whole way; the title and artist travel inside it from the bar's lines to
+ * the player's; the artwork is the player's own, flying above. The player comes through only at the end.
+ *
+ * [fraction] is the morph's, 1 open and 0 on the bar, or null when no morph is on screen; [playerRect] where the
+ * player stands on screen this frame.
+ */
+@Composable
+fun PlayerMorphGlass(
+    dock: PlayerDock,
+    song: Song?,
+    glass: Boolean,
+    fraction: () -> Float?,
+    playerRect: () -> Rect?,
+    modifier: Modifier = Modifier,
+) {
+    val t = fraction() ?: return
+    val bar = dock.miniContainerOnScreen() ?: return
+    val full = playerRect() ?: return
+    val density = LocalDensity.current
+    val origin = remember { arrayOfNulls<LayoutCoordinates>(1) }
+    val at = origin[0]?.takeIf { it.isAttached }?.positionOnScreen() ?: Offset.Zero
+    val rect = lerp(bar, full, t).translate(-at.x, -at.y)
+    val radius = with(density) { (minOf(bar.width, bar.height) / 2f * (1f - t) + MORPH_SHEET_CORNER.toPx() * t * (1f - t) * 2f).toDp() }
+    val shape = RoundedCornerShape(radius)
+    Box(
+        modifier
+            .fillMaxSize()
+            .onPlaced { origin[0] = it }
+            .drawBehind { drawRect(Color.Black.copy(alpha = MORPH_SCRIM_ALPHA * t)) },
+    ) {
+        Box(
+            Modifier
+                .offset { IntOffset(rect.left.roundToInt(), rect.top.roundToInt()) }
+                .size(with(density) { rect.width.toDp() }, with(density) { rect.height.toDp() })
+                .then(
+                    if (glass && isGlassSupported()) {
+                        Modifier.liquidGlass(shape = shape)
+                    } else {
+                        Modifier.clip(shape).background(MaterialTheme.colorScheme.surface)
+                    },
+                ),
+        )
+        val mini = dock.miniCreditsOnScreen()
+        if (song != null && mini != null && mini.height > 0f) {
+            val target = dock.playerCreditsOnScreen() ?: mini
+            val k = 1f + (target.height / mini.height - 1f) * t
+            val left = lerpF(mini.left, target.left, t) - at.x
+            val top = lerpF(mini.top, target.top, t) - at.y
+            val base = glassContentColor()
+            val color = androidx.compose.ui.graphics.lerp(base, Color.White, t)
+            Column(
+                Modifier
+                    .offset { IntOffset(left.roundToInt(), top.roundToInt()) }
+                    .width(with(density) { mini.width.toDp() })
+                    .graphicsLayer {
+                        scaleX = k
+                        scaleY = k
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f)
+                    },
+            ) {
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontSize = ACCESSORY_TITLE_SIZE,
+                        fontWeight = ACCESSORY_TITLE_WEIGHT,
+                        letterSpacing = ACCESSORY_TITLE_TRACKING,
+                    ),
+                    color = color,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = song.artist,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontSize = ACCESSORY_ARTIST_SIZE,
+                        letterSpacing = ACCESSORY_ARTIST_TRACKING,
+                    ),
+                    color = color.copy(alpha = 0.7f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+private val MORPH_SHEET_CORNER = 40.dp
+private const val MORPH_SCRIM_ALPHA = 0.35f

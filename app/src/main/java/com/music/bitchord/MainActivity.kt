@@ -265,6 +265,7 @@ import com.music.bitchord.ui.components.FrostedDeleteConfirm
 import com.music.bitchord.ui.components.FrostedExportPicker
 import com.music.bitchord.ui.components.MetadataRepairDialog
 import com.music.bitchord.ui.components.PopupBox
+import com.music.bitchord.ui.components.PlayerMorphGlass
 import com.music.bitchord.ui.components.animatedExit
 import com.music.bitchord.ui.components.popupCard
 import com.music.bitchord.ui.components.rememberPopupMotion
@@ -635,8 +636,14 @@ private fun BitChordApp(
     // page's draw below hears when that flips rather than on every frame of the
     // sheet's travel: read straight off the fraction, each of those frames
     // redrew the page's whole window behind the player, glass and blurs and all.
+    // The player sheet's content box, for the morph's glass to know where the player stands on screen.
+    val playerSheetBox = remember { arrayOfNulls<LayoutCoordinates>(1) }
     val coveredByPlayer by remember {
-        derivedStateOf { showNowPlaying && playerDock.attached && playerDock.openFraction() >= 1f }
+        derivedStateOf {
+            // The sheet's real place, not the morph's fraction: a finger sliding the player down shows the page.
+            val sliding = !playerSheetMotion.holding && (playerSheetMotion.position().takeUnless { it.isNaN() } ?: 0f) > 0.5f
+            showNowPlaying && playerDock.attached && playerDock.openFraction() >= 1f && !sliding
+        }
     }
     // "Reduce animation" keeps the player as it always was: M3's own slide up
     // and down, its own scrim and window animations, no pull from the mini
@@ -4550,6 +4557,26 @@ private fun BitChordApp(
 
         }
 
+        // The mini player's glass growing into the player and back — see [PlayerMorphGlass].
+        if (!reducePlayerMotion) {
+            Isolated {
+                PlayerMorphGlass(
+                    dock = playerDock,
+                    song = player.song,
+                    glass = glassActive,
+                    fraction = {
+                        if (showNowPlaying && playerSheetMotion.holding && playerDock.attached) playerDock.openFraction() else null
+                    },
+                    playerRect = {
+                        playerSheetBox[0]?.takeIf { it.isAttached }?.let { box ->
+                            val at = box.positionOnScreen()
+                            Rect(at, Size(box.size.width.toFloat(), box.size.height.toFloat()))
+                        }
+                    },
+                )
+            }
+        }
+
         // The DJ can be asked for with nothing loaded: its player is up while it chooses.
         val playerRaised = showNowPlaying && (playerSong != null || djStarted.pending)
 
@@ -5006,7 +5033,6 @@ private fun BitChordApp(
                     confirmValueChange = confirmSheetValue,
                 )
             }
-            val playerSheetBox = remember { arrayOfNulls<LayoutCoordinates>(1) }
             DisposableEffect(nowPlayingSheetState) {
                 playerSheetMotion.sheet = nowPlayingSheetState
                 playerDock.sheetOffset = playerSheetMotion::position
@@ -5093,7 +5119,7 @@ private fun BitChordApp(
                             // its own background is opaque, and a full-screen
                             // blend behind it is paid on every frame the window
                             // draws for nothing anyone can see.
-                            if (!reducePlayerMotion && open > 0f && !(open >= 1f && playerDock.attached)) {
+                            if (!reducePlayerMotion && !playerSheetMotion.holding && open > 0f && !(open >= 1f && playerDock.attached)) {
                                 // Where the player's content stands: in the morph that is not the sheet's offset.
                                 val top = (playerSheetMotion.morphPlacement() ?: playerSheetMotion.position())
                                     .takeUnless { it.isNaN() } ?: 0f
@@ -5120,7 +5146,24 @@ private fun BitChordApp(
                                 }
                                 clipPath(path) { this@drawWithContent.drawContent() }
                             } else {
-                                drawContent()
+                                // Slid by a finger, the player is a sheet: its top corners round off as it leaves the top.
+                                val at = playerSheetMotion.position()
+                                val slid = if (!playerSheetMotion.holding && !at.isNaN()) at else 0f
+                                if (!reducePlayerMotion && slid > 0.5f) {
+                                    val radius = PLAYER_SHEET_CORNER.toPx() * (slid / PLAYER_SHEET_CORNER_RAMP.toPx()).coerceIn(0f, 1f)
+                                    val path = androidx.compose.ui.graphics.Path().apply {
+                                        addRoundRect(
+                                            androidx.compose.ui.geometry.RoundRect(
+                                                rect = Rect(Offset.Zero, size),
+                                                topLeft = androidx.compose.ui.geometry.CornerRadius(radius),
+                                                topRight = androidx.compose.ui.geometry.CornerRadius(radius),
+                                            ),
+                                        )
+                                    }
+                                    clipPath(path) { this@drawWithContent.drawContent() }
+                                } else {
+                                    drawContent()
+                                }
                             }
                         }
                         .guardSheetFromContentTouches(nowPlayingSheetState)
@@ -6840,3 +6883,7 @@ private const val TAB_SEARCH = 3
 
 /** Auden doesn't carry BitChord's seasonal greetings. */
 private const val AUDEN_FESTIVE_GREETINGS = false
+
+/** The top corners of the player while a finger slides it as a sheet, and how far it takes to round them. */
+private val PLAYER_SHEET_CORNER = 38.dp
+private val PLAYER_SHEET_CORNER_RAMP = 48.dp
