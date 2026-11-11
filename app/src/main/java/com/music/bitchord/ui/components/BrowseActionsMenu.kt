@@ -173,9 +173,8 @@ fun BrowseActionsMenu(
     savingOnDevice: Boolean = false,
 ) {
     var renaming by remember { mutableStateOf(startRenaming) }
-    var confirmingDelete by remember { mutableStateOf(false) }
     var exporting by remember { mutableStateOf(false) }
-    var confirmingDeleteDownload by remember { mutableStateOf(false) }
+
 
     val playlist = target.playlist
     if (renaming && playlist != null && onRename != null) {
@@ -308,30 +307,10 @@ fun BrowseActionsMenu(
                 ActionRow(SfIcons.Upgrade, stringResource(R.string.metadata_repair), onClick = it)
             }
             if (onDelete != null) {
-                if (confirmingDelete) {
-                    ActionRow(
-                        icon = SfIcons.Trash,
-                        label = stringResource(R.string.delete_playlist_confirmation, target.title),
-                        tint = MaterialTheme.colorScheme.error,
-                        onClick = onDelete,
-                    )
-                } else {
-                    ActionRow(SfIcons.Trash, stringResource(R.string.delete_playlist)) { confirmingDelete = true }
-                }
+                ActionRow(SfIcons.Trash, stringResource(R.string.delete_playlist), tint = MaterialTheme.colorScheme.error, onClick = onDelete)
             }
             if (onDeleteDownload != null) {
-                if (confirmingDeleteDownload) {
-                    ActionRow(
-                        icon = SfIcons.Trash,
-                        label = stringResource(R.string.delete_download_confirmation, target.title),
-                        tint = MaterialTheme.colorScheme.error,
-                        onClick = onDeleteDownload,
-                    )
-                } else {
-                    ActionRow(SfIcons.Trash, stringResource(R.string.delete_download)) {
-                        confirmingDeleteDownload = true
-                    }
-                }
+                ActionRow(SfIcons.Trash, stringResource(R.string.delete_download), tint = MaterialTheme.colorScheme.error, onClick = onDeleteDownload)
             }
         }
     }

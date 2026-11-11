@@ -257,6 +257,10 @@ import dev.auden.dj.DjSession
 import dev.auden.dj.DjUiState
 import com.music.bitchord.ui.player.DjNowPlayingScreen
 import com.music.bitchord.ui.components.InfoAlert
+import com.music.bitchord.ui.components.DeleteRequest
+import com.music.bitchord.ui.components.FrostedDeleteConfirm
+import com.music.bitchord.ui.components.MetadataRepairDialog
+import com.music.bitchord.ui.icons.SfIcons
 import com.music.bitchord.ui.components.DownloadManagerPage
 import com.music.bitchord.ui.components.PlaylistPickerSheet
 import com.music.bitchord.ui.components.ReorderPlaylistPage
@@ -678,6 +682,7 @@ private fun BitChordApp(
     var choosingSourceQuality by remember { mutableStateOf<SourceConfig?>(null) }
     /** An addon whose "Outdated addon" line was tapped; see [SourceConfig.needsAddonUpdate]. */
     var explainingOutdatedAddon by remember { mutableStateOf<SourceConfig?>(null) }
+    var deleteRequest by remember { mutableStateOf<DeleteRequest?>(null) }
     var confirmJioSaavn by remember { mutableStateOf(false) }
     var confirmBitPerfect by remember { mutableStateOf<BitPerfectMode?>(null) }
     var confirmFixedVolume by remember { mutableStateOf(false) }
@@ -5619,14 +5624,22 @@ private fun BitChordApp(
                 onDelete = playlist?.let { p ->
                     {
                         browseActions = null
-                        viewModel.deletePlaylist(p)
+                        deleteRequest = DeleteRequest(
+                            title = context.getString(R.string.delete_playlist_question, target.title),
+                            message = context.getString(R.string.delete_playlist_warning),
+                        ) { viewModel.deletePlaylist(p) }
                     }
                 } ?: offlineEditable?.let { p ->
                     {
                         browseActions = null
-                        // Its page has nothing left to show; take it away too.
-                        if (detail?.browseId == p.browseId) viewModel.closeDetail()
-                        OfflinePlaylists.delete(p.browseId)
+                        deleteRequest = DeleteRequest(
+                            title = context.getString(R.string.delete_playlist_question, target.title),
+                            message = context.getString(R.string.delete_playlist_warning),
+                        ) {
+                            // Its page has nothing left to show; take it away too.
+                            if (detail?.browseId == p.browseId) viewModel.closeDetail()
+                            OfflinePlaylists.delete(p.browseId)
+                        }
                     }
                 },
                 onToggleDevice = target.browseId
@@ -5662,7 +5675,10 @@ private fun BitChordApp(
                 onDeleteDownload = target.downloadId?.let { id ->
                     {
                         browseActions = null
-                        scope.launch { Downloads.deleteCollection(context, id) }
+                        deleteRequest = DeleteRequest(
+                            title = context.getString(R.string.delete_download_question, target.title),
+                            message = context.getString(R.string.delete_download_warning),
+                        ) { scope.launch { Downloads.deleteCollection(context, id) } }
                     }
                 },
             )
@@ -5939,6 +5955,11 @@ private fun BitChordApp(
                         if (downloadsFolder) AppSettings.setDownloadedMusicViewType(next)
                         else AppSettings.setLocalMusicViewType(next)
                         folderMenuOpen = false
+                    },
+                    onRepairMetadata = {
+                        folderMenuOpen = false
+                        val folderSongs = (detail?.songs as? UiState.Success)?.data.orEmpty()
+                        MetadataRepair.start(context, folderSongs)
                     },
                     onDismiss = { folderMenuOpen = false },
                 )
@@ -6302,6 +6323,12 @@ private fun BitChordApp(
                 )
             }
 
+            MetadataRepairDialog(hazeState)
+
+            deleteRequest?.let { request ->
+                FrostedDeleteConfirm(hazeState = hazeState, request = request, onDismiss = { deleteRequest = null })
+            }
+
             explainingOutdatedAddon?.let { config ->
                 InfoAlert(
                     hazeState = hazeState,
@@ -6481,6 +6508,7 @@ private fun FrostedFolderMenu(
     viewType: LibraryViewType,
     onSort: (LocalMusicSort) -> Unit,
     onToggleViewType: () -> Unit,
+    onRepairMetadata: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     FrostedMenuPanel(hazeState = hazeState, onDismiss = onDismiss) {
@@ -6490,6 +6518,12 @@ private fun FrostedFolderMenu(
             checked = false,
             onClick = onToggleViewType,
             icon = if (grid) BitChordIcons.ListView else BitChordIcons.GridView,
+        )
+        FrostedMenuRow(
+            label = stringResource(R.string.metadata_repair),
+            checked = false,
+            onClick = onRepairMetadata,
+            icon = SfIcons.Upgrade,
         )
         HorizontalDivider(
             modifier = Modifier.padding(vertical = 4.dp),

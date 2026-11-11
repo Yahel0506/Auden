@@ -195,9 +195,9 @@ object MediaTagger {
         lyrics: LyricsTag.Embeddable? = null,
         artwork: Artwork? = null,
         extras: TagExtras? = null,
-    ) {
-        if (!carriesTags(extension)) return
-        taggingLock.withLock { embedNow(context, uri, track, extension, lyrics, artwork, extras) }
+    ): Boolean {
+        if (!carriesTags(extension)) return false
+        return taggingLock.withLock { embedNow(context, uri, track, extension, lyrics, artwork, extras) }
     }
 
     private fun embedNow(
@@ -208,7 +208,7 @@ object MediaTagger {
         lyrics: LyricsTag.Embeddable?,
         artwork: Artwork?,
         extras: TagExtras?,
-    ) {
+    ): Boolean {
         // The portable field and this app's own. Split here rather than inside
         // each tagger so all three agree on which string goes where.
         val plain = lyrics?.plain
@@ -219,10 +219,10 @@ object MediaTagger {
         if (extension == "flac" &&
             tagFlacStreaming(context, uri, track, plain, words, artwork, extras)
         ) {
-            return
+            return true
         }
 
-        val original = readAll(context, uri) ?: return
+        val original = readAll(context, uri) ?: return false
         val tagged = runCatching {
             when (extension) {
                 // Indexed first: a fragmented file saved without a `sidx`
@@ -268,14 +268,14 @@ object MediaTagger {
             // large lossless file is the common one and reads as a track that
             // simply saved without its cover or its words.
             Log.w(TAG, "could not build tags for ${track.videoId} (${original.size}B $extension): $it")
-        }.getOrNull() ?: return
+        }.getOrNull() ?: return false
 
         // Every tagger hands back the same array reference when there was
         // nothing safe to do — cheaper than a byte comparison, and exact
         // where it matters: it means "don't touch the file that just finished
         // downloading" rather than "these bytes happen to be equal".
-        if (tagged === original) return
-        writeAll(context, uri, tagged)
+        if (tagged === original) return false
+        return writeAll(context, uri, tagged)
     }
 
     /**
@@ -416,14 +416,28 @@ object MediaTagger {
         return fetchCover(url, track.videoId)
     }
 
-    private fun fetchCover(url: String, logId: String): Artwork? {
+    /**
+     * A cover downloaded from [url], re-encoded as the JPEG the taggers expect.
+     * [cropSquare] takes the centre square, for a video thumbnail whose catalogue
+     * art sits in the middle of a 16:9 or 4:3 frame.
+     */
+    internal fun coverFromUrl(url: String, logId: String, cropSquare: Boolean = false): Artwork? =
+        fetchCover(url, logId, cropSquare)
+
+    private fun fetchCover(url: String, logId: String, cropSquare: Boolean = false): Artwork? {
         return runCatching {
             val request = okhttp3.Request.Builder().url(url).build()
             Http.client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@runCatching null
                 val raw = response.body?.bytes() ?: return@runCatching null
                 val bitmap = BitmapFactory.decodeByteArray(raw, 0, raw.size) ?: return@runCatching null
-                val scaled = downscale(bitmap, COVER_MAX_SIDE)
+                val source = if (cropSquare && bitmap.width != bitmap.height) {
+                    val side = minOf(bitmap.width, bitmap.height)
+                    Bitmap.createBitmap(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side)
+                } else {
+                    bitmap
+                }
+                val scaled = downscale(source, COVER_MAX_SIDE)
                 val out = ByteArrayOutputStream()
                 scaled.compress(Bitmap.CompressFormat.JPEG, 92, out)
                 Artwork(out.toByteArray(), "image/jpeg")
@@ -451,13 +465,12 @@ object MediaTagger {
         }
     }.onFailure { Log.w(TAG, "could not read $uri for tagging: ${it.message}") }.getOrNull()
 
-    private fun writeAll(context: Context, uri: Uri, bytes: ByteArray) {
-        runCatching {
-            if (uri.scheme == "file") {
-                File(requireNotNull(uri.path)).writeBytes(bytes)
-            } else {
-                context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(bytes) }
-            }
-        }.onFailure { Log.w(TAG, "could not write tags to $uri: ${it.message}") }
-    }
+    private fun writeAll(context: Context, uri: Uri, bytes: ByteArray): Boolean = runCatching {
+        if (uri.scheme == "file") {
+            File(requireNotNull(uri.path)).writeBytes(bytes)
+        } else {
+            context.contentResolver.openOutputStream(uri, "wt")?.use { it.write(bytes) } ?: error("no output stream")
+        }
+        true
+    }.onFailure { Log.w(TAG, "could not write tags to $uri: ${it.message}") }.getOrDefault(false)
 }

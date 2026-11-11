@@ -135,6 +135,9 @@ fun IdentifyBanner(modifier: Modifier = Modifier) {
     // The sheet has nothing left to show once the last suggestion is answered.
     LaunchedEffect(review.isEmpty()) { if (review.isEmpty()) reviewing = false }
 
+    // Once the review is closed, the files of what was accepted can be rewritten.
+    LaunchedEffect(reviewing) { if (!reviewing) com.music.bitchord.download.MetadataRepair.offerQueued() }
+
     if (reviewing) {
         ModalBottomSheet(
             onDismissRequest = { reviewing = false },

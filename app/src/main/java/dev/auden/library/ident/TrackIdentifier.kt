@@ -1,5 +1,6 @@
 package dev.auden.library.ident
 
+import dev.auden.library.toSong
 import android.content.Context
 import android.util.Log
 import com.music.bitchord.R
@@ -110,6 +111,16 @@ object TrackIdentifier {
             val db = AudenDb.get(app)
             val track = db.tracks().byId(trackId) ?: return@launch
             val id = track.suggestedVideoId ?: return@launch
+            // The file's tags are what the listener called inexact, so the suggestion
+            // is queued to be offered for rewriting once the review closes.
+            if (track.localUri != null) {
+                com.music.bitchord.download.MetadataRepair.queueAccepted(
+                    com.music.bitchord.download.MetadataRepair.Accepted(
+                        song = track.toSong(), videoId = id,
+                        title = track.suggestedTitle, artist = track.suggestedArtist,
+                    ),
+                )
+            }
             db.tracks().update(
                 track.copy(
                     videoId = id, identStatus = IdentStatus.MATCHED, identSource = IdentSource.MANUAL,
