@@ -462,12 +462,17 @@ fun MiniPlayer(
                     .thumbnailBorder(RoundedCornerShape(ART_CORNER))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             ) {
-                AsyncImage(
-                    model = rememberRemoteArtworkUrl(song)?.artworkAt(ROW_ART_PX),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                // The DJ's voice has a cover that moves: its mesh and its ring.
+                if (song.isDjClip) {
+                    DjCover(Modifier.fillMaxSize())
+                } else {
+                    AsyncImage(
+                        model = rememberRemoteArtworkUrl(song)?.artworkAt(ROW_ART_PX),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
                 // A music video keeps playing in the cover's place, cropped to
                 // it, as the web player's mini player does — the full player,
                 // when it is up, takes the picture over.

@@ -399,6 +399,7 @@ object DjSession {
         private lateinit var planner: DjPlanner
         private lateinit var writer: DjWriter
         private lateinit var renderer: DjClipRenderer
+        private var coverUri: String? = null
 
         /** One item the DJ is about to queue: its id, the song the player gets, its place in its set. */
         private class Piece(val id: String, val song: Song, val pos: Int, val clip: DjClip?)
@@ -406,6 +407,8 @@ object DjSession {
         suspend fun begin() {
             // A clip left behind by an earlier session (the one playing when it was stopped) goes now.
             renderer = withContext(Dispatchers.IO) { DjClipRenderer(app).also { it.clearClips() } }
+            // The cover the notification and the lock screen show while the DJ speaks, drawn once and kept.
+            coverUri = withContext(Dispatchers.IO) { DjCoverArt.ensure(app) }
             ensureOpen()
             val loaded = DjPool.load(app)
             lap("begin pool tracks=${loaded.tracks.size}")
@@ -559,7 +562,7 @@ object DjSession {
                 videoId = id,
                 title = app.getString(R.string.dj_title),
                 artist = app.getString(R.string.dj_title),
-                thumbnailUrl = null,
+                thumbnailUrl = coverUri,
                 durationText = "%d:%02d".format(clip.durationMs / 60_000, clip.durationMs / 1000 % 60),
                 localUri = Uri.fromFile(clip.file).toString(),
                 playbackSourceType = PlaybackSourceType.QUEUE,

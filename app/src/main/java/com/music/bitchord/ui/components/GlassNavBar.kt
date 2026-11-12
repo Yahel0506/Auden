@@ -666,12 +666,17 @@ private fun GlassNowPlaying(
                     .clip(RoundedCornerShape(ACCESSORY_ART_CORNER))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             ) {
-                AsyncImage(
-                    model = rememberRemoteArtworkUrl(song)?.artworkAt(ROW_ART_PX),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                // The DJ's voice has a cover that moves: its mesh and its ring.
+                if (song.isDjClip) {
+                    DjCover(Modifier.fillMaxSize())
+                } else {
+                    AsyncImage(
+                        model = rememberRemoteArtworkUrl(song)?.artworkAt(ROW_ART_PX),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
                 if (showsPicture) {
                     AndroidMusicVideo(
                         videoId = song.videoId,
