@@ -136,9 +136,6 @@ private const val HELD_BAR_SCALE = 1.045f
 /** How much shorter than its row the selection pill rests, in all. */
 private val PILL_REST_TRIM = 6.dp
 
-/** How wide the selection pill tries to be, as a share of its height, when its cell is narrower than that. */
-private const val MIN_PILL_ASPECT = 1.65f
-
 /** How far the held bar leans after the finger at most, and how much of the finger's travel it takes. */
 private val HELD_BAR_PULL = 5.dp
 private const val HELD_BAR_PULL_SHARE = 0.07f
@@ -872,15 +869,13 @@ private fun SharedTransitionScope.ExpandedTabs(
     val padTopPx = with(density) { contentPadding.calculateTopPadding().toPx() }
     val padBottomPx = with(density) { contentPadding.calculateBottomPadding().toPx() }
     val rowHeightPx = rowSize.height.toFloat()
-    // With more cells the pill would narrow towards a circle; it is made wider than its cell, an oval still —
-    // but no wider than the bar's own padding lets it stand past the cell at the ends, so it is centred on its
-    // tab everywhere, the first and the last included.
-    val pillWidthPx = minOf(
-        maxOf(tabWidthPx, rowHeightPx * MIN_PILL_ASPECT),
-        tabWidthPx + 2f * padLeftPx,
-    )
-    // A little shorter than the row it sits in, centred in it.
-    val restSize = Size(pillWidthPx, (rowHeightPx - with(density) { PILL_REST_TRIM.toPx() }).coerceAtLeast(0f))
+    // The pill rests as far in from the bar's end as it does from its top and bottom, so at the first and the
+    // last tab its end follows the bar's own curve instead of being cut by it: as wide as its cell less the
+    // difference between that inset and the row's own padding. A little shorter than the row, centred in it.
+    val restTrimPx = with(density) { PILL_REST_TRIM.toPx() }
+    val endInsetPx = padTopPx + restTrimPx / 2f
+    val pillWidthPx = (tabWidthPx - 2f * (endInsetPx - padLeftPx)).coerceAtLeast(rowHeightPx)
+    val restSize = Size(pillWidthPx, (rowHeightPx - restTrimPx).coerceAtLeast(0f))
     val liftedHeightPx = rowHeightPx + padTopPx + padBottomPx +
         with(density) { PILL_GROW_HEIGHT.toPx() }
     val liftedSize = if (rowHeightPx > 0f) {
