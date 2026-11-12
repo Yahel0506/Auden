@@ -39,6 +39,18 @@ enum class PlayerTheme {
     SIMPLE,
 }
 
+/** How much the Continuation backdrop moves. */
+enum class BackdropMotion {
+    /** The colours hold still. */
+    STATIC,
+
+    /** The colours drift, slowly, while the music plays. */
+    ANIMATED,
+
+    /** They drift, and follow the song's bass and level. */
+    REACTIVE,
+}
+
 /** The surface that was last open inside the expanded player. */
 enum class LastPlayerScreen {
     MAIN,

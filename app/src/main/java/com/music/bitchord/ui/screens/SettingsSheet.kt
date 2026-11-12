@@ -183,6 +183,7 @@ import com.music.bitchord.data.settings.AudioQuality
 import com.music.bitchord.data.settings.DownloadQuality
 import com.music.bitchord.data.settings.ThemeMode
 import com.music.bitchord.data.settings.AppFont
+import com.music.bitchord.data.settings.BackdropMotion
 import com.music.bitchord.data.settings.PlayerTheme
 import com.music.bitchord.data.stats.Backup
 import com.music.bitchord.playback.AudioCache
@@ -258,7 +259,7 @@ fun SettingsScreen(
     val listenTogetherButton by AppSettings.showListenTogetherButton.collectAsStateWithLifecycle()
     val connectEnabled by AppSettings.connectEnabled.collectAsStateWithLifecycle()
     val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
-    val reactiveBackdrop by AppSettings.reactiveBackdrop.collectAsStateWithLifecycle()
+    val backdropMotion by AppSettings.backdropMotion.collectAsStateWithLifecycle()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val disableBlendEffects by AppSettings.disableBlendEffects.collectAsStateWithLifecycle()
     val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
@@ -1230,21 +1231,6 @@ fun SettingsScreen(
                     onClick = { AppSettings.setReduceAnimation(!reduceAnimation) },
                 )
             }
-            val reactiveBackdropTitle = stringResource(R.string.reactive_backdrop)
-            row(reactiveBackdropTitle, "motion", "music") {
-                SettingsRow(
-                    icon = SfIcons.MotionPhotosOff,
-                    title = reactiveBackdropTitle,
-                    subtitle = stringResource(R.string.reactive_backdrop_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = reactiveBackdrop,
-                            onCheckedChange = AppSettings::setReactiveBackdrop,
-                        )
-                    },
-                    onClick = { AppSettings.setReactiveBackdrop(!reactiveBackdrop) },
-                )
-            }
             val reduceDynamicBlurTitle = stringResource(R.string.reduce_dynamic_blur)
             row(reduceDynamicBlurTitle, "blur", "performance") {
                 SettingsRow(
@@ -1372,6 +1358,23 @@ fun SettingsScreen(
                     onSelect = { AppSettings.setPlayerTheme(PlayerTheme.entries[it]) },
                     modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
                 )
+            }
+            // Only the Continuation backdrop has colours to move; the others have their own.
+            if (playerTheme == PlayerTheme.DEFAULT) {
+                val backdropMotionTitle = stringResource(R.string.backdrop_motion)
+                row(backdropMotionTitle, "background", "player", "motion", "animated", "reactive", "static", "music") {
+                    SettingsRow(
+                        icon = SfIcons.Animation,
+                        title = backdropMotionTitle,
+                        subtitle = backdropMotion.description(),
+                    )
+                    SegmentedControl(
+                        options = BackdropMotion.entries.map { it.localizedLabel() },
+                        selectedIndex = BackdropMotion.entries.indexOf(backdropMotion),
+                        onSelect = { AppSettings.setBackdropMotion(BackdropMotion.entries[it]) },
+                        modifier = Modifier.padding(start = ROW_INSET, end = ROW_INSET, bottom = 14.dp),
+                    )
+                }
             }
             val animatedCoverArtTitle = stringResource(R.string.animated_cover_art)
             row(animatedCoverArtTitle, "canvas", "motion", "apple", "tidal") {
@@ -2463,6 +2466,24 @@ private fun PlayerTheme.localizedLabel(): String = stringResource(
         PlayerTheme.DEFAULT -> R.string.player_theme_default
         PlayerTheme.LEGACY -> R.string.player_theme_legacy
         PlayerTheme.SIMPLE -> R.string.player_theme_simple
+    },
+)
+
+@Composable
+private fun BackdropMotion.localizedLabel(): String = stringResource(
+    when (this) {
+        BackdropMotion.STATIC -> R.string.backdrop_motion_static
+        BackdropMotion.ANIMATED -> R.string.backdrop_motion_animated
+        BackdropMotion.REACTIVE -> R.string.backdrop_motion_reactive
+    },
+)
+
+@Composable
+private fun BackdropMotion.description(): String = stringResource(
+    when (this) {
+        BackdropMotion.STATIC -> R.string.backdrop_motion_static_subtitle
+        BackdropMotion.ANIMATED -> R.string.backdrop_motion_animated_subtitle
+        BackdropMotion.REACTIVE -> R.string.backdrop_motion_reactive_subtitle
     },
 )
 

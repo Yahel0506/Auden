@@ -10,6 +10,7 @@ import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.settings.AudioQuality
+import com.music.bitchord.data.settings.BackdropMotion
 import com.music.bitchord.data.settings.LastPlayerScreen
 import com.music.bitchord.data.settings.PlayerTheme
 import com.music.bitchord.data.settings.SmartAnalysis
@@ -293,8 +294,8 @@ interface PlayerSettingsSource {
     val preferUsbDac: StateFlow<Boolean>
     val prioritizeSpotifyCanvas: StateFlow<Boolean>
     val reduceAnimation: StateFlow<Boolean>
-    /** The player's backdrop moves with the music, rather than only drifting. */
-    val reactiveBackdrop: StateFlow<Boolean>
+    /** How much the Continuation backdrop moves: not at all, drifting, or with the music. */
+    val backdropMotion: StateFlow<BackdropMotion>
     /** How hard the music is hitting, 0..1 — see [setMusicLevelMeter]. */
     fun musicLevel(): Float
     /** Turns the level meter on while the backdrop is reading it; it costs a pass over the audio. */

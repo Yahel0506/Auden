@@ -39,6 +39,7 @@ import coil3.SingletonImageLoader
 import coil3.request.ImageRequest
 import coil3.request.SuccessResult
 import com.music.bitchord.data.model.CARD_ART_PX
+import com.music.bitchord.data.settings.BackdropMotion
 import com.music.bitchord.data.model.artworkAt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -327,8 +328,12 @@ fun ArtworkMeshBackdrop(
     shade: () -> Float = { 0f },
 ) {
     val reduceAnimation by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
-    val reactive by PlayerSettings.reactiveBackdrop.collectAsStateWithLifecycle()
-    val flow = rememberBackdropFlow(playing, reactive && !reduceAnimation, !reduceAnimation)
+    val motion by PlayerSettings.backdropMotion.collectAsStateWithLifecycle()
+    val flow = rememberBackdropFlow(
+        playing = playing,
+        reactive = motion == BackdropMotion.REACTIVE && !reduceAnimation,
+        enabled = motion != BackdropMotion.STATIC && !reduceAnimation,
+    )
 
     // The mesh on screen, and the one fading in over it. Two states rather than
     // one animated value because what crossfades here is a pair of bitmaps, not
