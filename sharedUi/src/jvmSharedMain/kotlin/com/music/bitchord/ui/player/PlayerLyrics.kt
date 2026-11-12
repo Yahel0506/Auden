@@ -359,7 +359,7 @@ private val GAP_ROW_SPACING = 16.dp
  * further out, which is most of the list.
  */
 private val LINE_FALLOFF_ALPHA = floatArrayOf(1f, 0.8f, 0.7f, 0.58f, 0.46f)
-private val LINE_FALLOFF_BLUR = arrayOf(0.dp, 2.dp, 2.7.dp, 4.dp, 5.6.dp)
+private val LINE_FALLOFF_BLUR = arrayOf(0.dp, 3.5.dp, 5.dp, 7.5.dp, 10.dp)
 
 /**
  * The same falloff for a phone, where the sung line is read from the top and
