@@ -134,8 +134,8 @@ import kotlin.math.roundToInt
 private const val HELD_BAR_SCALE = 1.045f
 
 /** How far the held bar leans after the finger at most, and how much of the finger's travel it takes. */
-private val HELD_BAR_PULL = 10.dp
-private const val HELD_BAR_PULL_SHARE = 0.12f
+private val HELD_BAR_PULL = 5.dp
+private const val HELD_BAR_PULL_SHARE = 0.07f
 
 /**
  * The fold between the expanded and the collapsed bar, in two movements rather than one straight line, as

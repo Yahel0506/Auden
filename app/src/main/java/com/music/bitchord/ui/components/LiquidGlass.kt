@@ -138,9 +138,9 @@ private const val DARK_INDICATOR_OPACITY = 0.30f
 @Composable
 fun navGlassTint(): Color =
     if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
-        Color(0xFFF2F2F4).copy(alpha = 0.52f)
+        Color(0xFFF2F2F4).copy(alpha = 0.57f)
     } else {
-        Color(0xFF444449).copy(alpha = 0.42f)
+        Color(0xFF444449).copy(alpha = 0.47f)
     }
 
 /** The nav bar's rim, a little softer than the default, and its lens a little deeper. */
@@ -148,7 +148,7 @@ const val NAV_GLASS_RIM = 0.6f
 const val NAV_GLASS_DEPTH = 1.3f
 
 /** The nav bar's blur, a little lighter than the app's other glass, so the page reads through it more. */
-const val NAV_GLASS_BLUR = 0.75f
+const val NAV_GLASS_BLUR = 0.5f
 
 /**
  * A lightweight visual match for liquid glass over a stable background.
