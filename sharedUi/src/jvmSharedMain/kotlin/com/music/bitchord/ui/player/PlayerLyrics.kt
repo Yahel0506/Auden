@@ -1863,6 +1863,7 @@ internal fun LyricsPanel(
 
     val reduceDynamicBlur by PlayerSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val lyricsBlur by PlayerSettings.lyricsBlur.collectAsStateWithLifecycle()
+    val lyricsBlurAmount by PlayerSettings.lyricsBlurAmount.collectAsStateWithLifecycle()
     val reduceAnimation by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
 
     val glowing = !reduceAnimation && !reduceDynamicBlur && lyricsBlur &&
@@ -2121,7 +2122,8 @@ internal fun LyricsPanel(
             val blur by animateDpAsState(
                 targetValue = when {
                     !isSynced || reduceDynamicBlur || !lyricsBlur || browsing || isActive -> 0.dp
-                    else -> LINE_FALLOFF_BLUR[step.coerceAtMost(LINE_FALLOFF_BLUR.lastIndex)]
+                    // 75% is the table as it is; the slider scales it from nothing to a third as much again.
+                    else -> LINE_FALLOFF_BLUR[step.coerceAtMost(LINE_FALLOFF_BLUR.lastIndex)] * (lyricsBlurAmount / 75f)
                 },
                 animationSpec = tween(LYRIC_SETTLE_MS, easing = LYRIC_EASING),
                 label = "lyricBlur",

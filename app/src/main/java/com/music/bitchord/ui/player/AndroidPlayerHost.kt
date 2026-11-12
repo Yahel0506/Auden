@@ -81,6 +81,7 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val lastPlayerScreen get() = AppSettings.lastPlayerScreen
         override val playerTheme get() = AppSettings.playerTheme
         override val lyricsBlur get() = AppSettings.lyricsBlur
+        override val lyricsBlurAmount get() = AppSettings.lyricsBlurAmount
         override val lyricsOffsetMs get() = dev.auden.library.lyrics.SongLyricsOffset.effective
         override val lyricsOffsetPerSong get() = dev.auden.library.lyrics.SongLyricsOffset.perSong
         override val storedLyricsProviders get() = dev.auden.library.lyrics.CurrentLyrics.stored

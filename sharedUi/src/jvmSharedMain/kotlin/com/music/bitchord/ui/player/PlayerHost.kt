@@ -280,6 +280,8 @@ interface PlayerSettingsSource {
     val lastPlayerScreen: StateFlow<LastPlayerScreen>
     val playerTheme: StateFlow<PlayerTheme>
     val lyricsBlur: StateFlow<Boolean>
+    /** How strong that blur is, in percent: 75 is the strength the player was tuned at. */
+    val lyricsBlurAmount: StateFlow<Int>
     val lyricsOffsetMs: StateFlow<Int>
     /** Whether the lyrics offset being edited belongs to the current song alone. */
     val lyricsOffsetPerSong: StateFlow<Boolean>

@@ -267,6 +267,7 @@ fun SettingsScreen(
     val progressiveBlur by AppSettings.progressiveBlur.collectAsStateWithLifecycle()
     val liquidGlassSupported = isGlassSupported()
     val lyricsBlur by AppSettings.lyricsBlur.collectAsStateWithLifecycle()
+    val lyricsBlurAmount by AppSettings.lyricsBlurAmount.collectAsStateWithLifecycle()
     val animatedCanvas by AppSettings.animatedCanvas.collectAsStateWithLifecycle()
     val backgroundVideo by AppSettings.backgroundVideo.collectAsStateWithLifecycle()
     val canvasOverCellular by AppSettings.canvasOverCellular.collectAsStateWithLifecycle()
@@ -1520,6 +1521,21 @@ fun SettingsScreen(
                         },
                         onClick = { AppSettings.setLyricsBlur(!lyricsBlur) },
                     )
+                }
+                // Only while there is a blur to strengthen.
+                if (lyricsBlur) {
+                    val lyricsBlurAmountTitle = stringResource(R.string.lyrics_blur_amount)
+                    row(lyricsBlurAmountTitle, "lyrics", "blur", "amount", "strength") {
+                        SliderRow(
+                            icon = SfIcons.BlurOn,
+                            title = lyricsBlurAmountTitle,
+                            value = "$lyricsBlurAmount%",
+                            sliderValue = lyricsBlurAmount.toFloat(),
+                            onSliderValue = { AppSettings.setLyricsBlurAmount((it / 5f).roundToInt() * 5) },
+                            valueRange = 0f..100f,
+                            steps = 19,
+                        )
+                    }
                 }
                 val lyricsSourcesTitle = stringResource(R.string.lyrics_sources)
                 row(lyricsSourcesTitle, "lyrics", "lrclib", "musixmatch") {

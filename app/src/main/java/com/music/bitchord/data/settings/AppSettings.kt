@@ -550,6 +550,9 @@ object AppSettings {
     /** Blurs unfocused lyric lines, keeping the active line sharp. */
     val lyricsBlur = MutableStateFlow(true)
 
+    /** How strong the blur on unfocused lyrics is, in percent: 75 is the blur the player was tuned at. */
+    val lyricsBlurAmount = MutableStateFlow(DEFAULT_LYRICS_BLUR_AMOUNT)
+
     /** Positive values delay synced lyrics; negative values bring them forward. */
     val lyricsOffsetMs = MutableStateFlow(0)
 
@@ -1128,6 +1131,7 @@ object AppSettings {
         glassPerformance.value = prefs.getBoolean(KEY_GLASS_PERFORMANCE, false)
         progressiveBlur.value = prefs.getBoolean(KEY_PROGRESSIVE_BLUR, false)
         lyricsBlur.value = prefs.getBoolean(KEY_LYRICS_BLUR, true)
+        lyricsBlurAmount.value = prefs.getInt(KEY_LYRICS_BLUR_AMOUNT, DEFAULT_LYRICS_BLUR_AMOUNT).coerceIn(0, 100)
         lyricsOffsetMs.value = prefs.getInt(KEY_LYRICS_OFFSET_MS, 0)
             .coerceIn(MIN_LYRICS_OFFSET_MS, MAX_LYRICS_OFFSET_MS)
         translationLanguage.value = prefs.getString(KEY_TRANSLATION_LANGUAGE, "").orEmpty()
@@ -1659,6 +1663,12 @@ object AppSettings {
         val normalized = normalizePerformanceRefreshRate(value)
         performanceRefreshRate.value = normalized
         prefs.edit().putInt(KEY_PERFORMANCE_REFRESH_RATE, normalized).apply()
+    }
+
+    fun setLyricsBlurAmount(percent: Int) {
+        val value = percent.coerceIn(0, 100)
+        lyricsBlurAmount.value = value
+        prefs.edit().putInt(KEY_LYRICS_BLUR_AMOUNT, value).apply()
     }
 
     fun setLyricsBlur(value: Boolean) {
@@ -2504,6 +2514,8 @@ object AppSettings {
     private const val KEY_GLASS_PERFORMANCE = "glass_performance"
     private const val KEY_PROGRESSIVE_BLUR = "progressive_blur"
     private const val KEY_LYRICS_BLUR = "lyrics_blur"
+    private const val KEY_LYRICS_BLUR_AMOUNT = "lyrics_blur_amount"
+    const val DEFAULT_LYRICS_BLUR_AMOUNT = 75
     private const val KEY_LYRICS_OFFSET_MS = "lyrics_offset_ms"
     private const val KEY_TRANSLATION_LANGUAGE = "translation_language"
     private const val KEY_ANIMATED_CANVAS = "animated_canvas"

@@ -834,6 +834,7 @@
 
     <string name="blur_unfocused_lyrics">Desenfocar letras no activas</string>
 
+    <string name="lyrics_blur_amount">Cantidad de blur de las letras</string>
     <string name="blur_unfocused_lyrics_subtitle">Mantiene el foco en la línea actual</string>
 
     <string name="card_plays_format">%1$s reproducciones</string>
