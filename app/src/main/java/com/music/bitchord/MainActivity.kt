@@ -5046,11 +5046,26 @@ private fun BitChordApp(
                     playerDock.placementOverride = playerSheetMotion::morphPlacement
                     playerDock.morphing = { playerSheetMotion.holding }
                     playerSheetMotion.miniTop = { playerDock.miniContainerOnScreen()?.top }
+                    playerDock.morphCard = card@{
+                        val t = playerDock.openFraction()
+                        val bar = playerDock.miniContainerOnScreen()
+                        val box = playerSheetBox[0]?.takeIf { it.isAttached }
+                        if (!playerSheetMotion.holding || t >= 1f || bar == null || box == null) return@card null
+                        val origin = box.positionOnScreen()
+                        // The very card the player is clipped to (see the sheet's drawWithContent), on screen.
+                        morphCard(bar.translate(-origin.x, -origin.y), box.size.width.toFloat(), box.size.height - origin.y, t)
+                            .translate(origin.x, origin.y)
+                    }
+                    playerDock.morphCorner = {
+                        val bar = playerDock.miniContainerOnScreen()
+                        if (bar == null) 0f else morphCorner(bar.height, with(sheetDensity) { PLAYER_SHEET_CORNER.toPx() }, playerDock.openFraction())
+                    }
                 }
                 onDispose {
                     playerDock.fractionOverride = null
                     playerDock.placementOverride = null
                     playerDock.morphing = { false }
+                    playerDock.morphCard = { null }
                     playerDock.sheetOffset = null
                     playerSheetMotion.onSheetGone()
                 }

@@ -107,6 +107,14 @@ class PlayerDock {
     /** Whether the open or close on screen is the morph — the mini player becoming the player and back. */
     var morphing: () -> Boolean = { false }
 
+    /**
+     * The card the mini player's surface is this frame of the morph, on screen, and its corner radius in px —
+     * the same shape the player is drawn inside — or null with no morph on screen. The mini player stretches
+     * its own glass to it, so the surface that grows into the player is the mini player's.
+     */
+    var morphCard: () -> Rect? = { null }
+    var morphCorner: () -> Float = { 0f }
+
     /** Reported by the mini player's cover whenever it is placed. */
     fun reportMiniArt(coordinates: LayoutCoordinates, corner: Dp) {
         miniArt = coordinates

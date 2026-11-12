@@ -358,7 +358,7 @@ internal fun Modifier.playerDockContainer(dock: PlayerDock?): Modifier {
 
 /** The mini player's title and artist lines, which fly to the player's in the morph and stand aside meanwhile. */
 @Composable
-internal fun Modifier.playerDockCredits(dock: PlayerDock?): Modifier {
+internal fun Modifier.playerDockCredits(dock: PlayerDock?, hideInMorph: Boolean = true): Modifier {
     if (dock == null) return this
     val placed = remember { arrayOfNulls<LayoutCoordinates>(1) }
     DisposableEffect(dock) {
@@ -369,7 +369,7 @@ internal fun Modifier.playerDockCredits(dock: PlayerDock?): Modifier {
             placed[0] = coordinates
             dock.reportMiniCredits(coordinates)
         }
-        .graphicsLayer { alpha = if (dock.coversMiniArt && dock.morphing()) 0f else 1f }
+        .graphicsLayer { alpha = if (hideInMorph && dock.coversMiniArt && dock.morphing()) 0f else 1f }
 }
 
 /** The mini player's cover for a music video: 16:9 at the cover's 40dp height. */

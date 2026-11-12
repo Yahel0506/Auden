@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBarInlineBehavior
 import kotlin.math.roundToInt
+import androidx.compose.foundation.shape.CornerBasedShape
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -169,11 +170,12 @@ fun GlassNavBar(
     // A factory, not a value — see the note in FloatingTabBar's header. Each of
     // the three surfaces gets its own glass modifier and so its own shape cache.
     // The theme's own glass tint, as the liquid top bar has it — no white wash.
-    val glassSurface: @Composable () -> Modifier = {
-        Modifier.liquidGlass(shape = pillShape, surfaceTint = navGlassTint(), rim = NAV_GLASS_RIM, depth = NAV_GLASS_DEPTH, blur = NAV_GLASS_BLUR, vibrancy = NAV_GLASS_VIBRANCY, edgeThickening = NAV_GLASS_EDGE,
+    val glassIn: @Composable (CornerBasedShape) -> Modifier = { shape ->
+        Modifier.liquidGlass(shape = shape, surfaceTint = navGlassTint(), rim = NAV_GLASS_RIM, depth = NAV_GLASS_DEPTH, blur = NAV_GLASS_BLUR, vibrancy = NAV_GLASS_VIBRANCY, edgeThickening = NAV_GLASS_EDGE,
             performanceBlur = NAV_GLASS_PERFORMANCE_BLUR,
         )
     }
+    val glassSurface: @Composable () -> Modifier = { glassIn(pillShape) }
 
     // ---- The fold, as Apple Music's: one movement driven by one value -----------------------------
     //
@@ -459,11 +461,6 @@ fun GlassNavBar(
         )
         // The now playing bar.
         if (song != null) {
-            // In the morph the glass is drawn growing out of here (see [PlayerMorphGlass]), so this bar's own
-            // glass stands aside meanwhile; the artwork, the lines and the buttons see to themselves.
-            val morphHidesGlass by remember(dock) {
-                derivedStateOf { dock != null && dock.morphing() && dock.coversMiniArt }
-            }
             // Rising past its place it also swells a touch, and settles back with it.
             Box(
                 Modifier
@@ -490,7 +487,8 @@ fun GlassNavBar(
                     dock = dock,
                     pull = pull,
                     swell = { swell(narrow.value, drop.value) },
-                    modifier = Modifier.fillMaxSize().clip(pillShape).then(if (morphHidesGlass) Modifier else glassSurface()),
+                    glass = glassIn,
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }
@@ -527,6 +525,7 @@ private fun GlassNowPlaying(
     dock: PlayerDock?,
     pull: MiniPlayerPull?,
     swell: () -> Float = { 0f },
+    glass: @Composable (CornerBasedShape) -> Modifier = { Modifier },
     modifier: Modifier = Modifier,
 ) {
     val haptics = rememberHaptics()
@@ -549,12 +548,26 @@ private fun GlassNowPlaying(
     )
     val glyphSlot = if (isInline) 32.dp else 40.dp
     // The transport fades as the bar opens into the player, and comes back as it closes into the bar.
+    // It rides the card's top edge meanwhile, as the mini row stays at the top of the card in Apple's.
     val transport = Modifier.graphicsLayer {
         alpha = if (dock != null && dock.morphing() && dock.coversMiniArt) {
             (1f - dock.openFraction() / TRANSPORT_FADE_SPAN).coerceIn(0f, 1f)
         } else {
             1f
         }
+        translationY = dock?.let(::morphRise) ?: 0f
+    }
+    // The pill's shape, which in the morph opens to the card's corner (see [PlayerDock.morphCard]).
+    val morphShape = remember(dock) {
+        RoundedCornerShape(
+            object : androidx.compose.foundation.shape.CornerSize {
+                override fun toPx(shapeSize: Size, density: Density): Float {
+                    val half = shapeSize.minDimension / 2f
+                    if (dock == null || dock.morphCard() == null) return half
+                    return dock.morphCorner().coerceAtMost(half)
+                }
+            },
+        )
     }
     val glyphSize = if (isInline) 24.dp else EXPANDED_GLYPH_SIZE
 
@@ -598,6 +611,22 @@ private fun GlassNowPlaying(
                 onClick = onExpand,
             ),
     ) {
+        // The mini player's own glass: its pill at rest, and in the morph stretched to the card the player grows
+        // out of and closes back into — the one surface, the whole way. Clear of the bar's size it fades under
+        // the player, which by then covers it; it is the bar the card starts from and ends as.
+        Box(
+            Modifier
+                .matchParentSize()
+                .morphStretch(dock)
+                .graphicsLayer {
+                    alpha = if (dock != null && dock.morphCard() != null) {
+                        1f - smooth((dock.openFraction() / GLASS_SPAN).coerceIn(0f, 1f))
+                    } else {
+                        1f
+                    }
+                }
+                .then(glass(morphShape)),
+        )
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
@@ -657,7 +686,19 @@ private fun GlassNowPlaying(
             // small, openly spaced type (see [ACCESSORY_TITLE_SIZE]). The inline
             // row shares its width with the tab pill and the Search circle, so
             // a long line fades out at its end, as Apple's does.
-            Column(Modifier.weight(1f).playerDockCredits(dock)) {
+            // The lines stay on in the morph, riding the card's top edge and fading as the player comes through
+            // over them — and back in as it closes — rather than standing aside and appearing at the end.
+            Column(
+                Modifier
+                    .weight(1f)
+                    .playerDockCredits(dock, hideInMorph = false)
+                    .graphicsLayer {
+                        if (dock != null && dock.morphCard() != null) {
+                            alpha = 1f - smooth((dock.openFraction() / GLASS_SPAN).coerceIn(0f, 1f))
+                            translationY = morphRise(dock)
+                        }
+                    },
+            ) {
                 val secondary = contentColor.copy(alpha = 0.7f)
                 ExplicitSongTitle(
                     song = song,
@@ -986,6 +1027,8 @@ fun PlayerMorphGlass(
             .onPlaced { origin[0] = it; screenHeight = it.size.height }
             .drawBehind { drawRect(Color.Black.copy(alpha = MORPH_SCRIM_ALPHA * k)) },
     ) {
+        // The glass bar stretches its own pill (see [GlassNowPlaying]); this card is for the plain mini player.
+        if (glass) return@Box
         Box(
             Modifier
                 .offset { IntOffset(rect.left.roundToInt(), rect.top.roundToInt()) }
@@ -1041,6 +1084,30 @@ fun PlayerMorphGlass(
 }
 
 private fun smooth(x: Float) = x * x * (3f - 2f * x)
+
+/** How far the morph's card top stands above the mini player's, this frame (0 with no morph). */
+private fun morphRise(dock: PlayerDock): Float {
+    val card = dock.morphCard() ?: return 0f
+    val bar = dock.miniContainerOnScreen() ?: return 0f
+    return card.top - bar.top
+}
+
+/** Sized and placed to the morph's card while there is one; as laid out otherwise. */
+private fun Modifier.morphStretch(dock: PlayerDock?): Modifier = if (dock == null) this else layout { measurable, constraints ->
+    val card = dock.morphCard()
+    val bar = dock.miniContainerOnScreen()
+    if (card == null || bar == null) {
+        val placeable = measurable.measure(constraints)
+        layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+    } else {
+        val placeable = measurable.measure(
+            Constraints.fixed(card.width.roundToInt().coerceAtLeast(1), card.height.roundToInt().coerceAtLeast(1)),
+        )
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            placeable.place((card.left - bar.left).roundToInt(), (card.top - bar.top).roundToInt())
+        }
+    }
+}
 
 /** How much of the morph the bar's glass and lines last: while the card is still about the bar's size. */
 private const val GLASS_SPAN = 0.14f
