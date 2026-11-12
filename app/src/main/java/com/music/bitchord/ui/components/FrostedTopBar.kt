@@ -88,7 +88,7 @@ import kotlin.math.roundToInt
  * backdrop, fixed headers that sit directly beneath it — measures from here
  * rather than from a copy of the number.
  */
-val TopBarContentHeight = 52.dp
+val TopBarContentHeight = TAB_TITLE_ROW_HEIGHT
 
 /**
  * The breathing room between the bar's bottom edge and the first thing under
@@ -498,11 +498,11 @@ private fun artworkPageSurface(
         .clip(shape)
         .then(
             when {
-                useLiquidGlass -> Modifier.liquidGlass(shape)
+                useLiquidGlass -> Modifier.navGlass(shape)
                 reduceDynamicBlur || hazeState == null -> Modifier.background(container)
                 else -> Modifier.optimizedHazeEffect(
                     state = hazeState,
-                    style = HazeMaterials.regular(container),
+                    style = navGlassHazeStyle(),
                 )
             },
         )

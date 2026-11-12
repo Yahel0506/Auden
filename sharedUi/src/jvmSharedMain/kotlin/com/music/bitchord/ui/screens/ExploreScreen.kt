@@ -50,6 +50,10 @@ import com.music.bitchord.data.model.ShelfItem
 import com.music.bitchord.data.model.UiState
 import com.music.bitchord.ui.components.MessageState
 import com.music.bitchord.ui.components.PAGE_GUTTER
+import com.music.bitchord.ui.components.TAB_TITLE_GAP
+import com.music.bitchord.ui.components.TAB_TITLE_END_RESERVE
+import com.music.bitchord.ui.components.TAB_TITLE_ROW_HEIGHT
+import androidx.compose.foundation.layout.height
 import com.music.bitchord.ui.components.PullToRefresh
 import com.music.bitchord.ui.components.ShimmerBox
 import com.music.bitchord.ui.components.feedSkeleton
@@ -84,19 +88,22 @@ fun ExploreScreen(
             ) {
                 if (showTitle) {
                     item {
-                        Text(
-                            text = stringResource(Res.string.explore),
-                            style = MaterialTheme.typography.displayLarge,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            // 14dp under the title, the same gap Library leaves
-                            // above its first card (8dp title + 6dp Replay row).
-                            modifier = Modifier.padding(
-                                start = PAGE_GUTTER,
-                                end = PAGE_GUTTER,
-                                top = 8.dp,
-                                bottom = 14.dp,
-                            ),
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = TAB_TITLE_GAP)
+                                .height(TAB_TITLE_ROW_HEIGHT)
+                                .padding(start = PAGE_GUTTER, end = TAB_TITLE_END_RESERVE),
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
+                            Text(
+                                text = stringResource(Res.string.explore),
+                                style = MaterialTheme.typography.displayLarge,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 }
                 when (state) {

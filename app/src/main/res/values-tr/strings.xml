@@ -1599,4 +1599,9 @@
     <string name="background_video_subtitle">Plays Spotify\'s short vertical loop behind the player</string>
     <string name="hide_mini_lyrics">Mini sözleri gizle</string>
     <string name="hide_mini_lyrics_subtitle">Removes the one-line synced lyric above the progress bar; the controls spread out to fill its place</string>
+    <string name="library_statistics">İstatistikler</string>
+    <string name="library_other">Diğer</string>
+    <string name="add_local_files">Yerel dosya ekle</string>
+    <string name="local_files_added">%1$d yerel dosya eklendi</string>
+    <string name="import_playlist_file">Import file</string>
 </resources>

@@ -117,6 +117,19 @@ import androidx.compose.foundation.border
 val PAGE_GUTTER = 16.dp
 
 /**
+ * The height of the top bar's own row — the one the account pill and photo sit centred in — and so of a tab's
+ * title row. Titles of the main tabs are the first row of the scrolling list, as tall as that bar row and
+ * centred in it, so that at rest they line up with the pill as if they were part of the bar.
+ */
+val TAB_TITLE_ROW_HEIGHT = 52.dp
+
+/** Room kept clear at the end of a title row for the account pill. */
+val TAB_TITLE_END_RESERVE = 150.dp
+
+/** Space between a tab's title row and what follows it. */
+val TAB_TITLE_GAP = 14.dp
+
+/**
  * The inset the floating chrome sits at: the mini player, the tab bar and the
  * top bar's controls. The same as [PAGE_GUTTER], so the bars' edges line up
  * with the content scrolling beneath them rather than sitting just outside it.

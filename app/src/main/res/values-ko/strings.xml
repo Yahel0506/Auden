@@ -1492,4 +1492,8 @@
     <string name="background_video_subtitle">Plays Spotify\'s short vertical loop behind the player</string>
     <string name="hide_mini_lyrics">미니 가사 숨기기</string>
     <string name="hide_mini_lyrics_subtitle">Removes the one-line synced lyric above the progress bar; the controls spread out to fill its place</string>
+    <string name="library_statistics">통계</string>
+    <string name="library_other">기타</string>
+    <string name="add_local_files">로컬 파일 추가</string>
+    <string name="local_files_added">로컬 파일 %1$d개 추가됨</string>
 </resources>

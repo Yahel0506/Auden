@@ -1744,4 +1744,9 @@
     <string name="library_songs_count_one">1 canción</string>
     <string name="library_collections">Colecciones</string>
     <string name="library_backup_caption">En tu dispositivo</string>
+    <string name="library_statistics">Estadísticas</string>
+    <string name="library_other">Otros</string>
+    <string name="add_local_files">Añadir archivos locales</string>
+    <string name="local_files_added">%1$d archivos locales añadidos</string>
+    <string name="import_playlist_file">Importar archivo</string>
 </resources>

@@ -977,7 +977,7 @@ internal fun AlertScaffold(
                     } else {
                         Modifier.optimizedHazeEffect(
                             state = hazeState,
-                            style = HazeMaterials.regular(MaterialTheme.colorScheme.surface),
+                            style = navGlassHazeStyle(),
                         )
                     },
                 )
@@ -988,5 +988,43 @@ internal fun AlertScaffold(
                 ),
             content = content,
         )
+    }
+}
+
+/**
+ * The Library's "+" asks which kind of playlist to make: one kept on this device, one on YouTube Music (with an
+ * account), or an import from Spotify or from a playlist file.
+ */
+@OptIn(ExperimentalHazeMaterialsApi::class)
+@Composable
+fun NewPlaylistTypeAlert(
+    hazeState: HazeState,
+    signedIn: Boolean,
+    onLocal: () -> Unit,
+    onYouTubeMusic: () -> Unit,
+    onImportSpotify: () -> Unit,
+    onImportFile: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertScaffold(hazeState = hazeState, onDismiss = onDismiss) {
+        Text(
+            text = stringResource(R.string.new_playlist),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 19.dp),
+            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, fontWeight = FontWeight.W600),
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = TextAlign.Center,
+        )
+        AlertRule()
+        AlertAction(label = stringResource(R.string.new_playlist_on_device), emphasised = false, onClick = animatedExit(onLocal))
+        if (signedIn) {
+            AlertRule()
+            AlertAction(label = stringResource(R.string.new_playlist_on_youtube_music), emphasised = false, onClick = animatedExit(onYouTubeMusic))
+        }
+        AlertRule()
+        AlertAction(label = stringResource(R.string.import_spotify), emphasised = false, onClick = animatedExit(onImportSpotify))
+        AlertRule()
+        AlertAction(label = stringResource(R.string.import_playlist_file), emphasised = false, onClick = animatedExit(onImportFile))
+        AlertRule()
+        AlertAction(label = stringResource(R.string.cancel), emphasised = true, onClick = animatedExit(onDismiss))
     }
 }

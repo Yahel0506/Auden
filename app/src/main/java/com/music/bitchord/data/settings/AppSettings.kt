@@ -804,7 +804,7 @@ object AppSettings {
     val pinnedPlaylists = MutableStateFlow<List<String>>(emptyList())
 
     /** How many playlists [pinnedPlaylists] can hold at once. */
-    const val MAX_PINNED_PLAYLISTS = 5
+    const val MAX_PINNED_PLAYLISTS = 6
 
     // ── Scrobbling ──────────────────────────────────────────────────────
 
@@ -1007,6 +1007,7 @@ object AppSettings {
             context,
             likedTitle = context.getString(com.music.bitchord.R.string.auto_liked),
         )
+        com.music.bitchord.data.PlaylistLocalFiles.init(context)
         readAll()
         watchConnection(context)
     }
@@ -2558,6 +2559,14 @@ object AppSettings {
     private const val KEY_SMB_SHARE = "smb_share"
     private const val KEY_SMB_BASE_PATH = "smb_base_path"
     private const val KEY_SMB_USERNAME = "smb_username"
+    /** Takes [ids] out of the pins: lists that no longer show anywhere must not count against the limit. */
+    fun unpinAll(ids: Collection<String>) {
+        val updated = pinnedPlaylists.value.filterNot { it in ids }
+        if (updated.size == pinnedPlaylists.value.size) return
+        pinnedPlaylists.value = updated
+        prefs.edit().putString(KEY_PINNED_PLAYLISTS, updated.joinToString(",")).apply()
+    }
+
     private const val KEY_PINNED_PLAYLISTS = "pinned_playlists"
 
     private const val KEY_LASTFM_ENABLED = "lastfm_enabled"

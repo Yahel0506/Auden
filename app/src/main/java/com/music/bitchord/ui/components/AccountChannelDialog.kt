@@ -90,7 +90,7 @@ fun AccountChannelDialog(
                     } else {
                         Modifier.hazeEffect(
                             state = hazeState,
-                            style = HazeMaterials.regular(MaterialTheme.colorScheme.surface),
+                            style = navGlassHazeStyle(),
                         )
                     },
                 )

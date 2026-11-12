@@ -136,6 +136,7 @@ fun DjScreen(
     contentPadding: PaddingValues,
     onOpenPlayer: () -> Unit,
     modifier: Modifier = Modifier,
+    listState: androidx.compose.foundation.lazy.LazyListState = androidx.compose.foundation.lazy.rememberLazyListState(),
 ) {
     val context = LocalContext.current
     val djState by DjSession.state.collectAsStateWithLifecycle()
@@ -229,10 +230,11 @@ fun DjScreen(
             colorFadeMillis = MESH_CYCLE_MILLIS,
         )
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             // Just clear of the floating buttons at the top (the page's own top inset already holds the bar's space),
             // and of the bars at the foot.
-            contentPadding = PaddingValues(top = (contentPadding.calculateTopPadding() - 20.dp).coerceAtLeast(0.dp), bottom = 180.dp),
+            contentPadding = PaddingValues(top = contentPadding.calculateTopPadding(), bottom = 180.dp),
         ) {
             item(key = "header") { Header() }
             if (djState.active) item(key = "on-air") {
@@ -299,7 +301,10 @@ private fun variantKey(card: DjSetCard): String = when (card.kind) {
 @Composable
 private fun Header() {
     Column(Modifier.padding(horizontal = Gutter)) {
-        Text(stringResource(R.string.dj_home_title), color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+        // As tall as the bar's row and centred in it, so at rest the title sits level with the account pill.
+        Box(Modifier.fillMaxWidth().padding(bottom = com.music.bitchord.ui.components.TAB_TITLE_GAP).height(com.music.bitchord.ui.components.TAB_TITLE_ROW_HEIGHT), contentAlignment = Alignment.CenterStart) {
+            Text(stringResource(R.string.dj_home_title), color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Bold)
+        }
         Spacer(Modifier.height(4.dp))
         Text(stringResource(R.string.dj_home_subtitle), color = Color.White.copy(alpha = 0.75f), fontSize = 14.sp, lineHeight = 19.sp)
     }
