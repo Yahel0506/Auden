@@ -396,8 +396,8 @@ fun ArtworkMeshBackdrop(
         drawRect(
             brush = Brush.verticalGradient(
                 colors = listOf(
-                    Color.Black.copy(alpha = 0.04f),
-                    Color.Black.copy(alpha = 0.58f),
+                    Color.Black.copy(alpha = 0.10f),
+                    Color.Black.copy(alpha = 0.70f),
                 ),
                 startY = seamY,
                 endY = size.height,
