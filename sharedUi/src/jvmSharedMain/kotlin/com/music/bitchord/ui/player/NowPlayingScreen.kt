@@ -337,7 +337,15 @@ private fun PlayerMeshBackdrop(
     seamTarget: () -> Dp,
     alpha: () -> Float,
     playing: () -> Boolean,
+    panels: Boolean,
 ) {
+    // The lyrics and the queue stand on this same backdrop, softer and darker, rather than on a cover of
+    // their own: the colours keep flowing, and nothing is swapped.
+    val panelMix by animateFloatAsState(
+        targetValue = if (panels) 1f else 0f,
+        animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+        label = "meshPanelMix",
+    )
     val mesh = key(trackKey) { rememberArtworkMesh(imageUrl, canvasFrame(), ART_PX) }
     val currentSeamTarget by rememberUpdatedState(seamTarget)
     val seam = remember { Animatable(Snapshot.withoutReadObservation { seamTarget() }, Dp.VectorConverter) }
@@ -356,6 +364,8 @@ private fun PlayerMeshBackdrop(
         mesh = mesh,
         seam = { seam.value },
         playing = playing,
+        soften = { panelMix },
+        shade = { panelMix },
         modifier = Modifier.graphicsLayer { this.alpha = alpha() },
     )
 }
@@ -2444,7 +2454,7 @@ fun NowPlayingScreen(
                         !legacyMeshBackdrop &&
                         (tabletArtworkBackdrop || fullArtworkBlurImage != null) &&
                         (!spotifyCanvasPresentation || lyricsOpen || queueOpen) &&
-                        (!artworkMeshBackdrop || lyricsOpen || queueOpen)
+                        !artworkMeshBackdrop
                     ) 1f else 0f,
                     animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
                     label = "fullArtworkBackdropCrossfade",
@@ -2473,12 +2483,15 @@ fun NowPlayingScreen(
                     // a panel opening over it to find ready.
                     PlayerMeshBackdrop(
                         playing = { isPlaying },
+                        panels = lyricsOpen || queueOpen,
                         trackKey = song.videoId,
                         imageUrl = remoteArt,
                         canvasFrame = { canvasFrame },
                         seamTarget = {
                             val stillBottom = stillBottomPx()
                             when {
+                                // No sleeve over the lyrics or the queue: the whole mesh is the screen.
+                                lyricsOpen || queueOpen -> 0.dp
                                 clipPortrait -> clipBottom
                                 stillBottom > 0f -> with(density) { stillBottom.toDp() }
                                 heroMode -> heroHeight
@@ -2489,7 +2502,7 @@ fun NowPlayingScreen(
                         // the two fading through each other and dipping toward the
                         // black beneath, and out of the frame altogether after that.
                         alpha = {
-                            if (spotifyCanvasPresentation || fullArtworkBackdropAlpha >= 1f) 0f else 1f
+                            if ((spotifyCanvasPresentation && !lyricsOpen && !queueOpen) || fullArtworkBackdropAlpha >= 1f) 0f else 1f
                         },
                     )
                 }

@@ -88,7 +88,12 @@ import kotlin.random.Random
  * as the old backdrop draws — would be thirty-six full-screen radial gradients.
  */
 @Immutable
-class ArtworkMesh internal constructor(internal val image: ImageBitmap)
+class ArtworkMesh internal constructor(internal val image: ImageBitmap) {
+    /** The same mesh blurred further, for the lyrics and the queue to stand on — made once, when first wanted. */
+    internal val soft: ImageBitmap by lazy { image.boxBlurred(MESH_SOFT_PASSES) }
+}
+
+private const val MESH_SOFT_PASSES = 6
 
 /**
  * One pre-blurred bitmap for the full-cover player backdrop.
@@ -316,6 +321,10 @@ fun ArtworkMeshBackdrop(
     fallback: Color = FallbackBackdrop,
     /** Whether the music is playing: the colours flow only then, and hold still when it is paused. */
     playing: () -> Boolean = { true },
+    /** 0..1: how far the mesh has gone to its softer, blurrier copy — the lyrics and queue's. */
+    soften: () -> Float = { 0f },
+    /** 0..1: an extra shade over the mesh, for the same panels. */
+    shade: () -> Float = { 0f },
 ) {
     val reduceAnimation by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
     val reactive by PlayerSettings.reactiveBackdrop.collectAsStateWithLifecycle()
@@ -365,6 +374,14 @@ fun ArtworkMeshBackdrop(
         // Read here rather than in composition: an Animatable read inside a
         // draw lambda invalidates the drawing and leaves composition out of it.
         incoming?.let { drawMesh(it, seamY, alpha = fade.value, flow = flow) }
+        // The blurrier copy comes in over it: the same colours, further apart from detail.
+        val softness = soften()
+        if (softness > 0.005f) {
+            shown?.let { drawMesh(it, seamY, alpha = softness, flow = flow, image = it.soft) }
+            incoming?.let { drawMesh(it, seamY, alpha = fade.value * softness, flow = flow, image = it.soft) }
+        }
+        val shading = shade()
+        if (shading > 0.005f) drawRect(Color.Black.copy(alpha = shading * MESH_PANEL_SHADE))
 
         // Vivid at the top and progressively darker toward the controls, so the
         // transport buttons keep their contrast without the foot going near
@@ -385,9 +402,14 @@ fun ArtworkMeshBackdrop(
  * first row held from there up. Two draws of one small texture, both stretched
  * by the sampler.
  */
-private fun DrawScope.drawMesh(mesh: ArtworkMesh, seamY: Float, alpha: Float, flow: BackdropFlow? = null) {
+private fun DrawScope.drawMesh(
+    mesh: ArtworkMesh,
+    seamY: Float,
+    alpha: Float,
+    flow: BackdropFlow? = null,
+    image: ImageBitmap = mesh.image,
+) {
     if (alpha <= 0.001f) return
-    val image = mesh.image
     val width = size.width.roundToInt()
 
     // Above the seam: the sleeve's bottom edge, held. Skipped when the seam is
@@ -517,6 +539,9 @@ internal fun rememberBackdropFlow(playing: () -> Boolean, reactive: Boolean, ena
         )
     }
 }
+
+/** How dark the shade over the mesh gets under the lyrics and the queue. */
+private const val MESH_PANEL_SHADE = 0.32f
 
 private const val FLOW_REACH = 0.05f
 private const val FLOW_RAMP = 0.34f
