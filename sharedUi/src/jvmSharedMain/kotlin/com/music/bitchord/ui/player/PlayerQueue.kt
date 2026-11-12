@@ -252,6 +252,8 @@ internal fun InlineQueue(
     onToggleShuffle: (() -> Unit)? = null,
     onCycleRepeat: (() -> Unit)? = null,
     onToggleAutoplay: (() -> Unit)? = null,
+    automixEnabled: Boolean = false,
+    onToggleAutomix: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -314,6 +316,8 @@ internal fun InlineQueue(
                 onToggleShuffle = onToggleShuffle,
                 onCycleRepeat = onCycleRepeat,
                 onToggleAutoplay = onToggleAutoplay,
+                automixEnabled = automixEnabled,
+                onToggleAutomix = onToggleAutomix,
             )
         }
         Spacer(Modifier.height(4.dp))
@@ -465,6 +469,8 @@ private fun QueueModePills(
     onToggleShuffle: () -> Unit,
     onCycleRepeat: () -> Unit,
     onToggleAutoplay: () -> Unit,
+    automixEnabled: Boolean,
+    onToggleAutomix: (() -> Unit)?,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -507,6 +513,17 @@ private fun QueueModePills(
             onClick = onToggleAutoplay,
             modifier = Modifier.weight(1f),
         )
+        if (onToggleAutomix != null) {
+            QueueModePill(
+                icon = BitChordIcons.Automix,
+                label = null,
+                contentDescription = stringResource(if (automixEnabled) Res.string.automix_on else Res.string.automix_off),
+                lit = automixEnabled,
+                haptic = if (automixEnabled) Haptic.ToggleOff else Haptic.ToggleOn,
+                onClick = onToggleAutomix,
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 
@@ -523,7 +540,7 @@ private fun QueueModePill(
     val haptics = rememberHaptics()
     Box(
         modifier = modifier
-            .height(46.dp)
+            .height(34.dp)
             .clip(RoundedCornerShape(50))
             .background(Color.White.copy(alpha = if (lit) 0.30f else 0.12f))
             .clickable(
@@ -537,9 +554,9 @@ private fun QueueModePill(
         contentAlignment = Alignment.Center,
     ) {
         if (icon != null) {
-            Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
         } else if (label != null) {
-            Text(text = label, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text(text = label, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

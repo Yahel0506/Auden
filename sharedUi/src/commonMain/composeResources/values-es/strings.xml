@@ -11,6 +11,8 @@
     <string name="automix_stopped_in_party">Automix: detenido en Escuchar juntos</string>
     <string name="autoplay">Reproducción automática</string>
     <string name="autoplay_empty_description">Seguirá reproduciéndose música similar</string>
+    <string name="automix_on">Automix activado</string>
+    <string name="automix_off">Automix desactivado</string>
     <string name="autoplay_off">AutoPlay desactivado</string>
     <string name="autoplay_on">AutoPlay activado</string>
     <string name="autoplay_queue_description">Música similar elegida para reproducirse a continuación</string>

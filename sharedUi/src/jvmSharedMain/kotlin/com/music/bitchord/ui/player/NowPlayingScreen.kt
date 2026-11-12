@@ -989,6 +989,7 @@ fun NowPlayingScreen(
         if (outputMenuAsked != null) audioOutputMenu.consume()
     }
 
+    val automixEnabled by PlayerSettings.smartFadeEnabled.collectAsStateWithLifecycle()
     val syncedLyricsEnabled by PlayerSettings.syncedLyrics.collectAsStateWithLifecycle()
     val lyricsOffsetMs by PlayerSettings.lyricsOffsetMs.collectAsStateWithLifecycle()
     // A lambda, not a value: read by the lyric strip and panel in scopes of
@@ -2448,6 +2449,8 @@ fun NowPlayingScreen(
                             onToggleShuffle = onToggleShuffle,
                             onCycleRepeat = onCycleRepeat,
                             onToggleAutoplay = onToggleAutoplay,
+                            automixEnabled = automixEnabled,
+                            onToggleAutomix = { PlayerSettings.setSmartFadeEnabled(!automixEnabled) },
                             modifier = Modifier.fillMaxSize(),
                         )
                     },
@@ -4123,6 +4126,8 @@ fun NowPlayingScreen(
                                     onToggleShuffle = onToggleShuffle,
                                     onCycleRepeat = onCycleRepeat,
                                     onToggleAutoplay = onToggleAutoplay,
+                                    automixEnabled = automixEnabled,
+                                    onToggleAutomix = { PlayerSettings.setSmartFadeEnabled(!automixEnabled) },
                                     collapsePlayerOnScroll = true,
                                     onRevealPlayer = { queueControlsOpen = true },
                                     onHidePlayer = { queueControlsOpen = false },

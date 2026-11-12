@@ -119,6 +119,7 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override fun setLyricsOffsetPerSong(enabled: Boolean) = dev.auden.library.lyrics.SongLyricsOffset.setPerSong(enabled)
         override fun downloadLyricsProvider(source: LyricsSource) = dev.auden.library.lyrics.CurrentLyrics.onDownload(source)
         override fun removeStoredLyrics(source: LyricsSource) = dev.auden.library.lyrics.CurrentLyrics.onRemove(source)
+        override fun setSmartFadeEnabled(value: Boolean) = AppSettings.setSmartFadeEnabled(value)
         override fun setMixViewOpen(open: Boolean) {
             AppSettings.mixViewOpen.value = open
         }

@@ -51,24 +51,49 @@ object BitChordIcons {
             name = "bc_audio_output", defaultWidth = 24.dp, defaultHeight = 24.dp,
             viewportWidth = 24f, viewportHeight = 24f,
         ).apply {
+            // The triangle, rounded and a little left of centre; the waves are two arcs round it, the
+            // outer one wrapping back past the triangle's base.
             path(
-                fill = stroke, stroke = stroke, strokeLineWidth = 1.6f,
+                fill = stroke, stroke = stroke, strokeLineWidth = 2f,
                 strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
             ) {
-                moveTo(2.8f, 7.6f)
-                lineTo(10.4f, 12f)
-                lineTo(2.8f, 16.4f)
+                moveTo(4.6f, 8.4f)
+                lineTo(10.6f, 12f)
+                lineTo(4.6f, 15.6f)
                 close()
             }
             path(stroke = stroke, strokeLineWidth = 2f, strokeLineCap = StrokeCap.Round) {
-                for ((radius, spread) in listOf(6.2f to 52f, 10.6f to 50f)) {
-                    val cx = 7.2f
+                for ((radius, spread) in listOf(6.2f to 58f, 10.6f to 96f)) {
+                    val cx = 8.4f
                     val a = Math.toRadians(spread.toDouble())
                     val dx = (radius * Math.cos(a)).toFloat()
                     val dy = (radius * Math.sin(a)).toFloat()
                     moveTo(cx + dx, 12f - dy)
                     arcTo(radius, radius, 0f, false, true, cx + dx, 12f + dy)
                 }
+            }
+        }.build()
+    }
+
+    /** Automix: two overlapping circles, a ring and a ring with a dot — one song crossing into the next. */
+    val Automix: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "bc_automix", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f,
+        ).apply {
+            path(stroke = stroke, strokeLineWidth = 2f, strokeLineCap = StrokeCap.Round) {
+                for (cx in listOf(8.4f, 15.6f)) {
+                    moveTo(cx + 5.2f, 12f)
+                    arcToRelative(5.2f, 5.2f, 0f, true, true, -10.4f, 0f)
+                    arcToRelative(5.2f, 5.2f, 0f, true, true, 10.4f, 0f)
+                    close()
+                }
+            }
+            path(fill = stroke) {
+                moveTo(15.6f + 2.2f, 12f)
+                arcToRelative(2.2f, 2.2f, 0f, true, true, -4.4f, 0f)
+                arcToRelative(2.2f, 2.2f, 0f, true, true, 4.4f, 0f)
+                close()
             }
         }.build()
     }

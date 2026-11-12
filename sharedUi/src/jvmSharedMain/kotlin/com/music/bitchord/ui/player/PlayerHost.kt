@@ -338,6 +338,8 @@ interface PlayerSettingsSource {
     fun removeStoredLyrics(source: LyricsSource)
     /** Whether the mix popup is up, so the host lays out [smartMixPreview] for it. */
     fun setMixViewOpen(open: Boolean)
+    /** Turns Automix on or off. */
+    fun setSmartFadeEnabled(value: Boolean)
 }
 
 /** The player's name for the installed host's settings, read where AppSettings used to be. */
