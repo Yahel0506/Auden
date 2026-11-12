@@ -133,6 +133,9 @@ import kotlin.math.roundToInt
 /** How much the whole bar swells while a finger carries the selection. */
 private const val HELD_BAR_SCALE = 1.045f
 
+/** How much shorter than its row the selection pill rests, in all. */
+private val PILL_REST_TRIM = 6.dp
+
 /** How wide the selection pill tries to be, as a share of its height, when its cell is narrower than that. */
 private const val MIN_PILL_ASPECT = 1.65f
 
@@ -876,7 +879,8 @@ private fun SharedTransitionScope.ExpandedTabs(
         maxOf(tabWidthPx, rowHeightPx * MIN_PILL_ASPECT),
         tabWidthPx + 2f * padLeftPx,
     )
-    val restSize = Size(pillWidthPx, rowHeightPx)
+    // A little shorter than the row it sits in, centred in it.
+    val restSize = Size(pillWidthPx, (rowHeightPx - with(density) { PILL_REST_TRIM.toPx() }).coerceAtLeast(0f))
     val liftedHeightPx = rowHeightPx + padTopPx + padBottomPx +
         with(density) { PILL_GROW_HEIGHT.toPx() }
     val liftedSize = if (rowHeightPx > 0f) {
