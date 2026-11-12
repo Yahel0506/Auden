@@ -76,6 +76,55 @@ object BitChordIcons {
         }.build()
     }
 
+    /**
+     * The DJ's ring, held still: the thick wobbling loop of its visualizer as one frame of it, with two echoes
+     * of itself trailing off to either side, as fainter loops — the colours of the live one reduced to the
+     * glyph's own, so it takes whatever tint the bar gives it.
+     */
+    val DjRing: ImageVector by lazy {
+        fun ring(time: Float, dx: Float, dy: Float, radius: Float, push: Float): List<Pair<Float, Float>> {
+            val points = 96
+            return (0..points).map { i ->
+                val a = 2f * Math.PI.toFloat() * i / points
+                val wobble = 0.55f * Math.sin((2 * a + 0.9f * time + 0.3f).toDouble()) +
+                    0.32f * Math.sin((3 * a - 1.3f * time + 1.1f).toDouble()) +
+                    0.22f * Math.sin((4 * a + 1.7f * time + 2.0f).toDouble()) +
+                    0.13f * Math.sin((5 * a - 2.3f * time).toDouble())
+                val r = radius * (1f + push * wobble.toFloat())
+                (12f + dx + r * Math.cos(a.toDouble()).toFloat()) to (12f + dy + r * Math.sin(a.toDouble()).toFloat())
+            }
+        }
+        ImageVector.Builder(
+            name = "bc_dj_ring", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f,
+        ).apply {
+            // The echoes first, fainter and off to one side each, then the ring over them.
+            for ((time, dx, dy, alpha) in listOf(
+                listOf(-0.6f, 1.5f, -1.1f, 0.34f),
+                listOf(-0.3f, -1.2f, 1.2f, 0.52f),
+            )) {
+                path(
+                    stroke = stroke, strokeAlpha = alpha, strokeLineWidth = 1.8f,
+                    strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
+                ) {
+                    val pts = ring(time, dx, dy, 7f, 0.14f)
+                    moveTo(pts[0].first, pts[0].second)
+                    pts.drop(1).forEach { lineTo(it.first, it.second) }
+                    close()
+                }
+            }
+            path(
+                stroke = stroke, strokeLineWidth = 2.2f,
+                strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
+            ) {
+                val pts = ring(0.4f, 0f, 0f, 7f, 0.14f)
+                moveTo(pts[0].first, pts[0].second)
+                pts.drop(1).forEach { lineTo(it.first, it.second) }
+                close()
+            }
+        }.build()
+    }
+
     /** Automix: two overlapping circles, a ring and a ring with a dot — one song crossing into the next. */
     val Automix: ImageVector by lazy {
         ImageVector.Builder(

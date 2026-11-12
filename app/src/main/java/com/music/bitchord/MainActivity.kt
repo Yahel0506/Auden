@@ -4493,7 +4493,7 @@ private fun BitChordApp(
                 val djLabel = stringResource(R.string.dj_nav_tab)
                 val navTabs = remember(tabs, showDjTab, djLabel) {
                     if (showDjTab) {
-                        tabs.toMutableList().apply { add(DJ_TAB_INDEX, BottomTab(djLabel, Icons.Rounded.GraphicEq, action = true)) }
+                        tabs.toMutableList().apply { add(DJ_TAB_INDEX, BottomTab(djLabel, BitChordIcons.DjRing, action = true)) }
                     } else {
                         tabs
                     }
