@@ -100,24 +100,24 @@ object BitChordIcons {
         ).apply {
             // The echoes first, fainter and off to one side each, then the ring over them.
             for ((time, dx, dy, alpha) in listOf(
-                listOf(-0.6f, 1.5f, -1.1f, 0.34f),
-                listOf(-0.3f, -1.2f, 1.2f, 0.52f),
+                listOf(-0.6f, 1.2f, -0.9f, 0.34f),
+                listOf(-0.3f, -1.0f, 1.0f, 0.52f),
             )) {
                 path(
-                    stroke = stroke, strokeAlpha = alpha, strokeLineWidth = 1.8f,
+                    stroke = stroke, strokeAlpha = alpha, strokeLineWidth = 2.5f,
                     strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
                 ) {
-                    val pts = ring(time, dx, dy, 7f, 0.14f)
+                    val pts = ring(time, dx, dy, 7.8f, 0.13f)
                     moveTo(pts[0].first, pts[0].second)
                     pts.drop(1).forEach { lineTo(it.first, it.second) }
                     close()
                 }
             }
             path(
-                stroke = stroke, strokeLineWidth = 2.2f,
+                stroke = stroke, strokeLineWidth = 3.1f,
                 strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
             ) {
-                val pts = ring(0.4f, 0f, 0f, 7f, 0.14f)
+                val pts = ring(0.4f, 0f, 0f, 7.8f, 0.13f)
                 moveTo(pts[0].first, pts[0].second)
                 pts.drop(1).forEach { lineTo(it.first, it.second) }
                 close()
