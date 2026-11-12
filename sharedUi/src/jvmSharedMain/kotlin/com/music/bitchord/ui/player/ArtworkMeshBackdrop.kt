@@ -92,13 +92,9 @@ import kotlin.random.Random
 class ArtworkMesh internal constructor(internal val image: ImageBitmap) {
     /** The same mesh blurred further, for the lyrics and the queue to stand on — made once, when first wanted. */
     internal val soft: ImageBitmap by lazy { image.boxBlurred(MESH_SOFT_PASSES) }
-
-    /** Further still, for the lyrics, where the words are all there is to read. */
-    internal val deep: ImageBitmap by lazy { image.boxBlurred(MESH_DEEP_PASSES) }
 }
 
 private const val MESH_SOFT_PASSES = 3
-private const val MESH_DEEP_PASSES = 16
 
 /**
  * One pre-blurred bitmap for the full-cover player backdrop.
@@ -330,8 +326,6 @@ fun ArtworkMeshBackdrop(
     soften: () -> Float = { 0f },
     /** 0..1: an extra shade over the mesh, for the same panels. */
     shade: () -> Float = { 0f },
-    /** 0..1: of the softened mesh, how much has gone on to the deeper blur — the lyrics'. */
-    deep: () -> Float = { 0f },
 ) {
     val reduceAnimation by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
     val motion by PlayerSettings.backdropMotion.collectAsStateWithLifecycle()
@@ -390,11 +384,6 @@ fun ArtworkMeshBackdrop(
         if (softness > 0.005f) {
             shown?.let { drawMesh(it, seamY, alpha = softness, flow = flow, image = it.soft) }
             incoming?.let { drawMesh(it, seamY, alpha = fade.value * softness, flow = flow, image = it.soft) }
-            val deeper = deep() * softness
-            if (deeper > 0.005f) {
-                shown?.let { drawMesh(it, seamY, alpha = deeper, flow = flow, image = it.deep) }
-                incoming?.let { drawMesh(it, seamY, alpha = fade.value * deeper, flow = flow, image = it.deep) }
-            }
         }
         val shading = shade()
         if (shading > 0.005f) drawRect(Color.Black.copy(alpha = shading * MESH_PANEL_SHADE))
