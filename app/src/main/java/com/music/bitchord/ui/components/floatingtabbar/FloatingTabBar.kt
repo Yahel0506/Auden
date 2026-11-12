@@ -134,7 +134,7 @@ import kotlin.math.roundToInt
 private const val HELD_BAR_SCALE = 1.045f
 
 /** How wide the selection pill tries to be, as a share of its height, when its cell is narrower than that. */
-private const val PILL_ASPECT = 1.6f
+private const val PILL_ASPECT = 1.52f
 
 /** How much shorter than its row the selection pill rests, in all. */
 private val PILL_REST_TRIM = 6.dp
