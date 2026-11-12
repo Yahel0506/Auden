@@ -329,7 +329,7 @@ fun GlassNavBar(
                 sizes = FloatingTabBarDefaults.sizes(
                     // The selection nearly the bar's full height, as Apple's: less inset above and below, and
                     // the tabs that much taller, so the bar itself stays the size it was.
-                    tabBarContentPadding = PaddingValues(horizontal = PILL_INSET, vertical = NAV_PILL_INSET),
+                    tabBarContentPadding = PaddingValues(horizontal = NAV_END_PADDING, vertical = NAV_PILL_INSET),
                     tabExpandedContentPadding = PaddingValues(vertical = TAB_VERTICAL_PADDING + (PILL_INSET - NAV_PILL_INSET)),
                 ),
                 contentKey = remember(selectedIndex, tabs, contentColor) { listOf(selectedIndex, tabs, contentColor) },
@@ -793,6 +793,12 @@ internal fun Modifier.navAccent(): Modifier = this
 
 /** Flat, and a step darker than the gradient's lead blue (5C9DFF) it replaces. */
 private val NAV_ACCENT = Color(0xFF4A8BEE)
+
+/**
+ * How far the first and last tabs sit from the bar's ends: more than the tabs' own spacing, which closes them up
+ * a little, so the oval selection has room to stand past a narrow cell at the ends without being cut by the curve.
+ */
+private val NAV_END_PADDING = 14.dp
 
 /** How far the selection sits inside the bar above and below. */
 private val NAV_PILL_INSET = 2.dp
