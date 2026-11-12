@@ -138,9 +138,9 @@ private const val DARK_INDICATOR_OPACITY = 0.42f
 @Composable
 fun navGlassTint(): Color =
     if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
-        Color(0xFFFFFFFF).copy(alpha = 0.42f)
+        Color(0xFFFFFFFF).copy(alpha = 0.64f)
     } else {
-        Color(0xFF1C1C1E).copy(alpha = 0.42f)
+        Color(0xFF3A3A3D).copy(alpha = 0.64f)
     }
 
 /**
@@ -156,8 +156,8 @@ val NAV_GLASS_RIM = Highlight(
     ),
 )
 
-/** Its lens a little deeper than the app's other glass, so the page bends visibly round the ends. */
-const val NAV_GLASS_DEPTH = 1.3f
+/** Its lens a little shallower than the app's other glass: the page bends round the ends, but only slightly. */
+const val NAV_GLASS_DEPTH = 0.8f
 
 /**
  * Its blur all but gone, as Apple's: the page reads through the bar, in its own colours (boosted by
