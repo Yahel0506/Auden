@@ -76,6 +76,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Velocity
 import coil3.compose.AsyncImage
 import com.music.bitchord.ui.components.thumbnailBorder
+import androidx.compose.foundation.layout.Arrangement
+import com.music.bitchord.ui.haptics.Haptic
+import com.music.bitchord.ui.haptics.rememberHaptics
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import com.music.bitchord.ui.icons.BitChordIcons
 import com.music.bitchord.data.model.QueueTier
 import com.music.bitchord.data.model.Song
@@ -235,6 +243,15 @@ internal fun InlineQueue(
     collapsePlayerOnScroll: Boolean = false,
     onRevealPlayer: () -> Unit = {},
     onHidePlayer: () -> Unit = {},
+    /**
+     * The playback modes, as pills across the top of the queue — under the song, above its rows, as
+     * Apple Music has them. Shown when the callbacks are given.
+     */
+    shuffleEnabled: Boolean = false,
+    repeatMode: Int = 0,
+    onToggleShuffle: (() -> Unit)? = null,
+    onCycleRepeat: (() -> Unit)? = null,
+    onToggleAutoplay: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -287,6 +304,17 @@ internal fun InlineQueue(
             if (tracks.user.isNotEmpty()) {
                 QueueClearButton(MaterialTheme.typography.titleMedium, controlsLocked, onClear)
             }
+        }
+        if (onToggleShuffle != null && onCycleRepeat != null && onToggleAutoplay != null) {
+            Spacer(Modifier.height(10.dp))
+            QueueModePills(
+                shuffleEnabled = shuffleEnabled,
+                repeatMode = repeatMode,
+                autoplayEnabled = autoplayEnabled,
+                onToggleShuffle = onToggleShuffle,
+                onCycleRepeat = onCycleRepeat,
+                onToggleAutoplay = onToggleAutoplay,
+            )
         }
         Spacer(Modifier.height(4.dp))
         Box(
@@ -425,6 +453,94 @@ private fun LazyListScope.queueSection(
             onDragEnd = { drag.end(track.key) },
             modifier = if (held) Modifier.alpha(0f) else queueMotion(),
         )
+    }
+}
+
+/** Shuffle, repeat and autoplay as pills across the top of the queue; lit while on. */
+@Composable
+private fun QueueModePills(
+    shuffleEnabled: Boolean,
+    repeatMode: Int,
+    autoplayEnabled: Boolean,
+    onToggleShuffle: () -> Unit,
+    onCycleRepeat: () -> Unit,
+    onToggleAutoplay: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        QueueModePill(
+            icon = BitChordIcons.Shuffle,
+            label = null,
+            contentDescription = stringResource(if (shuffleEnabled) Res.string.shuffle_on else Res.string.shuffle_off),
+            lit = shuffleEnabled,
+            haptic = if (shuffleEnabled) Haptic.ToggleOff else Haptic.ToggleOn,
+            onClick = onToggleShuffle,
+            modifier = Modifier.weight(1f),
+        )
+        QueueModePill(
+            icon = if (repeatMode == RepeatModes.ONE) null else BitChordIcons.Repeat,
+            label = if (repeatMode == RepeatModes.ONE) "1" else null,
+            contentDescription = when (repeatMode) {
+                RepeatModes.ONE -> stringResource(Res.string.repeat_one)
+                RepeatModes.ALL -> stringResource(Res.string.repeat_all)
+                else -> stringResource(Res.string.repeat_off)
+            },
+            lit = repeatMode != RepeatModes.OFF,
+            // Leaving off rises, returning to off falls, and the step between the two repeat modes is a
+            // selection.
+            haptic = when (repeatMode) {
+                RepeatModes.OFF -> Haptic.ToggleOn
+                RepeatModes.ONE -> Haptic.ToggleOff
+                else -> Haptic.Select
+            },
+            onClick = onCycleRepeat,
+            modifier = Modifier.weight(1f),
+        )
+        QueueModePill(
+            icon = BitChordIcons.Infinity,
+            label = null,
+            contentDescription = stringResource(if (autoplayEnabled) Res.string.autoplay_on else Res.string.autoplay_off),
+            lit = autoplayEnabled,
+            haptic = if (autoplayEnabled) Haptic.ToggleOff else Haptic.ToggleOn,
+            onClick = onToggleAutoplay,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@Composable
+private fun QueueModePill(
+    icon: ImageVector?,
+    label: String?,
+    contentDescription: String,
+    lit: Boolean,
+    haptic: Haptic,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val haptics = rememberHaptics()
+    Box(
+        modifier = modifier
+            .height(46.dp)
+            .clip(RoundedCornerShape(50))
+            .background(Color.White.copy(alpha = if (lit) 0.30f else 0.12f))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+            ) {
+                haptics.play(haptic)
+                onClick()
+            }
+            .semantics { this.contentDescription = contentDescription },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (icon != null) {
+            Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+        } else if (label != null) {
+            Text(text = label, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        }
     }
 }
 

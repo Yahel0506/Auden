@@ -45,6 +45,34 @@ object BitChordIcons {
         }.build()
     }
 
+    /** The audio output button: a play triangle with sound waves leaving it. */
+    val AudioOutput: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "bc_audio_output", defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f,
+        ).apply {
+            path(
+                fill = stroke, stroke = stroke, strokeLineWidth = 1.6f,
+                strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
+            ) {
+                moveTo(2.8f, 7.6f)
+                lineTo(10.4f, 12f)
+                lineTo(2.8f, 16.4f)
+                close()
+            }
+            path(stroke = stroke, strokeLineWidth = 2f, strokeLineCap = StrokeCap.Round) {
+                for ((radius, spread) in listOf(6.2f to 52f, 10.6f to 50f)) {
+                    val cx = 7.2f
+                    val a = Math.toRadians(spread.toDouble())
+                    val dx = (radius * Math.cos(a)).toFloat()
+                    val dy = (radius * Math.sin(a)).toFloat()
+                    moveTo(cx + dx, 12f - dy)
+                    arcTo(radius, radius, 0f, false, true, cx + dx, 12f + dy)
+                }
+            }
+        }.build()
+    }
+
     val LyricsQuote: ImageVector by lazy {
         ImageVector.Builder(
             name = "bc_lyrics_quote", defaultWidth = 24.dp, defaultHeight = 24.dp,

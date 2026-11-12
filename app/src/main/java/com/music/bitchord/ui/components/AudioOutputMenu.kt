@@ -223,6 +223,8 @@ fun AudioOutputMenu(
             icon = Icons.Rounded.Groups,
             onClick = onParty,
         )
+        // Set a little apart from the devices under it.
+        Spacer(Modifier.height(6.dp))
         if (current != null) {
             // This phone's own output is the volume: its pill fills with the level.
             PillRow(
