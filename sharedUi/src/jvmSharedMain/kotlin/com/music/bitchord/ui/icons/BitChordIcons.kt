@@ -63,8 +63,9 @@ object BitChordIcons {
                 close()
             }
             path(stroke = stroke, strokeLineWidth = 2f, strokeLineCap = StrokeCap.Round) {
-                for ((radius, spread) in listOf(6.2f to 58f, 10.6f to 96f)) {
-                    val cx = 8.4f
+                // The waves well apart, the outer one wrapping a long way round.
+                for ((radius, spread) in listOf(4.6f to 58f, 10.8f to 128f)) {
+                    val cx = 9.2f
                     val a = Math.toRadians(spread.toDouble())
                     val dx = (radius * Math.cos(a)).toFloat()
                     val dy = (radius * Math.sin(a)).toFloat()
