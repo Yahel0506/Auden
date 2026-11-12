@@ -78,11 +78,13 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.animation.core.spring
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -130,6 +132,10 @@ import kotlin.math.roundToInt
 
 /** How much the whole bar swells while a finger carries the selection. */
 private const val HELD_BAR_SCALE = 1.045f
+
+/** How far the held bar leans after the finger at most, and how much of the finger's travel it takes. */
+private val HELD_BAR_PULL = 10.dp
+private const val HELD_BAR_PULL_SHARE = 0.12f
 
 /**
  * The fold between the expanded and the collapsed bar, in two movements rather than one straight line, as
@@ -898,6 +904,20 @@ private fun SharedTransitionScope.ExpandedTabs(
         label = "heldBarGlow",
     )
 
+    // And it leans after the finger: a little way along with it, giving less the further it goes, and back
+    // into place on a spring when it lets go.
+    var fingerPull by remember { mutableFloatStateOf(0f) }
+    val pullLimitPx = with(LocalDensity.current) { HELD_BAR_PULL.toPx() }
+    val barPull by animateFloatAsState(
+        targetValue = if (pill.held && !reduceAnimation) {
+            pullLimitPx * kotlin.math.tanh(fingerPull * HELD_BAR_PULL_SHARE / pullLimitPx)
+        } else {
+            0f
+        },
+        animationSpec = if (pill.held) spring(stiffness = 1400f) else GlassSpring,
+        label = "heldBarPull",
+    )
+
     // Unclipped: the lifted pill stands past the bar's edges, so it is drawn
     // here, over the bar, rather than inside the bar's clip.
     Box(
@@ -905,6 +925,7 @@ private fun SharedTransitionScope.ExpandedTabs(
             .graphicsLayer {
                 scaleX = holdScale
                 scaleY = holdScale
+                translationX = barPull
             }
             .sharedElement(
                 sharedContentState = rememberSharedContentState("tabGroup"),
@@ -986,6 +1007,7 @@ private fun SharedTransitionScope.ExpandedTabs(
                                     direction = if (currentIsRtl) -1f else 1f
                                     totalDrag = 0f
                                     dragStartIndex = currentSelectedTabIndex
+                                    fingerPull = 0f
                                     pill.startDrag()
                                 },
                                 onDragCancel = {
@@ -1005,6 +1027,7 @@ private fun SharedTransitionScope.ExpandedTabs(
                                 },
                                 onHorizontalDrag = { _, delta ->
                                     if (!holding) return@detectHorizontalDragGestures
+                                    fingerPull += delta
                                     totalDrag += delta * direction
                                     val absoluteIndexFloat = (dragStartIndex + totalDrag / step)
                                         .coerceIn(0f, cells.lastIndex.toFloat())

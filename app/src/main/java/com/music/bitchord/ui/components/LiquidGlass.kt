@@ -123,13 +123,29 @@ fun glassContentColor(): Color =
 @Composable
 fun glassIndicatorColor(): Color =
     if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
-        Color.White.copy(alpha = 0.5f)
+        Color.Black.copy(alpha = 0.08f)
     } else {
-        Color.White.copy(alpha = DARK_INDICATOR_OPACITY)
+        Color.Black.copy(alpha = DARK_INDICATOR_OPACITY)
     }
 
-/** The selected tab's pill in dark theme, a step whiter than the bar. */
-private const val DARK_INDICATOR_OPACITY = 0.14f
+/** The selected tab's pill, as Apple Music's: a darker well pressed into the milky glass. */
+private const val DARK_INDICATOR_OPACITY = 0.30f
+
+/**
+ * The nav bar's glass, as Apple Music's: milkier and a touch more opaque than the app's other glass — a
+ * whitish film over the page rather than a dark one — so the darker selection reads in it.
+ */
+@Composable
+fun navGlassTint(): Color =
+    if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
+        Color(0xFFFFFFFF).copy(alpha = 0.62f)
+    } else {
+        Color(0xFF55555B).copy(alpha = 0.52f)
+    }
+
+/** The nav bar's rim, a little softer than the default, and its lens a little deeper. */
+const val NAV_GLASS_RIM = 0.6f
+const val NAV_GLASS_DEPTH = 1.3f
 
 /**
  * A lightweight visual match for liquid glass over a stable background.
@@ -216,6 +232,10 @@ fun Modifier.liquidGlass(
     shape: CornerBasedShape,
     /** Drawn over the glass in place of the theme's default tint, when set. */
     surfaceTint: Color? = null,
+    /** The rim's strength, 1 the default edge. */
+    rimAlpha: Float = 1f,
+    /** How deep the lens bends at the edges, 1 the default. */
+    depth: Float = 1f,
 ): Modifier {
     if (!isGlassSupported()) return this
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -230,7 +250,7 @@ fun Modifier.liquidGlass(
     val resolutionScale = if (glassPerformance) FROST_RESOLUTION_SCALE else GLASS_RESOLUTION_SCALE
     val blurRadiusDp = if (glassPerformance) FROST_BLUR_RADIUS_DP else BLUR_RADIUS_DP
     val blurPx = with(density) { blurRadiusDp.dp.toPx() } * resolutionScale
-    val lensHeightPx = with(density) { (LENS_HEIGHT * LENS_MAX_DP).dp.toPx() } * resolutionScale
+    val lensHeightPx = with(density) { (LENS_HEIGHT * depth * LENS_MAX_DP).dp.toPx() } * resolutionScale
     val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP).dp.toPx() } * resolutionScale
     val themeTint = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
         Color(0xFFFAFAFA)
@@ -254,7 +274,7 @@ fun Modifier.liquidGlass(
                 )
             }
         },
-        highlight = { Highlight.Default },
+        highlight = { if (rimAlpha >= 1f) Highlight.Default else Highlight.Default.copy(alpha = rimAlpha) },
         shadow = { Shadow.Default },
         onDrawSurface = {
             drawRect(color = surfaceTintColor, size = size)

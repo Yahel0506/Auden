@@ -573,8 +573,9 @@ internal fun GlassSelectionPill(
 /** The rim and its shadow are gone by the time the hand-off is 55% through. */
 private fun rimOf(presence: Float): Float = ((presence - 0.45f) / 0.55f).coerceIn(0f, 1f)
 
-private val LENS_HEIGHT = 12.dp
-private val LENS_AMOUNT = 14.dp
+/** The drop's edge: a wider and stronger bend than the bar's, the clear centre left as it is. */
+private val LENS_HEIGHT = 16.dp
+private val LENS_AMOUNT = 19.dp
 
 private val PILL_SHADOW = Shadow(
     radius = 12.dp,
