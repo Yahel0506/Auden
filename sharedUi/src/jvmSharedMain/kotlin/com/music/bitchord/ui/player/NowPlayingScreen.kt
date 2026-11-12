@@ -497,7 +497,7 @@ private const val DOCK_FADE_LEAD = 0.15f
 private const val DOCK_FADE_FLOOR = 1f / 255f
 
 /** How much of the morph the player takes to become opaque inside the growing surface. */
-private const val MORPH_FADE_SPAN = 0.13f
+private const val MORPH_FADE_SPAN = 0.4f
 private const val MORPH_FADE_FROM = 0.02f
 
 /**

@@ -620,7 +620,7 @@ private fun GlassNowPlaying(
                 .morphStretch(dock)
                 .graphicsLayer {
                     alpha = if (dock != null && dock.morphCard() != null) {
-                        1f - smooth((dock.openFraction() / GLASS_SPAN).coerceIn(0f, 1f))
+                        1f - smooth((dock.openFraction() / MORPH_GLASS_SPAN).coerceIn(0f, 1f))
                     } else {
                         1f
                     }
@@ -1111,6 +1111,12 @@ private fun Modifier.morphStretch(dock: PlayerDock?): Modifier = if (dock == nul
 
 /** How much of the morph the bar's glass and lines last: while the card is still about the bar's size. */
 private const val GLASS_SPAN = 0.14f
+
+/**
+ * How much of the morph the stretched glass lasts under the player: as long as the player takes to come
+ * through over it (its fade in NowPlayingScreen, 0.02 + 0.4), so the card is never left half see-through.
+ */
+private const val MORPH_GLASS_SPAN = 0.42f
 
 private val MORPH_SHEET_CORNER = 40.dp
 private const val TRANSPORT_FADE_SPAN = 0.25f
