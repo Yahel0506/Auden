@@ -45,32 +45,32 @@ object BitChordIcons {
         }.build()
     }
 
-    /** The audio output button: a play triangle with sound waves leaving it. */
+    /**
+     * The audio output button: a play triangle with two sound waves round its tip — a short arc close to it
+     * and a long one, about 230 degrees, wrapping a good way past it. Measured off the reference glyph.
+     */
     val AudioOutput: ImageVector by lazy {
         ImageVector.Builder(
             name = "bc_audio_output", defaultWidth = 24.dp, defaultHeight = 24.dp,
             viewportWidth = 24f, viewportHeight = 24f,
         ).apply {
-            // The triangle, rounded and a little left of centre; the waves are two arcs round it, the
-            // outer one wrapping back past the triangle's base.
             path(
-                fill = stroke, stroke = stroke, strokeLineWidth = 2f,
+                fill = stroke, stroke = stroke, strokeLineWidth = 1.2f,
                 strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round,
             ) {
-                moveTo(4.6f, 8.4f)
-                lineTo(10.6f, 12f)
-                lineTo(4.6f, 15.6f)
+                moveTo(2.2f, 7f)
+                lineTo(9.4f, 12f)
+                lineTo(2.2f, 17f)
                 close()
             }
-            path(stroke = stroke, strokeLineWidth = 2f, strokeLineCap = StrokeCap.Round) {
-                // The waves well apart, the outer one wrapping a long way round.
-                for ((radius, spread) in listOf(4.6f to 58f, 10.8f to 128f)) {
-                    val cx = 9.2f
+            path(stroke = stroke, strokeLineWidth = 1.8f, strokeLineCap = StrokeCap.Round) {
+                val cx = 10.9f
+                for ((radius, spread) in listOf(4.1f to 60f, 9.5f to 115f)) {
                     val a = Math.toRadians(spread.toDouble())
                     val dx = (radius * Math.cos(a)).toFloat()
                     val dy = (radius * Math.sin(a)).toFloat()
                     moveTo(cx + dx, 12f - dy)
-                    arcTo(radius, radius, 0f, false, true, cx + dx, 12f + dy)
+                    arcTo(radius, radius, 0f, spread > 90f, true, cx + dx, 12f + dy)
                 }
             }
         }.build()
