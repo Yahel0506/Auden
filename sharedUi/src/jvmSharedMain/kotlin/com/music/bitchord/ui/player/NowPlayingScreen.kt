@@ -377,7 +377,7 @@ private fun LegacyMeshBackdrop(
 private const val SPOTIFY_CANVAS_RESUME_DELAY_MS = 1_000L
 
 /** [image] filling this scope, centred and cropped as [ContentScale.Crop] would. */
-private fun DrawScope.drawCropped(image: ImageBitmap) {
+private fun DrawScope.drawCropped(image: ImageBitmap, alpha: Float = 1f) {
     if (size.width <= 0f || size.height <= 0f) return
     val scale = maxOf(size.width / image.width, size.height / image.height)
     val srcWidth = (size.width / scale).roundToInt().coerceIn(1, image.width)
@@ -387,8 +387,23 @@ private fun DrawScope.drawCropped(image: ImageBitmap) {
         srcOffset = IntOffset((image.width - srcWidth) / 2, (image.height - srcHeight) / 2),
         srcSize = IntSize(srcWidth, srcHeight),
         dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt()),
+        alpha = alpha,
     )
 }
+
+/**
+ * How much of the clip's still is left on the cover flying to the mini player, from its [t] (1 open, 0
+ * docked): all of it while the cover is still big, dissolving into the static cover as it shrinks, and gone
+ * just before it lands — so the swap happens small and in motion, where the eye cannot catch it, and the
+ * mini player's static cover is what lands. An open plays it backwards: the static cover grows into the clip.
+ */
+private fun stillShareInFlight(t: Float): Float {
+    val x = ((t - STILL_DISSOLVE_END) / (STILL_DISSOLVE_START - STILL_DISSOLVE_END)).coerceIn(0f, 1f)
+    return x * x * (3f - 2f * x)
+}
+
+private const val STILL_DISSOLVE_START = 0.45f
+private const val STILL_DISSOLVE_END = 0.05f
 
 /** An animated cover's frame, and where in its clip it was taken. */
 @Immutable
@@ -3485,7 +3500,11 @@ fun NowPlayingScreen(
                                             stillTakesOver() || !canvasRendered ||
                                             (heroMode && canvasCover.floatValue < 1f)
                                         ) {
-                                            drawCropped(frame.image)
+                                            // On the way to the mini player, the clip's frame dissolves
+                                            // into the static cover underneath as it shrinks.
+                                            val keep = if (docking() && art.loaded) stillShareInFlight(dockT()) else 1f
+                                            if (keep < 1f) drawContent()
+                                            if (keep > 0f) drawCropped(frame.image, keep)
                                         }
                                     },
                             )
