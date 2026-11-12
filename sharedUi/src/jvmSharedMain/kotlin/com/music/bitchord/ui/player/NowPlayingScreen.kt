@@ -343,16 +343,20 @@ private fun PlayerMeshBackdrop(
     // their own: the colours keep flowing, and nothing is swapped.
     val panelMix by animateFloatAsState(
         targetValue = if (panels) 1f else 0f,
-        animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
+        animationSpec = tween(durationMillis = PANEL_MESH_MS, easing = FastOutSlowInEasing),
         label = "meshPanelMix",
     )
+    val panelsNow by rememberUpdatedState(panels)
     val mesh = key(trackKey) { rememberArtworkMesh(imageUrl, canvasFrame(), ART_PX) }
     val currentSeamTarget by rememberUpdatedState(seamTarget)
     val seam = remember { Animatable(Snapshot.withoutReadObservation { seamTarget() }, Dp.VectorConverter) }
     // Glides to a clip's edge as the clip fades in, and is put straight where
     // the first measure says: nothing should be seen settling as the player opens.
-    LaunchedEffect(seam) {
+    LaunchedEffect(seam, panels) {
         snapshotFlow { currentSeamTarget() }.collectLatest { target ->
+            // Held where it was while the lyrics or the queue are up: they carry it away themselves, with
+            // everything else about the backdrop (below), and a sleeve folding away must not snap it first.
+            if (panelsNow) return@collectLatest
             if (seam.value == 0.dp || target == 0.dp) {
                 seam.snapTo(target)
             } else {
@@ -362,13 +366,18 @@ private fun PlayerMeshBackdrop(
     }
     ArtworkMeshBackdrop(
         mesh = mesh,
-        seam = { seam.value },
+        // The one transformation: the colours below the cover's edge stretch up to fill the screen, softening and
+        // darkening as they go, all on the same curve — the mesh is moved, not swapped for another picture.
+        seam = { seam.value * (1f - panelMix) },
         playing = playing,
         soften = { panelMix },
         shade = { panelMix },
         modifier = Modifier.graphicsLayer { this.alpha = alpha() },
     )
 }
+
+/** How long the backdrop takes to become the lyrics' and the queue's, and back. */
+private const val PANEL_MESH_MS = 560
 
 /** The legacy theme's backdrop, in a scope of its own for the same reason. */
 @Composable
@@ -2490,8 +2499,6 @@ fun NowPlayingScreen(
                         seamTarget = {
                             val stillBottom = stillBottomPx()
                             when {
-                                // No sleeve over the lyrics or the queue: the whole mesh is the screen.
-                                lyricsOpen || queueOpen -> 0.dp
                                 clipPortrait -> clipBottom
                                 stillBottom > 0f -> with(density) { stillBottom.toDp() }
                                 heroMode -> heroHeight
