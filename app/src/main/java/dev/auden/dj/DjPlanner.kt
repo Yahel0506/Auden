@@ -242,6 +242,9 @@ class DjPlanner(
             out += DjTheme.Favorites
             out += DjTheme.Rediscover
             out += DjTheme.Fresh
+            // What the listener named that is not a field of every song: a playlist, discoveries.
+            request?.playlist?.let { name -> if (scope.count { t -> t.playlists.any { it.equals(name, true) } } >= MIN_BLOCK) out += DjTheme.ByPlaylist(name) }
+            if (request?.discover == true && scope.any { it.discovery }) out += DjTheme.Discover
         }
         // Not twice running, and not the same family back to back, unless there is no other choice.
         val recent = recentThemes.map { it.key }.toSet()
@@ -290,30 +293,9 @@ class DjPlanner(
     /** How well [theme] suits this time of day and week. The one place the DJ's sense of the moment lives. */
     private fun prior(theme: DjTheme): Double {
         val morning = hour in 5..11
-        val afternoon = hour in 12..18
         val evening = hour in 19..22
         return when (theme) {
-            is DjTheme.ByMood -> when (theme.mood) {
-                DjMood.ENERGY -> when {
-                    morning -> 1.0
-                    afternoon -> if (weekend) 0.9 else 0.6
-                    evening -> if (weekend) 0.9 else 0.5
-                    else -> 0.2
-                }
-                DjMood.FOCUS -> when {
-                    afternoon && !weekend -> 1.0
-                    morning && !weekend -> 0.7
-                    else -> 0.3
-                }
-                DjMood.CHILL -> when {
-                    evening || hour !in 5..11 -> 1.0
-                    else -> 0.5
-                }
-                DjMood.ACOUSTIC -> when {
-                    evening || hour !in 5..11 -> 0.9
-                    else -> 0.6
-                }
-            }
+            is DjTheme.ByMood -> moodPrior(theme.mood, hour, weekend)
             DjTheme.Favorites -> 0.6
             DjTheme.Rediscover -> if (evening || hour !in 5..11) 0.9 else 0.4
             DjTheme.Fresh -> 0.6
@@ -360,7 +342,10 @@ class DjPlanner(
             is DjTheme.ByDecade -> if (r.decade == theme.decade) 1.0 else 0.0
             is DjTheme.ByGenre -> if (r.genre == theme.genre) 1.0 else 0.0
             is DjTheme.ByMood -> if (r.mood == theme.mood) 1.0 else 0.0
-            is DjTheme.ByAlbum, DjTheme.Discover, is DjTheme.ByPlaylist, is DjTheme.ByRequest -> 0.0
+            is DjTheme.ByAlbum -> if (r.album.equals(theme.album, ignoreCase = true)) 1.0 else 0.0
+            is DjTheme.ByPlaylist -> if (r.playlist.equals(theme.name, ignoreCase = true)) 1.0 else 0.0
+            DjTheme.Discover -> if (r.discover) 1.0 else 0.0
+            is DjTheme.ByRequest -> 0.0
         }
     }
 
@@ -507,15 +492,49 @@ class DjPlanner(
             (r.decade == null || t.decade == r.decade) &&
             (r.genre == null || t.genreKey == r.genre) &&
             (r.mood == null || moodOf(t, r.mood)) &&
+            (r.album == null || t.album.equals(r.album, ignoreCase = true)) &&
+            (r.playlist == null || t.playlists.any { it.equals(r.playlist, ignoreCase = true) }) &&
+            (!r.discover || t.discovery) &&
             (!r.localOnly || t.localUri != null)
 
     /** A track's mood from its title, album, genre tag, and the artist's Last.fm genres. */
-    private fun moodOf(t: DjTrack, mood: DjMood): Boolean {
-        val text = (listOfNotNull(t.genre, t.title, t.album) + genresOf(t.leadArtist)).joinToString(" ").lowercase(Locale.ROOT)
-        return mood.keywords.any { it in text }
-    }
+    private fun moodOf(t: DjTrack, mood: DjMood): Boolean = matchesMood(t, mood, genresOf(t.leadArtist))
 
     companion object {
+        /** Whether a track is of [mood]: its title, album and genre tag, and the artist's [genres]. */
+        fun matchesMood(t: DjTrack, mood: DjMood, genres: List<String>): Boolean {
+            val text = (listOfNotNull(t.genre, t.title, t.album) + genres).joinToString(" ").lowercase(Locale.ROOT)
+            return mood.keywords.any { it in text }
+        }
+
+        /** How well [mood] suits an hour of the day and the week: the one place the DJ's sense of the moment lives. */
+        fun moodPrior(mood: DjMood, hour: Int, weekend: Boolean): Double {
+            val morning = hour in 5..11
+            val afternoon = hour in 12..18
+            val evening = hour in 19..22
+            return when (mood) {
+                DjMood.ENERGY -> when {
+                    morning -> 1.0
+                    afternoon -> if (weekend) 0.9 else 0.6
+                    evening -> if (weekend) 0.9 else 0.5
+                    else -> 0.2
+                }
+                DjMood.FOCUS -> when {
+                    afternoon && !weekend -> 1.0
+                    morning && !weekend -> 0.7
+                    else -> 0.3
+                }
+                DjMood.CHILL -> when {
+                    evening || hour !in 5..11 -> 1.0
+                    else -> 0.5
+                }
+                DjMood.ACOUSTIC -> when {
+                    evening || hour !in 5..11 -> 0.9
+                    else -> 0.6
+                }
+            }
+        }
+
         const val DEFAULT_BLOCK_SIZE = 8
         const val MIN_BLOCK = 4
         private const val RECENT_THEMES = 4

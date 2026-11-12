@@ -42,6 +42,7 @@ data class DjTrack(
     }
 }
 
+@kotlinx.serialization.Serializable
 enum class DjMood(val keywords: Set<String>) {
     FOCUS(setOf("instrumental", "ambient", "piano", "classical", "clásica", "clasica", "lo-fi", "lofi", "study", "focus", "minimal", "post-rock", "soundtrack")),
     CHILL(setOf("chill", "lounge", "downtempo", "bossa", "soft", "jazz", "r&b", "soul", "trip hop", "easy listening", "dream pop", "indie pop")),
@@ -88,8 +89,19 @@ data class DjRequest(
     val fresh: Boolean = false,
     val rediscover: Boolean = false,
     val localOnly: Boolean = false,
+    /** One album of the library, with [artist] as its artist. */
+    val album: String? = null,
+    /** One of the listener's playlists: a set drawn from it. */
+    val playlist: String? = null,
+    /** Songs new to the listener, found on YouTube Music's radio of what they play: a set of discoveries. */
+    val discover: Boolean = false,
+    /** For a discovery: the artist whose radio it follows, rather than the ones played most. */
+    val discoverSeed: String? = null,
+    /** For a discovery: follow the songs the listener has hardly played, further from their usual. */
+    val discoverFar: Boolean = false,
 ) {
     /** True when the text said something the DJ could act on. */
     val understood: Boolean
-        get() = artist != null || decade != null || genre != null || mood != null || favorites || fresh || rediscover || localOnly
+        get() = artist != null || decade != null || genre != null || mood != null || favorites || fresh || rediscover ||
+            localOnly || album != null || playlist != null || discover
 }

@@ -28,6 +28,9 @@ sealed interface AppRoute {
     data object Spotify : AppRoute
     data object Downloads : AppRoute
 
+    /** Auden DJ's page: starting a set, and the sets the DJ prepares. Opened from the navigation bar's DJ button. */
+    data object Dj : AppRoute
+
     /** A Library shelf's "Show all" — its own cards laid out again as a grid. */
     data class LibraryShowAll(val shelf: HomeShelf) : AppRoute
 

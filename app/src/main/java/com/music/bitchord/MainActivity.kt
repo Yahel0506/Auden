@@ -203,6 +203,7 @@ import com.music.bitchord.ui.screens.libraryDeviceItems
 import com.music.bitchord.ui.screens.SPOTIFY_BROWSE_ID
 import com.music.bitchord.ui.screens.libraryLinks
 import com.music.bitchord.ui.screens.CACHE_FOLDER_BROWSE_ID
+import com.music.bitchord.ui.screens.DjScreen
 import com.music.bitchord.ui.screens.ListenTogetherScreen
 import com.music.bitchord.ui.screens.PartyServerEditor
 import com.music.bitchord.ui.screens.SignatureApiEditor
@@ -3245,6 +3246,11 @@ private fun BitChordApp(
                                     contentPadding = listPadding,
                                 )
                             }
+                        } else if (pageRoute == AppRoute.Dj) {
+                            DjScreen(
+                                contentPadding = listPadding,
+                                onOpenPlayer = { showNowPlaying = true },
+                            )
                         } else if (pageRoute == AppRoute.Moods) {
                             MoodGridPage(
                                 gridState = moodsGridState,
@@ -4107,6 +4113,7 @@ private fun BitChordApp(
                         AppRoute.Downloads -> stringResource(R.string.downloads)
                         AppRoute.Discord -> "Discord"
                         AppRoute.History -> stringResource(R.string.history)
+                        AppRoute.Dj -> stringResource(R.string.dj_home_title)
                         is AppRoute.LibraryShowAll -> route.shelf.title
                         is AppRoute.ArtistShelf -> route.shelf.title
                         AppRoute.Moods -> stringResource(R.string.find_your_mood)
@@ -4142,6 +4149,8 @@ private fun BitChordApp(
                             // The page leads with its own large "Replay", so the bar
                             // stays out of the way until that has been scrolled off.
                             route == AppRoute.Replay -> replayScrolled
+                            // The DJ's page leads with its own large title, like a tab's page.
+                            route == AppRoute.Dj -> false
                             route != null -> true
                             detail != null && detailActiveShelf != null -> true
                             detail != null -> detailScrolled
@@ -4154,6 +4163,8 @@ private fun BitChordApp(
                     // The same step the back gesture takes — see [goBack] —
                     // offered on anything pushed over a tab.
                     onBack = when {
+                        // A page of the bar, like Home and Library: the bar's selector is how it is left.
+                        route == AppRoute.Dj && detail == null && selectedMoodGenre == null -> null
                         route != null || detail != null || selectedMoodGenre != null -> goBack
                         else -> null
                     },
@@ -4493,12 +4504,18 @@ private fun BitChordApp(
                 val djLabel = stringResource(R.string.dj_nav_tab)
                 val navTabs = remember(tabs, showDjTab, djLabel) {
                     if (showDjTab) {
-                        tabs.toMutableList().apply { add(DJ_TAB_INDEX, BottomTab(djLabel, BitChordIcons.DjRing, action = true)) }
+                        tabs.toMutableList().apply { add(DJ_TAB_INDEX, BottomTab(djLabel, BitChordIcons.DjRing)) }
                     } else {
                         tabs
                     }
                 }
-                val navSelected = if (showDjTab && selectedTab >= DJ_TAB_INDEX) selectedTab + 1 else selectedTab
+                // The DJ's page is a place of the bar like the others: the selector rests on it while it is open,
+                // and leaves it when another tab is chosen (which clears the page).
+                val navSelected = when {
+                    showDjTab && route == AppRoute.Dj -> DJ_TAB_INDEX
+                    showDjTab && selectedTab >= DJ_TAB_INDEX -> selectedTab + 1
+                    else -> selectedTab
+                }
 
                 // One tab handler, whichever bar is drawing it.
                 // A tab is a fresh start: everything pushed over the old one —
@@ -4519,8 +4536,12 @@ private fun BitChordApp(
                 val onNavTabSelected: (Int) -> Unit = { index ->
                     when {
                         showDjTab && index == DJ_TAB_INDEX ->
-                            // Open the DJ's player when it is up, start it when it is not.
-                            if (DjSession.state.value.active) showNowPlaying = true else startDj()
+                            // The DJ's page: where a set is asked for. Where the player opens is its own business.
+                            if (route != AppRoute.Dj) {
+                                navigator.clear()
+                                viewModel.closeMoodGenre()
+                                navigator.push(AppRoute.Dj)
+                            }
                         showDjTab && index > DJ_TAB_INDEX -> onTabSelected(index - 1)
                         else -> onTabSelected(index)
                     }

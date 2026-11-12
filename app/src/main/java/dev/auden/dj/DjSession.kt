@@ -174,12 +174,12 @@ object DjSession {
      * start is under way, a second one is not dropped: it becomes a change of what the DJ plays, made
      * the moment the first one is playing.
      */
-    fun start(context: Context, request: String?) {
+    fun start(context: Context, request: String?, structured: DjRequest? = null) {
         val text = request?.trim().orEmpty()
         live?.let { if (!it.started) return askOnceStarted(text) }
         stop()
         val app = context.applicationContext
-        val session = Run(app, text)
+        val session = Run(app, text, structured)
         live = session
         queuedRequest = null
         _state.value = _state.value.copy(
@@ -329,7 +329,7 @@ object DjSession {
      * its songs. The player's queue may hold the listener's songs between them: an index into the
      * player is always found by looking, never assumed from [order].
      */
-    private class Run(private val app: Context, requestText: String) {
+    private class Run(private val app: Context, requestText: String, private val structured: DjRequest? = null) {
         private val lang = language(app)
         private val blockSize = AppSettings.djBlockSize.value
         // Asked each time, not once: a setting changed while the DJ is on takes effect at the next line.
@@ -414,13 +414,23 @@ object DjSession {
             tracks.putAll(loaded.tracks.associateBy { it.id })
             songs.putAll(loaded.songs)
             val text = requestText
-            val (parsed, firstPlanned, relaxed) = withContext(planning) {
-                val parsed = text.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, loaded.tracks) }
+            var parsed = structured ?: text.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, loaded.tracks) }
+            withContext(planning) {
                 planner = DjPlanner(loaded.tracks, now, seed = now, blockSize = blockSize, request = parsed, genresOf = ArtistFacts::genresForDj,
                     recently = DjHistory.recent(app), recentOrder = DjHistory.recentOrdered(app),
                     pastThemes = DjHistory.themes(app), pastOpeners = DjHistory.openers(app))
-                Triple(parsed, planner.next(), planner.relaxed)
             }
+            // A set of discoveries needs them found before the first set is chosen. When the radio gives none
+            // (offline, nothing streamed), the ask is let go and the DJ surprises, rather than saying it found nothing.
+            parsed?.takeIf { it.discover }?.let { ask ->
+                val found = withTimeoutOrNull(DISCOVER_WAIT_MS) { addDiscoveries(loaded.tracks, ask) } == true
+                if (!found) {
+                    parsed = ask.copy(discover = false, discoverSeed = null, discoverFar = false).takeIf { it.understood }
+                    withContext(planning) { planner.setRequest(parsed) }
+                }
+            }
+            val firstPlanned = withContext(planning) { planner.next() }
+            val relaxed = planner.relaxed
             lap("begin planned")
             ensureOpen()
             // The Last.fm genres of the artists the listener plays most, asked for once and kept: they
@@ -433,7 +443,7 @@ object DjSession {
             }
             // New to the listener but on the taste they show: the radio of what they know, fetched
             // once here and kept for the session. Surprises only; a request names its songs itself.
-            if (parsed == null) background += scope.launch(Dispatchers.Main) { addDiscoveries(loaded.tracks) }
+            if (parsed == null) background += scope.launch(Dispatchers.Main) { addDiscoveries(loaded.tracks, null) }
             val time = java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault())
             val plays = loaded.tracks.groupBy { it.leadArtist.lowercase() }
                 .mapValues { (_, ts) -> ts.sumOf { it.plays30 } to ts.sumOf { it.plays } }
@@ -611,12 +621,20 @@ object DjSession {
         private fun playable(set: DjBlock): DjBlock = set.copy(tracks = set.tracks.filter { songs.containsKey(it.id) })
 
         /** Asks YouTube Music's radio for songs like the listener's favourites, and offers them to the planner. */
-        private suspend fun addDiscoveries(known: List<DjTrack>) {
+        /** True when something was found and added to the pool. */
+        private suspend fun addDiscoveries(known: List<DjTrack>, ask: DjRequest?): Boolean {
             val have = known.mapTo(HashSet()) { it.id }
             val found = withContext(Dispatchers.IO) {
                 // Seeds drawn at random from the songs the listener plays most, not always the same few: the
-                // discoveries are as varied as the taste they come from.
-                val seeds = known.filter { it.plays > 0 && it.localUri == null }
+                // discoveries are as varied as the taste they come from. An ask can name the artist to follow, or
+                // ask for the songs hardly played, further from the usual.
+                val streamed = known.filter { it.plays > 0 && it.localUri == null }
+                val named = ask?.discoverSeed?.let { artist -> streamed.filter { it.leadArtist.equals(artist, true) } }.orEmpty()
+                val seeds = when {
+                    named.isNotEmpty() -> named.sortedByDescending { it.plays }.take(DISCOVERY_SEEDS)
+                    ask?.discoverFar == true -> streamed.filter { it.plays in 1..FAR_MAX_PLAYS }.shuffled().take(DISCOVERY_SEEDS)
+                    else -> null
+                } ?: streamed
                     .sortedByDescending { it.plays }
                     .take(DISCOVERY_POOL)
                     .shuffled()
@@ -634,7 +652,7 @@ object DjSession {
                 }
                 out
             }
-            if (closed || found.isEmpty()) return
+            if (closed || found.isEmpty()) return false
             // Back on the main thread: the songs are known before the planner can choose them.
             found.forEach { (track, song) ->
                 tracks[track.id] = track
@@ -642,6 +660,7 @@ object DjSession {
             }
             val fresh = found.map { it.first }
             withContext(planning) { planner.addDiscoveries(fresh) }
+            return true
         }
 
         /**
@@ -1096,6 +1115,12 @@ object DjSession {
 
     /** How many of the listener's favourites seed the discoveries. */
     private const val DISCOVERY_SEEDS = 4
+
+/** How long a set of discoveries is given to find them before the DJ gives the ask up and surprises instead. */
+private const val DISCOVER_WAIT_MS = 9_000L
+
+/** The most plays a song has to be a seed for the discoveries further from the listener's usual. */
+private const val FAR_MAX_PLAYS = 6
 
     /** How many of the most played songs the discovery seeds are drawn from. */
     private const val DISCOVERY_POOL = 25
