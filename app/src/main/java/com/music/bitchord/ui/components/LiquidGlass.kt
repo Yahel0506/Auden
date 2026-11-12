@@ -154,7 +154,7 @@ val NAV_GLASS_RIM = Highlight(
     width = 0.6.dp,
     blurRadius = 0.2.dp,
     style = com.music.bitchord.ui.components.backdrop.highlight.HighlightStyle.Default(
-        color = Color.White.copy(alpha = 0.6f),
+        color = Color.White.copy(alpha = 0.3f),
         // Lit from above: the long top and bottom edges carry it, the round ends and corners much less.
         angle = 90f,
         falloff = 1.6f,
