@@ -93,7 +93,7 @@ class ArtworkMesh internal constructor(internal val image: ImageBitmap) {
     internal val soft: ImageBitmap by lazy { image.boxBlurred(MESH_SOFT_PASSES) }
 }
 
-private const val MESH_SOFT_PASSES = 6
+private const val MESH_SOFT_PASSES = 3
 
 /**
  * One pre-blurred bitmap for the full-cover player backdrop.
