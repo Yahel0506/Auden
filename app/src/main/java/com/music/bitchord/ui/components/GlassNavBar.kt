@@ -398,6 +398,7 @@ fun GlassNavBar(
                         )
                     },
                     onClick = onClick,
+                    action = tab.action,
                 )
             }
         }

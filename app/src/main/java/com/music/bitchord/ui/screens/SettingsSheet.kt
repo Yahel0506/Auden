@@ -259,6 +259,7 @@ fun SettingsScreen(
     val connectEnabled by AppSettings.connectEnabled.collectAsStateWithLifecycle()
     val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val backdropMotion by AppSettings.backdropMotion.collectAsStateWithLifecycle()
+    val showDjTab by AppSettings.showDjTab.collectAsStateWithLifecycle()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val disableBlendEffects by AppSettings.disableBlendEffects.collectAsStateWithLifecycle()
     val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
@@ -1583,6 +1584,21 @@ fun SettingsScreen(
         }
 
         if (shows(SettingsCategory.DJ)) SearchableSettingsGroup(search, header = stringResource(R.string.dj_title)) {
+            val djNavTitle = stringResource(R.string.dj_nav_setting)
+            row(djNavTitle, "dj", "navigation", "bar", "button", "tab") {
+                SettingsRow(
+                    icon = Icons.Rounded.GraphicEq,
+                    title = djNavTitle,
+                    subtitle = stringResource(R.string.dj_nav_setting_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = showDjTab,
+                            onCheckedChange = AppSettings::setShowDjTab,
+                        )
+                    },
+                    onClick = { AppSettings.setShowDjTab(!showDjTab) },
+                )
+            }
             val djVoiceTitle = stringResource(R.string.dj_setting_voice)
             row(djVoiceTitle, "dj", "voice", "speech", "talk") {
                 SettingsRow(

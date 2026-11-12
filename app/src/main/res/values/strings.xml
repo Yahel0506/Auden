@@ -1506,6 +1506,9 @@
     <string name="dj_theme_energy">Energy</string>
     <string name="dj_theme_acoustic">Acoustic</string>
     <string name="dj_theme_favorites">Your favorites</string>
+    <string name="dj_nav_tab">DJ</string>
+    <string name="dj_nav_setting">DJ in the navigation bar</string>
+    <string name="dj_nav_setting_subtitle">A DJ button in the middle of the bar</string>
     <string name="dj_title">Auden DJ</string>
     <string name="dj_subtitle">Themed sets from your own music, with a voice in between</string>
     <string name="dj_start">Start the DJ</string>

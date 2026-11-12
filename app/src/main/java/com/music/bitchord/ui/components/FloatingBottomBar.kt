@@ -65,6 +65,11 @@ import kotlin.math.roundToInt
 data class BottomTab(
     val label: String,
     val icon: ImageVector,
+    /**
+     * A button that does something rather than being somewhere: it is never the selected tab, the selection
+     * stays where it was, and a drag of the selection that lands on it is a tap on it.
+     */
+    val action: Boolean = false,
 )
 
 /**

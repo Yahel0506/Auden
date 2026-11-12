@@ -67,6 +67,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.GraphicEq
 import com.music.bitchord.ui.components.LocalActionRowStyle
 import com.music.bitchord.ui.components.ActionRowStyle
 import com.music.bitchord.ui.components.ActionRow
@@ -4485,6 +4486,20 @@ private fun BitChordApp(
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
 
+                // The DJ's button in the middle of the bar: a button, not a page. The rest of the app counts
+                // its four tabs as it always has, so the bars are handed this list with the DJ slotted in at
+                // the middle and the selection and the taps translated across.
+                val showDjTab by AppSettings.showDjTab.collectAsStateWithLifecycle()
+                val djLabel = stringResource(R.string.dj_nav_tab)
+                val navTabs = remember(tabs, showDjTab, djLabel) {
+                    if (showDjTab) {
+                        tabs.toMutableList().apply { add(DJ_TAB_INDEX, BottomTab(djLabel, Icons.Rounded.GraphicEq, action = true)) }
+                    } else {
+                        tabs
+                    }
+                }
+                val navSelected = if (showDjTab && selectedTab >= DJ_TAB_INDEX) selectedTab + 1 else selectedTab
+
                 // One tab handler, whichever bar is drawing it.
                 // A tab is a fresh start: everything pushed over the old one —
                 // routes and release pages alike — goes with it.
@@ -4501,6 +4516,16 @@ private fun BitChordApp(
                     }
                 }
 
+                val onNavTabSelected: (Int) -> Unit = { index ->
+                    when {
+                        showDjTab && index == DJ_TAB_INDEX ->
+                            // Open the DJ's player when it is up, start it when it is not.
+                            if (DjSession.state.value.active) showNowPlaying = true else startDj()
+                        showDjTab && index > DJ_TAB_INDEX -> onTabSelected(index - 1)
+                        else -> onTabSelected(index)
+                    }
+                }
+
                 if (glassActive) Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
@@ -4514,9 +4539,9 @@ private fun BitChordApp(
                     // controls dock into the tab bar rather than riding above it,
                     // and the pair folds together on scroll. See [GlassNavBar].
                     GlassNavBar(
-                        tabs = tabs,
-                        selectedIndex = selectedTab,
-                        onTabSelected = onTabSelected,
+                        tabs = navTabs,
+                        selectedIndex = navSelected,
+                        onTabSelected = onNavTabSelected,
                         scrollConnection = navBarScroll,
                         song = player.song,
                         isPlaying = player.isPlaying,
@@ -4577,10 +4602,10 @@ private fun BitChordApp(
                         Spacer(Modifier.height(8.dp))
                     }
                     FloatingBottomBar(
-                        tabs = tabs,
-                        selectedIndex = selectedTab,
+                        tabs = navTabs,
+                        selectedIndex = navSelected,
                         hazeState = hazeState,
-                        onTabSelected = onTabSelected,
+                        onTabSelected = onNavTabSelected,
                     )
                 }
             }
@@ -6936,6 +6961,9 @@ private const val TAB_HOME = 0
 private const val TAB_EXPLORE = 1
 private const val TAB_LIBRARY = 2
 private const val TAB_SEARCH = 3
+
+/** Where the DJ's button sits in the bar: the middle of five. */
+private const val DJ_TAB_INDEX = 2
 
 /** Auden doesn't carry BitChord's seasonal greetings. */
 private const val AUDEN_FESTIVE_GREETINGS = false

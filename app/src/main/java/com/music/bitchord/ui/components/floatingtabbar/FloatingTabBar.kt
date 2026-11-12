@@ -440,7 +440,9 @@ interface FloatingTabBarScope {
         title: @Composable () -> Unit,
         icon: @Composable () -> Unit,
         onClick: () -> Unit,
-        indication: (@Composable () -> Indication)? = { LocalIndication.current }
+        indication: (@Composable () -> Indication)? = { LocalIndication.current },
+        /** A button that does something rather than being somewhere: the selection never rests on it. */
+        action: Boolean = false,
     )
 
     /**
@@ -1020,9 +1022,16 @@ private fun SharedTransitionScope.ExpandedTabs(
                                     val absoluteIndexFloat = (dragStartIndex + totalDrag / step)
                                         .coerceIn(0f, cells.lastIndex.toFloat())
                                     val newIndex = absoluteIndexFloat.roundToInt()
-                                    pill.release(newIndex)
-                                    if (newIndex != currentSelectedTabIndex) {
+                                    if (cells[newIndex].action) {
+                                        // A button, not a place: the selection goes back where it was, and
+                                        // the button is pressed.
+                                        pill.release(currentSelectedTabIndex)
                                         cells[newIndex].onClick()
+                                    } else {
+                                        pill.release(newIndex)
+                                        if (newIndex != currentSelectedTabIndex) {
+                                            cells[newIndex].onClick()
+                                        }
                                     }
                                 },
                                 onHorizontalDrag = { _, delta ->
@@ -1306,7 +1315,8 @@ private class FloatingTabBarScopeImpl : FloatingTabBarScope {
         title: @Composable () -> Unit,
         icon: @Composable () -> Unit,
         onClick: () -> Unit,
-        indication: (@Composable () -> Indication)?
+        indication: (@Composable () -> Indication)?,
+        action: Boolean,
     ) {
         tabs.add(
             FloatingTabBarTab(
@@ -1314,7 +1324,8 @@ private class FloatingTabBarScopeImpl : FloatingTabBarScope {
                 title = title,
                 icon = icon,
                 onClick = onClick,
-                indication = indication
+                indication = indication,
+                action = action,
             )
         )
     }
@@ -1341,7 +1352,8 @@ private data class FloatingTabBarTab(
     val title: @Composable () -> Unit,
     val icon: @Composable () -> Unit,
     val onClick: () -> Unit,
-    val indication: (@Composable () -> Indication)?
+    val indication: (@Composable () -> Indication)?,
+    val action: Boolean = false,
 )
 
 /**

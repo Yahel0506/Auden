@@ -547,6 +547,9 @@ object AppSettings {
     /** Blurs unfocused lyric lines, keeping the active line sharp. */
     val lyricsBlur = MutableStateFlow(true)
 
+    /** A DJ button in the middle of the navigation bar. */
+    val showDjTab = MutableStateFlow(true)
+
     /** How strong the blur on unfocused lyrics is, in percent: 75 is the strength the table in PlayerLyrics was tuned at; the default is a little under it. */
     val lyricsBlurAmount = MutableStateFlow(DEFAULT_LYRICS_BLUR_AMOUNT)
 
@@ -1126,6 +1129,7 @@ object AppSettings {
         liquidGlass.value = prefs.getBoolean(KEY_LIQUID_GLASS, false)
         glassPerformance.value = prefs.getBoolean(KEY_GLASS_PERFORMANCE, false)
         progressiveBlur.value = prefs.getBoolean(KEY_PROGRESSIVE_BLUR, false)
+        showDjTab.value = prefs.getBoolean(KEY_SHOW_DJ_TAB, true)
         lyricsBlur.value = prefs.getBoolean(KEY_LYRICS_BLUR, true)
         lyricsBlurAmount.value = prefs.getInt(KEY_LYRICS_BLUR_AMOUNT, DEFAULT_LYRICS_BLUR_AMOUNT).coerceIn(0, 100)
         lyricsOffsetMs.value = prefs.getInt(KEY_LYRICS_OFFSET_MS, 0)
@@ -1654,6 +1658,11 @@ object AppSettings {
         val normalized = normalizePerformanceRefreshRate(value)
         performanceRefreshRate.value = normalized
         prefs.edit().putInt(KEY_PERFORMANCE_REFRESH_RATE, normalized).apply()
+    }
+
+    fun setShowDjTab(value: Boolean) {
+        showDjTab.value = value
+        prefs.edit().putBoolean(KEY_SHOW_DJ_TAB, value).apply()
     }
 
     fun setLyricsBlurAmount(percent: Int) {
@@ -2504,6 +2513,7 @@ object AppSettings {
     private const val KEY_GLASS_PERFORMANCE = "glass_performance"
     private const val KEY_PROGRESSIVE_BLUR = "progressive_blur"
     private const val KEY_LYRICS_BLUR = "lyrics_blur"
+    private const val KEY_SHOW_DJ_TAB = "show_dj_tab"
     private const val KEY_LYRICS_BLUR_AMOUNT = "lyrics_blur_amount"
     const val DEFAULT_LYRICS_BLUR_AMOUNT = 65
     private const val KEY_LYRICS_OFFSET_MS = "lyrics_offset_ms"
