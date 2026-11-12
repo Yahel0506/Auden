@@ -434,7 +434,7 @@ private fun DrawScope.drawFlowing(image: ImageBitmap, seamY: Float, below: Float
     val amplitude = width * FLOW_REACH * flow.strength()
     val phase = flow.phase()
     val ramp = (below * FLOW_RAMP).coerceAtLeast(1f)
-    val bands = (below / FLOW_BAND_PX).roundToInt().coerceIn(12, 56)
+    val bands = (below / FLOW_BAND_PX).roundToInt().coerceIn(24, 180)
     val bandHeight = below / bands
     val dstSize = IntSize(width.roundToInt(), below.roundToInt())
     for (band in 0 until bands) {
@@ -518,10 +518,10 @@ internal fun rememberBackdropFlow(playing: () -> Boolean, reactive: Boolean, ena
     }
 }
 
-private const val FLOW_REACH = 0.05f
+private const val FLOW_REACH = 0.024f
 private const val FLOW_RAMP = 0.34f
-private const val FLOW_BAND_PX = 14f
-private const val FLOW_WAVELENGTH_PX = 520f
+private const val FLOW_BAND_PX = 7f
+private const val FLOW_WAVELENGTH_PX = 1000f
 private const val FLOW_VERTICAL = 0.55f
 private const val FLOW_TWO_PI = 6.2831855f
 private const val FLOW_STEP_S = 0.032f
