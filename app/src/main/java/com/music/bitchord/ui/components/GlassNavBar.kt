@@ -170,7 +170,7 @@ fun GlassNavBar(
     // the three surfaces gets its own glass modifier and so its own shape cache.
     // The theme's own glass tint, as the liquid top bar has it — no white wash.
     val glassSurface: @Composable () -> Modifier = {
-        Modifier.liquidGlass(shape = pillShape, surfaceTint = navGlassTint(), rim = NAV_GLASS_RIM, depth = NAV_GLASS_DEPTH, blur = NAV_GLASS_BLUR, vibrancy = NAV_GLASS_VIBRANCY)
+        Modifier.liquidGlass(shape = pillShape, surfaceTint = navGlassTint(), rim = NAV_GLASS_RIM, depth = NAV_GLASS_DEPTH, blur = NAV_GLASS_BLUR, vibrancy = NAV_GLASS_VIBRANCY, edgeThickening = NAV_GLASS_EDGE)
     }
 
     // ---- The fold, as Apple Music's: one movement driven by one value -----------------------------

@@ -138,10 +138,13 @@ private const val DARK_INDICATOR_OPACITY = 0.42f
 @Composable
 fun navGlassTint(): Color =
     if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
-        Color(0xFFFFFFFF).copy(alpha = 0.64f)
+        Color(0xFFFFFFFF).copy(alpha = 0.66f)
     } else {
-        Color(0xFF3A3A3D).copy(alpha = 0.64f)
+        Color(0xFF3A3A3D).copy(alpha = 0.68f)
     }
+
+/** How much more opaque the nav bar's glass grows from its centre out to its edges. */
+const val NAV_GLASS_EDGE = 0.45f
 
 /**
  * The nav bar's rim, as Apple's: a fine line, but bright, and lit from one side — light caught in the glass's
@@ -151,8 +154,10 @@ val NAV_GLASS_RIM = Highlight(
     width = 0.6.dp,
     blurRadius = 0.2.dp,
     style = com.music.bitchord.ui.components.backdrop.highlight.HighlightStyle.Default(
-        color = Color.White.copy(alpha = 0.9f),
-        falloff = 2f,
+        color = Color.White.copy(alpha = 0.6f),
+        // Lit from above: the long top and bottom edges carry it, the round ends and corners much less.
+        angle = 90f,
+        falloff = 1.6f,
     ),
 )
 
@@ -251,6 +256,11 @@ fun Modifier.liquidGlass(
     shape: CornerBasedShape,
     /** Drawn over the glass in place of the theme's default tint, when set. */
     surfaceTint: Color? = null,
+    /**
+     * When set, the glass grows this much more opaque towards its edges — [surfaceTint] at the centre — a
+     * film that thickens at the rim, as Apple's does.
+     */
+    edgeThickening: Float = 0f,
     /** The rim drawn along the edge in place of the default, when set. */
     rim: Highlight? = null,
     /** The saturation boost given to what shows through, 1 the default. */
@@ -301,6 +311,25 @@ fun Modifier.liquidGlass(
         shadow = { Shadow.Default },
         onDrawSurface = {
             drawRect(color = surfaceTintColor, size = size)
+            if (edgeThickening > 0f) {
+                val edge = surfaceTintColor.copy(alpha = edgeThickening)
+                val clear = edge.copy(alpha = 0f)
+                // Top and bottom: the long edges, thickest.
+                drawRect(
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        0f to edge, 0.38f to clear, 0.62f to clear, 1f to edge,
+                    ),
+                    size = size,
+                )
+                // The round ends, over as far as they curve.
+                val end = (size.height / size.width).coerceAtMost(0.5f)
+                drawRect(
+                    brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                        0f to edge, end * 0.6f to clear, 1f - end * 0.6f to clear, 1f to edge,
+                    ),
+                    size = size,
+                )
+            }
         },
         exportedBackdrop = exportedBackdrop,
         backdropScale = resolutionScale,
