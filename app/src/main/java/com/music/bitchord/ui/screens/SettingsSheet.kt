@@ -506,6 +506,7 @@ fun SettingsScreen(
                     SettingsRow(
                         icon = SettingsCategory.WHATS_NEW.icon,
                         title = stringResource(SettingsCategory.WHATS_NEW.title),
+                        subtitle = version,
                         onClick = { onOpenSection(SettingsCategory.WHATS_NEW) },
                     )
                 }
