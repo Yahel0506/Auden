@@ -780,30 +780,18 @@ private fun GlassNowPlaying(
 }
 
 /**
- * The selected tab's accent: what is drawn is kept as a mask and filled with a soft gradient from blue through
- * a hint of blue violet to a very light blue, blue for almost all of it — Apple Music's place for its red, in Auden's colours.
+ * The selected tab's accent: what is drawn is kept as a mask and filled with one flat blue — Apple Music's
+ * place for its red, in Auden's colour.
  */
 internal fun Modifier.navAccent(): Modifier = this
     .graphicsLayer(compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen)
     .drawWithContent {
         drawContent()
-        drawRect(
-            brush = androidx.compose.ui.graphics.Brush.linearGradient(
-                colorStops = NAV_ACCENT,
-                start = androidx.compose.ui.geometry.Offset.Zero,
-                end = androidx.compose.ui.geometry.Offset(size.width, size.height),
-            ),
-            blendMode = androidx.compose.ui.graphics.BlendMode.SrcIn,
-        )
+        drawRect(color = NAV_ACCENT, blendMode = androidx.compose.ui.graphics.BlendMode.SrcIn)
     }
 
-// Blue throughout; a breath of blue violet and a very light blue only at the far corner, never leading.
-private val NAV_ACCENT = arrayOf(
-    0.00f to Color(0xFF5C9DFF),
-    0.55f to Color(0xFF6FAAFF),
-    0.80f to Color(0xFF8A9DFF),
-    1.00f to Color(0xFFB0DDFF),
-)
+/** Flat, and a step darker than the gradient's lead blue (5C9DFF) it replaces. */
+private val NAV_ACCENT = Color(0xFF4A8BEE)
 
 /** How far the selection sits inside the bar above and below. */
 private val NAV_PILL_INSET = 2.dp
