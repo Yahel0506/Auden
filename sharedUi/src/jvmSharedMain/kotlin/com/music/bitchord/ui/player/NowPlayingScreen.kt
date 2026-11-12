@@ -501,8 +501,8 @@ private val ArtworkScaleEasing = CubicBezierEasing(0.215f, 0.61f, 0.355f, 1f)
 private const val ARTWORK_SCALE_DURATION_MS = 500
 
 /** The gaps either side of the transport row, which sits close to the scrubber and the volume bar. */
-private val TRANSPORT_GAP_ABOVE = 2.dp
-private val TRANSPORT_GAP_BELOW = 4.dp
+private val TRANSPORT_GAP_ABOVE = 6.dp
+private val TRANSPORT_GAP_BELOW = 16.dp
 /**
  * The spread [NowPlayingScreen] settled on the last time it was laid out.
  *
@@ -4259,7 +4259,7 @@ fun NowPlayingScreen(
                         )
                         // The volume slider already has 13dp below its drawn track.
                         // Balance that invisible inset with the caption gap below the icons.
-                        Spacer(Modifier.height(6.dp + gapShare))
+                        Spacer(Modifier.height(12.dp + gapShare))
                     } else {
                         // No volume bar: its height is shared out by the gaps instead (see
                         // [gapShare]), so the transport sits centred between the scrubber and
