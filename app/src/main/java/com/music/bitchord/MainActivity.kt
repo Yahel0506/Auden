@@ -198,7 +198,10 @@ import com.music.bitchord.ui.screens.DiscordDialogHost
 import com.music.bitchord.ui.screens.DiscordScreen
 import com.music.bitchord.ui.screens.EqualizerScreen
 import com.music.bitchord.ui.screens.HistoryScreen
+import com.music.bitchord.ui.screens.rememberFolderItems
+import com.music.bitchord.ui.screens.LibraryBackupBanner
 import com.music.bitchord.ui.screens.LibraryReplayEntry
+import com.music.bitchord.ui.screens.rememberSpotifyShelf
 import com.music.bitchord.ui.screens.libraryDeviceItems
 import com.music.bitchord.ui.screens.SPOTIFY_BROWSE_ID
 import com.music.bitchord.ui.screens.libraryLinks
@@ -4008,6 +4011,24 @@ private fun BitChordApp(
                                 pullState = libraryPull,
                                 contentPadding = listPadding,
                                 links = libraryLinks(),
+                                backup = {
+                                    LibraryBackupBanner(
+                                        onOpen = onLibraryItemClick,
+                                        onPlay = {
+                                            scope.launch {
+                                                val cached = AudioCache.cachedSongs().map { it.song }
+                                                if (cached.isNotEmpty()) {
+                                                    playFrom(cached, 0, QueueSource(context.getString(R.string.music_backup), PlaybackSourceType.BROWSE, CACHE_FOLDER_BROWSE_ID))
+                                                }
+                                            }
+                                        },
+                                    )
+                                },
+                                foldersTitle = stringResource(R.string.library_collections),
+                                folders = rememberFolderItems(),
+                                spotifyTitle = stringResource(R.string.from_spotify),
+                                spotifyPlaylists = rememberSpotifyShelf(),
+                                onOpenSpotify = { navigator.push(AppRoute.Spotify) },
                                 // An album kept on the device and then downloaded is one album: its copy in
                                 // the library is the card, not the download's record beside it.
                                 deviceItems = libraryDeviceItems(

@@ -53,24 +53,9 @@ fun libraryLinks(): List<LibraryLink> {
         ),
         icon = icon,
     )
+    // The folders that used to head the page — Downloads, Local music, the song cache and Spotify — have their own
+    // places now (the app's playlists, the backup banner, the Spotify row); what is left are the remote libraries.
     return listOfNotNull(
-        link(
-            stringResource(R.string.downloads),
-            stringResource(R.string.downloaded_songs),
-            "local:downloads",
-        ),
-        link(
-            stringResource(R.string.local_music),
-            stringResource(R.string.audio_files_on_device),
-            "local:all",
-        ),
-        // Opt-in from Settings → Storage: what the song cache is holding from
-        // YouTube and JioSaavn. See [com.music.bitchord.playback.AudioCache.cachedSongs].
-        link(
-            stringResource(R.string.cached_songs),
-            stringResource(R.string.cached_songs_subtitle),
-            CACHE_FOLDER_BROWSE_ID,
-        ).takeIf { showCacheFolder },
         // Only once set up in Sources; unconfigured, they'd just be dead ends.
         link(
             stringResource(R.string.webdav),
@@ -82,13 +67,6 @@ fun libraryLinks(): List<LibraryLink> {
             stringResource(R.string.smb_subtitle),
             com.music.bitchord.data.smb.SmbConfig.BROWSE_ID,
         ).takeIf { smbHost.isNotBlank() && smbShare.isNotBlank() },
-        // Only while signed in to Spotify in Settings → Accounts; it opens that
-        // account's playlists rather than a browse page.
-        link(
-            stringResource(R.string.spotify),
-            stringResource(R.string.spotify_library_subtitle),
-            SPOTIFY_BROWSE_ID,
-        ).takeIf { spotifyConnected.isNotBlank() }?.copy(logo = Res.drawable.spotify_logo),
     )
 }
 
@@ -137,30 +115,3 @@ const val SPOTIFY_BROWSE_ID = "app:spotify"
 
 /** The Cached songs folder's page id — one of the `local:` device folders. */
 const val CACHE_FOLDER_BROWSE_ID = "local:cache"
-
-/**
- * The phone's way in to Replay: its row of headline cards, placeholders for
- * them while the history is read, and nothing at all while there is not yet
- * enough listening to deal them — Settings still opens Replay either way.
- */
-@Composable
-fun LibraryReplayEntry(
-    cards: List<ReplayHeroCard>,
-    loading: Boolean,
-    holder: String,
-    memberSince: String?,
-    onOpenReplay: (ReplayStoryPage) -> Unit,
-) {
-    if (loading) {
-        ReplayCardRowSkeleton()
-    } else if (cards.isNotEmpty()) {
-        ReplayCardRow(
-            cards = cards,
-            holder = holder,
-            memberSince = memberSince,
-            onCardClick = onOpenReplay,
-            modifier = Modifier.padding(vertical = 6.dp),
-            contentPadding = PaddingValues(horizontal = PAGE_GUTTER),
-        )
-    }
-}

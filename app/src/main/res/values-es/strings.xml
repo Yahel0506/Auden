@@ -1736,4 +1736,12 @@
     <string name="dj_typed_title">%1$s</string>
     <string name="dj_session_typed">Lo pediste tú</string>
     <string name="dj_with">Con %1$s</string>
+    <string name="music_backup">Respaldo musical</string>
+    <string name="music_backup_subtitle">Todas las canciones de tu caché</string>
+    <string name="library_replay_cta">Ver estadísticas</string>
+    <string name="library_songs_count">%1$d canciones</string>
+    <string name="from_spotify">De Spotify</string>
+    <string name="library_songs_count_one">1 canción</string>
+    <string name="library_collections">Colecciones</string>
+    <string name="library_backup_caption">En tu dispositivo</string>
 </resources>

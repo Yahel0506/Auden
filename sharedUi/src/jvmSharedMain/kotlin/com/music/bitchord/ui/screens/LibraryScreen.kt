@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import com.music.bitchord.ui.components.ShelfRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -115,6 +116,21 @@ fun LibraryScreen(
      * whole. Left off the page entirely while there are none.
      */
     deviceItems: List<ShelfItem>,
+    /** The banner that leads to the song cache, under the Replay banner; built by the app. */
+    backup: @Composable () -> Unit = {},
+    /**
+     * The row of the app's own folders — Downloads and Local music — drawn as playlists like any other, each with its
+     * own cover; its title is [foldersTitle]. Left off the page while there are none.
+     */
+    foldersTitle: String = "",
+    folders: List<ShelfItem> = emptyList(),
+    /**
+     * The Spotify account's playlists as a row of their own, after the account's own playlists. Left off the page
+     * while there are none; its title opens the Spotify page ([onOpenSpotify]).
+     */
+    spotifyTitle: String = "",
+    spotifyPlaylists: List<ShelfItem> = emptyList(),
+    onOpenSpotify: (() -> Unit)? = null,
     /** The big "Library" heading; the desktop's pages carry none. */
     showTitle: Boolean = true,
 ) {
@@ -141,9 +157,19 @@ fun LibraryScreen(
                     )
                 }
             }
+            // Replay, as one banner that opens the numbers; then the way into the song cache; then the playlists the
+            // app makes itself; then what is on this device, larger; then the rest.
             item(key = "replay") { replay() }
-            if (links.isNotEmpty()) {
-                item(key = "links") { LibraryLinkList(links = links, onClick = onShelfItemClick) }
+            item(key = "backup") { backup() }
+            if (folders.isNotEmpty()) {
+                item(key = "shelf:folders") {
+                    LibraryGridShelf(
+                        shelf = HomeShelf(title = foldersTitle, items = folders),
+                        onItemClick = onShelfItemClick,
+                        onItemLongPress = onShelfItemLongPress,
+                        onShowAll = {},
+                    )
+                }
             }
             if (deviceItems.isNotEmpty()) {
                 item(key = "shelf:$onDevice") {
@@ -153,7 +179,27 @@ fun LibraryScreen(
                         onItemClick = onShelfItemClick,
                         onItemLongPress = onShelfItemLongPress,
                         onShowAll = { onShowAll(onDeviceShelf) },
+                        cardWidth = DEVICE_CARD_WIDTH,
                     )
+                }
+            }
+            // The remote libraries (WebDAV, SMB), only once set up in Sources.
+            if (links.isNotEmpty()) {
+                item(key = "links") { LibraryLinkList(links = links, onClick = onShelfItemClick) }
+            }
+            val spotifyRow: LazyListScope.() -> Unit = {
+                if (spotifyPlaylists.isNotEmpty()) {
+                    item(key = "shelf:spotify") {
+                        LibraryGridShelf(
+                            shelf = HomeShelf(title = spotifyTitle, items = spotifyPlaylists),
+                            onItemClick = onShelfItemClick,
+                            onItemLongPress = onShelfItemLongPress,
+                            onShowAll = {},
+                            // Every playlist, as a normal row; the title is the way in to the Spotify page.
+                            maxItems = Int.MAX_VALUE,
+                            onTitleClick = onOpenSpotify,
+                        )
+                    }
                 }
             }
             if (!signedIn) {
@@ -169,6 +215,7 @@ fun LibraryScreen(
                         onShowAll = { onShowAll(emptyPlaylists) },
                     )
                 }
+                spotifyRow()
                 item {
                     MessageState(
                         message = stringResource(Res.string.library_sign_in_description),
@@ -203,6 +250,7 @@ fun LibraryScreen(
                             )
                         }
                     }
+                    if (shelves.none { it.title == PLAYLISTS }) spotifyRow()
                     shelves.forEach { shelf ->
                         item(key = "shelf:${shelf.title}") {
                             if (shelf.title == PLAYLISTS) {
@@ -226,6 +274,8 @@ fun LibraryScreen(
                                 )
                             }
                         }
+                        // The Spotify account's playlists follow the account's own.
+                        if (shelf.title == PLAYLISTS) spotifyRow()
                     }
                 }
             }
@@ -354,6 +404,9 @@ private fun PlaylistShelf(
     )
 }
 
+/** The cards of the row for what is kept on this device: larger than a shelf's usual. */
+private val DEVICE_CARD_WIDTH = 190.dp
+
 /** A Library shelf's preview row never swipes past this many cards. */
 private const val LIBRARY_ROW_MAX_ITEMS = 5
 
@@ -375,14 +428,20 @@ internal fun LibraryGridShelf(
     onShowAll: () -> Unit,
     leadingCard: (@Composable () -> Unit)? = null,
     pinnedPlaylists: List<String> = emptyList(),
+    /** A row of larger cards, like the one for what is on this device. */
+    cardWidth: androidx.compose.ui.unit.Dp = SHELF_CARD_WIDTH,
+    /** How many cards the row shows before a "Show all"; every playlist of the Spotify row is on it. */
+    maxItems: Int = LIBRARY_ROW_MAX_ITEMS,
+    onTitleClick: (() -> Unit)? = null,
 ) {
     val leadingCount = if (leadingCard != null) 1 else 0
-    val visibleItems = shelf.items.take((LIBRARY_ROW_MAX_ITEMS - leadingCount).coerceAtLeast(0))
+    val visibleItems = shelf.items.take((maxItems - leadingCount).coerceAtLeast(0))
     Column(Modifier.padding(bottom = 26.dp)) {
         SectionHeader(
             title = shelf.title,
             subtitle = shelf.subtitle,
-            onShowAll = onShowAll.takeIf { shelf.items.size + leadingCount > LIBRARY_ROW_MAX_ITEMS },
+            onShowAll = onShowAll.takeIf { shelf.items.size + leadingCount > maxItems },
+            onTitleClick = onTitleClick,
         )
         ShelfRow(
             contentPadding = PaddingValues(horizontal = PAGE_GUTTER),
@@ -394,6 +453,7 @@ internal fun LibraryGridShelf(
                     item = item,
                     onClick = { onItemClick(item) },
                     onLongPress = { onItemLongPress(item) },
+                    modifier = Modifier.width(cardWidth),
                     isPinned = item.browseId != null && item.browseId in pinnedPlaylists,
                 )
             }

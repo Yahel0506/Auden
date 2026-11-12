@@ -1634,4 +1634,12 @@
     <string name="dj_typed_title">%1$s</string>
     <string name="dj_session_typed">You asked for it</string>
     <string name="dj_with">With %1$s</string>
+    <string name="music_backup">Music backup</string>
+    <string name="music_backup_subtitle">Every song your cache holds</string>
+    <string name="library_replay_cta">See your stats</string>
+    <string name="library_songs_count">%1$d songs</string>
+    <string name="from_spotify">From Spotify</string>
+    <string name="library_songs_count_one">1 song</string>
+    <string name="library_collections">Collections</string>
+    <string name="library_backup_caption">On your device</string>
 </resources>

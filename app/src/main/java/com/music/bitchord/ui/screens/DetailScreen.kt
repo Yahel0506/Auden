@@ -170,6 +170,8 @@ import com.music.bitchord.ui.components.DownloadedBadge
 import com.music.bitchord.ui.components.ExplicitSongTitle
 import com.music.bitchord.ui.components.LIBRARY_GRID_SPACING
 import com.music.bitchord.ui.components.MessageState
+import com.music.bitchord.ui.components.FolderCover
+import com.music.bitchord.ui.components.folderCoverStyle
 import com.music.bitchord.ui.components.PAGE_GUTTER
 import com.music.bitchord.ui.components.NUMBERED_ROW_DIVIDER_INSET
 import com.music.bitchord.ui.components.RowMoreButton
@@ -1035,12 +1037,17 @@ private fun ReleaseHeader(
             // real one is still on its way, so a loading cover doesn't flash
             // a glyph first.
             if (page.thumbnailUrl == null || artFailed) {
-                CoverPlaceholder(
-                    icon = page.placeholderIcon(),
-                    base = palette.elevated,
-                    tint = palette.onBackgroundVariant,
-                    modifier = Modifier.matchParentSize(),
-                )
+                if (folderCoverStyle(page.browseId) != null) {
+                    // A device folder opens on the cover its card on the Library has.
+                    FolderCover(browseId = page.browseId, modifier = Modifier.matchParentSize())
+                } else {
+                    CoverPlaceholder(
+                        icon = page.placeholderIcon(),
+                        base = palette.elevated,
+                        tint = palette.onBackgroundVariant,
+                        modifier = Modifier.matchParentSize(),
+                    )
+                }
             }
             AsyncImage(
                 model = page.thumbnailUrl.artworkAt(HEADER_ART_PX),

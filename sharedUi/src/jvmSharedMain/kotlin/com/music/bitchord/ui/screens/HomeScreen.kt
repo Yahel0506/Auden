@@ -98,6 +98,7 @@ import com.music.bitchord.data.model.UiState
 import java.util.Locale
 import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.ui.components.MessageState
+import com.music.bitchord.ui.components.FolderCover
 import com.music.bitchord.ui.components.PAGE_GUTTER
 import com.music.bitchord.ui.components.RowMoreButton
 import com.music.bitchord.ui.components.PullToRefresh
@@ -542,7 +543,13 @@ private const val LOGO_ASPECT = 730f / 484f
  * Home and Explore never pass it, so their heading is unchanged.
  */
 @Composable
-internal fun SectionHeader(title: String, subtitle: String = "", onShowAll: (() -> Unit)? = null) {
+internal fun SectionHeader(
+    title: String,
+    subtitle: String = "",
+    onShowAll: (() -> Unit)? = null,
+    /** When set, the title itself is the way in to something bigger — the Spotify row's to the Spotify page — and says so with a chevron. */
+    onTitleClick: (() -> Unit)? = null,
+) {
     val displayTitle = localizeShelfTitle(title)
     val displaySubtitle = localizeShelfSubtitle(subtitle)
     Row(
@@ -552,13 +559,27 @@ internal fun SectionHeader(title: String, subtitle: String = "", onShowAll: (() 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(
-                text = displayTitle,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = if (onTitleClick != null) Modifier.clickable(onClick = onTitleClick) else Modifier,
+            ) {
+                Text(
+                    text = displayTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (onTitleClick != null) {
+                    Icon(
+                        imageVector = BitChordIcons.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 4.dp).size(18.dp),
+                    )
+                }
+            }
             if (displaySubtitle.isNotBlank()) {
                 Text(
                     text = displaySubtitle,
@@ -980,48 +1001,10 @@ internal fun ShelfCard(
             .contextClick(onLongPress),
     ) {
         when (item.browseId) {
-            "local:downloads" -> {
-                val palette = remember { MeshPalette(listOf(Color(0xFF1E3C72), Color(0xFF2A5298))) }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    MeshGradientBackground(
-                        palette = palette,
-                        trackKey = "local:downloads",
-                        continuous = true,
-                        blurRadius = 24.dp,
-                    )
-                    Icon(
-                        imageVector = BitChordIcons.Download,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(40.dp),
-                    )
-                }
-            }
-            "local:all" -> ServiceCard(
-                colors = listOf(Color(0xFF134E5E), Color(0xFF71B280)),
-                trackKey = "local:all",
-                icon = Icons.Rounded.LibraryMusic,
-            )
-            "local:cache" -> ServiceCard(
-                colors = listOf(Color(0xFF42275A), Color(0xFF734B6D)),
-                trackKey = "local:cache",
-                icon = Icons.Rounded.Cached,
-            )
-            "local:webdav" -> ServiceCard(
-                colors = listOf(Color(0xFF3A1C71), Color(0xFFD76D77)),
-                trackKey = "local:webdav",
-                icon = Icons.Rounded.Folder,
-            )
-            "local:smb" -> ServiceCard(
-                colors = listOf(Color(0xFF0F2027), Color(0xFF2C5364)),
-                trackKey = "local:smb",
-                icon = Icons.Rounded.Storage,
+            // A device folder's own cover — see [FolderCover].
+            "local:downloads", "local:all", "local:cache", "local:webdav", "local:smb" -> FolderCover(
+                browseId = item.browseId,
+                modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)),
             )
             else -> {
                 Box(
