@@ -31,9 +31,20 @@ class DjPlanner(
     private val genresOf: (String) -> List<String> = { emptyList() },
     /** Songs the DJ played recently, in earlier sessions too: chosen last, so a new session sounds new. */
     private val recently: Set<String> = emptySet(),
+    /**
+     * The same songs in the order they were played, oldest first: the nearer a song, the harder it is leaned
+     * away from. Without it every song of [recently] is as good as the next to leave out.
+     */
+    recentOrder: List<String> = emptyList(),
+    /** The [DjTheme.key]s of the sets of earlier sessions, oldest first: a theme heard lately comes round less. */
+    private val pastThemes: List<String> = emptyList(),
+    /** The songs earlier sets opened on, oldest first: the one song a set is announced with is not a repeat. */
+    pastOpeners: List<String> = emptyList(),
 ) {
     private val rng = Random(seed)
     private val pool = pool.toMutableList()
+    private val nearRecent: Set<String> = recentOrder.takeLast(NEAR_RECENT).toSet()
+    private val pastOpenerSet: Set<String> = pastOpeners.takeLast(OPENER_MEMORY).toSet()
 
     /** What the listener asked for; null on a surprise. [setRequest] changes it from the next set on. */
     var request: DjRequest? = request
@@ -100,7 +111,7 @@ class DjPlanner(
         val scored = candidates.map { c ->
             val score = if (surprise) {
                 prior(c.theme) * (0.5 + 0.5 * affinity(c.tracks) / maxAffinity) * novelty(c.theme) *
-                    (0.85 + 0.3 * rng.nextDouble())
+                    pastPenalty(c.theme) * (0.7 + 0.6 * rng.nextDouble())
             } else {
                 (0.45 * affinity(c.tracks) / maxAffinity + 0.15 * novelty(c.theme) +
                     0.25 * relatedness(c.tracks) + 0.15 * requestMatch(c.theme)) *
@@ -109,13 +120,20 @@ class DjPlanner(
             c to score
         }.sortedByDescending { it.second }
 
-        // A weighted pick among the best three: the top theme most of the time, not every time.
-        val top = scored.take(3)
-        var roll = rng.nextDouble() * top.sumOf { it.second }
-        var chosen = top.first().first
-        for ((candidate, score) in top) {
-            roll -= score
-            if (roll <= 0) { chosen = candidate; break }
+        // A request: a weighted pick among the best three, the top theme most of the time, not every time. A
+        // surprise chooses a family of sets first and a theme within it second, so a kind with many themes
+        // (every playlist is one) is not more likely for having many.
+        val chosen = if (surprise) {
+            pickByFamily(scored)
+        } else {
+            val top = scored.take(3)
+            var roll = rng.nextDouble() * top.sumOf { it.second }
+            var pick = top.first().first
+            for ((candidate, score) in top) {
+                roll -= score
+                if (roll <= 0) { pick = candidate; break }
+            }
+            pick
         }
 
         val tracks = assemble(chosen.theme, chosen.tracks, surprise)
@@ -128,6 +146,66 @@ class DjPlanner(
     }
 
     private class Candidate(val theme: DjTheme, val tracks: List<DjTrack>)
+
+    /**
+     * A surprise's theme: first its family — a mood, the favourites, the playlists, what is new — by how well the
+     * family suits the moment, and then one theme of it, the better ones likelier. Chosen over the whole list, not
+     * the best few: what the listener is offered should vary from one session to the next.
+     */
+    private fun pickByFamily(scored: List<Pair<Candidate, Double>>): Candidate {
+        val byKind = scored.groupBy { it.first.theme.kind }
+        val kinds = byKind.map { (kind, list) ->
+            val best = list.map { it.second }.sortedDescending().take(2).average()
+            kind to (familyWeight(kind) * best).coerceAtLeast(1e-9)
+        }
+        var roll = rng.nextDouble() * kinds.sumOf { it.second }
+        var kind = kinds.first().first
+        for ((k, w) in kinds) {
+            roll -= w
+            if (roll <= 0) { kind = k; break }
+        }
+        val within = byKind.getValue(kind)
+        // Squared: a clearly better theme of the family is clearly likelier, without being the only one.
+        var inner = rng.nextDouble() * within.sumOf { it.second * it.second }.coerceAtLeast(1e-12)
+        var out = within.first().first
+        for ((candidate, s) in within) {
+            inner -= s * s
+            if (inner <= 0) { out = candidate; break }
+        }
+        return out
+    }
+
+    /** How much a family of sets is offered, before the moment and the listener's history have their say. */
+    private fun familyWeight(kind: String): Double = when (kind) {
+        "mood" -> 1.0
+        "discover" -> 0.9
+        "rediscover" -> 0.8
+        "favorites" -> 0.7
+        "fresh" -> 0.6
+        // The listener's playlists are many, and a family of their own: a share, not the whole menu.
+        "playlist" -> 0.5
+        else -> 0.8
+    }
+
+    /**
+     * A theme the last sessions already offered comes round less: the nearer, the less, and a session does not
+     * open on the family the last one opened on. Never to nothing, because a small library has few themes.
+     */
+    private fun pastPenalty(theme: DjTheme): Double {
+        if (pastThemes.isEmpty()) return 1.0
+        val back = pastThemes.asReversed().indexOf(theme.key)
+        var factor = when {
+            back < 0 -> 1.0
+            back == 0 -> 0.2
+            back == 1 -> 0.3
+            back == 2 -> 0.4
+            back < 6 -> 0.55
+            back < 12 -> 0.75
+            else -> 1.0
+        }
+        if (previous == null && theme.kind == pastThemes.last().substringBefore(':')) factor *= 0.6
+        return factor
+    }
 
     private fun candidatesFor(surprise: Boolean, allowResting: Boolean): List<Candidate> =
         themes(surprise).mapNotNull { theme ->
@@ -314,7 +392,7 @@ class DjPlanner(
         // Well-known songs are favoured, not guaranteed: a wide random spread keeps the top of the list from
         // being every set's answer, and songs heard lately sink.
         val ranked = eligible
-            .map { it to 0.35 * fit(it) + 1.2 * rng.nextGaussian() - (if (it.id in recently) RECENT_PENALTY else 0.0) }
+            .map { it to 0.3 * fit(it) + 1.3 * rng.nextGaussian() - recentPenalty(it.id) }
             .sortedByDescending { it.second }.map { it.first }
         val familiar = ranked.filter { !it.discovery && it.plays > 0 }
         val newer = ranked.filter { it.discovery || it.plays == 0 }
@@ -346,11 +424,34 @@ class DjPlanner(
 
     private fun fitPlus(t: DjTrack) = fit(t)
 
+    /** How far a song is leaned away from for having been played lately: the nearer, the further. */
+    private fun recentPenalty(id: String): Double = when {
+        id in nearRecent -> 2 * RECENT_PENALTY
+        id in recently -> RECENT_PENALTY
+        else -> 0.0
+    }
+
+    /**
+     * The song a set opens on, which is also the one it is announced with. The best-known song of the set most of
+     * the time was every session's answer; now any of its songs may open it, the better known likelier, and one
+     * that opened a recent set is passed over while there is another.
+     */
+    private fun pickOpener(tracks: List<DjTrack>): DjTrack {
+        val open = tracks.filter { it.id !in pastOpenerSet }.ifEmpty { tracks }
+        val weights = open.map { (fitPlus(it) + 1.0) * (if (it.id in nearRecent) 0.4 else 1.0) }
+        var roll = rng.nextDouble() * weights.sum()
+        for ((i, w) in weights.withIndex()) {
+            roll -= w
+            if (roll <= 0) return open[i]
+        }
+        return open.last()
+    }
+
     private fun distinctArtists(tracks: List<DjTrack>): Int =
         tracks.mapTo(HashSet()) { it.leadArtist.lowercase(Locale.ROOT) }.size
 
     /**
-     * Opens on the best-known song, then walks to the nearest neighbour each time: never the same
+     * Opens on one of its songs (see [pickOpener]), then walks to the nearest neighbour each time: never the same
      * album back to back, never the same artist back to back if there is any other way round, and a
      * tempo within reach when both are known.
      */
@@ -358,7 +459,7 @@ class DjPlanner(
         if (tracks.size <= 2) return tracks
         val left = tracks.toMutableList()
         val out = ArrayList<DjTrack>(tracks.size)
-        out += left.removeAt(left.indices.maxByOrNull { fitPlus(left[it]) }!!)
+        out += left.removeAt(left.indexOf(pickOpener(left)))
         while (left.isNotEmpty()) {
             val last = out.last()
             val next = left.minByOrNull { distance(last, it, surprise) }!!
@@ -420,6 +521,9 @@ class DjPlanner(
         private const val RECENT_THEMES = 4
         private const val ARTIST_COOLDOWN_SETS = 2
         private const val RECENT_PENALTY = 3.0
+        /** The last this many songs played count as "just now"; the rest of the memory as "lately". */
+        private const val NEAR_RECENT = 60
+        private const val OPENER_MEMORY = 40
         private const val FAMILIAR_SHARE = 0.7
         private const val FAVORITE_MIN_PLAYS = 3
         private const val REDISCOVER_MIN_PLAYS = 5

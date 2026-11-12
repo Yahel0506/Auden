@@ -416,7 +416,9 @@ object DjSession {
             val text = requestText
             val (parsed, firstPlanned, relaxed) = withContext(planning) {
                 val parsed = text.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, loaded.tracks) }
-                planner = DjPlanner(loaded.tracks, now, seed = now, blockSize = blockSize, request = parsed, genresOf = ArtistFacts::genresForDj, recently = DjHistory.recent(app))
+                planner = DjPlanner(loaded.tracks, now, seed = now, blockSize = blockSize, request = parsed, genresOf = ArtistFacts::genresForDj,
+                    recently = DjHistory.recent(app), recentOrder = DjHistory.recentOrdered(app),
+                    pastThemes = DjHistory.themes(app), pastOpeners = DjHistory.openers(app))
                 Triple(parsed, planner.next(), planner.relaxed)
             }
             lap("begin planned")
@@ -693,6 +695,12 @@ object DjSession {
             val (set, pos) = at
             // A song, not the DJ's own voice, goes in the memory that keeps the next session fresh.
             if (pos >= 0) DjHistory.record(app, id)
+            // The first song of a set is the one it is announced with: remembered, with the set's theme, so the
+            // next session neither opens on it nor offers the same set (a request's theme is the listener's own).
+            if (pos == 0) {
+                DjHistory.recordOpener(app, id)
+                sets[set].theme.takeUnless { it is DjTheme.ByRequest }?.let { DjHistory.recordTheme(app, it.key) }
+            }
             publish { copy(theme = label(sets[set].theme)) }
             if (awaiting in 0..set) {
                 awaiting = -1

@@ -363,4 +363,73 @@ class DjTest {
         assertEquals("Trep: 4 times.", w.trackNote(t("r", "Ana", title = "Trep", plays30 = 4)))
         assertEquals("Tp from Road.", w.trackNote(t("p", "Ana", title = "Tp").copy(playlists = listOf("Road"))))
     }
+
+    // ── Variety across sessions ─────────────────────────────────────────────
+
+    /** A rich library: sixteen artists' favourites across the moods, and a dozen playlists of songs by many artists. */
+    private val rich: List<DjTrack> =
+        (1..16).flatMap { a ->
+            val genre = if (a > 12) "Ambient" else listOf("Rock", "Jazz", "Folk")[a % 3]
+            (1..6).map { n ->
+                t("r$a-$n", "Star$a", album = "Disc$a-${n % 3}", genre = genre, year = 1980 + a * 2, plays = 12 + n, plays30 = 2)
+                    .copy(trackNumber = n)
+            }
+        } + (1..12).flatMap { p ->
+            (1..8).map { n -> t("pl$p-$n", "Voice${p}_$n", plays = 1 + n % 3).copy(playlists = listOf("List$p")) }
+        }
+
+    @Test
+    fun playlistsAreOneFamilyAmongSeveralNotTheWholeMenu() {
+        val firsts = (1..200).map { seed -> DjPlanner(rich, now, seed.toLong(), blockSize = 5).next()!!.theme }
+        val share = firsts.count { it is DjTheme.ByPlaylist } / firsts.size.toDouble()
+        assertTrue("playlists opened $share of sessions", share < 0.35)
+        // And the rest is not one thing either.
+        assertTrue(firsts.map { it.kind }.toSet().size >= 3)
+    }
+
+    @Test
+    fun aSetDoesNotOpenOnTheSongTheLastSessionsOpenedOn() {
+        val usual = (1..60).map { seed -> DjPlanner(rich, now, seed.toLong(), blockSize = 5).next()!!.tracks.first().id }
+        val mostCommon = usual.groupingBy { it }.eachCount().maxByOrNull { it.value }!!.key
+        repeat(40) { seed ->
+            val planner = DjPlanner(rich, now, seed.toLong(), blockSize = 5, pastOpeners = listOf(mostCommon))
+            val opener = planner.next()!!.tracks.first().id
+            assertTrue("opened on $mostCommon again", opener != mostCommon)
+        }
+    }
+
+    @Test
+    fun aThemeHeardInTheLastSessionComesRoundLessOften() {
+        val plain = (1..150).map { seed -> DjPlanner(rich, now, seed.toLong(), blockSize = 5).next()!!.theme.key }
+        val busiest = plain.groupingBy { it }.eachCount().maxByOrNull { it.value }!!.key
+        val after = (1..150).map { seed ->
+            DjPlanner(rich, now, seed.toLong(), blockSize = 5, pastThemes = listOf(busiest)).next()!!.theme.key
+        }
+        assertTrue("$busiest ${plain.count { it == busiest }} -> ${after.count { it == busiest }}", after.count { it == busiest } < plain.count { it == busiest })
+    }
+
+    @Test
+    fun manySessionsInARowRarelyOpenOnTheSameSongOrTheSameSet() {
+        // The way the app keeps its memory: each session sees what the ones before it played and opened on.
+        val played = ArrayList<String>()
+        val openers = ArrayList<String>()
+        val themes = ArrayList<String>()
+        val firstSongs = ArrayList<String>()
+        repeat(30) { session ->
+            val planner = DjPlanner(
+                rich, now, 1_000L + session, blockSize = 5,
+                recently = played.toSet(), recentOrder = played.toList(), pastThemes = themes.toList(), pastOpeners = openers.toList(),
+            )
+            val sets = generateSequence { planner.next() }.take(3).toList()
+            sets.forEach { block ->
+                block.tracks.forEach { played.remove(it.id); played.add(it.id) }
+                openers.add(block.tracks.first().id)
+                themes.remove(block.theme.key); themes.add(block.theme.key)
+            }
+            firstSongs.add(sets.first().tracks.first().id)
+        }
+        // Thirty sessions: nearly every one opens on a song the others did not, and the sets are not one family.
+        assertTrue("distinct openers ${firstSongs.toSet().size}", firstSongs.toSet().size >= 24)
+        assertTrue(themes.map { it.substringBefore(':') }.toSet().size >= 3)
+    }
 }
