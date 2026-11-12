@@ -338,6 +338,7 @@ private fun PlayerMeshBackdrop(
     alpha: () -> Float,
     playing: () -> Boolean,
     panels: Boolean,
+    lyrics: Boolean,
 ) {
     // The lyrics and the queue stand on this same backdrop, softer and darker, rather than on a cover of
     // their own: the colours keep flowing, and nothing is swapped.
@@ -347,6 +348,11 @@ private fun PlayerMeshBackdrop(
         label = "meshPanelMix",
     )
     val panelsNow by rememberUpdatedState(panels)
+    val lyricsMix by animateFloatAsState(
+        targetValue = if (lyrics) 1f else 0f,
+        animationSpec = tween(durationMillis = PANEL_MESH_MS, easing = FastOutSlowInEasing),
+        label = "meshLyricsMix",
+    )
     val mesh = key(trackKey) { rememberArtworkMesh(imageUrl, canvasFrame(), ART_PX) }
     val currentSeamTarget by rememberUpdatedState(seamTarget)
     val seam = remember { Animatable(Snapshot.withoutReadObservation { seamTarget() }, Dp.VectorConverter) }
@@ -372,6 +378,7 @@ private fun PlayerMeshBackdrop(
         playing = playing,
         soften = { panelMix },
         shade = { panelMix },
+        deep = { lyricsMix },
         modifier = Modifier.graphicsLayer { this.alpha = alpha() },
     )
 }
@@ -2493,6 +2500,7 @@ fun NowPlayingScreen(
                     PlayerMeshBackdrop(
                         playing = { isPlaying },
                         panels = lyricsOpen || queueOpen,
+                        lyrics = lyricsOpen,
                         trackKey = song.videoId,
                         imageUrl = remoteArt,
                         canvasFrame = { canvasFrame },
