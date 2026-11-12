@@ -151,7 +151,8 @@ fun GlassNavBar(
     val pillShape = remember { RoundedCornerShape(percent = 50) }
     val contentColor = glassContentColor()
     val selectedColor = contentColor
-    val unselectedColor = contentColor.copy(alpha = 0.65f)
+    // Near full strength, as Apple's: over clear glass a dimmed label is lost in the page behind it.
+    val unselectedColor = contentColor.copy(alpha = 0.92f)
     val haptics = rememberHaptics()
 
     // The tab content lambdas below are captured once per contentKey and held
@@ -169,7 +170,7 @@ fun GlassNavBar(
     // the three surfaces gets its own glass modifier and so its own shape cache.
     // The theme's own glass tint, as the liquid top bar has it — no white wash.
     val glassSurface: @Composable () -> Modifier = {
-        Modifier.liquidGlass(shape = pillShape, surfaceTint = navGlassTint(), rimAlpha = NAV_GLASS_RIM, depth = NAV_GLASS_DEPTH, blur = NAV_GLASS_BLUR)
+        Modifier.liquidGlass(shape = pillShape, surfaceTint = navGlassTint(), rim = NAV_GLASS_RIM, depth = NAV_GLASS_DEPTH, blur = NAV_GLASS_BLUR, vibrancy = NAV_GLASS_VIBRANCY)
     }
 
     // ---- The fold, as Apple Music's: one movement driven by one value -----------------------------
@@ -330,8 +331,10 @@ fun GlassNavBar(
                 ),
                 elevations = FloatingTabBarDefaults.elevations(inlineElevation = 0.dp, expandedElevation = 0.dp),
                 sizes = FloatingTabBarDefaults.sizes(
-                    tabBarContentPadding = PaddingValues(PILL_INSET),
-                    tabExpandedContentPadding = PaddingValues(vertical = TAB_VERTICAL_PADDING),
+                    // The selection nearly the bar's full height, as Apple's: less inset above and below, and
+                    // the tabs that much taller, so the bar itself stays the size it was.
+                    tabBarContentPadding = PaddingValues(horizontal = PILL_INSET, vertical = NAV_PILL_INSET),
+                    tabExpandedContentPadding = PaddingValues(vertical = TAB_VERTICAL_PADDING + (PILL_INSET - NAV_PILL_INSET)),
                 ),
                 contentKey = remember(selectedIndex, tabs, contentColor) { listOf(selectedIndex, tabs, contentColor) },
                 standaloneInExpandedBar = true,
@@ -748,6 +751,9 @@ private val NAV_ACCENT = arrayOf(
     0.80f to Color(0xFF8A9DFF),
     1.00f to Color(0xFFB0DDFF),
 )
+
+/** How far the selection sits inside the bar above and below. */
+private val NAV_PILL_INSET = 2.dp
 
 /** The collapsed row's margin at either side of the screen, and its items' spacing. */
 private val INLINE_GUTTER = 28.dp

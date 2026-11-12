@@ -125,11 +125,11 @@ fun glassIndicatorColor(): Color =
     if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
         Color.Black.copy(alpha = 0.08f)
     } else {
-        Color.Black.copy(alpha = DARK_INDICATOR_OPACITY)
+        Color(0xFF0E0E10).copy(alpha = DARK_INDICATOR_OPACITY)
     }
 
 /** The selected tab's pill, as Apple Music's: a darker well pressed into the milky glass. */
-private const val DARK_INDICATOR_OPACITY = 0.30f
+private const val DARK_INDICATOR_OPACITY = 0.42f
 
 /**
  * The nav bar's glass, as Apple Music's: milkier and a touch more opaque than the app's other glass — a
@@ -138,17 +138,33 @@ private const val DARK_INDICATOR_OPACITY = 0.30f
 @Composable
 fun navGlassTint(): Color =
     if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
-        Color(0xFFF2F2F4).copy(alpha = 0.57f)
+        Color(0xFFFFFFFF).copy(alpha = 0.42f)
     } else {
-        Color(0xFF444449).copy(alpha = 0.47f)
+        Color(0xFF1C1C1E).copy(alpha = 0.42f)
     }
 
-/** The nav bar's rim, a little softer than the default, and its lens a little deeper. */
-const val NAV_GLASS_RIM = 0.6f
+/**
+ * The nav bar's rim, as Apple's: a fine line, but bright, and lit from one side — light caught in the glass's
+ * edge, strongest along the top and round the curved ends — rather than an even grey outline.
+ */
+val NAV_GLASS_RIM = Highlight(
+    width = 0.6.dp,
+    blurRadius = 0.2.dp,
+    style = com.music.bitchord.ui.components.backdrop.highlight.HighlightStyle.Default(
+        color = Color.White.copy(alpha = 0.9f),
+        falloff = 2f,
+    ),
+)
+
+/** Its lens a little deeper than the app's other glass, so the page bends visibly round the ends. */
 const val NAV_GLASS_DEPTH = 1.3f
 
-/** The nav bar's blur, a little lighter than the app's other glass, so the page reads through it more. */
-const val NAV_GLASS_BLUR = 0.5f
+/**
+ * Its blur all but gone, as Apple's: the page reads through the bar, in its own colours (boosted by
+ * [NAV_GLASS_VIBRANCY]), and the lens at the edges has something sharp to bend.
+ */
+const val NAV_GLASS_BLUR = 0.2f
+const val NAV_GLASS_VIBRANCY = 1.6f
 
 /**
  * A lightweight visual match for liquid glass over a stable background.
@@ -235,8 +251,10 @@ fun Modifier.liquidGlass(
     shape: CornerBasedShape,
     /** Drawn over the glass in place of the theme's default tint, when set. */
     surfaceTint: Color? = null,
-    /** The rim's strength, 1 the default edge. */
-    rimAlpha: Float = 1f,
+    /** The rim drawn along the edge in place of the default, when set. */
+    rim: Highlight? = null,
+    /** The saturation boost given to what shows through, 1 the default. */
+    vibrancy: Float = VIBRANCY,
     /** How deep the lens bends at the edges, 1 the default. */
     depth: Float = 1f,
     /** The blur's radius against the default, 1 as it is. */
@@ -268,7 +286,7 @@ fun Modifier.liquidGlass(
         backdrop = backdrop,
         shape = { shape },
         effects = {
-            colorControls(saturation = 1f + 0.5f * VIBRANCY)
+            colorControls(saturation = 1f + 0.5f * vibrancy)
             blur(blurPx)
             if (!glassPerformance && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 lens(
@@ -279,7 +297,7 @@ fun Modifier.liquidGlass(
                 )
             }
         },
-        highlight = { if (rimAlpha >= 1f) Highlight.Default else Highlight.Default.copy(alpha = rimAlpha) },
+        highlight = { rim ?: Highlight.Default },
         shadow = { Shadow.Default },
         onDrawSurface = {
             drawRect(color = surfaceTintColor, size = size)
