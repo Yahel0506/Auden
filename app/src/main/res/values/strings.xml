@@ -374,6 +374,8 @@
     <string name="font_legacy_subtitle">SF Pro Display · Original heavy weights</string>
     <string name="font_footer">Legacy brings back the heavier, tighter type the app used before it was matched to Apple Music.</string>
     <string name="reduce_animation">Reduce animation</string>
+    <string name="reactive_backdrop">Music-reactive background</string>
+    <string name="reactive_backdrop_subtitle">The player\'s background moves with the bass and level of the song</string>
     <string name="reduce_animation_subtitle">Freezes the main player\'s gradient instead of drifting</string>
     <string name="reduce_dynamic_blur">Reduce dynamic blur</string>
     <string name="reduce_dynamic_blur_subtitle">Swaps frosted glass for solid fills across the app</string>

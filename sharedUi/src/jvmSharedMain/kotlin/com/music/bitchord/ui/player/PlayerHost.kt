@@ -293,6 +293,12 @@ interface PlayerSettingsSource {
     val preferUsbDac: StateFlow<Boolean>
     val prioritizeSpotifyCanvas: StateFlow<Boolean>
     val reduceAnimation: StateFlow<Boolean>
+    /** The player's backdrop moves with the music, rather than only drifting. */
+    val reactiveBackdrop: StateFlow<Boolean>
+    /** How hard the music is hitting, 0..1 — see [setMusicLevelMeter]. */
+    fun musicLevel(): Float
+    /** Turns the level meter on while the backdrop is reading it; it costs a pass over the audio. */
+    fun setMusicLevelMeter(on: Boolean)
     val reduceDynamicBlur: StateFlow<Boolean>
     /** Turns [LocalPlayerChrome] off: glyphs and text over the artwork in plain white. */
     val disableBlendEffects: StateFlow<Boolean>

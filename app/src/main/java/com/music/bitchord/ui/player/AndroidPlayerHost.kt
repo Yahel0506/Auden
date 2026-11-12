@@ -91,6 +91,11 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
         override val preferUsbDac get() = AppSettings.preferUsbDac
         override val prioritizeSpotifyCanvas get() = AppSettings.prioritizeSpotifyCanvas
         override val reduceAnimation get() = AppSettings.reduceAnimation
+        override val reactiveBackdrop get() = AppSettings.reactiveBackdrop
+        override fun musicLevel(): Float = com.music.bitchord.playback.audio.MusicLevel.read()
+        override fun setMusicLevelMeter(on: Boolean) {
+            com.music.bitchord.playback.audio.MusicLevel.active = on
+        }
         override val reduceDynamicBlur get() = AppSettings.reduceDynamicBlur
         override val disableBlendEffects get() = AppSettings.disableBlendEffects
         override val showNerdStats get() = AppSettings.showNerdStats

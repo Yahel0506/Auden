@@ -43,8 +43,19 @@ import com.music.bitchord.data.model.artworkAt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.translate
+import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlin.random.Random
 
 /**
@@ -303,8 +314,12 @@ fun ArtworkMeshBackdrop(
     seam: () -> Dp = { 0.dp },
     /** What the surface is before any artwork has been read. */
     fallback: Color = FallbackBackdrop,
+    /** Whether the music is playing: the colours flow only then, and hold still when it is paused. */
+    playing: () -> Boolean = { true },
 ) {
     val reduceAnimation by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
+    val reactive by PlayerSettings.reactiveBackdrop.collectAsStateWithLifecycle()
+    val flow = rememberBackdropFlow(playing, reactive && !reduceAnimation, !reduceAnimation)
 
     // The mesh on screen, and the one fading in over it. Two states rather than
     // one animated value because what crossfades here is a pair of bitmaps, not
@@ -346,10 +361,10 @@ fun ArtworkMeshBackdrop(
             .background(fallback),
     ) {
         val seamY = seam().toPx().coerceIn(0f, size.height)
-        shown?.let { drawMesh(it, seamY, alpha = 1f) }
+        shown?.let { drawMesh(it, seamY, alpha = 1f, flow = flow) }
         // Read here rather than in composition: an Animatable read inside a
         // draw lambda invalidates the drawing and leaves composition out of it.
-        incoming?.let { drawMesh(it, seamY, alpha = fade.value) }
+        incoming?.let { drawMesh(it, seamY, alpha = fade.value, flow = flow) }
 
         // Vivid at the top and progressively darker toward the controls, so the
         // transport buttons keep their contrast without the foot going near
@@ -370,7 +385,7 @@ fun ArtworkMeshBackdrop(
  * first row held from there up. Two draws of one small texture, both stretched
  * by the sampler.
  */
-private fun DrawScope.drawMesh(mesh: ArtworkMesh, seamY: Float, alpha: Float) {
+private fun DrawScope.drawMesh(mesh: ArtworkMesh, seamY: Float, alpha: Float, flow: BackdropFlow? = null) {
     if (alpha <= 0.001f) return
     val image = mesh.image
     val width = size.width.roundToInt()
@@ -389,6 +404,12 @@ private fun DrawScope.drawMesh(mesh: ArtworkMesh, seamY: Float, alpha: Float) {
         )
     }
 
+    val below = size.height - seamY
+    if (flow != null && flow.moving() && below > 8f) {
+        drawFlowing(image, seamY, below, alpha, flow)
+        return
+    }
+
     // From the seam down: the mesh itself, stretched over whatever is left.
     drawImage(
         image = image,
@@ -400,6 +421,116 @@ private fun DrawScope.drawMesh(mesh: ArtworkMesh, seamY: Float, alpha: Float) {
         filterQuality = FilterQuality.Low,
     )
 }
+
+/**
+ * The mesh from the seam down, flowing: cut into thin bands, each carried sideways and a little up and down by
+ * a wave that runs down the screen, the carry growing from nothing at the seam to its full reach a third of the
+ * way down. So the colours drift and swell below the artwork while its edge — the seam, where the cover gives
+ * way to the backdrop — is exactly where it was, and the continuation from the cover is kept. A band is the
+ * whole texture, clipped, so every draw is the same sampler pass as the still one, moved by a fractional amount.
+ */
+private fun DrawScope.drawFlowing(image: ImageBitmap, seamY: Float, below: Float, alpha: Float, flow: BackdropFlow) {
+    val width = size.width
+    val amplitude = width * FLOW_REACH * flow.strength()
+    val phase = flow.phase()
+    val ramp = (below * FLOW_RAMP).coerceAtLeast(1f)
+    val bands = (below / FLOW_BAND_PX).roundToInt().coerceIn(12, 56)
+    val bandHeight = below / bands
+    val dstSize = IntSize(width.roundToInt(), below.roundToInt())
+    for (band in 0 until bands) {
+        val top = seamY + band * bandHeight
+        val mid = (band + 0.5f) * bandHeight
+        val grow = smoothstep((mid / ramp).coerceIn(0f, 1f))
+        if (grow <= 0.001f) {
+            // Not yet moving: still the plain texture. Only the first few bands, kept apart to stay exact.
+            clipRect(left = 0f, top = top, right = width, bottom = top + bandHeight + 1f) {
+                drawImage(image = image, srcOffset = IntOffset.Zero, srcSize = IntSize(image.width, image.height),
+                    dstOffset = IntOffset(0, seamY.roundToInt()), dstSize = dstSize, alpha = alpha, filterQuality = FilterQuality.Low)
+            }
+            continue
+        }
+        val along = mid / FLOW_WAVELENGTH_PX
+        val dx = amplitude * grow * sin(phase + along * FLOW_TWO_PI)
+        val dy = amplitude * FLOW_VERTICAL * grow * cos(phase * 0.7f + along * FLOW_TWO_PI * 1.3f)
+        val reachX = 1f + 2f * abs(amplitude * grow) / width
+        val reachY = 1f + 2f * abs(amplitude * FLOW_VERTICAL * grow) / below
+        clipRect(left = 0f, top = top, right = width, bottom = top + bandHeight + 1f) {
+            translate(left = dx, top = dy) {
+                scale(scaleX = reachX, scaleY = reachY, pivot = Offset(width / 2f, seamY)) {
+                    drawImage(image = image, srcOffset = IntOffset.Zero, srcSize = IntSize(image.width, image.height),
+                        dstOffset = IntOffset(0, seamY.roundToInt()), dstSize = dstSize, alpha = alpha, filterQuality = FilterQuality.Low)
+                }
+            }
+        }
+    }
+}
+
+/** What moves the backdrop this frame: where its wave is, how far it reaches, and whether it is moving at all. */
+@Stable
+internal class BackdropFlow(
+    val phase: () -> Float,
+    val strength: () -> Float,
+    val moving: () -> Boolean,
+)
+
+/**
+ * The backdrop's motion: a phase that advances while the music plays — slowly on its own, quicker and
+ * further with the music when [reactive] — read where it is drawn, so a frame redraws the canvas and
+ * recomposes nothing. Redrawn about thirty times a second, which a slow drift does not need more than.
+ * Holds still when paused, and costs nothing when [enabled] is off.
+ */
+@Composable
+internal fun rememberBackdropFlow(playing: () -> Boolean, reactive: Boolean, enabled: Boolean): BackdropFlow? {
+    if (!enabled) return null
+    val phase = remember { mutableStateOf(0f) }
+    val strength = remember { mutableStateOf(FLOW_BASE_STRENGTH) }
+    val currentPlaying by rememberUpdatedState(playing)
+    DisposableEffect(reactive) {
+        if (reactive) PlayerPlatform.host.settings.setMusicLevelMeter(true)
+        onDispose { if (reactive) PlayerPlatform.host.settings.setMusicLevelMeter(false) }
+    }
+    LaunchedEffect(reactive) {
+        var last = -1L
+        var level = 0f
+        while (true) {
+            val now = withFrameNanos { it }
+            if (last < 0) { last = now; continue }
+            val dt = (now - last) / 1e9f
+            if (dt < FLOW_STEP_S) continue
+            last = now
+            val running = currentPlaying()
+            val target = if (running && reactive) PlayerPlatform.host.settings.musicLevel() else 0f
+            // Quick to rise on a beat, slow to let go of it.
+            level += (target - level) * (if (target > level) FLOW_ATTACK else FLOW_RELEASE)
+            if (running) {
+                phase.value += dt * (FLOW_BASE_SPEED + FLOW_REACT_SPEED * level)
+                if (phase.value > FLOW_TWO_PI * 64f) phase.value -= FLOW_TWO_PI * 64f
+            }
+            strength.value = FLOW_BASE_STRENGTH + FLOW_REACT_STRENGTH * level
+        }
+    }
+    return remember {
+        BackdropFlow(
+            phase = { phase.value },
+            strength = { strength.value },
+            moving = { true },
+        )
+    }
+}
+
+private const val FLOW_REACH = 0.05f
+private const val FLOW_RAMP = 0.34f
+private const val FLOW_BAND_PX = 14f
+private const val FLOW_WAVELENGTH_PX = 520f
+private const val FLOW_VERTICAL = 0.55f
+private const val FLOW_TWO_PI = 6.2831855f
+private const val FLOW_STEP_S = 0.032f
+private const val FLOW_BASE_SPEED = 0.32f
+private const val FLOW_REACT_SPEED = 1.1f
+private const val FLOW_BASE_STRENGTH = 0.55f
+private const val FLOW_REACT_STRENGTH = 0.95f
+private const val FLOW_ATTACK = 0.45f
+private const val FLOW_RELEASE = 0.07f
 
 /** The shade over the blurred cover, deepening toward the controls at the foot. */
 private val FullArtworkScrim = Brush.verticalGradient(

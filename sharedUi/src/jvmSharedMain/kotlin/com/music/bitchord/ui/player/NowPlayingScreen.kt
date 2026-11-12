@@ -336,6 +336,7 @@ private fun PlayerMeshBackdrop(
     canvasFrame: () -> ImageBitmap?,
     seamTarget: () -> Dp,
     alpha: () -> Float,
+    playing: () -> Boolean,
 ) {
     val mesh = key(trackKey) { rememberArtworkMesh(imageUrl, canvasFrame(), ART_PX) }
     val currentSeamTarget by rememberUpdatedState(seamTarget)
@@ -354,6 +355,7 @@ private fun PlayerMeshBackdrop(
     ArtworkMeshBackdrop(
         mesh = mesh,
         seam = { seam.value },
+        playing = playing,
         modifier = Modifier.graphicsLayer { this.alpha = alpha() },
     )
 }
@@ -2470,6 +2472,7 @@ fun NowPlayingScreen(
                     // Stays mounted under a full-screen Spotify Canvas, undrawn, for
                     // a panel opening over it to find ready.
                     PlayerMeshBackdrop(
+                        playing = { isPlaying },
                         trackKey = song.videoId,
                         imageUrl = remoteArt,
                         canvasFrame = { canvasFrame },

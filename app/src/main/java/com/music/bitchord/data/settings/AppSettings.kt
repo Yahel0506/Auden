@@ -453,6 +453,9 @@ object AppSettings {
     /** Freezes the main player's mesh gradient instead of letting it drift/crossfade. */
     val reduceAnimation = MutableStateFlow(false)
 
+    /** The main player's backdrop drifts with the music — how hard it moves follows the track's bass and level. */
+    val reactiveBackdrop = MutableStateFlow(true)
+
     /**
      * Whether the welcome pages (party name, then YouTube sign-in) have been
      * through. Absent rather than true for anyone updating from a build that
@@ -1091,6 +1094,7 @@ object AppSettings {
         showListenTogetherButton.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_BUTTON, false)
         connectEnabled.value = prefs.getBoolean(KEY_CONNECT_ENABLED, true)
         reduceAnimation.value = prefs.getBoolean(KEY_REDUCE_ANIMATION, false)
+        reactiveBackdrop.value = prefs.getBoolean(KEY_REACTIVE_BACKDROP, true)
         onboardingComplete.value = prefs.getBoolean(KEY_ONBOARDING_COMPLETE, false)
         diwaliGreetingShown.value = prefs.getBoolean(KEY_DIWALI_GREETING_SHOWN, false)
         highPerformanceMode.value = prefs.getBoolean(KEY_HIGH_PERFORMANCE_MODE, false)
@@ -1503,6 +1507,11 @@ object AppSettings {
     fun setAppFont(value: AppFont) {
         appFont.value = value
         prefs.edit().putString(KEY_APP_FONT, value.name).apply()
+    }
+
+    fun setReactiveBackdrop(value: Boolean) {
+        reactiveBackdrop.value = value
+        prefs.edit().putBoolean(KEY_REACTIVE_BACKDROP, value).apply()
     }
 
     fun setReduceAnimation(value: Boolean) {
@@ -2461,6 +2470,7 @@ object AppSettings {
     private const val KEY_LISTEN_TOGETHER_BUTTON = "show_listen_together_button"
     private const val KEY_CONNECT_ENABLED = "connect_enabled"
     private const val KEY_CACHE_LIMIT = "audio_cache_limit_bytes"
+    private const val KEY_REACTIVE_BACKDROP = "reactive_backdrop"
     private const val KEY_REDUCE_ANIMATION = "reduce_animation"
     private const val KEY_ONBOARDING_COMPLETE = "onboarding_complete"
     private const val KEY_DIWALI_GREETING_SHOWN = "diwali_greeting_2026_shown"

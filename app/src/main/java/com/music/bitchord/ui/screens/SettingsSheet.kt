@@ -258,6 +258,7 @@ fun SettingsScreen(
     val listenTogetherButton by AppSettings.showListenTogetherButton.collectAsStateWithLifecycle()
     val connectEnabled by AppSettings.connectEnabled.collectAsStateWithLifecycle()
     val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
+    val reactiveBackdrop by AppSettings.reactiveBackdrop.collectAsStateWithLifecycle()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val disableBlendEffects by AppSettings.disableBlendEffects.collectAsStateWithLifecycle()
     val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
@@ -1227,6 +1228,21 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setReduceAnimation(!reduceAnimation) },
+                )
+            }
+            val reactiveBackdropTitle = stringResource(R.string.reactive_backdrop)
+            row(reactiveBackdropTitle, "motion", "music") {
+                SettingsRow(
+                    icon = SfIcons.MotionPhotosOff,
+                    title = reactiveBackdropTitle,
+                    subtitle = stringResource(R.string.reactive_backdrop_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = reactiveBackdrop,
+                            onCheckedChange = AppSettings::setReactiveBackdrop,
+                        )
+                    },
+                    onClick = { AppSettings.setReactiveBackdrop(!reactiveBackdrop) },
                 )
             }
             val reduceDynamicBlurTitle = stringResource(R.string.reduce_dynamic_blur)

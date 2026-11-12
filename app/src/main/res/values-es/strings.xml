@@ -219,6 +219,8 @@
     <string name="show_nerd_stats_subtitle">Códec, tasa de bits y frecuencia de muestreo en el reproductor</string>
     <string name="theme">Tema</string>
     <string name="reduce_animation">Reducir animaciones</string>
+    <string name="reactive_backdrop">Fondo reactivo a la música</string>
+    <string name="reactive_backdrop_subtitle">El fondo del reproductor se mueve con los graves y la intensidad de la canción</string>
     <string name="reduce_animation_subtitle">Detiene el degradado del reproductor principal</string>
     <string name="reduce_dynamic_blur">Reducir desenfoque dinámico</string>
     <string name="reduce_dynamic_blur_subtitle">Cambia el cristal esmerilado por fondos sólidos</string>
