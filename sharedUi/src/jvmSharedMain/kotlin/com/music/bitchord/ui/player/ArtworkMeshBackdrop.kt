@@ -388,15 +388,19 @@ fun ArtworkMeshBackdrop(
         val shading = shade()
         if (shading > 0.005f) drawRect(Color.Black.copy(alpha = shading * MESH_PANEL_SHADE))
 
-        // Vivid at the top and progressively darker toward the controls, so the
-        // transport buttons keep their contrast without the foot going near
-        // black. Linear from the first stop to the last.
+        // Vivid where the cover ends and progressively darker toward the controls, so the transport
+        // buttons keep their contrast without the foot going near black. It starts at the seam, under the
+        // cover, and runs the whole way down to the bottom edge, where it is darkest — rather than being
+        // spread over the cover's height too, which had it already half dark by the middle of the player.
+        // Linear from the first stop to the last.
         drawRect(
             brush = Brush.verticalGradient(
                 colors = listOf(
                     Color.Black.copy(alpha = 0.04f),
                     Color.Black.copy(alpha = 0.58f),
                 ),
+                startY = seamY,
+                endY = size.height,
             ),
         )
     }
