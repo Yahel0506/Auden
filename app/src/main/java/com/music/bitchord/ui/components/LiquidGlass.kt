@@ -138,14 +138,17 @@ private const val DARK_INDICATOR_OPACITY = 0.30f
 @Composable
 fun navGlassTint(): Color =
     if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
-        Color(0xFFFFFFFF).copy(alpha = 0.62f)
+        Color(0xFFF2F2F4).copy(alpha = 0.52f)
     } else {
-        Color(0xFF55555B).copy(alpha = 0.52f)
+        Color(0xFF444449).copy(alpha = 0.42f)
     }
 
 /** The nav bar's rim, a little softer than the default, and its lens a little deeper. */
 const val NAV_GLASS_RIM = 0.6f
 const val NAV_GLASS_DEPTH = 1.3f
+
+/** The nav bar's blur, a little lighter than the app's other glass, so the page reads through it more. */
+const val NAV_GLASS_BLUR = 0.75f
 
 /**
  * A lightweight visual match for liquid glass over a stable background.
@@ -236,6 +239,8 @@ fun Modifier.liquidGlass(
     rimAlpha: Float = 1f,
     /** How deep the lens bends at the edges, 1 the default. */
     depth: Float = 1f,
+    /** The blur's radius against the default, 1 as it is. */
+    blur: Float = 1f,
 ): Modifier {
     if (!isGlassSupported()) return this
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -249,7 +254,7 @@ fun Modifier.liquidGlass(
     val density = LocalDensity.current
     val resolutionScale = if (glassPerformance) FROST_RESOLUTION_SCALE else GLASS_RESOLUTION_SCALE
     val blurRadiusDp = if (glassPerformance) FROST_BLUR_RADIUS_DP else BLUR_RADIUS_DP
-    val blurPx = with(density) { blurRadiusDp.dp.toPx() } * resolutionScale
+    val blurPx = with(density) { (blurRadiusDp * blur).dp.toPx() } * resolutionScale
     val lensHeightPx = with(density) { (LENS_HEIGHT * depth * LENS_MAX_DP).dp.toPx() } * resolutionScale
     val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP).dp.toPx() } * resolutionScale
     val themeTint = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
