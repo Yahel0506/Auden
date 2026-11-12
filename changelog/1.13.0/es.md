@@ -16,3 +16,9 @@
 
 - La reparación de metadatos encuentra datos reales y arregla portadas.
 - Las alertas, diálogos y menús de la barra superior se animan al entrar y salir.
+- El mix en bucle de Automix se construye antes y más rápido, repite una pasada menos y sigue sonando tras el bucle, y el reproductor entrante ya no se da por atascado.
+- Las listas M3U8 exportadas incluyen ahora las canciones en streaming, y los formatos de exportación se eligen en un selector centrado.
+- Una sesión reflejada dibuja cada canción desde el propio registro del teléfono.
+- Las portadas rotas de canciones en streaming se confirman, se descartan y se reemplazan por la oficial; se corrigen las portadas de playlists del dispositivo y la etiqueta de sincronización.
+- La sincronización con YouTube Music envía solo lo que cambió.
+- El pliegue de la barra es más rápido.

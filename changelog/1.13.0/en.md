@@ -16,3 +16,9 @@
 
 - Metadata repair finds real data and fixes covers.
 - Alerts, dialogs and top-bar menus animate in and out.
+- Automix's loop mix is built earlier and faster, repeats one pass fewer and plays on past the loop, and the incoming player no longer gets failed as stuck.
+- Exported M3U8 lists now include streamed songs, and export formats are chosen in a centred picker.
+- A mirrored session draws every song from the phone's own record.
+- Dead covers of streamed songs are confirmed, dropped and replaced by the official one; covers of device playlists and the sync label are fixed.
+- YouTube Music sync sends only what changed.
+- The bar's fold is faster.
