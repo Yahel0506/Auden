@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import com.music.bitchord.ui.components.floatingtabbar.FloatingTabBarInlineBehavior
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
@@ -185,19 +186,25 @@ fun GlassNavBar(
     //    expanding it follows the rise (from 60 ms to 250 ms);
     //  - [drop]: its fall to the collapsed row — after the narrowing has a head start (80 ms to 420 ms) —
     //    and, expanding, its rise, which leads (done by 180 ms).
-    // Eased in and out, no overshoot: the bar arrives, it does not bounce.
+    // Each on a lightly underdamped spring, as Apple's: it runs a few percent past its mark and settles
+    // back — the bar dips a touch below its row and narrows a touch more than it ends up, and rising, it
+    // comes up a little over its place and a little wider — which is what makes the glass read as liquid.
     val fold = remember { Animatable(if (compact) 1f else 0f) }
     val narrow = remember { Animatable(if (compact) 1f else 0f) }
     val drop = remember { Animatable(if (compact) 1f else 0f) }
     LaunchedEffect(compact) {
+        suspend fun Animatable<Float, *>.go(to: Float, stiffness: Float, delayMs: Long = 0L) {
+            if (delayMs > 0L) delay(delayMs)
+            animateTo(to, spring(dampingRatio = NAV_SPRING_DAMPING, stiffness = stiffness))
+        }
         if (compact) {
-            launch { fold.animateTo(1f, tween(FOLD_IN_MS, easing = FastOutSlowInEasing)) }
-            launch { narrow.animateTo(1f, tween(NARROW_IN_MS, easing = FastOutSlowInEasing)) }
-            launch { drop.animateTo(1f, tween(DROP_IN_MS, delayMillis = DROP_IN_DELAY_MS, easing = FastOutSlowInEasing)) }
+            launch { fold.go(1f, FOLD_IN_STIFFNESS) }
+            launch { narrow.go(1f, NARROW_IN_STIFFNESS) }
+            launch { drop.go(1f, DROP_IN_STIFFNESS, DROP_IN_DELAY_MS) }
         } else {
-            launch { drop.animateTo(0f, tween(RISE_MS, easing = FastOutSlowInEasing)) }
-            launch { narrow.animateTo(0f, tween(WIDEN_MS, delayMillis = WIDEN_DELAY_MS, easing = FastOutSlowInEasing)) }
-            launch { fold.animateTo(0f, tween(FOLD_OUT_MS, delayMillis = FOLD_OUT_DELAY_MS, easing = FastOutSlowInEasing)) }
+            launch { drop.go(0f, RISE_STIFFNESS) }
+            launch { narrow.go(0f, WIDEN_STIFFNESS, WIDEN_DELAY_MS) }
+            launch { fold.go(0f, FOLD_OUT_STIFFNESS, FOLD_OUT_DELAY_MS) }
         }
     }
     val m: () -> Float = { fold.value }
@@ -229,7 +236,14 @@ fun GlassNavBar(
         val rowTop = height - liftPx - rowPx
         home = Rect(gutterPx, rowTop, gutterPx + rowPx, rowTop + rowPx)
         searchCircle = Rect(width - gutterPx - rowPx, rowTop, width - gutterPx, rowTop + rowPx)
-        tab = lerp(tabExpanded, home, p)
+        // Not straight across: folding, the bar drops onto the row first and then draws in sideways;
+        // unfolding, it spreads sideways first and then rises — a short curve, as Apple's circles take.
+        tab = Rect(
+            lerpF(tabExpanded.left, home.left, sideways(p)),
+            lerpF(tabExpanded.top, home.top, upDown(p)),
+            lerpF(tabExpanded.right, home.right, sideways(p)),
+            lerpF(tabExpanded.bottom, home.bottom, upDown(p)),
+        )
         piecesShown = (p / 0.3f).coerceIn(0f, 1f)
         val accExpanded = Rect(0f, tabExpanded.top - gapPx - accessoryPx, width, tabExpanded.top - gapPx)
         val accCompact = Rect(home.right + spacingPx, rowTop, searchCircle.left - spacingPx, rowTop + rowPx)
@@ -242,12 +256,13 @@ fun GlassNavBar(
             lerpF(accExpanded.bottom, accCompact.bottom, v),
         )
         accessoryInline = h >= 0.5f
-        searchGlass = p
+        searchGlass = p.coerceIn(0f, 1f)
         tabsShown = 1f - (p / 0.5f).coerceIn(0f, 1f)
     }
     fun now(): NavMorphGeometry = frame(boxSize[0], boxSize[1])
     fun heightFor(@Suppress("UNUSED_PARAMETER") unused: Float = 0f): Float {
-        val p = drop.value
+        // Held within its two heights: the overshoot is the now playing bar's, not the whole bar's.
+        val p = drop.value.coerceIn(0f, 1f)
         val tabH = tabBarHeight.toFloat().takeIf { it > 0f } ?: rowPx
         val expanded = tabH + if (hasAccessory) gapPx + accessoryPx else 0f
         val collapsed = rowPx + liftPx
@@ -411,7 +426,7 @@ fun GlassNavBar(
             at = { w, h ->
                 val g = frame(w, h)
                 val from = iconSpots[inlineIndex]?.let { spot -> centreIn(box[0], spot) } ?: g.tabExpanded.center
-                lerpO(from, g.home.center, m())
+                curved(from, g.home.center, m())
             },
         )
         TravellingGlyph(
@@ -422,7 +437,7 @@ fun GlassNavBar(
             at = { w, h ->
                 val g = frame(w, h)
                 val from = iconSpots[standaloneIndex]?.let { spot -> centreIn(box[0], spot) } ?: g.searchCircle.center
-                lerpO(from, g.searchCircle.center, m())
+                curved(from, g.searchCircle.center, m())
             },
         )
         // The now playing bar.
@@ -432,7 +447,16 @@ fun GlassNavBar(
             val morphHidesGlass by remember(dock) {
                 derivedStateOf { dock != null && dock.morphing() && dock.coversMiniArt }
             }
-            Box(Modifier.placeAt { w, h -> frame(w, h).accessory }) {
+            // Rising past its place it also swells a touch, and settles back with it.
+            Box(
+                Modifier
+                    .placeAt { w, h -> frame(w, h).accessory }
+                    .graphicsLayer {
+                        val s = 1f + swell(narrow.value, drop.value) * ACCESSORY_SWELL
+                        scaleX = s
+                        scaleY = s
+                    },
+            ) {
                 val inline by remember { derivedStateOf { narrow.value >= 0.5f } }
                 GlassNowPlaying(
                     song = song,
@@ -448,6 +472,7 @@ fun GlassNavBar(
                     onBlockedControl = onBlockedControl,
                     dock = dock,
                     pull = pull,
+                    swell = { swell(narrow.value, drop.value) },
                     modifier = Modifier.fillMaxSize().clip(pillShape).then(if (morphHidesGlass) Modifier else glassSurface()),
                 )
             }
@@ -484,6 +509,7 @@ private fun GlassNowPlaying(
     onBlockedControl: () -> Unit,
     dock: PlayerDock?,
     pull: MiniPlayerPull?,
+    swell: () -> Float = { 0f },
     modifier: Modifier = Modifier,
 ) {
     val haptics = rememberHaptics()
@@ -559,6 +585,13 @@ private fun GlassNowPlaying(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
+                // Coming out of the row the artwork and the controls run a touch out towards the glass's
+                // edges, and a touch larger, before they settle — more than the glass itself does.
+                .graphicsLayer {
+                    val s = 1f + swell() * CONTENT_SWELL
+                    scaleX = s
+                    scaleY = s
+                }
                 .padding(
                     // The artwork sits in the end of a capsule, which curves
                     // away from it; at 8dp its corner met the curve.
@@ -649,7 +682,25 @@ private fun GlassNowPlaying(
             // Dropped inline: the collapsed row is sharing its width with the
             // tab pill and the Search circle, and the title is what has to
             // survive that, not a second transport button.
-            if (!isInline) {
+            // It comes in from the glass's right edge as the bar widens, and goes back out the same way.
+            androidx.compose.animation.AnimatedVisibility(
+                visible = !isInline,
+                enter = androidx.compose.animation.expandHorizontally(
+                    animationSpec = spring(dampingRatio = NAV_SPRING_DAMPING, stiffness = WIDEN_STIFFNESS),
+                    expandFrom = Alignment.Start,
+                    clip = false,
+                ) + androidx.compose.animation.slideInHorizontally(
+                    animationSpec = spring(dampingRatio = NAV_SPRING_DAMPING, stiffness = WIDEN_STIFFNESS),
+                ) { it } + androidx.compose.animation.fadeIn(tween(160, delayMillis = 40)),
+                exit = androidx.compose.animation.shrinkHorizontally(
+                    animationSpec = spring(stiffness = NARROW_IN_STIFFNESS),
+                    shrinkTowards = Alignment.Start,
+                    clip = false,
+                ) + androidx.compose.animation.slideOutHorizontally(
+                    animationSpec = spring(stiffness = NARROW_IN_STIFFNESS),
+                ) { it } + androidx.compose.animation.fadeOut(tween(90)),
+            ) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
                 // Glyph centres 44dp apart, as Apple's are.
                 Spacer(Modifier.width(4.dp))
                 IconButton(
@@ -664,6 +715,7 @@ private fun GlassNowPlaying(
                         tint = contentColor.copy(alpha = if (controlsLocked) 0.3f else 1f),
                     )
                 }
+              }
             }
         }
     }
@@ -816,16 +868,38 @@ private fun BoxScope.TravellingGlyph(
     )
 }
 
-/** Apple Music's timings, in ms — see the fold in [GlassNavBar]. */
-private const val FOLD_IN_MS = 110
-private const val NARROW_IN_MS = 200
-private const val DROP_IN_MS = 340
-private const val DROP_IN_DELAY_MS = 80
-private const val RISE_MS = 180
-private const val WIDEN_MS = 190
-private const val WIDEN_DELAY_MS = 60
-private const val FOLD_OUT_MS = 120
-private const val FOLD_OUT_DELAY_MS = 30
+/**
+ * Apple Music's fold, on springs — see [GlassNavBar]. A damping of 0.74 runs about 3% past the mark and back,
+ * the small soft settle of Apple's glass; the stiffnesses keep its measured pacing (the fold well under 0.1 s
+ * collapsing, the bar narrowing by ~200 ms and dropping after an 80 ms head start; rising first, then widening).
+ * Unfolding, the tab bar spreading out of its circle is slower than it was, so it does not snap open.
+ */
+private const val NAV_SPRING_DAMPING = 0.74f
+private const val FOLD_IN_STIFFNESS = 900f
+private const val NARROW_IN_STIFFNESS = 600f
+private const val DROP_IN_STIFFNESS = 340f
+private const val DROP_IN_DELAY_MS = 80L
+private const val RISE_STIFFNESS = 520f
+private const val WIDEN_STIFFNESS = 300f
+private const val WIDEN_DELAY_MS = 60L
+private const val FOLD_OUT_STIFFNESS = 260f
+private const val FOLD_OUT_DELAY_MS = 30L
+
+/** How much the now playing glass, and its contents beyond that, swell per unit of overshoot rising. */
+private const val ACCESSORY_SWELL = 0.6f
+private const val CONTENT_SWELL = 1.4f
+
+/** How far past its rest the bar is, rising: its overshoot above its place and out past its width. */
+private fun swell(narrow: Float, drop: Float): Float = maxOf(0f, -narrow, -drop)
+
+/** The fold's sideways share: behind folding (drop first), ahead unfolding (spread first). */
+private fun sideways(p: Float): Float = if (p in 0f..1f) p * (0.55f + 0.45f * p) else p
+
+/** The fold's up and down share: the mirror of [sideways]. */
+private fun upDown(p: Float): Float = 1f - sideways(1f - p)
+
+/** From [a] to [b] on the fold's short curve rather than straight across. */
+private fun curved(a: Offset, b: Offset, p: Float) = Offset(lerpF(a.x, b.x, sideways(p)), lerpF(a.y, b.y, upDown(p)))
 
 /**
  * A stretch of the fold's value, eased within its span — and past either end, carried on as it is, so the
