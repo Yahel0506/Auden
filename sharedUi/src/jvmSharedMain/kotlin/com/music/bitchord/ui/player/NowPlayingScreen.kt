@@ -890,6 +890,11 @@ fun NowPlayingScreen(
      * the sheet is the caller's business.
      */
     onListenTogether: () -> Unit,
+    /**
+     * The host's audio output menu, when it draws one: the output button opens it, hung off the button,
+     * instead of this player's own drawer. Null leaves the drawer.
+     */
+    audioOutputMenu: AudioOutputMenuState? = null,
     lyrics: List<LyricLine>?,
     lyricsSource: LyricsSource?,
     lyricsProviderStates: Map<LyricsSource, LyricsProviderState>,
@@ -953,7 +958,14 @@ fun NowPlayingScreen(
     var showVideoQuality by remember { mutableStateOf(false) }
     var showLyricsProviders by remember { mutableStateOf(false) }
     // Gated on the Bluetooth permission the first time — see [rememberOutputPicker].
-    val openAudioOutput = rememberOutputPicker { showAudioOutput = true }
+    val openAudioOutput = rememberOutputPicker {
+        if (audioOutputMenu != null) {
+            audioOutputMenu.anchor = com.music.bitchord.ui.components.MenuAnchor.consume()
+            audioOutputMenu.open = true
+        } else {
+            showAudioOutput = true
+        }
+    }
     // Listening in a party whose host has taken the controls: the transport
     // keeps only play/pause, which from here moves this device alone.
     val controlsLocked = rememberControlsLocked()
@@ -963,6 +975,19 @@ fun NowPlayingScreen(
     // to show, so the pill and the caption fall back to [onListenTogether]
     // itself (create/join) when there isn't one.
     val openListenTogetherMembers: () -> Unit = { showListenTogetherMembers = true }
+    // What the host's output menu asked for, now that it has closed: its pipeline, its receiver picker, and
+    // the party — who is in it, or the page to start one.
+    val outputMenuAsked = audioOutputMenu?.pending
+    LaunchedEffect(outputMenuAsked) {
+        when (outputMenuAsked) {
+            AudioOutputAction.PIPELINE -> showAudioPipeline = true
+            AudioOutputAction.CAST -> showCast = true
+            AudioOutputAction.PARTY ->
+                if (PlayerPlatform.host.party.value.inParty) showListenTogetherMembers = true else onListenTogether()
+            null -> Unit
+        }
+        if (outputMenuAsked != null) audioOutputMenu.consume()
+    }
 
     val syncedLyricsEnabled by PlayerSettings.syncedLyrics.collectAsStateWithLifecycle()
     val lyricsOffsetMs by PlayerSettings.lyricsOffsetMs.collectAsStateWithLifecycle()
@@ -1745,8 +1770,6 @@ fun NowPlayingScreen(
             onCycleRepeat = onCycleRepeat,
             onToggleAutoplay = onToggleAutoplay,
             onOpenOutput = openAudioOutput,
-            onListenTogether = onListenTogether,
-            onOpenListenTogetherMembers = openListenTogetherMembers,
             onOpenDj = onOpenDj,
             onDjSurprise = onDjSurprise,
         )

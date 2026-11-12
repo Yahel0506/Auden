@@ -256,7 +256,6 @@ fun SettingsScreen(
     val dolbyAtmosSupported = DeviceCodecs.playsDolbyAtmos
     val spatialAudio by AppSettings.spatialAudio.collectAsStateWithLifecycle()
     val nerdStats by AppSettings.showNerdStats.collectAsStateWithLifecycle()
-    val listenTogetherButton by AppSettings.showListenTogetherButton.collectAsStateWithLifecycle()
     val connectEnabled by AppSettings.connectEnabled.collectAsStateWithLifecycle()
     val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val backdropMotion by AppSettings.backdropMotion.collectAsStateWithLifecycle()
@@ -1947,21 +1946,6 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setHideMiniLyrics(!hideMiniLyrics) },
-                )
-            }
-            val listenTogetherButtonTitle = stringResource(R.string.show_listen_together_button)
-            row(listenTogetherButtonTitle, "party", "jam", "output", "headphones", "player") {
-                SettingsRow(
-                    icon = SfIcons.Groups,
-                    title = listenTogetherButtonTitle,
-                    subtitle = stringResource(R.string.show_listen_together_button_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = listenTogetherButton,
-                            onCheckedChange = AppSettings::setShowListenTogetherButton,
-                        )
-                    },
-                    onClick = { AppSettings.setShowListenTogetherButton(!listenTogetherButton) },
                 )
             }
             val connectTitle = stringResource(R.string.connect_enabled)

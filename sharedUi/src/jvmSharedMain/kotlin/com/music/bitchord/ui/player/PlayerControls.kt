@@ -599,9 +599,6 @@ internal fun PlayerActionRow(
     onCycleRepeat: () -> Unit,
     onToggleAutoplay: () -> Unit,
     onOpenOutput: () -> Unit,
-    onListenTogether: () -> Unit,
-    /** Opens [ListenTogetherMembersSheet] rather than settings directly. */
-    onOpenListenTogetherMembers: () -> Unit,
     /**
      * Set only while the DJ is on: its button takes the queue's place, because the DJ has no queue to
      * open. A tap asks it for something ([onOpenDj]); a hold lets it choose ([onDjSurprise]).
@@ -609,10 +606,8 @@ internal fun PlayerActionRow(
     onOpenDj: (() -> Unit)? = null,
     onDjSurprise: (() -> Unit)? = null,
 ) {
-    val showPartyButton by PlayerSettings.showListenTogetherButton.collectAsStateWithLifecycle()
-    val inParty = rememberPartyBadge().inParty
     // Just the output glyph in the middle.
-    val compact = !queueOpen && !showPartyButton && !inParty
+    val compact = !queueOpen
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         // Sized for the wider of the two capsules — the three-up one — whether
         // that or the output/party one is up, so the lyrics and queue glyphs
@@ -709,11 +704,7 @@ internal fun PlayerActionRow(
                         )
                     }
                 } else {
-                    OutputPartyPill(
-                        onOutput = onOpenOutput,
-                        onParty = onListenTogether,
-                        onOpenMembers = onOpenListenTogetherMembers,
-                    )
+                    OutputButton(onOutput = onOpenOutput)
                 }
             }
             Box(
@@ -970,71 +961,20 @@ private fun PillDivider() {
 }
 
 /**
- * The two ends of "where is this playing": the output capsule.
- *
- * Both halves answer the same question and so belong to one control rather than
- * two glyphs that happen to sit side by side — the device the sound leaves by
- * (see [rememberOutputGlyph]), the party for which *people* it reaches.
- *
- * Video vs audio-only used to live here as a third segment; it now lives in
- * the player's own three-dot menu, beside Revert to original and Upgrade
- * quality — the same kind of choice, offered the same way. This capsule is
- * back to the two icons it always otherwise had, at their original spacing.
+ * The output button: the device the sound leaves by (see [rememberOutputGlyph]). The menu it opens hangs off
+ * it, and holds the party along with the devices.
  */
 @Composable
-private fun OutputPartyPill(
-    onOutput: () -> Unit,
-    onParty: () -> Unit,
-    /** Who's in it, before the settings page — see [ListenTogetherMembersSheet]. */
-    onOpenMembers: () -> Unit,
-) {
-    val badge = rememberPartyBadge()
-    val shown by PlayerSettings.showListenTogetherButton.collectAsStateWithLifecycle()
+private fun OutputButton(onOutput: () -> Unit) {
     val output = rememberOutputGlyph()
-    // Party half hidden only outside a party: once in one, this is the way to
-    // who's in it. Without it the output glyph stands alone, drawn like the
-    // lyrics and queue glyphs either side rather than as half a capsule.
-    if (!shown && !badge.inParty) {
-        BottomGlyph(
-            icon = output.icon,
-            iconSize = output.size * (BOTTOM_ICON_SIZE / PILL_OUTPUT_SIZE),
-            contentDescription = stringResource(Res.string.audio_output),
-            onClick = onOutput,
-            vibrant = true,
-        )
-        return
-    }
-    Pill {
-        PillSegment(
-            icon = output.icon,
-            iconSize = output.size,
-            contentDescription = stringResource(Res.string.audio_output),
-            onClick = onOutput,
-            vibrant = true,
-        )
-        PillDivider()
-        PillSegment(
-            // Person rather than Groups: the three-person glyph is drawn half
-            // the height of Headphones and wider than the segment holding it,
-            // so the two halves of the capsule never looked like a pair.
-            icon = Icons.Rounded.Person,
-            iconSize = PILL_PARTY_SIZE,
-            // The count is here and nowhere else: spoken, it is the whole
-            // point of the control; drawn, it would cost the capsule its
-            // symmetry for something the caption below already implies.
-            contentDescription = if (badge.inParty) {
-                stringResource(Res.string.listen_together_open_count, badge.members)
-            } else {
-                stringResource(Res.string.listen_together_open)
-            },
-            // Already in a party, this opens who's in it rather than the
-            // settings page directly; there is nothing to create or join once
-            // there is a party, so [onParty] only ever fires beforehand.
-            onClick = if (badge.inParty) onOpenMembers else onParty,
-            highlighted = badge.inParty,
-            trailingLabel = badge.members.takeIf { badge.inParty }?.toString(),
-        )
-    }
+    BottomGlyph(
+        icon = output.icon,
+        iconSize = output.size * (BOTTOM_ICON_SIZE / PILL_OUTPUT_SIZE),
+        contentDescription = stringResource(Res.string.audio_output),
+        onClick = onOutput,
+        vibrant = true,
+        modifier = Modifier.menuAnchor(),
+    )
 }
 
 /**

@@ -444,9 +444,6 @@ object AppSettings {
     /** Put the playing track's codec, bitrate and sample rate on the player. */
     val showNerdStats = MutableStateFlow(false)
 
-    /** Show the output / Listen Together pill under the player's transport. */
-    val showListenTogetherButton = MutableStateFlow(false)
-
     /** Auden Connect: join the account's device list and let its other devices play on, or control, this one. */
     val connectEnabled = MutableStateFlow(true)
 
@@ -1094,7 +1091,6 @@ object AppSettings {
         shuffleEnabled.value = prefs.getBoolean(KEY_SHUFFLE_ENABLED, false)
         repeatMode.value = prefs.getInt(KEY_REPEAT_MODE, Player.REPEAT_MODE_OFF)
         showNerdStats.value = prefs.getBoolean(KEY_NERD_STATS, false)
-        showListenTogetherButton.value = prefs.getBoolean(KEY_LISTEN_TOGETHER_BUTTON, false)
         connectEnabled.value = prefs.getBoolean(KEY_CONNECT_ENABLED, true)
         reduceAnimation.value = prefs.getBoolean(KEY_REDUCE_ANIMATION, false)
         // The old reactive switch answers until a motion has been picked: off was drifting, on was following.
@@ -1496,11 +1492,6 @@ object AppSettings {
     fun setShowNerdStats(value: Boolean) {
         showNerdStats.value = value
         prefs.edit().putBoolean(KEY_NERD_STATS, value).apply()
-    }
-
-    fun setShowListenTogetherButton(value: Boolean) {
-        showListenTogetherButton.value = value
-        prefs.edit().putBoolean(KEY_LISTEN_TOGETHER_BUTTON, value).apply()
     }
 
     fun setConnectEnabled(value: Boolean) {
@@ -2482,7 +2473,6 @@ object AppSettings {
     private const val KEY_SHUFFLE_ENABLED = "shuffle_enabled"
     private const val KEY_REPEAT_MODE = "repeat_mode"
     private const val KEY_NERD_STATS = "show_nerd_stats"
-    private const val KEY_LISTEN_TOGETHER_BUTTON = "show_listen_together_button"
     private const val KEY_CONNECT_ENABLED = "connect_enabled"
     private const val KEY_CACHE_LIMIT = "audio_cache_limit_bytes"
     private const val KEY_BACKDROP_MOTION = "backdrop_motion"

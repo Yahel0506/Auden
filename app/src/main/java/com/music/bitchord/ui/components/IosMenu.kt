@@ -71,6 +71,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
@@ -437,6 +438,12 @@ fun <T : Any> IosMenuPopover(
     onDismiss: () -> Unit,
     backdrop: Backdrop? = null,
     hazeState: HazeState? = null,
+    /**
+     * Centred across the screen instead of lined up with the button, still settling at the button's height
+     * and growing out of the point nearest it — for a menu with more in it than a column of verbs.
+     */
+    centered: Boolean = false,
+    menuWidth: Dp = IosMenuWidth,
     content: @Composable (T) -> Unit,
 ) {
     var last by remember { mutableStateOf<Pair<T, Rect?>?>(null) }
@@ -576,15 +583,28 @@ fun <T : Any> IosMenuPopover(
         val bottom = height - insets.getBottom(this) - 12.dp.roundToPx()
 
         val scrimPlaceable = measurables[0].measure(Constraints.fixed(width, height))
-        val panelWidth = IosMenuWidth.roundToPx().coerceAtMost(width - margin * 2)
+        val panelWidth = menuWidth.roundToPx().coerceAtMost(width - margin * 2)
         val panel = measurables[2].measure(
             Constraints(minWidth = panelWidth, maxWidth = panelWidth, maxHeight = (bottom - top).coerceAtLeast(0)),
         )
         val shadowPlate = measurables[1].measure(Constraints.fixed(panel.width, panel.height))
         val anchorBounds = menuAnchor?.translate(-overlayOffset)
         val right = anchorBounds?.right?.roundToInt() ?: (width - margin)
-        val panelX = (right - panel.width)
-            .coerceIn(margin, (width - margin - panel.width).coerceAtLeast(margin))
+        val panelX = if (centered) {
+            ((width - panel.width) / 2).coerceAtLeast(margin)
+        } else {
+            (right - panel.width)
+                .coerceIn(margin, (width - margin - panel.width).coerceAtLeast(margin))
+        }
+        // Where along the panel the growth starts: from the button when centred, from the corner it hangs off
+        // otherwise.
+        val originX = if (centered && anchorBounds != null && panel.width > 0) {
+            ((anchorBounds.center.x - panelX) / panel.width).coerceIn(0f, 1f)
+        } else if (centered) {
+            0.5f
+        } else {
+            1f
+        }
         val lowest = (bottom - panel.height).coerceAtLeast(top)
         val hangsDown = anchorBounds != null && anchorBounds.center.y < height / 2f
         val panelY = if (hangsDown) anchorBounds.top.roundToInt().coerceIn(top, lowest) else lowest
@@ -593,7 +613,7 @@ fun <T : Any> IosMenuPopover(
             val p = progress.value
             alpha = (p * 2.5f).coerceIn(0f, 1f)
             if (!reduceMotion) {
-                transformOrigin = TransformOrigin(1f, if (hangsDown) 0f else 1f)
+                transformOrigin = TransformOrigin(originX, if (hangsDown) 0f else 1f)
                 val scale = lerp(0.3f, 1f, p)
                 scaleX = scale
                 scaleY = scale

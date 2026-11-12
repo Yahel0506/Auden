@@ -340,6 +340,10 @@ import com.music.bitchord.data.model.TopPick
 import com.music.bitchord.data.model.TopPickKind
 import com.music.bitchord.data.model.TopPickMood
 import com.music.bitchord.ui.screens.MoodGridPage
+import com.music.bitchord.ui.components.AudioOutputMenu
+import com.music.bitchord.ui.components.AudioOutputMenuWidth
+import com.music.bitchord.ui.player.AudioOutputAction
+import com.music.bitchord.ui.player.AudioOutputMenuState
 import com.music.bitchord.ui.player.NowPlayingScreen
 import com.music.bitchord.ui.player.MixViewRequest
 import com.music.bitchord.ui.player.MusicVideoEngine
@@ -912,6 +916,8 @@ private fun BitChordApp(
 
     // The glass menu off the DJ's button in the player, and the button it hangs from.
     var djMenuUp by remember { mutableStateOf(false) }
+    // The audio output menu hung off the player's output button — see [AudioOutputMenu].
+    val audioOutputMenu = remember { AudioOutputMenuState() }
     var djMenuAnchor by remember { mutableStateOf<Rect?>(null) }
     // A hold on that button turns the player into the DJ's, spreading from the button's corner:
     // [djReveal] counts the holds, [djRevealing] says the old player is still wanted underneath,
@@ -2989,6 +2995,7 @@ private fun BitChordApp(
                 dismissPlayer()
                 navigator.pushAll(AppRoute.Settings, AppRoute.ListenTogether)
             },
+            audioOutputMenu = audioOutputMenu,
             onClearQueue = {
                 // Keep what's playing and context/autoplay; drop user-queued tracks.
                 controller?.let { c ->
@@ -5208,7 +5215,14 @@ private fun BitChordApp(
                     // sheet's own window, as the menu has to be to sit above
                     // the player. Not under "reduce dynamic blur": the panel
                     // is opaque then.
-                    val playerMenuUp = (songActions != null && songMenuOrigin == null && menuFromPlayer) || djMenuUp
+                    val playerMenuUp = (songActions != null && songMenuOrigin == null && menuFromPlayer) || djMenuUp ||
+                        audioOutputMenu.open
+                    // Taken as the output menu opens, like the ⋯'s (see onOpenMenu), for its glass to blur.
+                    LaunchedEffect(audioOutputMenu.open) {
+                        if (audioOutputMenu.open && !AppSettings.reduceDynamicBlur.value && !playerLiveCanvas) {
+                            playerBackdrop.capture()
+                        }
+                    }
                     LaunchedEffect(playerMenuUp, reduceDynamicBlur) {
                         if (!playerMenuUp || reduceDynamicBlur) {
                             delay(SNAPSHOT_RELEASE_DELAY_MS)
@@ -5233,6 +5247,24 @@ private fun BitChordApp(
                         backdrop = if (playerLiveCanvas) livePlayerBackdrop else playerBackdrop,
                     ) { song ->
                         songMenuBody(song)
+                    }
+                    // The audio output's: the same glass, centred across the player and hung at the output
+                    // button's height, growing out of it.
+                    IosMenuPopover(
+                        item = if (audioOutputMenu.open) Unit else null,
+                        anchor = audioOutputMenu.anchor,
+                        onDismiss = { audioOutputMenu.open = false },
+                        backdrop = if (playerLiveCanvas) livePlayerBackdrop else playerBackdrop,
+                        centered = true,
+                        menuWidth = AudioOutputMenuWidth,
+                    ) {
+                        AudioOutputMenu(
+                            accountName = account?.name,
+                            onParty = { audioOutputMenu.request(AudioOutputAction.PARTY) },
+                            onCast = { audioOutputMenu.request(AudioOutputAction.CAST) },
+                            onPipeline = { audioOutputMenu.request(AudioOutputAction.PIPELINE) },
+                            onDismiss = { audioOutputMenu.open = false },
+                        )
                     }
                     // The DJ's: the same glass, hung off the DJ's button.
                     IosMenuPopover(
