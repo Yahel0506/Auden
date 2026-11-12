@@ -297,15 +297,7 @@ fun GlassNavBar(
             Modifier
                 .placeAt { w, h -> frame(w, h).tab }
                 .graphicsLayer { alpha = now().piecesShown }
-                .then(glassSurface())
-                .clickable(
-                    enabled = compact,
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) {
-                    scrollConnection.expand()
-                    if (inlineIndex != selectedIndex) currentOnTabSelected(inlineIndex)
-                },
+                .then(glassSurface()),
         )
         // The expanded bar itself, laid out at its full size where it rests, fading out as its halves take
         // over (and back in as they meet).
@@ -409,6 +401,21 @@ fun GlassNavBar(
         }
     }
         }
+        // The open tab's circle, tapped, opens the bar back out. Its own hit area over the folded bar, which
+        // still lies under the circle, faded and clipped to it, and would otherwise take the tap as a tab's.
+        if (compact) {
+            Box(
+                Modifier
+                    .placeAt { w, h -> frame(w, h).tab }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) {
+                        scrollConnection.expand()
+                        if (inlineIndex != selectedIndex) currentOnTabSelected(inlineIndex)
+                    },
+            )
+        }
         // Search's own circle, growing round its glyph as it leaves the bar, and merging back into it.
         Box(
             Modifier
@@ -422,7 +429,10 @@ fun GlassNavBar(
                     enabled = compact,
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                ) { currentOnTabSelected(standaloneIndex) },
+                ) {
+                    scrollConnection.expand()
+                    currentOnTabSelected(standaloneIndex)
+                },
         )
         // The two glyphs that travel: the open tab's, into its circle, and Search's, into its own.
         TravellingGlyph(
