@@ -1,6 +1,30 @@
 package com.music.bitchord.ui.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import com.music.bitchord.data.model.ROW_ART_PX
+import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.model.artworkAt
+import com.music.bitchord.ui.player.ConnectDeviceUi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -59,7 +83,6 @@ import com.music.bitchord.ui.player.AudioOutputDevice
 import com.music.bitchord.ui.player.AudioOutputKind
 import com.music.bitchord.ui.player.BluetoothForm
 import com.music.bitchord.ui.player.PlayerPlatform
-import com.music.bitchord.ui.player.ThinSlider
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
@@ -67,19 +90,21 @@ import org.jetbrains.compose.resources.stringResource
 val AudioOutputMenuWidth = 300.dp
 
 /**
- * What the glass menu off the player's output button holds: the party, the device the music is on now, the
- * others it could be on — this phone's outputs, a watch, a receiver, the account's other Auden devices, all
- * in one list — the volume, and, set apart at the foot, the audio pipeline.
+ * What the glass menu off the player's output button holds, laid out as Apple Music's: the song at the top,
+ * then pill rows — the party, the device playing now (which is also the volume: its pill fills with the level
+ * and is dragged to change it), every other place the music could go, and the audio pipeline set apart at the
+ * foot.
  *
- * Every device appears once. The one playing is named at the top and left out of the list below it, and the
- * account's own copy of this phone (Auden Connect lists the device it is running on) is the phone's output
- * row, not a second one.
+ * Every device appears once. The one playing is named near the top and left out of the list below it. Auden
+ * Connect lists the device it runs on, and every other install of the app on this phone (a second build is a
+ * second device to it) — all of those are the phone's own output row, not further entries.
  *
  * Drawn inside an [IosMenuPopover]; what a row does beyond switching device — the party, the receiver picker,
  * the pipeline — goes to the host through [onParty], [onCast] and [onPipeline], which close the menu.
  */
 @Composable
 fun AudioOutputMenu(
+    song: Song?,
     accountName: String?,
     onParty: () -> Unit,
     onCast: () -> Unit,
@@ -97,10 +122,14 @@ fun AudioOutputMenu(
     // A watch comes and goes; ask again each time the menu opens.
     LaunchedEffect(Unit) { host.refreshWatchOutput() }
 
-    // The account's other Auden devices. Its entry for this very device is the phone's own output row below.
     val connectDevices = if (connect.visible) connect.devices else emptyList()
     val thisDevice = connectDevices.firstOrNull { it.isThisDevice }
-    val remote = connectDevices.firstOrNull { it.isActive && !it.isThisDevice }
+    // Other devices that are this phone: the same model and platform as this install, which is what a second
+    // build of the app on it looks like from the room.
+    val thisPhone: (ConnectDeviceUi) -> Boolean = { device ->
+        device.isThisDevice || (thisDevice != null && device.platform == thisDevice.platform && device.name == thisDevice.name)
+    }
+    val remote = connectDevices.firstOrNull { it.isActive && !thisPhone(it) }
 
     val phoneTitle = accountName?.trim()?.split(Regex("\\s+"))?.firstOrNull()?.takeIf { it.isNotBlank() }
         ?.let { stringResource(Res.string.personal_phone, it) }
@@ -160,7 +189,7 @@ fun AudioOutputMenu(
                 ),
             )
         }
-        connectDevices.filter { !it.isThisDevice }.forEach { device ->
+        connectDevices.filter { !thisPhone(it) }.forEach { device ->
             add(
                 OutputDestination(
                     key = "connect-${device.id}",
@@ -179,12 +208,14 @@ fun AudioOutputMenu(
         ?: devices.firstOrNull { it.key.startsWith("out-") && it.active }
         ?: devices.firstOrNull { it.key.startsWith("out-") }
     val others = devices.filter { it !== current }
-    val playing = stringResource(Res.string.audio_output_playing)
 
-    Column {
-        // The party, first: the way into listening with other people.
-        IosMenuRow(
-            label = if (party.inParty) {
+    Column(
+        modifier = Modifier.padding(horizontal = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (song != null) SongPreview(song)
+        PillRow(
+            title = if (party.inParty) {
                 stringResource(Res.string.listen_together_open_count, party.members.size)
             } else {
                 stringResource(Res.string.listen_together_open)
@@ -193,45 +224,201 @@ fun AudioOutputMenu(
             onClick = onParty,
         )
         if (current != null) {
-            IosMenuSeparator(colors)
-            IosMenuRow(
-                label = current.title,
-                description = current.subtitle ?: playing,
+            // This phone's own output is the volume: its pill fills with the level.
+            PillRow(
+                title = current.title,
+                subtitle = current.subtitle,
                 icon = current.icon,
+                selected = true,
+                volume = current.key.startsWith("out-"),
+                routeKey = outputs,
                 onClick = null,
-                trailing = { Icon(Icons.Rounded.Check, contentDescription = null, tint = colors.label, modifier = Modifier.size(20.dp)) },
             )
         }
-        if (others.isNotEmpty()) {
-            IosMenuSeparator(colors)
-            others.forEach { device ->
-                IosMenuRow(
-                    label = device.title,
-                    description = device.subtitle,
-                    icon = device.icon,
-                    onClick = {
-                        device.onClick()
-                        if (device.closes) onDismiss()
-                    },
-                    trailing = if (device.key == "cast") {
-                        { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = colors.secondaryLabel, modifier = Modifier.size(20.dp)) }
-                    } else {
-                        null
-                    },
+        others.forEach { device ->
+            PillRow(
+                title = device.title,
+                subtitle = device.subtitle,
+                icon = device.icon,
+                onClick = {
+                    device.onClick()
+                    if (device.closes) onDismiss()
+                },
+                chevron = device.key == "cast",
+            )
+        }
+        // Set apart at the foot: not a place to send the music but a look at what it passes through.
+        Spacer(Modifier.height(4.dp))
+        PillRow(
+            title = stringResource(Res.string.audio_pipeline),
+            subtitle = format.summary.takeIf { it.isNotBlank() },
+            icon = Icons.Rounded.GraphicEq,
+            onClick = onPipeline,
+            chevron = true,
+        )
+        Spacer(Modifier.height(2.dp))
+    }
+}
+
+/** The song at the top of the menu: its cover, title and artist — what the output is carrying. */
+@Composable
+private fun SongPreview(song: Song) {
+    val colors = iosMenuColors()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 2.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        AsyncImage(
+            model = rememberRemoteArtworkUrl(song)?.artworkAt(ROW_ART_PX),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(54.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(colors.pressed),
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = song.title,
+                color = colors.label,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = song.artist,
+                color = colors.secondaryLabel,
+                fontSize = 14.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/**
+ * One capsule of the menu: a glyph, a name, and what it is — a check when it is the one playing. With
+ * [volume], the capsule is also the volume slider: filled with the level up to its width, and dragged to move it.
+ */
+@Composable
+private fun PillRow(
+    title: String,
+    icon: ImageVector,
+    onClick: (() -> Unit)?,
+    subtitle: String? = null,
+    selected: Boolean = false,
+    chevron: Boolean = false,
+    volume: Boolean = false,
+    routeKey: Any = Unit,
+) {
+    val colors = iosMenuColors()
+    val shape = RoundedCornerShape(50)
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+
+    val system = PlayerPlatform.host.volume
+    val systemLevel by system.level.collectAsStateWithLifecycle()
+    var level by remember(system) { mutableFloatStateOf(systemLevel) }
+    var dragging by remember { mutableStateOf(false) }
+    if (volume) {
+        LaunchedEffect(systemLevel) { if (!dragging) level = systemLevel }
+        // Android swaps the volume index a moment after the device list changes, with no event of its own.
+        LaunchedEffect(routeKey) {
+            repeat(4) {
+                if (!dragging) system.refresh()
+                delay(250L)
+            }
+        }
+    }
+    var widthPx by remember { mutableFloatStateOf(1f) }
+    val setLevel: (Float) -> Unit = { x ->
+        val next = (x / widthPx).coerceIn(0f, 1f)
+        level = next
+        system.set(next)
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 52.dp)
+            .clip(shape)
+            .background(
+                when {
+                    selected -> colors.label.copy(alpha = 0.14f)
+                    pressed -> colors.pressed
+                    else -> colors.label.copy(alpha = 0.07f)
+                },
+            )
+            .then(
+                if (volume) {
+                    Modifier
+                        .onSizeChanged { widthPx = it.width.toFloat().coerceAtLeast(1f) }
+                        .drawBehind {
+                            // The level, as a lighter fill from the left edge.
+                            drawRect(colors.label.copy(alpha = 0.18f), size = Size(size.width * level, size.height))
+                        }
+                        .pointerInput(Unit) {
+                            detectHorizontalDragGestures(
+                                onDragStart = { dragging = true; setLevel(it.x) },
+                                onDragEnd = { dragging = false },
+                                onDragCancel = { dragging = false },
+                                onHorizontalDrag = { change, _ -> setLevel(change.position.x) },
+                            )
+                        }
+                } else {
+                    Modifier
+                },
+            )
+            .then(
+                if (onClick != null) {
+                    Modifier.clickable(interactionSource = interaction, indication = null, onClick = onClick)
+                } else {
+                    Modifier
+                },
+            )
+            .padding(horizontal = 18.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = colors.label,
+            modifier = Modifier.size(24.dp),
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = colors.label,
+                fontSize = 17.sp,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    color = colors.secondaryLabel,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
-        IosMenuSeparator(colors)
-        MenuVolume(routeKey = outputs)
-        // Set apart at the foot: not a place to send the music but a look at what it passes through.
-        IosMenuSeparator(colors)
-        IosMenuRow(
-            label = stringResource(Res.string.audio_pipeline),
-            description = format.summary.takeIf { it.isNotBlank() },
-            icon = Icons.Rounded.GraphicEq,
-            onClick = onPipeline,
-            trailing = { Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = colors.secondaryLabel, modifier = Modifier.size(20.dp)) },
-        )
+        if (selected) {
+            Icon(Icons.Rounded.Check, contentDescription = null, tint = colors.label, modifier = Modifier.size(22.dp))
+        } else if (chevron) {
+            Icon(
+                Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                contentDescription = null,
+                tint = colors.secondaryLabel,
+                modifier = Modifier.size(20.dp),
+            )
+        }
     }
 }
 
@@ -246,51 +433,6 @@ private class OutputDestination(
     /** Whether choosing it closes the menu; the receiver picker, which opens over it, does not need to. */
     val closes: Boolean = true,
 )
-
-/** The phone's media volume on the player's own slider, re-read when the route changes. */
-@Composable
-private fun MenuVolume(routeKey: Any) {
-    val system = PlayerPlatform.host.volume
-    val systemLevel by system.level.collectAsStateWithLifecycle()
-    var level by remember(system) { mutableFloatStateOf(systemLevel) }
-    var dragging by remember { mutableStateOf(false) }
-    LaunchedEffect(systemLevel) { if (!dragging) level = systemLevel }
-    // Android swaps the volume index a moment after the device list changes, with no event of its own.
-    LaunchedEffect(routeKey) {
-        repeat(4) {
-            if (!dragging) system.refresh()
-            delay(250L)
-        }
-    }
-    val colors = iosMenuColors()
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Start,
-    ) {
-        Icon(
-            imageVector = if (level > 0f) Icons.AutoMirrored.Rounded.VolumeUp else Icons.AutoMirrored.Rounded.VolumeOff,
-            contentDescription = null,
-            tint = colors.secondaryLabel,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(Modifier.width(12.dp))
-        ThinSlider(
-            value = level,
-            onValueChange = {
-                dragging = true
-                level = it
-                system.set(it)
-            },
-            onValueChangeFinished = { dragging = false },
-            idleHeight = 6.dp,
-            activeHeight = 10.dp,
-            modifier = Modifier.weight(1f),
-        )
-    }
-}
 
 private fun outputIcon(device: AudioOutputDevice): ImageVector = when (device.kind) {
     AudioOutputKind.PHONE -> Icons.Rounded.PhoneAndroid

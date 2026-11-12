@@ -5259,6 +5259,7 @@ private fun BitChordApp(
                         menuWidth = AudioOutputMenuWidth,
                     ) {
                         AudioOutputMenu(
+                            song = playerSong,
                             accountName = account?.name,
                             onParty = { audioOutputMenu.request(AudioOutputAction.PARTY) },
                             onCast = { audioOutputMenu.request(AudioOutputAction.CAST) },
