@@ -988,8 +988,10 @@ private fun SharedTransitionScope.ExpandedTabs(
                             )
                         }
                     }
-                    .padding(contentPadding)
+                    // Size animation outside the padding: it clips what it draws to its bounds, and the selection,
+                    // wider than its cell at the ends, stands out over the padding — inside it, it was cut there.
                     .animateContentSize()
+                    .padding(contentPadding)
             ) {
                 if (showPill && (!glassPill || pill.isFlat)) {
                     FlatSelectionPill(
