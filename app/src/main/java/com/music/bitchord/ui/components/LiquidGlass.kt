@@ -171,6 +171,9 @@ const val NAV_GLASS_DEPTH = 0.8f
 const val NAV_GLASS_BLUR = 0.2f
 const val NAV_GLASS_VIBRANCY = 1.6f
 
+/** Under "improve glass performance", only a touch more blur than the full effect, not the frost's double. */
+const val NAV_GLASS_PERFORMANCE_BLUR = 1.3f
+
 /**
  * A lightweight visual match for liquid glass over a stable background.
  *
@@ -269,6 +272,11 @@ fun Modifier.liquidGlass(
     depth: Float = 1f,
     /** The blur's radius against the default, 1 as it is. */
     blur: Float = 1f,
+    /**
+     * Under [AppSettings.glassPerformance], the blur as this many times the full effect's, in place of the
+     * frost's doubled radius — for a surface whose look should barely change between the two.
+     */
+    performanceBlur: Float? = null,
 ): Modifier {
     if (!isGlassSupported()) return this
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -282,7 +290,8 @@ fun Modifier.liquidGlass(
     val density = LocalDensity.current
     val resolutionScale = if (glassPerformance) FROST_RESOLUTION_SCALE else GLASS_RESOLUTION_SCALE
     val blurRadiusDp = if (glassPerformance) FROST_BLUR_RADIUS_DP else BLUR_RADIUS_DP
-    val blurPx = with(density) { (blurRadiusDp * blur).dp.toPx() } * resolutionScale
+    val radiusDp = if (glassPerformance && performanceBlur != null) BLUR_RADIUS_DP * performanceBlur else blurRadiusDp
+    val blurPx = with(density) { (radiusDp * blur).dp.toPx() } * resolutionScale
     val lensHeightPx = with(density) { (LENS_HEIGHT * depth * LENS_MAX_DP).dp.toPx() } * resolutionScale
     val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP).dp.toPx() } * resolutionScale
     val themeTint = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
