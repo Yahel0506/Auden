@@ -133,6 +133,9 @@ import kotlin.math.roundToInt
 /** How much the whole bar swells while a finger carries the selection. */
 private const val HELD_BAR_SCALE = 1.045f
 
+/** The narrowest the selection pill gets, as a share of its height: an oval however many tabs share the bar. */
+private const val MIN_PILL_ASPECT = 1.65f
+
 /** How far the held bar leans after the finger at most, and how much of the finger's travel it takes. */
 private val HELD_BAR_PULL = 5.dp
 private const val HELD_BAR_PULL_SHARE = 0.07f
@@ -866,17 +869,24 @@ private fun SharedTransitionScope.ExpandedTabs(
     val padTopPx = with(density) { contentPadding.calculateTopPadding().toPx() }
     val padBottomPx = with(density) { contentPadding.calculateBottomPadding().toPx() }
     val rowHeightPx = rowSize.height.toFloat()
-    val restSize = Size(tabWidthPx, rowHeightPx)
+    // With more cells the pill would narrow towards a circle; it keeps an oval's proportions instead, wider
+    // than its cell and reaching a little into its neighbours.
+    val pillWidthPx = maxOf(tabWidthPx, rowHeightPx * MIN_PILL_ASPECT)
+    val restSize = Size(pillWidthPx, rowHeightPx)
     val liftedHeightPx = rowHeightPx + padTopPx + padBottomPx +
         with(density) { PILL_GROW_HEIGHT.toPx() }
     val liftedSize = if (rowHeightPx > 0f) {
-        Size(liftedHeightPx * tabWidthPx / rowHeightPx, liftedHeightPx)
+        Size(liftedHeightPx * pillWidthPx / rowHeightPx, liftedHeightPx)
     } else {
         restSize
     }
     // Where the pill's centre is in the row, for a position in tab steps.
     val pillCenterInRow: (Float) -> Offset = { position ->
-        val x = position * tabStepPx + tabWidthPx / 2f
+        val cellCentre = position * tabStepPx + tabWidthPx / 2f
+        // A pill wider than its cell is kept from standing out past the bar at either end.
+        val lowest = pillWidthPx / 2f - padLeftPx
+        val highest = rowSize.width - pillWidthPx / 2f + padLeftPx
+        val x = if (lowest < highest) cellCentre.coerceIn(lowest, highest) else cellCentre
         Offset(if (isRtl) rowSize.width - x else x, rowHeightPx / 2f)
     }
     val showPill = selectedTabIndex >= 0 && tabWidthPx > 0f
