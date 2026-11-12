@@ -499,6 +499,18 @@ fun SettingsScreen(
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 4.dp),
             )
 
+            // What's new, in a section of its own at the very top. While searching, its notes answer in the
+            // results like any other row's, so this entry is only for the page as it rests.
+            if (!searching) {
+                SettingsGroup {
+                    SettingsRow(
+                        icon = SettingsCategory.WHATS_NEW.icon,
+                        title = stringResource(SettingsCategory.WHATS_NEW.title),
+                        onClick = { onOpenSection(SettingsCategory.WHATS_NEW) },
+                    )
+                }
+            }
+
             SearchableSettingsGroup(search) {
                 val accountTitle = stringResource(R.string.account_integrations)
                 // What the row opens is the scrobbling screen, so the services it
@@ -1864,11 +1876,15 @@ fun SettingsScreen(
 
         // No footer: it only restated the stop-on-close row's own subtitle,
         // which sits four rows above it and says the same thing in fewer words.
-        if (shows(SettingsCategory.MISCELLANEOUS)) SearchableSettingsGroup(search, header = stringResource(R.string.miscellaneous)) {
+        if (shows(SettingsCategory.WHATS_NEW)) SearchableSettingsGroup(search) {
             val whatsNewTitle = stringResource(R.string.whats_new_update)
             row(whatsNewTitle, "changelog", "update", "release notes") {
-                WhatsNewSection(title = whatsNewTitle)
+                // On its own page the page's title is the heading; in the search results the card says what it is.
+                WhatsNewSection(title = whatsNewTitle.takeIf { searching })
             }
+        }
+
+        if (shows(SettingsCategory.MISCELLANEOUS)) SearchableSettingsGroup(search, header = stringResource(R.string.miscellaneous)) {
             val playNextOnSwipeTitle = stringResource(R.string.play_next_on_swipe)
             row(playNextOnSwipeTitle, "swipe", "queue") {
                 SettingsRow(
@@ -3226,6 +3242,8 @@ internal fun SegmentedControl(
  * they stay on the main page, where they always were.
  */
 enum class SettingsCategory(@param:StringRes val title: Int) {
+    /** The notes of the version running now. Opened from a row of its own at the top of the main page, not from the list. */
+    WHATS_NEW(R.string.whats_new_update),
     DOWNLOADS(R.string.downloads),
     PLAYBACK(R.string.playback),
     DJ(R.string.dj_title),
@@ -3241,6 +3259,7 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
 
     val icon: ImageVector
         get() = when (this) {
+            WHATS_NEW -> SfIcons.AutoAwesome
             DOWNLOADS -> SfIcons.Download
             PLAYBACK -> SfIcons.PlayCircle
             DJ -> SfIcons.GraphicEq
@@ -3269,7 +3288,7 @@ enum class SettingsChoiceKind(@param:StringRes val title: Int) {
 @Composable
 private fun SettingsCategoryList(onOpen: (SettingsCategory) -> Unit) {
     SettingsGroup {
-        SettingsCategory.entries.forEachIndexed { index, category ->
+        SettingsCategory.entries.filter { it != SettingsCategory.WHATS_NEW }.forEachIndexed { index, category ->
             if (index > 0) RowDivider()
             SettingsRow(
                 icon = category.icon,
@@ -3572,16 +3591,18 @@ private fun DownloadLayoutSheet(selected: String, onSelect: (String) -> Unit) {
  * language. Shipped with the build, so it shows without a connection.
  */
 @Composable
-private fun WhatsNewSection(title: String) {
+private fun WhatsNewSection(title: String?) {
     val context = LocalContext.current
     val notes = remember(context) { ReleaseNotes.forInstalledVersion(context) }
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        Spacer(Modifier.height(8.dp))
+        if (title != null) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            Spacer(Modifier.height(8.dp))
+        }
         if (notes == null) {
             Text(
                 text = stringResource(R.string.whats_new_none),
