@@ -1186,30 +1186,24 @@ private fun PillSegment(
     }
 }
 
+/** Whether this device is in a listening party — the one case the line under the buttons still has a name for. */
+@Composable
+internal fun rememberInParty(): Boolean = rememberPartyBadge().inParty
+
 /**
- * The line under the transport: normally the output, and the party's name
- * whenever there is one.
+ * The line under the buttons: the party's name, when there is one. The output device's own name no longer
+ * has a line here — it is on the output button's sheet — so this is drawn only in a party (see
+ * [rememberInParty]), and the player gives its height to everything else otherwise.
  *
- * A party overrides the output rather than sitting beside it because the two
- * are not the same kind of fact. "Kushagra's Phone" answers which speaker in
- * this room; once there are four devices playing the same song, the room is no
- * longer what the listener is checking. The tap follows the label — whichever
- * one is on screen is the thing it opens.
+ * The tap opens who is in it.
  */
 @Composable
 internal fun OutputCaption(
-    accountName: String?,
-    onOpenOutput: () -> Unit,
     /** Who's in it, before the settings page — see [ListenTogetherMembersSheet]. */
     onOpenMembers: () -> Unit,
 ) {
     val badge = rememberPartyBadge()
-    val outputName = rememberAudioOutputName(accountName)
-    val outputFormat by PlayerPlatform.host.outputFormat.collectAsStateWithLifecycle()
-    // The shine means one thing: the DAC has this track to itself, bit-perfect
-    // or at the most the DAC can take. Anything weaker — a hi-res stream on a
-    // float-capable route — still passes through Android's mixer, which may
-    // resample it, so it no longer earns the same mark.
+    if (!badge.inParty) return
     // The host's first name, exactly as the output line already shortens the
     // account's — "Kushagra's Jam" alongside "Kushagra's Phone".
     val jamName = badge.hostFirstName
@@ -1218,28 +1212,16 @@ internal fun OutputCaption(
     val captionModifier = Modifier
         .fillMaxWidth(0.65f)
         .additiveChrome(LocalPlayerChrome.current)
-        .clickable { if (badge.inParty) onOpenMembers() else onOpenOutput() }
-    if (!badge.inParty && (outputFormat.bitPerfect || outputFormat.dacLimited)) {
-        ShimmerText(
-            text = outputName,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-            ),
-            modifier = captionModifier,
-        )
-    } else {
-        Text(
-            text = if (badge.inParty) jamName else outputName,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
-            color = chromeWhite(0.55f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = captionModifier,
-        )
-    }
+        .clickable { onOpenMembers() }
+    Text(
+        text = jamName,
+        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+        color = chromeWhite(0.55f),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        textAlign = TextAlign.Center,
+        modifier = captionModifier,
+    )
 }
 
 /** The three fields of a party the player draws — see [OutputPartyPill]. */

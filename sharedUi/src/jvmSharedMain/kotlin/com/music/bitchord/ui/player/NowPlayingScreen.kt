@@ -1750,17 +1750,17 @@ fun NowPlayingScreen(
             onOpenDj = onOpenDj,
             onDjSurprise = onDjSurprise,
         )
-        // Keep the current output caption visible in every state.
-        Spacer(Modifier.height(18.dp))
-        Box(
-            modifier = Modifier.fillMaxWidth().height(20.dp),
-            contentAlignment = Alignment.TopCenter,
-        ) {
-            OutputCaption(
-                accountName = accountName,
-                onOpenOutput = openAudioOutput,
-                onOpenMembers = openListenTogetherMembers,
-            )
+        // The line under the buttons is the party's name, and only in a party: the output device's name is
+        // gone from here, and its 38dp go to the rest of the player (the artwork block takes what the
+        // controls leave).
+        if (rememberInParty()) {
+            Spacer(Modifier.height(18.dp))
+            Box(
+                modifier = Modifier.fillMaxWidth().height(20.dp),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                OutputCaption(onOpenMembers = openListenTogetherMembers)
+            }
         }
     }
 
