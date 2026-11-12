@@ -297,12 +297,8 @@ internal fun InlineQueue(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = stringResource(Res.string.queue),
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White,
-                modifier = Modifier.weight(1f),
-            )
+            // No "Queue" heading: the page already says where it is. The clear button keeps the row's right end.
+            Spacer(Modifier.weight(1f))
             if (tracks.user.isNotEmpty()) {
                 QueueClearButton(MaterialTheme.typography.titleMedium, controlsLocked, onClear)
             }

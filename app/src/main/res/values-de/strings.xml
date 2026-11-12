@@ -1642,4 +1642,9 @@
     <string name="background_video_subtitle">Plays Spotify\'s short vertical loop behind the player</string>
     <string name="hide_mini_lyrics">Mini-Songtext ausblenden</string>
     <string name="hide_mini_lyrics_subtitle">Removes the one-line synced lyric above the progress bar; the controls spread out to fill its place</string>
+    <string name="library_statistics">Statistiken</string>
+    <string name="library_other">Sonstiges</string>
+    <string name="add_local_files">Lokale Dateien hinzufügen</string>
+    <string name="local_files_added">%1$d lokale Dateien hinzugefügt</string>
+    <string name="import_playlist_file">Datei importieren</string>
 </resources>

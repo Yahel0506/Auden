@@ -261,7 +261,7 @@ fun DacVolumeHud(hazeState: HazeState) {
                             // through, blurred and only slightly darkened.
                             Modifier.optimizedHazeEffect(
                                 state = hazeState,
-                                style = HazeMaterials.ultraThin(Color(0xFF1C1C1E)),
+                                style = navGlassHazeStyle(),
                             )
                         },
                     )

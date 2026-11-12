@@ -74,21 +74,7 @@ fun AccountProfileSelector(
     val shape = MaterialTheme.shapes.extraLarge
     val surface = MaterialTheme.colorScheme.surface
     val dark = surface.luminance() < 0.5f
-    // The thin material lets too much of the page through behind the text. Dark
-    // mode gets a black wash over it; light mode a white one, which keeps the
-    // dark text readable over a busy cover instead of muddying it.
-    val material = HazeMaterials.thin(surface)
-    val style = remember(material, dark) {
-        HazeStyle(
-            backgroundColor = material.backgroundColor,
-            tints = material.tints + HazeTint(
-                if (dark) Color.Black.copy(alpha = 0.38f) else Color.White.copy(alpha = 0.40f),
-            ),
-            blurRadius = material.blurRadius,
-            noiseFactor = material.noiseFactor,
-            fallbackTint = material.fallbackTint,
-        )
-    }
+    val style = navGlassHazeStyle()
     val motion = rememberPopupMotion()
     BackHandler { motion.exit(onDismiss) }
     CompositionLocalProvider(LocalPopupExit provides motion::exit) {

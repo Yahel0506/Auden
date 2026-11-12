@@ -427,7 +427,7 @@ fun MiniPlayer(
                 } else {
                     Modifier.optimizedHazeEffect(
                         state = hazeState,
-                        style = HazeMaterials.thin(MaterialTheme.colorScheme.surface),
+                        style = navGlassHazeStyle(),
                     )
                 },
             )

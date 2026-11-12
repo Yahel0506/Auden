@@ -494,14 +494,14 @@ private fun VolumeRow(routeKey: Any) {
 private fun iconFor(device: AudioOutputDevice): ImageVector = when (device.kind) {
     AudioOutputKind.PHONE -> Icons.Rounded.PhoneAndroid
     AudioOutputKind.WIRED -> Icons.Rounded.Headphones
-    AudioOutputKind.USB -> Icons.Rounded.Usb
+    AudioOutputKind.USB -> Icons.Rounded.Headphones
     // The same reading the output pill draws — see AudioOutputDevice.form.
     AudioOutputKind.BLUETOOTH -> when (device.form) {
         BluetoothForm.BUDS -> Icons.Rounded.Earbuds
         BluetoothForm.HEADPHONES -> Icons.Rounded.Headphones
         BluetoothForm.SPEAKER -> Icons.Rounded.Speaker
         BluetoothForm.CAR -> Icons.Rounded.DirectionsCar
-        BluetoothForm.UNKNOWN -> Icons.Rounded.Bluetooth
+        BluetoothForm.UNKNOWN -> Icons.Rounded.Headphones
     }
     AudioOutputKind.HDMI -> Icons.Rounded.Tv
     AudioOutputKind.OTHER -> Icons.Rounded.Speaker

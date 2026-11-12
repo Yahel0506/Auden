@@ -186,6 +186,8 @@ fun BrowseActionsMenu(
     onToggleDevice: (() -> Unit)? = null,
     savedOnDevice: Boolean = false,
     savingOnDevice: Boolean = false,
+    /** A playlist of any kind: picks audio files from this device to add to it (never sent to an account). */
+    onAddLocalFiles: (() -> Unit)? = null,
 ) {
     var renaming by remember { mutableStateOf(startRenaming) }
 
@@ -298,6 +300,9 @@ fun BrowseActionsMenu(
                         renaming = true
                     }
                 }
+            }
+            onAddLocalFiles?.let {
+                ActionRow(SfIcons.Add, stringResource(R.string.add_local_files), onClick = it)
             }
             onReorder?.let {
                 ActionRow(SfIcons.Reorder, stringResource(R.string.reorder_songs), onClick = it)

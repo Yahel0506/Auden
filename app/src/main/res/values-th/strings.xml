@@ -1625,4 +1625,9 @@
     <string name="background_video_subtitle">Plays Spotify\'s short vertical loop behind the player</string>
     <string name="hide_mini_lyrics">ซ่อนเนื้อเพลงขนาดเล็ก</string>
     <string name="hide_mini_lyrics_subtitle">Removes the one-line synced lyric above the progress bar; the controls spread out to fill its place</string>
+    <string name="library_statistics">สถิติ</string>
+    <string name="library_other">อื่นๆ</string>
+    <string name="add_local_files">เพิ่มไฟล์ในเครื่อง</string>
+    <string name="local_files_added">เพิ่มไฟล์ในเครื่อง %1$d ไฟล์แล้ว</string>
+    <string name="import_playlist_file">Import file</string>
 </resources>

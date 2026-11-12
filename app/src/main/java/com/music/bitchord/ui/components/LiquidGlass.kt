@@ -37,6 +37,8 @@ import com.music.bitchord.ui.components.backdrop.highlight.HighlightElement
 import com.music.bitchord.ui.components.backdrop.internal.ShapeProvider
 import com.music.bitchord.ui.components.backdrop.shadow.Shadow
 import androidx.compose.ui.unit.dp
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
 
 /** Whether the liquid glass nav bar is turned on — see [AppSettings.liquidGlass]. */
 val LocalLiquidGlassEnabled = staticCompositionLocalOf { false }
@@ -188,23 +190,19 @@ fun Modifier.lightweightLiquidGlass(
     fallbackColor: Color,
 ): Modifier {
     val useGlass = LocalLiquidGlassEnabled.current && isGlassSupported()
-    val glassTint = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
-        Color(0xFFFAFAFA)
-    } else {
-        Color(0xFF121212)
-    }
+    val glassTint = navGlassTint()
     val shapeProvider = ShapeProvider { shape }
 
     return clip(shape)
         .background(
-            color = if (useGlass) glassTint.copy(alpha = SURFACE_OPACITY) else fallbackColor,
+            color = if (useGlass) glassTint else fallbackColor,
             shape = shape,
         )
         .then(
             if (useGlass) {
                 HighlightElement(
                     shapeProvider = shapeProvider,
-                    highlight = { Highlight.Default },
+                    highlight = { NAV_GLASS_RIM },
                 )
             } else {
                 Modifier
@@ -343,4 +341,34 @@ fun Modifier.liquidGlass(
         exportedBackdrop = exportedBackdrop,
         backdropScale = resolutionScale,
     )
+}
+
+/**
+ * The one glass the app is made of: the navigation bar's. Milky, a thickened rim lit from above, the page showing
+ * through in its own boosted colour, a shallow lens. Every liquid-glass surface — the top bar's pills, the tab
+ * bar, the player's card — is drawn with this.
+ */
+@Composable
+fun Modifier.navGlass(shape: CornerBasedShape): Modifier = liquidGlass(
+    shape = shape,
+    surfaceTint = navGlassTint(),
+    rim = NAV_GLASS_RIM,
+    depth = NAV_GLASS_DEPTH,
+    blur = NAV_GLASS_BLUR,
+    vibrancy = NAV_GLASS_VIBRANCY,
+    edgeThickening = NAV_GLASS_EDGE,
+    performanceBlur = NAV_GLASS_PERFORMANCE_BLUR,
+)
+
+/**
+ * The same glass for the surfaces that are blurred by Haze rather than drawn over the backdrop (alerts, dialogs,
+ * popups): the nav bar's milky tint over a light frost, since they sit where there is no backdrop to bend.
+ */
+@Composable
+fun navGlassHazeStyle(): HazeStyle {
+    val tint = navGlassTint()
+    val surface = MaterialTheme.colorScheme.surface
+    return remember(tint, surface) {
+        HazeStyle(backgroundColor = surface, tints = listOf(HazeTint(tint)), blurRadius = 14.dp, noiseFactor = 0f)
+    }
 }

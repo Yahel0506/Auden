@@ -304,4 +304,8 @@
     <string name="connect_play">Play</string>
     <string name="connect_pause">Pause</string>
     <string name="automix_overview_unavailable">No Automix transition coming up</string>
+    <string name="library_podcasts">Podcasts</string>
+    <string name="library_yt_music">YT Music</string>
+    <string name="library_other_empty">Sign in to see your artists, albums and podcasts here.</string>
+    <string name="library_my_lists">My lists</string>
 </resources>

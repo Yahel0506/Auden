@@ -899,8 +899,12 @@ private fun PillDivider() {
  */
 @Composable
 private fun OutputButton(onOutput: () -> Unit) {
+    // The phone's own speaker keeps the standard output glyph; anything else the sound leaves by — buds, a speaker,
+    // another Auden device, a browser — is drawn as itself.
+    val glyph = rememberOutputGlyph()
     BottomGlyph(
-        icon = BitChordIcons.AudioOutput,
+        icon = glyph?.icon ?: BitChordIcons.AudioOutput,
+        iconSize = glyph?.let { it.size * (BOTTOM_ICON_SIZE / PILL_OUTPUT_SIZE) } ?: BOTTOM_ICON_SIZE,
         contentDescription = stringResource(Res.string.audio_output),
         onClick = onOutput,
         vibrant = true,
@@ -917,18 +921,20 @@ private fun OutputButton(onOutput: () -> Unit) {
  * not where anybody is listening.
  */
 @Composable
-private fun rememberOutputGlyph(): OutputGlyph {
+private fun rememberOutputGlyph(): OutputGlyph? {
     val cast by PlayerPlatform.host.castState.collectAsStateWithLifecycle()
     val watch by PlayerPlatform.host.watchOutput.collectAsStateWithLifecycle()
+    val connect by PlayerPlatform.host.connect.collectAsStateWithLifecycle()
     val active = rememberAudioOutputs().firstOrNull { it.isActive }
+    // Another Auden device is the speaker: its own icon, not this phone's output.
+    val remote = connect.devices.firstOrNull { it.isActive && !it.isThisDevice }
     return when {
+        remote != null -> OutputGlyph(connectPlatformIcon(remote.platform), PILL_OUTPUT_TALL_SIZE)
         cast.connectedName != null -> OutputGlyph(Icons.Rounded.CastConnected, PILL_OUTPUT_WIDE_SIZE)
         watch.active -> OutputGlyph(Icons.Rounded.Watch, PILL_OUTPUT_TALL_SIZE)
         else -> when (active?.kind) {
-            // No active row is the phone too — the caption under the pill
-            // says "This phone" in the same case. Cast rather than a phone:
-            // on the phone itself the button's job is to send it elsewhere.
-            null, AudioOutputKind.PHONE -> OutputGlyph(Icons.Rounded.Cast, PILL_OUTPUT_WIDE_SIZE)
+            // No active row is the phone too: the standard output glyph stays.
+            null, AudioOutputKind.PHONE -> null
             AudioOutputKind.BLUETOOTH -> when (active.form) {
                 BluetoothForm.BUDS -> OutputGlyph(vectorResource(Res.drawable.ic_output_buds), PILL_OUTPUT_BUDS_SIZE)
                 BluetoothForm.SPEAKER -> OutputGlyph(vectorResource(Res.drawable.ic_output_speaker))

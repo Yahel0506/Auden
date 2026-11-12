@@ -82,7 +82,7 @@ private val BannerShape = RoundedCornerShape(14.dp)
 private val BackupAccent = Color(0xFF0A84FF)
 
 /**
- * Replay as a slim banner in the manner of Apple Music's Replay: a small caps caption, a bold line, over the pink-to-violet-to-orange of its brand. Opens the numbers.
+ * Replay as a slim banner in the manner of Apple Music's Replay: a small caps caption, a bold line, over a golden gradient. Opens the numbers.
  */
 @Composable
 fun LibraryReplayEntry(
@@ -107,7 +107,7 @@ fun LibraryReplayEntry(
             .fillMaxWidth()
             .height(72.dp)
             .clip(BannerShape)
-            .background(Brush.linearGradient(listOf(Color(0xFFFF375F), Color(0xFFBF3FD6), Color(0xFF5E5CE6))))
+            .background(Brush.linearGradient(listOf(Color(0xFFF2B84B), Color(0xFFD98E2B), Color(0xFF9C5A14))))
             .clickable { onOpenReplay(ReplayStoryPage.MINUTES) },
     ) {
         // The bars of a listening, rising to the right.

@@ -171,9 +171,7 @@ fun GlassNavBar(
     // the three surfaces gets its own glass modifier and so its own shape cache.
     // The theme's own glass tint, as the liquid top bar has it — no white wash.
     val glassIn: @Composable (CornerBasedShape) -> Modifier = { shape ->
-        Modifier.liquidGlass(shape = shape, surfaceTint = navGlassTint(), rim = NAV_GLASS_RIM, depth = NAV_GLASS_DEPTH, blur = NAV_GLASS_BLUR, vibrancy = NAV_GLASS_VIBRANCY, edgeThickening = NAV_GLASS_EDGE,
-            performanceBlur = NAV_GLASS_PERFORMANCE_BLUR,
-        )
+        Modifier.navGlass(shape)
     }
     val glassSurface: @Composable () -> Modifier = { glassIn(pillShape) }
 
@@ -1038,7 +1036,7 @@ fun PlayerMorphGlass(
                 .graphicsLayer { alpha = 1f - smooth((k / GLASS_SPAN).coerceIn(0f, 1f)) }
                 .then(
                     if (glass && isGlassSupported()) {
-                        Modifier.liquidGlass(shape = shape)
+                        Modifier.navGlass(shape)
                     } else {
                         Modifier.clip(shape).background(MaterialTheme.colorScheme.surface)
                     },

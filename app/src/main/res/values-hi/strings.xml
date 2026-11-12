@@ -1642,4 +1642,9 @@
     <string name="background_video_subtitle">Plays Spotify\'s short vertical loop behind the player</string>
     <string name="hide_mini_lyrics">मिनी लिरिक्स छिपाएं</string>
     <string name="hide_mini_lyrics_subtitle">Removes the one-line synced lyric above the progress bar; the controls spread out to fill its place</string>
+    <string name="library_statistics">आँकड़े</string>
+    <string name="library_other">अन्य</string>
+    <string name="add_local_files">स्थानीय फ़ाइलें जोड़ें</string>
+    <string name="local_files_added">%1$d स्थानीय फ़ाइलें जोड़ी गईं</string>
+    <string name="import_playlist_file">Import file</string>
 </resources>

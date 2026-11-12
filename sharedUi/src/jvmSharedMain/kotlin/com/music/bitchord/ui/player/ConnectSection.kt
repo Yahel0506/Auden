@@ -129,7 +129,7 @@ private fun ConnectDeviceRow(device: ConnectDeviceUi, onClick: () -> Unit) {
     }
 }
 
-private fun connectPlatformIcon(platform: String): ImageVector = when (platform) {
+internal fun connectPlatformIcon(platform: String): ImageVector = when (platform) {
     "android" -> Icons.Rounded.PhoneAndroid
     "watch" -> Icons.Rounded.Watch
     "tv" -> Icons.Rounded.Tv

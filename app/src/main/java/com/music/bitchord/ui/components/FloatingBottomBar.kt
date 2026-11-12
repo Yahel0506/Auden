@@ -262,11 +262,11 @@ fun FloatingBottomBar(
                 if (reduceDynamicBlur) {
                     Modifier.background(container)
                 } else if (useGlass) {
-                    Modifier.liquidGlass(shape = pillShape)
+                    Modifier.navGlass(pillShape)
                 } else {
                     Modifier.optimizedHazeEffect(
                         state = hazeState,
-                        style = HazeMaterials.regular(container),
+                        style = navGlassHazeStyle(),
                     )
                 },
             )

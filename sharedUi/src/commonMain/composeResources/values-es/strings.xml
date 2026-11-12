@@ -224,4 +224,8 @@
     <string name="connect_next">Siguiente</string>
     <string name="connect_play">Reproducir</string>
     <string name="connect_pause">Pausar</string>
+    <string name="library_podcasts">Podcasts</string>
+    <string name="library_yt_music">YT Music</string>
+    <string name="library_other_empty">Inicia sesión para ver aquí tus artistas, álbumes y podcasts.</string>
+    <string name="library_my_lists">Mis listas</string>
 </resources>

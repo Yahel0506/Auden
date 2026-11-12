@@ -31,6 +31,9 @@ sealed interface AppRoute {
     /** Auden DJ's page: starting a set, and the sets the DJ prepares. Opened from the navigation bar's DJ button. */
     data object Dj : AppRoute
 
+    /** The Library's "Other" row: the account's artists, albums and podcasts as rows of cards. */
+    data class LibraryOther(val shelves: List<HomeShelf>) : AppRoute
+
     /** A Library shelf's "Show all" — its own cards laid out again as a grid. */
     data class LibraryShowAll(val shelf: HomeShelf) : AppRoute
 

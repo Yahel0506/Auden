@@ -180,15 +180,14 @@ fun Modifier.iosMenuPanel(
     val backdropFrost = blurs && backdrop != null && isGlassSupported()
     val hazeFrost = blurs && !backdropFrost && hazeState != null
     val fill = fillOverride ?: if (backdropFrost || hazeFrost) {
-        // Thinner on a dark panel while its rows are blended, which takes them
-        // further into the colour behind; plain rows want the denser slab back.
-        colors.fill.copy(alpha = if (!colors.dark) 0.72f else if (plain) 0.80f else 0.60f)
+        // The nav bar's own glass.
+        navGlassTint()
     } else {
         colors.fill
     }
     val shadowed = if (castsShadow) iosMenuShadow() else this
     val surface = if (hazeFrost) {
-        val style = remember(colors, fill) { menuFrost(colors.fill, alpha = fill.alpha) }
+        val style = remember(colors, fill) { menuFrost(fill, alpha = fill.alpha) }
         shadowed.clip(IosMenuShape).optimizedHazeEffect(state = hazeState, style = style)
     } else if (backdropFrost) {
         shadowed.menuBackdropFrost(backdrop, IosMenuShape, fill)

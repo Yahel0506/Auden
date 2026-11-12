@@ -1620,4 +1620,9 @@
     <string name="background_video_subtitle">Plays Spotify\'s short vertical loop behind the player</string>
     <string name="hide_mini_lyrics">ミニ歌詞を隠す</string>
     <string name="hide_mini_lyrics_subtitle">Removes the one-line synced lyric above the progress bar; the controls spread out to fill its place</string>
+    <string name="library_statistics">統計</string>
+    <string name="library_other">その他</string>
+    <string name="add_local_files">ローカルファイルを追加</string>
+    <string name="local_files_added">ローカルファイルを%1$d件追加しました</string>
+    <string name="import_playlist_file">Import file</string>
 </resources>

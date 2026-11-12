@@ -100,6 +100,8 @@ import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.ui.components.MessageState
 import com.music.bitchord.ui.components.FolderCover
 import com.music.bitchord.ui.components.PAGE_GUTTER
+import com.music.bitchord.ui.components.TAB_TITLE_GAP
+import com.music.bitchord.ui.components.TAB_TITLE_ROW_HEIGHT
 import com.music.bitchord.ui.components.RowMoreButton
 import com.music.bitchord.ui.components.PullToRefresh
 import com.music.bitchord.ui.components.SHELF_CARD_WIDTH
@@ -203,16 +205,7 @@ fun HomeScreen(
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
-            // The heading sits higher than the other tabs' first row: pull the
-            // whole feed up by [HOME_TITLE_LIFT] with it.
-            contentPadding = if (title != null) {
-                PaddingValues(
-                    top = (contentPadding.calculateTopPadding() - HOME_TITLE_LIFT).coerceAtLeast(0.dp),
-                    bottom = contentPadding.calculateBottomPadding(),
-                )
-            } else {
-                contentPadding
-            },
+            contentPadding = contentPadding,
         ) {
             if (title != null) {
                 item { HomeTitle(title, festiveLogo = festiveLogo, onFestiveLogoClick = onFestiveLogoClick) }
@@ -501,9 +494,15 @@ private fun HomeTitle(
 ) {
     val style = MaterialTheme.typography.displayLarge
     val logoHeight = with(LocalDensity.current) { (style.fontSize * LOGO_TO_FONT).toDp() }
-    Column(modifier = modifier.padding(horizontal = PAGE_GUTTER, vertical = 8.dp)) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = TAB_TITLE_GAP)
+            .height(TAB_TITLE_ROW_HEIGHT)
+            .padding(start = PAGE_GUTTER),
+        contentAlignment = Alignment.CenterStart,
+    ) {
         val logoModifier = Modifier
-            .padding(bottom = 14.dp)
             .height(logoHeight)
             .aspectRatio(LOGO_ASPECT)
         if (festiveLogo) {
@@ -994,6 +993,8 @@ internal fun ShelfCard(
     isPinned: Boolean = false,
     isCurrent: Boolean = false,
     isPlaying: Boolean = false,
+    /** False draws the name alone, with nothing under it. */
+    showSubtitle: Boolean = true,
 ) {
     Column(
         modifier = modifier
@@ -1048,6 +1049,7 @@ internal fun ShelfCard(
                 modifier = Modifier.weight(1f, fill = false),
             )
         }
+        if (showSubtitle) {
         val logo = when (item.platform) {
             ShelfItem.PLATFORM_SPOTIFY -> Res.drawable.spotify_logo
             ShelfItem.PLATFORM_YT_MUSIC -> Res.drawable.ytmusic_logo
@@ -1088,6 +1090,7 @@ internal fun ShelfCard(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+        }
         }
     }
 }

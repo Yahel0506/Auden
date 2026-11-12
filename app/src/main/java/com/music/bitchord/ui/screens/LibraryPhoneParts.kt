@@ -3,7 +3,9 @@ package com.music.bitchord.ui.screens
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Lan
@@ -37,36 +39,30 @@ import com.music.bitchord.ui.replay.ReplayStoryPage
  * libraries it can reach.
  */
 @Composable
-fun libraryLinks(): List<LibraryLink> {
+fun libraryLinks(onOpenOther: () -> Unit): List<LibraryLink> {
     val webdavConfigured by AppSettings.webdavUrl.collectAsStateWithLifecycle()
     val smbHost by AppSettings.smbHost.collectAsStateWithLifecycle()
     val smbShare by AppSettings.smbShare.collectAsStateWithLifecycle()
-    val showCacheFolder by AppSettings.showCacheFolder.collectAsStateWithLifecycle()
-    val spotifyConnected by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
-    fun link(title: String, subtitle: String, browseId: String, icon: ImageVector = deviceFolderIcon(browseId) ?: Icons.Rounded.Cloud) = LibraryLink(
-        item = ShelfItem(
-            title = title,
-            subtitle = subtitle,
-            thumbnailUrl = null,
-            videoId = null,
-            browseId = browseId,
-        ),
+    fun link(title: String, browseId: String, icon: ImageVector = deviceFolderIcon(browseId) ?: Icons.Rounded.Cloud) = LibraryLink(
+        item = ShelfItem(title = title, subtitle = "", thumbnailUrl = null, videoId = null, browseId = browseId),
         icon = icon,
     )
-    // The folders that used to head the page — Downloads, Local music, the song cache and Spotify — have their own
-    // places now (the app's playlists, the backup banner, the Spotify row); what is left are the remote libraries.
+    fun action(title: String, icon: ImageVector, onClick: () -> Unit) = LibraryLink(
+        item = ShelfItem(title = title, subtitle = "", thumbnailUrl = null, videoId = null, browseId = null),
+        icon = icon,
+        onClick = onClick,
+    )
+    // Plain text rows into each section; the account's artists, albums and podcasts are behind "Other".
     return listOfNotNull(
+        link(stringResource(R.string.downloads), "local:downloads"),
+        link(stringResource(R.string.local_music), "local:all"),
+        link(stringResource(R.string.cached_songs), CACHE_FOLDER_BROWSE_ID),
         // Only once set up in Sources; unconfigured, they'd just be dead ends.
-        link(
-            stringResource(R.string.webdav),
-            stringResource(R.string.webdav_subtitle),
-            com.music.bitchord.data.webdav.WebDavConfig.BROWSE_ID,
-        ).takeIf { webdavConfigured.isNotBlank() },
-        link(
-            stringResource(R.string.smb),
-            stringResource(R.string.smb_subtitle),
-            com.music.bitchord.data.smb.SmbConfig.BROWSE_ID,
-        ).takeIf { smbHost.isNotBlank() && smbShare.isNotBlank() },
+        link(stringResource(R.string.webdav), com.music.bitchord.data.webdav.WebDavConfig.BROWSE_ID)
+            .takeIf { webdavConfigured.isNotBlank() },
+        link(stringResource(R.string.smb), com.music.bitchord.data.smb.SmbConfig.BROWSE_ID)
+            .takeIf { smbHost.isNotBlank() && smbShare.isNotBlank() },
+        action(stringResource(R.string.library_other), Icons.Rounded.MoreHoriz, onOpenOther),
     )
 }
 
