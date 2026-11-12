@@ -63,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
@@ -561,10 +562,12 @@ private fun MoodChip(card: DjSetCard, label: String, index: Int, onClick: () -> 
     }
 }
 
-/** What the listener types to the DJ: anything it understands — an artist, a decade, a feeling. */
+/** What the listener types to the DJ: anything it understands — an artist, a decade, a feeling. The whole bar takes the tap. */
 @Composable
 private fun AskField(onSend: (String) -> Unit) {
     var text by remember { mutableStateOf("") }
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
     val send = { text.trim().takeIf { it.isNotEmpty() }?.let { onSend(it); text = "" }; Unit }
     Row(
         modifier = Modifier
@@ -572,10 +575,16 @@ private fun AskField(onSend: (String) -> Unit) {
             .clip(RoundedCornerShape(26.dp))
             .background(Glass)
             .border(1.dp, GlassRim, RoundedCornerShape(26.dp))
+            // Anywhere on the bar opens the keyboard, not only on the line of text: the field is as wide as the
+            // bar's own inside, and what is left of it — the padding, the gap before the button — asks for focus too.
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                focus.requestFocus()
+                keyboard?.show()
+            }
             .padding(start = 18.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.weight(1f).height(38.dp), contentAlignment = Alignment.CenterStart) {
             if (text.isEmpty()) Text(stringResource(R.string.dj_ask_hint), color = Color.White.copy(alpha = 0.65f), fontSize = 15.sp)
             BasicTextField(
                 value = text,
@@ -585,6 +594,7 @@ private fun AskField(onSend: (String) -> Unit) {
                 cursorBrush = SolidColor(Color.White),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                 keyboardActions = KeyboardActions(onSend = { send() }),
+                modifier = Modifier.fillMaxWidth().focusRequester(focus),
             )
         }
         val ready = text.isNotBlank()
