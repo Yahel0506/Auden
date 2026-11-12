@@ -550,7 +550,7 @@ object AppSettings {
     /** Blurs unfocused lyric lines, keeping the active line sharp. */
     val lyricsBlur = MutableStateFlow(true)
 
-    /** How strong the blur on unfocused lyrics is, in percent: 75 is the blur the player was tuned at. */
+    /** How strong the blur on unfocused lyrics is, in percent: 75 is the strength the table in PlayerLyrics was tuned at; the default is a little under it. */
     val lyricsBlurAmount = MutableStateFlow(DEFAULT_LYRICS_BLUR_AMOUNT)
 
     /** Positive values delay synced lyrics; negative values bring them forward. */
@@ -2515,7 +2515,7 @@ object AppSettings {
     private const val KEY_PROGRESSIVE_BLUR = "progressive_blur"
     private const val KEY_LYRICS_BLUR = "lyrics_blur"
     private const val KEY_LYRICS_BLUR_AMOUNT = "lyrics_blur_amount"
-    const val DEFAULT_LYRICS_BLUR_AMOUNT = 75
+    const val DEFAULT_LYRICS_BLUR_AMOUNT = 65
     private const val KEY_LYRICS_OFFSET_MS = "lyrics_offset_ms"
     private const val KEY_TRANSLATION_LANGUAGE = "translation_language"
     private const val KEY_ANIMATED_CANVAS = "animated_canvas"
