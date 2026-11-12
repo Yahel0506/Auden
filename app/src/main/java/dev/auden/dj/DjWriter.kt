@@ -135,7 +135,11 @@ class DjWriter(
     /** The set as a thing the listener could have asked for: "music by X", "something calm"… */
     private fun what(theme: DjTheme): String? = when (theme) {
         is DjTheme.ByArtist -> pick("what_artist", "artist" to theme.artist)
-        is DjTheme.ByDecade -> pick("what_decade", "decade" to decadeLabel(theme.decade))
+        // Spanish writes the article into its lines ("música de los {decade}"), so its slot is the bare number.
+        is DjTheme.ByDecade -> pick(
+            "what_decade",
+            "decade" to if (language == "es") (if (theme.decade >= 2000) theme.decade else theme.decade % 100).toString() else decadeLabel(theme.decade),
+        )
         is DjTheme.ByGenre -> pick("what_genre", "genre" to theme.genre)
         is DjTheme.ByAlbum -> pick("what_album", "album" to theme.album, "artist" to theme.artist)
         is DjTheme.ByMood -> pick("mood_word_${theme.mood.name.lowercase(Locale.ROOT)}")
