@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -18,6 +19,7 @@ import com.music.bitchord.data.model.UiState
 import com.music.bitchord.data.model.playingRowMatcher
 import com.music.bitchord.ui.components.MessageState
 import com.music.bitchord.ui.components.ROW_DIVIDER_INSET
+import com.music.bitchord.ui.components.LocalSongSelection
 import com.music.bitchord.ui.components.SongRow
 import com.music.bitchord.ui.components.songListSkeleton
 
@@ -45,6 +47,11 @@ fun HistoryScreen(
     isPlaying: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    // "Select all", while songs are being picked here, is the whole history.
+    val selection = LocalSongSelection.current
+    val selecting = selection?.selecting == true
+    val listed = (state as? UiState.Success)?.data
+    LaunchedEffect(selecting, listed) { if (selecting && listed != null) selection?.offer(listed) }
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),

@@ -149,8 +149,33 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * [dev.auden.home.HomeComposer]. With nothing local to add — or offline with nothing local —
      * it is the feed's own state, untouched, so a loading or failed feed still reads as one.
      */
+    /** Recommendations drawn from the app's own listening, for a listener with no account. */
+    private val _tasteShelves = MutableStateFlow<List<HomeShelf>>(emptyList())
+    private var tasteJob: Job? = null
+
+    /** Builds [_tasteShelves] while signed out; cleared once signed in, where the account's own feed does this. */
+    private fun loadTasteShelves() {
+        tasteJob?.cancel()
+        if (_signedIn.value) {
+            _tasteShelves.value = emptyList()
+            return
+        }
+        tasteJob = viewModelScope.launch {
+            val shelves = runCatching { dev.auden.home.TasteShelves.build(getApplication()) }.getOrNull().orEmpty()
+            if (!_signedIn.value) _tasteShelves.value = shelves
+        }
+    }
+
     val homeComposed: StateFlow<UiState<List<HomeShelf>>> = combine(
-        _home,
+        combine(_home, _tasteShelves, _signedIn) { remote, taste, signed ->
+            if (signed || taste.isEmpty()) {
+                remote
+            } else {
+                // After the feed's first shelf, so the page still opens as it always does.
+                val feed = (remote as? UiState.Success)?.data.orEmpty()
+                UiState.Success(feed.take(1) + taste + feed.drop(1))
+            }
+        },
         _localHomeShelves,
         AppSettings.homeLocalShelves,
         AppSettings.homeLocalWeight,
@@ -1223,20 +1248,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Whether one playlist in the picker holds the song being filed. */
+    /** Whether one playlist in the picker holds the songs being filed. */
     sealed interface Member {
         /** The playlist's contents are still being read. */
         data object Checking : Member
 
-        /** [entries] are the rows of the playlist that are this song — empty when it is not there. */
-        data class Has(val entries: List<Song>) : Member {
-            val present: Boolean get() = entries.isNotEmpty()
+        /**
+         * [entries] are the rows of the playlist that are one of the songs being filed, and [missing]
+         * the songs it has no row for. Several songs are filed at once from a selection, and the
+         * playlist only counts as holding them when it holds every one.
+         */
+        data class Has(val entries: List<Song>, val missing: List<Song> = emptyList()) : Member {
+            /** Every song being filed is here already: the row starts ticked, and unticking takes them all out. */
+            val present: Boolean get() = entries.isNotEmpty() && missing.isEmpty()
         }
     }
 
     private val _membership = MutableStateFlow<Map<String, Member>>(emptyMap())
 
-    /** By the picker's playlist id: which playlists already hold the song the picker is open on. */
+    /** By the picker's playlist id: which playlists already hold what the picker is open on. */
     val membership: StateFlow<Map<String, Member>> = _membership.asStateFlow()
 
     private var membershipJob: Job? = null
@@ -1245,22 +1275,61 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val playlistContents = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<Song>>>()
 
     /**
-     * Works out which of [playlists] already contain [song], by id and then by
-     * metadata (see [dev.auden.library.SongIdentity]). Playlists on the device
-     * answer at once; an account's have to be read from YouTube Music, a few at
-     * a time, and show as checking until they have.
+     * Which of [picked] a playlist holding [contents] already has, by id and then by metadata (see
+     * [dev.auden.library.SongIdentity]). The titles are normalised once and looked up, rather than
+     * every picked song compared with every row: a selection of an album against a long playlist is
+     * otherwise hundreds of thousands of comparisons, each normalising both titles again.
      */
-    fun loadMembership(song: Song, playlists: List<UserPlaylist>) {
+    private fun membershipOf(contents: List<Song>, picked: List<Song>): Member.Has {
+        if (contents.isEmpty()) return Member.Has(emptyList(), picked)
+        val byId = contents.groupBy { it.videoId }
+        val byUri = contents.filter { it.localUri != null }.groupBy { it.localUri }
+        val byTitle by lazy {
+            contents.groupBy { dev.auden.library.io.PlaylistMatcher.normalize(it.title) }
+        }
+        val entries = LinkedHashSet<Song>()
+        val missing = ArrayList<Song>()
+        for (song in picked) {
+            val rows = byId[song.videoId]?.takeIf { song.videoId.isNotBlank() }
+                ?: song.localUri?.let { byUri[it] }
+                ?: byTitle[dev.auden.library.io.PlaylistMatcher.normalize(song.title)]
+                    ?.filter { dev.auden.library.SongIdentity.same(it, song) }
+                    .orEmpty()
+            if (rows.isEmpty()) missing += song else entries += rows
+        }
+        return Member.Has(entries.toList(), missing)
+    }
+
+    /** What the playlist [p] holds as far as this device can say without a request, or null when it has to be read. */
+    private fun knownContents(p: UserPlaylist, now: Long): List<Song>? = when {
+        p.playlistId.startsWith(DEVICE_PLAYLIST_PREFIX) ->
+            dev.auden.library.LocalPlaylists.get(p.playlistId.removePrefix(DEVICE_PLAYLIST_PREFIX))?.songs.orEmpty()
+        else -> playlistContents[p.browseId]?.takeIf { now - it.first < PLAYLIST_CONTENTS_TTL_MS }?.second
+            ?.let { it + localFilesOf(p) }
+    }
+
+    /** Device files the listener attached to the account playlist [p] — see [com.music.bitchord.data.PlaylistLocalFiles]. */
+    private fun localFilesOf(p: UserPlaylist): List<Song> =
+        com.music.bitchord.data.PlaylistLocalFiles.files.value[p.browseId].orEmpty()
+
+    /**
+     * Works out which of [playlists] already contain [songs] — one song from its own menu, or every
+     * song of a selection. Playlists on the device answer at once; an account's have to be read from
+     * YouTube Music, a few at a time, and show as checking until they have.
+     */
+    fun loadMembership(songs: List<Song>, playlists: List<UserPlaylist>) {
         membershipJob?.cancel()
+        if (songs.isEmpty()) {
+            _membership.value = emptyMap()
+            return
+        }
         val now = System.currentTimeMillis()
-        fun rowsOf(songs: List<Song>) = Member.Has(songs.filter { dev.auden.library.SongIdentity.same(it, song) })
+        // One song is answered where it stands, so the sheet opens with its ticks in place. A whole
+        // selection is compared off the main thread, and its rows spin for the moment that takes.
+        val inline = songs.size <= INLINE_MEMBERSHIP_SONGS
         val initial = playlists.associate { p ->
-            p.playlistId to when {
-                p.playlistId.startsWith(DEVICE_PLAYLIST_PREFIX) ->
-                    rowsOf(dev.auden.library.LocalPlaylists.get(p.playlistId.removePrefix(DEVICE_PLAYLIST_PREFIX))?.songs.orEmpty())
-                else -> playlistContents[p.browseId]?.takeIf { now - it.first < PLAYLIST_CONTENTS_TTL_MS }
-                    ?.let { rowsOf(it.second) } ?: Member.Checking
-            }
+            val known = if (inline) knownContents(p, now) else null
+            p.playlistId to (known?.let { membershipOf(it, songs) } ?: Member.Checking)
         }
         _membership.value = initial
         val toRead = playlists.filter { initial[it.playlistId] == Member.Checking }
@@ -1269,16 +1338,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val gate = Semaphore(MEMBERSHIP_PARALLELISM)
             toRead.map { p ->
                 async {
-                    gate.withPermit {
-                        val songs = YtMusicRepository.allSongs(p.browseId).getOrNull()
-                        songs?.let { playlistContents[p.browseId] = System.currentTimeMillis() to it }
-                        // A playlist that could not be read is shown as not containing it: better than a spinner forever.
-                        _membership.value = _membership.value + (p.playlistId to rowsOf(songs.orEmpty()))
+                    val contents = knownContents(p, now) ?: gate.withPermit {
+                        val read = YtMusicRepository.allSongs(p.browseId).getOrNull()
+                        read?.let { playlistContents[p.browseId] = System.currentTimeMillis() to it }
+                        // A playlist that could not be read is shown as not containing them: better than a spinner forever.
+                        read.orEmpty() + localFilesOf(p)
                     }
+                    val member = withContext(Dispatchers.Default) { membershipOf(contents, songs) }
+                    _membership.value = _membership.value + (p.playlistId to member)
                 }
             }.awaitAll()
         }
     }
+
+    fun loadMembership(song: Song, playlists: List<UserPlaylist>) = loadMembership(listOf(song), playlists)
 
     fun clearMembership() {
         membershipJob?.cancel()
@@ -1286,16 +1359,25 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Files [song] the way the picker was left: into [add], out of [remove].
-     * Reports what actually changed, once everything has settled.
+     * Files [songs] the way the picker was left: into [add], out of [remove].
+     * Reports what actually changed — in playlists, not songs — once everything has settled.
+     *
+     * A playlist in [add] takes only the songs it lacks, and one in [remove] loses every row that is
+     * one of them; which those are is [members]' answer, read as the picker was confirmed, since the
+     * picker's own copy is cleared as it closes.
      */
     fun applyPlaylistChanges(
-        song: Song,
+        songs: List<Song>,
         add: List<UserPlaylist>,
         remove: List<UserPlaylist>,
+        members: Map<String, Member> = _membership.value,
         onResult: (added: Int, removed: Int, failed: Int) -> Unit,
     ) {
-        if ((add + remove).any { !it.playlistId.startsWith(DEVICE_PLAYLIST_PREFIX) } && !requireSignIn()) return
+        if (songs.isEmpty() || (add.isEmpty() && remove.isEmpty())) return
+        // Only the account's own playlists need the account; a file is never sent to it.
+        val needsAccount = (add + remove).any { !it.playlistId.startsWith(DEVICE_PLAYLIST_PREFIX) } &&
+            songs.any { !it.isDeviceFile }
+        if (needsAccount && !requireSignIn()) return
         viewModelScope.launch {
             var failed = 0
             var added = 0
@@ -1303,51 +1385,87 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             for (p in remove) {
                 if (p.playlistId.startsWith(DEVICE_PLAYLIST_PREFIX)) {
                     val id = p.playlistId.removePrefix(DEVICE_PLAYLIST_PREFIX)
-                    if (dev.auden.library.LocalPlaylists.removeMatching(id, song) > 0) {
+                    if (songs.sumOf { dev.auden.library.LocalPlaylists.removeMatching(id, it) } > 0) {
                         refreshLocalDetail("local:playlist:$id")
                         removed++
                     } else {
                         failed++
                     }
                 } else {
-                    val rows = (_membership.value[p.playlistId] as? Member.Has)?.entries.orEmpty()
-                        .mapNotNull { row -> row.setVideoId?.let { it to row.videoId } }
-                    val ok = rows.isNotEmpty() &&
-                        YtMusicRepository.removeFromPlaylist(p.playlistId, rows).isSuccess
-                    if (ok) {
+                    val entries = (members[p.playlistId] as? Member.Has)?.entries.orEmpty()
+                    // Files attached to the playlist on this device come out of that record; the
+                    // account's own rows are asked of YouTube Music, by entry.
+                    val files = entries.filter { it.setVideoId == null && it.localUri != null }
+                    files.forEach { com.music.bitchord.data.PlaylistLocalFiles.remove(p.browseId, it) }
+                    val rows = entries.mapNotNull { row -> row.setVideoId?.let { it to row.videoId } }
+                    val ok = rows.isEmpty() || rows.chunked(PLAYLIST_EDIT_BATCH).all {
+                        YtMusicRepository.removeFromPlaylist(p.playlistId, it).isSuccess
+                    }
+                    if (ok && (rows.isNotEmpty() || files.isNotEmpty())) {
                         removed++
-                        libraryStale = true
-                        playlistContents.remove(p.browseId)
-                        val gone = rows.mapTo(HashSet()) { it.first }
-                        _detailStack.value = _detailStack.value.map { page ->
-                            val songs = (page.songs as? UiState.Success)?.data
-                            if (page.browseId != p.browseId || songs == null) page
-                            else page.copy(songs = UiState.Success(songs.filterNot { it.setVideoId in gone }))
+                        if (rows.isNotEmpty()) {
+                            libraryStale = true
+                            playlistContents.remove(p.browseId)
+                            val gone = rows.mapTo(HashSet()) { it.first }
+                            _detailStack.value = _detailStack.value.map { page ->
+                                val listed = (page.songs as? UiState.Success)?.data
+                                if (page.browseId != p.browseId || listed == null) page
+                                else page.copy(songs = UiState.Success(listed.filterNot { it.setVideoId in gone }))
+                            }
                         }
                     } else {
                         failed++
                     }
                 }
             }
-            if (add.isNotEmpty()) {
-                val device = add.filter { it.playlistId.startsWith(DEVICE_PLAYLIST_PREFIX) }
-                for (p in device) {
+            for (p in add) {
+                val lacking = (members[p.playlistId] as? Member.Has)?.missing ?: songs
+                if (p.playlistId.startsWith(DEVICE_PLAYLIST_PREFIX)) {
                     val id = p.playlistId.removePrefix(DEVICE_PLAYLIST_PREFIX)
-                    if (dev.auden.library.LocalPlaylists.add(id, listOf(song)) > 0) {
+                    if (dev.auden.library.LocalPlaylists.add(id, lacking) > 0) {
                         refreshLocalDetail("local:playlist:$id")
                         added++
                     }
+                    continue
                 }
-                for (p in add - device.toSet()) {
-                    when (addOne(p, song)) {
-                        AddOutcome.ADDED -> { added++; playlistContents.remove(p.browseId) }
-                        AddOutcome.ALREADY_THERE -> Unit
-                        AddOutcome.FAILED -> failed++
-                    }
+                val (files, streamed) = lacking.partition { it.isDeviceFile }
+                val filed = files.isNotEmpty() &&
+                    com.music.bitchord.data.PlaylistLocalFiles.add(p.browseId, files) > 0
+                val outcome = when {
+                    streamed.isEmpty() -> if (filed) AddOutcome.ADDED else AddOutcome.ALREADY_THERE
+                    streamed.size == 1 -> addOne(p, streamed.single())
+                    else -> addMany(p, streamed)
+                }
+                when {
+                    outcome == AddOutcome.ADDED || filed -> { added++; playlistContents.remove(p.browseId) }
+                    outcome == AddOutcome.FAILED -> failed++
                 }
             }
             onResult(added, removed, failed)
         }
+    }
+
+    fun applyPlaylistChanges(
+        song: Song,
+        add: List<UserPlaylist>,
+        remove: List<UserPlaylist>,
+        onResult: (added: Int, removed: Int, failed: Int) -> Unit,
+    ) = applyPlaylistChanges(listOf(song), add, remove, onResult = onResult)
+
+    /**
+     * Adds [songs] — already known to be absent from [playlist] — in batches, each one request. A
+     * batch that fails leaves the ones before it in: the outcome is "added" as soon as any went in.
+     */
+    private suspend fun addMany(playlist: UserPlaylist, songs: List<Song>): AddOutcome {
+        var any = false
+        for (batch in songs.distinctBy { it.videoId }.chunked(PLAYLIST_EDIT_BATCH)) {
+            YtMusicRepository.addToPlaylist(playlist.playlistId, batch.map { it.videoId }).onSuccess { added ->
+                any = true
+                batch.forEach { appendToOpenPlaylist(playlist.browseId, it, added[it.videoId]) }
+            }
+        }
+        if (any) libraryStale = true
+        return if (any) AddOutcome.ADDED else AddOutcome.FAILED
     }
 
     private enum class AddOutcome { ADDED, ALREADY_THERE, FAILED }
@@ -1377,19 +1495,31 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * track's menu — one request, so it can't half-succeed into an empty
      * playlist the user has to add to again.
      */
-    fun createPlaylist(title: String, privacy: PlaylistPrivacy, song: Song? = null) {
+    fun createPlaylist(title: String, privacy: PlaylistPrivacy, song: Song? = null) =
+        createPlaylist(title, privacy, listOfNotNull(song))
+
+    /** The same, seeded with every song of a selection. */
+    fun createPlaylist(title: String, privacy: PlaylistPrivacy, songs: List<Song>) {
         val name = title.trim().ifBlank { text(R.string.new_playlist) }
         if (privacy == PlaylistPrivacy.DEVICE || !requireSignIn()) {
-            dev.auden.library.LocalPlaylists.create(name, listOfNotNull(song))
+            dev.auden.library.LocalPlaylists.create(name, songs)
             return
         }
+        // A file on this device has nothing to send to the account: it is attached to the new
+        // playlist here instead, as "Add local files" would.
+        val (files, streamed) = songs.distinctBy { it.videoId }.partition { it.isDeviceFile }
+        val song = streamed.firstOrNull()
         viewModelScope.launch {
             YtMusicRepository.createPlaylist(
                 title = name,
                 privacy = privacy,
-                videoIds = listOfNotNull(song?.videoId),
+                videoIds = streamed.take(PLAYLIST_EDIT_BATCH).map { it.videoId },
             ).fold(
                 onSuccess = { playlistId ->
+                    streamed.drop(PLAYLIST_EDIT_BATCH).chunked(PLAYLIST_EDIT_BATCH).forEach { batch ->
+                        YtMusicRepository.addToPlaylist(playlistId, batch.map { it.videoId })
+                    }
+                    if (files.isNotEmpty()) com.music.bitchord.data.PlaylistLocalFiles.add("VL$playlistId", files)
                     // Nothing to look up for a playlist this account has just
                     // made: it is the owner by construction, so its card is
                     // editable the moment it appears rather than one request
@@ -1403,7 +1533,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         // surfaces that draw it leave a blank one out, so an
                         // unseeded playlist gets a card of just its name rather
                         // than a guess at what the feed will call it.
-                        subtitle = if (song != null) "1 song" else "",
+                        subtitle = when (streamed.size) {
+                            0 -> ""
+                            1 -> "1 song"
+                            else -> "${streamed.size} songs"
+                        },
                         thumbnailUrl = song?.thumbnailUrl,
                     )
                     // Drawn from what was just sent rather than waited for: the
@@ -1492,6 +1626,37 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * Drops [song] from the playlist page it is being read on, and takes the
      * row out from under the reader rather than waiting for a re-fetch.
      */
+    /**
+     * The same for every song of a selection: one edit per batch rather than one request a song,
+     * which is what YouTube answers a burst of with a rate limit.
+     */
+    fun removeFromPlaylist(browseId: String, songs: List<Song>) {
+        if (songs.size == 1) return removeFromPlaylist(browseId, songs.single())
+        if (browseId.startsWith("local:playlist:")) {
+            val id = browseId.removePrefix("local:playlist:")
+            songs.forEach { dev.auden.library.LocalPlaylists.remove(id, it.videoId) }
+            refreshLocalDetail(browseId)
+            return
+        }
+        val rows = songs.mapNotNull { song -> song.setVideoId?.let { it to song.videoId } }
+        if (rows.isEmpty() || !requireSignIn()) return
+        val playlistId = browseId.removePrefix("VL")
+        viewModelScope.launch {
+            for (batch in rows.chunked(PLAYLIST_EDIT_BATCH)) {
+                YtMusicRepository.removeFromPlaylist(playlistId, batch).onSuccess {
+                    libraryStale = true
+                    playlistContents.remove(browseId)
+                    val gone = batch.mapTo(HashSet()) { it.first }
+                    _detailStack.value = _detailStack.value.map { page ->
+                        val listed = (page.songs as? UiState.Success)?.data
+                        if (page.browseId != browseId || listed == null) page
+                        else page.copy(songs = UiState.Success(listed.filterNot { it.setVideoId in gone }))
+                    }
+                }
+            }
+        }
+    }
+
     fun removeFromPlaylist(browseId: String, song: Song) {
         if (browseId.startsWith("local:playlist:")) {
             dev.auden.library.LocalPlaylists.remove(browseId.removePrefix("local:playlist:"), song.videoId)
@@ -2077,6 +2242,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // one at the tail.
         _homePendingShelves.value = 1 + YtMusicRepository.HOME_SUPPLEMENT_BROWSE_IDS.size
         loadTopPicks(identity, rebuild = false)
+        loadTasteShelves()
         viewModelScope.launch {
             launch {
                 try {
@@ -2246,6 +2412,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // Top Picks keeps to its hour; a pull refreshes the feed, not the
         // picks, unless the hour has already turned over.
         if (topPicksJob?.isActive != true) loadTopPicks(identity, rebuild = false)
+        loadTasteShelves()
         YtMusicRepository.home().onSuccess { feed ->
             if (identity != listenerKey()) return@onSuccess
             homeContinuation = feed.continuation
@@ -2939,6 +3106,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         const val DEVICE_PLAYLIST_PREFIX = "device:"
         private const val PLAYLIST_CONTENTS_TTL_MS = 2 * 60_000L
         private const val MEMBERSHIP_PARALLELISM = 3
+        /** Up to this many songs, the picker's ticks are worked out before it opens rather than behind a spinner. */
+        private const val INLINE_MEMBERSHIP_SONGS = 3
+        /** How many rows one playlist edit carries; a selection larger than this goes as several. */
+        private const val PLAYLIST_EDIT_BATCH = 50
         /** Today's Top Picks row, kept so the next launch paints it before any request. */
         private const val TOP_PICKS_FILE = "top_picks_v4.json"
 
@@ -3454,6 +3625,21 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun retitleDetail(browseId: String, title: String) {
         if (title.isBlank()) return
         _detailStack.value = _detailStack.value.map { if (it.browseId == browseId) it.copy(title = title) else it }
+    }
+
+    /**
+     * Gives a playlist kept on this device the cover at [coverUrl], or its automatic one back with
+     * null, and redraws its page's header if that is open: the page took its cover when it was opened.
+     */
+    fun setLocalPlaylistCover(browseId: String, coverUrl: String?) {
+        val id = browseId.removePrefix("local:playlist:")
+        dev.auden.library.LocalPlaylists.setCover(id, coverUrl)
+        val playlist = dev.auden.library.LocalPlaylists.get(id) ?: return
+        val artwork = dev.auden.library.PlaylistCovers.coverFor(getApplication(), playlist)
+            ?: playlist.songs.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl
+        _detailStack.value = _detailStack.value.map {
+            if (it.browseId == playlist.browseId) it.copy(thumbnailUrl = artwork) else it
+        }
     }
 
     fun reloadLocalDetail(browseId: String) {
@@ -4108,3 +4294,7 @@ internal fun lyricsLookupKey(
     order: List<LyricsSource>,
     prioritizeSyllableSync: Boolean,
 ): List<Any> = listOf(videoId, sources, order, prioritizeSyllableSync)
+
+/** A file on this device with no identity anywhere else: its id is its own uri. */
+internal val Song.isDeviceFile: Boolean
+    get() = localUri != null && (videoId.startsWith("content://") || videoId.startsWith("file://"))

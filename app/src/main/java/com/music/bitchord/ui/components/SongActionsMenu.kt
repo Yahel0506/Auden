@@ -11,6 +11,7 @@ import androidx.compose.ui.layout.ContentScale
 import com.music.bitchord.R
 
 import android.net.Uri
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -26,6 +27,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.DownloadDone
+import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -129,11 +132,6 @@ fun SongActionsMenu(
     modifier: Modifier = Modifier,
     onRemoveFromPlaylist: (() -> Unit)? = null,
     /**
-     * Takes this track out of the song cache. Null hides the row — the caller
-     * passes one only while the cache actually holds some of it.
-     */
-    onRemoveFromCache: (() -> Unit)? = null,
-    /**
      * Removes this track from the account's listening history. Null hides the
      * row — the History screen passes one only when the menu is opened there.
      */
@@ -194,9 +192,16 @@ fun SongActionsMenu(
     playingUri: String? = null,
     /** A row from a Spotify playlist: lets its YouTube Music match be corrected by hand. */
     onFixSpotifyMatch: (() -> Unit)? = null,
+    /**
+     * Starts a multi-selection on this song's list, with this song picked. Null
+     * hides the row — the player's menu, whose song is on no list.
+     */
+    onSelect: (() -> Unit)? = null,
 ) {
     var showingSongInfo by remember(song.videoId) { mutableStateOf(false) }
     var pickingSleepTimer by remember { mutableStateOf(false) }
+    // Managing the song's downloaded files is a page of this menu, in whatever panel the menu is in.
+    var managing by remember(song.videoId) { mutableStateOf(false) }
     // A menu has no pages to swap, so Song Info opens as a dialog.
     if (showingSongInfo) SongInfoDialog(song) { showingSongInfo = false }
     // Neutral rather than the sleeve's colours: the panel floats over the page
@@ -316,6 +321,16 @@ fun SongActionsMenu(
                     onClick = it,
                 )
             }
+            // With the playlist rows: filing several songs at once is what a
+            // selection is started for more often than anything else.
+            onSelect?.let {
+                ActionRow(
+                    icon = Icons.Rounded.Checklist,
+                    label = stringResource(R.string.select_songs),
+                    accent = palette.accent,
+                    onClick = it,
+                )
+            }
         }
 
         // Where the track goes next, and what is kept of it. The file rows
@@ -340,19 +355,11 @@ fun SongActionsMenu(
             accent = palette.accent,
             onClick = onAddToQueue,
         )
-        DownloadRow(song, palette, isOffline, onDownload, playingUri)
+        DownloadRow(song, palette, isOffline, onDownload, playingUri) { managing = true }
         onRepairMetadata?.let {
             ActionRow(
                 icon = SfIcons.Upgrade,
                 label = stringResource(R.string.metadata_repair),
-                accent = palette.accent,
-                onClick = it,
-            )
-        }
-        onRemoveFromCache?.let {
-            ActionRow(
-                icon = SfIcons.Trash,
-                label = stringResource(R.string.remove_from_cache),
                 accent = palette.accent,
                 onClick = it,
             )
@@ -399,6 +406,7 @@ fun SongActionsMenu(
                 description = song.artist.takeIf { it.isNotBlank() },
             ) { onOpenArtist(id) }
         }
+
         ActionRow(SfIcons.Info, stringResource(R.string.song_info), accent = palette.accent) {
             showingSongInfo = true
         }
@@ -444,13 +452,15 @@ fun SongActionsMenu(
     }
 
     CompositionLocalProvider(LocalActionRowStyle provides ActionRowStyle.Menu) {
-        Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-            // The player's menu has the sleep timer, and swaps its rows for
-            // the picker in place.
-            if (pickingSleepTimer) {
-                SleepTimerPicker(palette = palette, onBack = { pickingSleepTimer = false })
-            } else {
-                rows()
+        // The sleep timer and the download manager are pages of this menu: each opens over the rows, in the same
+        // panel and the same place, and gives them back.
+        MenuPages(if (pickingSleepTimer) 1 else if (managing) 2 else 0, { it }, Modifier.fillMaxWidth()) { current ->
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                when (current) {
+                    1 -> SleepTimerPicker(palette = palette, onBack = { pickingSleepTimer = false })
+                    2 -> ManageDownloadPage(song, playingUri, palette) { managing = false }
+                    else -> rows()
+                }
             }
         }
     }
@@ -461,6 +471,7 @@ fun SongActionsMenu(
  * playlist picker's sheet, or a menu panel.
  */
 internal enum class ActionRowStyle { Sheet, Menu }
+
 
 internal val LocalActionRowStyle = staticCompositionLocalOf { ActionRowStyle.Sheet }
 
@@ -502,7 +513,7 @@ private fun neutralMenuPalette(): ArtworkPalette {
  * arrangement the sleep timer row already uses.
  */
 @Composable
-private fun DownloadRow(song: Song, palette: ArtworkPalette, isOffline: Boolean, onDownload: () -> Unit, playingUri: String?) {
+private fun DownloadRow(song: Song, palette: ArtworkPalette, isOffline: Boolean, onDownload: () -> Unit, playingUri: String?, onManage: (() -> Unit)?) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val active by Downloads.active.collectAsStateWithLifecycle()
@@ -561,13 +572,15 @@ private fun DownloadRow(song: Song, palette: ArtworkPalette, isOffline: Boolean,
 
         null -> if (copies.isNotEmpty() || file != null) {
             // The app's own download, and any other file that is this same song.
-            ManageDownloadRow(
-                song = song,
-                copies = copies,
-                playingUri = playingUri,
-                palette = palette,
-                onDeleteOwn = { scope.launch { Downloads.delete(context, song.videoId) } },
-            )
+            // What is done with the files is an alert of its own, not a drawer in the menu: one row leads to it.
+            ActionRow(
+                icon = Icons.Rounded.DownloadDone,
+                label = stringResource(R.string.manage_download),
+                value = if (copies.size > 1) stringResource(R.string.download_copies_count, copies.size) else null,
+                tint = palette.accent,
+                accent = palette.accent,
+                chevron = true,
+            ) { onManage?.invoke() }
             // Only the app's own download has lyrics to fetch into; a file found on the device is left as it is.
             if (file != null && !isOffline && !Downloads.hasLyrics(song.videoId)) {
                 val lyricsActive by Downloads.lyricsActive.collectAsStateWithLifecycle()
@@ -713,6 +726,57 @@ private fun SleepTimerPicker(palette: ArtworkPalette, onBack: () -> Unit) {
             }
         }
     }
+}
+
+/**
+ * A menu's pages, with the move between them animated: a page opened from another slides in from the right as the
+ * one before it slides off to the left and fades, and going back runs the other way; the panel eases to the new
+ * page's height rather than jumping to it. [depth] orders the pages — the deeper one is "forward".
+ */
+@Composable
+internal fun <T> MenuPages(page: T, depth: (T) -> Int, modifier: Modifier = Modifier, content: @Composable (T) -> Unit) {
+    androidx.compose.animation.AnimatedContent(
+        targetState = page,
+        modifier = modifier,
+        transitionSpec = {
+            val forward = depth(targetState) > depth(initialState)
+            (
+                androidx.compose.animation.slideInHorizontally(androidx.compose.animation.core.tween(280, easing = androidx.compose.animation.core.FastOutSlowInEasing)) { if (forward) it / 3 else -it / 3 } +
+                    androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(220, delayMillis = 40))
+                ).togetherWith(
+                androidx.compose.animation.slideOutHorizontally(androidx.compose.animation.core.tween(280, easing = androidx.compose.animation.core.FastOutSlowInEasing)) { if (forward) -it / 4 else it / 4 } +
+                    androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)),
+            ).using(androidx.compose.animation.SizeTransform(clip = true) { _, _ -> androidx.compose.animation.core.tween(280, easing = androidx.compose.animation.core.FastOutSlowInEasing) })
+        },
+        label = "menu_pages",
+    ) { current -> content(current) }
+}
+
+/**
+ * The top of a page inside a menu: a back arrow and the page's name. Every menu that groups its options into
+ * pages opens them the same way, and goes back the same way.
+ */
+@Composable
+internal fun MenuPageHeader(title: String, subtitle: String? = null, onBack: () -> Unit) {
+    if (subtitle != null) {
+        SleepTimerHeader(title, subtitle, onBack)
+        return
+    }
+    val colors = iosMenuColors()
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(start = 8.dp, end = 22.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(onClick = onBack) {
+            Icon(SfIcons.ArrowBack, contentDescription = stringResource(R.string.back), tint = colors.label)
+        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, lineHeight = 21.sp, letterSpacing = (-0.3).sp, fontWeight = FontWeight.SemiBold),
+            color = colors.label,
+        )
+    }
+    HorizontalDivider(thickness = 0.5.dp, color = colors.separator, modifier = Modifier.padding(bottom = 4.dp))
 }
 
 /**
@@ -917,6 +981,8 @@ internal fun ActionRow(
     description: String? = null,
     /** Drawn where the icon goes, when the icon is a logo or a progress ring rather than a tinted vector. */
     leading: (@Composable () -> Unit)? = null,
+    /** A chevron at the end: the row opens a page of related options instead of doing something. */
+    chevron: Boolean = false,
     onClick: () -> Unit,
 ) {
     if (LocalActionRowStyle.current == ActionRowStyle.Menu) {
@@ -930,6 +996,11 @@ internal fun ActionRow(
             valueColor = accent,
             enabled = enabled,
             leading = leading,
+            trailing = if (chevron) {
+                { Icon(SfIcons.ChevronRight, null, tint = iosMenuColors().secondaryLabel, modifier = Modifier.size(16.dp)) }
+            } else {
+                null
+            },
         )
         return
     }

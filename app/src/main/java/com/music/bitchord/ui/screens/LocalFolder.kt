@@ -88,6 +88,7 @@ import com.music.bitchord.ui.components.PAGE_GUTTER
 import com.music.bitchord.ui.components.ROW_DIVIDER_INSET
 import com.music.bitchord.ui.components.SearchPlayingBars
 import com.music.bitchord.ui.components.SongRow
+import com.music.bitchord.ui.components.SongSelectionState
 import com.music.bitchord.ui.components.longPressMenuClickable
 import com.music.bitchord.ui.components.rememberRemoteArtworkUrl
 import com.music.bitchord.ui.components.thumbnailBorder
@@ -121,26 +122,24 @@ class LocalFolder(
     /** Downloads only: the releases those files were asked for as — see [LocalGroups.albumsOf]. */
     val collections: List<DownloadedCollection> = emptyList(),
     /**
-     * Downloads only: holding a song or an album selects it, for [onDelete] and
-     * [onUpload] to act on, and the row's ⋮ carries the actions sheet instead.
+     * Downloads and Cached songs: holding a song or an album selects it rather
+     * than opening its menu, and the row's ⋮ carries the menu instead. What the
+     * selection can then do is the host's, on the selection bar's own ⋮.
      */
     val selectable: Boolean = false,
+    /** The app's selection, which a hold here starts — see [selectable]. */
+    val selection: SongSelectionState? = null,
     /** Local Music only: adds the Genres and Folders tabs a whole-device library has. */
     val libraryTabs: Boolean = false,
     val onOpenGroup: (LocalGroup) -> Unit,
     /** An album or artist held — its menu, with the rows it covers in hand. */
     val onGroupLongPress: (LocalGroup) -> Unit,
-    val onDelete: ((List<Song>) -> Unit)? = null,
-    /** Copies the selection to WebDAV; null (no server configured) hides the action. */
-    val onUpload: ((List<Song>) -> Unit)? = null,
     /**
      * Cached songs only: saves tracks to Downloads straight from the song
-     * cache. Set, it puts a download button on every row, Download all in the
-     * header, and Download on the selection.
+     * cache. Set, it puts a download button on every row and Download all in
+     * the header.
      */
     val onDownload: ((List<Song>) -> Unit)? = null,
-    /** Cached songs only: takes the selection out of the song cache. */
-    val onRemoveFromCache: ((List<Song>) -> Unit)? = null,
     /** Which ways of looking at the tracks this folder offers, in order. */
     val tabs: List<LocalFolderTab> = LocalFolderTab.BASIC,
     /**
@@ -177,53 +176,12 @@ enum class LocalFolderTab {
 }
 
 /**
- * A folder's own state while its page is on the stack: the tab showing, and
- * the Downloads multi-selection.
- *
- * Albums are selected by key as well as by their tracks: different albums can
- * share tracks, so inferring an album's selection from track ids made one held
- * playlist appear to select unrelated albums.
+ * A folder's own state while its page is on the stack: the tab showing. What
+ * is selected on it is the app's one [SongSelectionState].
  */
 @Stable
 class LocalFolderState {
     var tab by mutableStateOf(LocalFolderTab.SONGS)
-
-    var selectedIds by mutableStateOf<Set<String>>(emptySet())
-        private set
-    var selectedGroups by mutableStateOf<Set<String>>(emptySet())
-        private set
-    val selecting: Boolean get() = selectedIds.isNotEmpty()
-
-    fun select(song: Song) {
-        selectedIds = selectedIds + song.videoId
-    }
-
-    fun toggle(song: Song) {
-        selectedIds = if (song.videoId in selectedIds) selectedIds - song.videoId else selectedIds + song.videoId
-    }
-
-    fun select(group: LocalGroup) {
-        selectedGroups = selectedGroups + group.browseId
-        selectedIds = selectedIds + group.songs.map { it.videoId }
-    }
-
-    fun toggle(group: LocalGroup) {
-        if (group.browseId in selectedGroups) {
-            selectedGroups = selectedGroups - group.browseId
-            selectedIds = selectedIds - group.songs.mapTo(HashSet()) { it.videoId }
-        } else {
-            select(group)
-        }
-    }
-
-    fun selectAll(songs: List<Song>) {
-        selectedIds = songs.mapTo(linkedSetOf()) { it.videoId }
-    }
-
-    fun clear() {
-        selectedIds = emptySet()
-        selectedGroups = emptySet()
-    }
 }
 
 /**
@@ -333,17 +291,25 @@ internal fun LazyListScope.localFolderItems(
 
     // Downloads redefines the hold as "select", so the ⋮ has to carry the
     // actions sheet itself or the page loses it.
+    val selection = folder.selection
+    val selecting = selection?.selecting == true
     val songClick: (Int) -> Unit = { index ->
-        if (state.selecting) state.toggle(songs[index]) else onSongClick(songs, index)
+        if (selecting) selection?.toggle(songs[index]) else onSongClick(songs, index)
     }
     val songHold: (Song) -> Unit = { song ->
-        if (folder.selectable) state.select(song) else onSongLongPress(song)
+        if (folder.selectable && selection != null) selection.start(song) else onSongLongPress(song)
     }
+    // An album or artist is picked whole, once a selection is on; a genre or a
+    // directory is only ever opened.
     val groupClick: (LocalGroup) -> Unit = { group ->
-        if (state.selecting && group.type != BrowseType.OTHER) state.toggle(group) else folder.onOpenGroup(group)
+        if (selecting && group.type != BrowseType.OTHER) selection?.toggle(group) else folder.onOpenGroup(group)
     }
     val groupHold: (LocalGroup) -> Unit = { group ->
-        if (folder.selectable && group.type != BrowseType.OTHER) state.select(group) else folder.onGroupLongPress(group)
+        when {
+            selection != null && group.type != BrowseType.OTHER && (selecting || folder.selectable) ->
+                if (!selection.isSelected(group)) selection.toggle(group)
+            else -> folder.onGroupLongPress(group)
+        }
     }
 
     val isCurrentRow = playingRowMatcher(songs, currentSong)
@@ -353,7 +319,7 @@ internal fun LazyListScope.localFolderItems(
                 val song = songs[index]
                 SongGridCard(
                     song = song,
-                    selected = song.videoId in state.selectedIds,
+                    selected = selection?.isSelected(song) == true,
                     isCurrent = isCurrentRow(song),
                     isPlaying = isCurrentRow(song) && isPlaying,
                     palette = palette,
@@ -365,7 +331,6 @@ internal fun LazyListScope.localFolderItems(
             itemsIndexed(songs, key = { index, song -> "song-${song.videoId}-$index" }) { index, song ->
                 SongRow(
                     song = song,
-                    selected = song.videoId in state.selectedIds,
                     isCurrent = isCurrentRow(song),
                     isPlaying = isCurrentRow(song) && isPlaying,
                     searchPlayingStyle = true,
@@ -409,7 +374,7 @@ internal fun LazyListScope.localFolderItems(
                 AlbumGridCard(
                     group = group,
                     palette = palette,
-                    selected = group.browseId in state.selectedGroups,
+                    selected = selection?.isSelected(group) == true,
                     onClick = groupClick,
                     onLongPress = { groupHold(group) },
                 )
@@ -419,7 +384,7 @@ internal fun LazyListScope.localFolderItems(
                 AlbumRow(
                     group = group,
                     palette = palette,
-                    selected = group.browseId in state.selectedGroups,
+                    selected = selection?.isSelected(group) == true,
                     onClick = groupClick,
                     onLongPress = { groupHold(group) },
                 )
@@ -869,87 +834,6 @@ private fun TrailingGlyph(selected: Boolean, palette: ArtworkPalette) {
 }
 
 /**
- * The Downloads selection's actions, floated under the top bar while anything
- * is selected — over the list rather than in it, so it stays in reach however
- * far down the selection was made.
- */
-@Composable
-internal fun LocalFolderSelectionBar(
-    folder: LocalFolder,
-    state: LocalFolderState,
-    /** Every track in the folder, for Select all and to resolve the selection against. */
-    songs: List<Song>,
-    modifier: Modifier = Modifier,
-) {
-    val count = state.selectedIds.size
-    val allSelected = songs.isNotEmpty() && songs.all { it.videoId in state.selectedIds }
-    fun chosen() = songs.filter { it.videoId in state.selectedIds }.also { state.clear() }
-    val shape = RoundedCornerShape(14.dp)
-    val dark = isSystemInDarkTheme()
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .shadow(10.dp, shape)
-            .background(MaterialTheme.colorScheme.surfaceVariant, shape)
-            .padding(horizontal = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        IconButton(onClick = { state.selectAll(songs) }, enabled = !allSelected) {
-            Icon(
-                Icons.Rounded.Check,
-                contentDescription = stringResource(R.string.select_all),
-                tint = if (dark) Color.White else MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp),
-            )
-        }
-        Text(
-            text = "$count ${stringResource(R.string.selected)}",
-            style = MaterialTheme.typography.titleSmall,
-            color = if (dark) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.weight(1f),
-        )
-        folder.onUpload?.let { upload ->
-            SelectionAction(
-                icon = Icons.Rounded.FileUpload,
-                label = stringResource(R.string.upload_to_webdav),
-                color = MaterialTheme.colorScheme.primary,
-                enabled = count > 0,
-                onClick = { upload(chosen()) },
-            )
-        }
-        folder.onDownload?.let { download ->
-            SelectionAction(
-                icon = Icons.Rounded.Download,
-                label = stringResource(R.string.download),
-                color = MaterialTheme.colorScheme.primary,
-                enabled = count > 0,
-                onClick = { download(chosen()) },
-            )
-        }
-        folder.onRemoveFromCache?.let { remove ->
-            SelectionAction(
-                icon = Icons.Rounded.Delete,
-                label = stringResource(R.string.cached_song_remove),
-                color = DESTRUCTIVE,
-                enabled = count > 0,
-                onClick = { remove(chosen()) },
-            )
-        }
-        folder.onDelete?.let { delete ->
-            SelectionAction(
-                icon = Icons.Rounded.Delete,
-                label = stringResource(R.string.delete),
-                color = DESTRUCTIVE,
-                enabled = count > 0,
-                onClick = { delete(chosen()) },
-            )
-        }
-        TextButton(onClick = state::clear) { Text(stringResource(R.string.cancel)) }
-    }
-}
-
-/**
  * A Cached songs row's own download button, showing where that track's download
  * stands: tap to save it, a ring while it is queued or saving (tap again to
  * call it off), a tick once it is in Downloads, and a retry after a failure.
@@ -1010,17 +894,6 @@ private fun RowDownloadButton(song: Song, palette: ArtworkPalette, onDownload: (
         }
     }
 }
-
-@Composable
-private fun SelectionAction(icon: ImageVector, label: String, color: Color, enabled: Boolean, onClick: () -> Unit) {
-    TextButton(onClick = onClick, enabled = enabled) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(4.dp))
-        Text(label, color = color)
-    }
-}
-
-private val DESTRUCTIVE = Color(0xFFFF453A)
 
 @Composable
 internal fun LocalMusicSort.localizedLabel(): String = when (this) {

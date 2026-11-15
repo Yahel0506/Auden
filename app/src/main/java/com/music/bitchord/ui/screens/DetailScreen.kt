@@ -55,6 +55,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import com.music.bitchord.data.model.LibraryState
@@ -172,11 +174,13 @@ import com.music.bitchord.ui.components.LIBRARY_GRID_SPACING
 import com.music.bitchord.ui.components.MessageState
 import com.music.bitchord.ui.components.FolderCover
 import com.music.bitchord.ui.components.folderCoverStyle
+import androidx.compose.ui.graphics.ImageBitmap
 import com.music.bitchord.ui.components.PAGE_GUTTER
 import com.music.bitchord.ui.components.NUMBERED_ROW_DIVIDER_INSET
 import com.music.bitchord.ui.components.RowMoreButton
 import com.music.bitchord.ui.components.ROW_DIVIDER_INSET
 import com.music.bitchord.ui.components.SHELF_CARD_WIDTH
+import com.music.bitchord.ui.components.LocalSongSelection
 import com.music.bitchord.ui.components.SongRow
 import com.music.bitchord.ui.components.SearchPlayingBars
 import com.music.bitchord.ui.components.libraryGrid
@@ -191,6 +195,8 @@ import com.music.bitchord.ui.icons.BitChordIcons
 import com.music.bitchord.ui.graphics.FADE_CURVE_STOPS
 import com.music.bitchord.ui.graphics.smootherStep
 import com.music.bitchord.ui.player.CanvasArtworkPlayer
+import com.music.bitchord.ui.player.ArtworkMeshBackdrop
+import com.music.bitchord.ui.player.rememberArtworkMesh
 import com.music.bitchord.ui.theme.ArtworkPalette
 import com.music.bitchord.ui.theme.rememberArtworkPalette
 import kotlin.math.roundToInt
@@ -480,16 +486,18 @@ fun DetailScreen(
         page.suggestedSongs.matching(query).map { it.value }
     }
 
-    // A device folder's tab and Downloads selection. The selection answers
-    // Back before the search does: it is registered after it, so it is asked
-    // first while it is on.
+    // A device folder's tab.
     val folderState = folder?.state
     val folderGroups = if (folder != null && folderState != null) {
         rememberLocalFolderGroups(page.browseId, folder, folderState.tab, rawSongs, query)
     } else {
         emptyList()
     }
-    BackHandler(enabled = folderState?.selecting == true) { folderState?.clear() }
+    // While songs are being picked here, "Select all" means the rows standing
+    // in this list: what the filter box and the sort left of it.
+    val selection = LocalSongSelection.current
+    val selecting = selection?.selecting == true
+    LaunchedEffect(selecting, queue) { if (selecting) selection?.offer(queue) }
 
     // What marks a row as already downloaded, tinted from the sleeve like the
     // rest of the page. Null on any page that is itself a reading of this
@@ -574,6 +582,26 @@ fun DetailScreen(
                 // A folder's grid view: the same column count the Library's
                 // "Show all" grids reach at this width.
                 val gridColumns = libraryGrid(maxWidth - PAGE_GUTTER * 2).columns
+
+                // The cover's colours carrying on below it, fading down into the page's own colour: from
+                // where a full-bleed sleeve or an artist's photograph ends, or from under a framed sleeve.
+                if (reorder == null) {
+                    val continuationSeam = when {
+                        isArtist -> artHeight
+                        fullBleedSleeve -> maxWidth
+                        else -> topBarContentPadding() + sleeveSize
+                    }
+                    CoverContinuation(
+                        imageUrl = if (isArtist) appleArt?.heroUrl ?: page.thumbnailUrl else page.thumbnailUrl,
+                        folderId = page.browseId.takeIf { page.thumbnailUrl == null && !isArtist },
+                        seam = continuationSeam,
+                        length = maxHeight * COVER_CONTINUATION_LENGTH,
+                        pageColor = pageColor,
+                        framed = !isArtist && !fullBleedSleeve,
+                        listState = listState,
+                        modifier = Modifier.matchParentSize(),
+                    )
+                }
 
                 // The artist photo is drawn behind the list rather than in it, so
                 // both need to agree on its height without being able to ask each
@@ -682,8 +710,9 @@ fun DetailScreen(
                 (page.subscriberCountText != null || page.monthlyListenerCount != null)
             // The header holds Apple's logo here, so the ink goes at the foot of the page instead.
             val aboutSignature = if (isArtist && appleArt?.logoUrl != null) signature else null
+            val ownPlaylist = page.browseId.startsWith("local:playlist:") || page.browseId.startsWith("local:offline:")
             val showAbout = (!description.isNullOrBlank() &&
-                (page.type == BrowseType.ALBUM || isArtist)) || hasStats || aboutSignature != null
+                (page.type == BrowseType.ALBUM || isArtist || ownPlaylist)) || hasStats || aboutSignature != null
             fun LazyListScope.aboutItem() {
                 if (!showAbout) return
                 item(key = "about") {
@@ -691,7 +720,11 @@ fun DetailScreen(
                     Box(Modifier.padding(top = if (isArtist) 28.dp else 0.dp)) {
                     AboutSection(
                         title = stringResource(
-                            if (isArtist) R.string.about_artist else R.string.about_album,
+                            when {
+                                isArtist -> R.string.about_artist
+                                ownPlaylist -> R.string.about_playlist
+                                else -> R.string.about_album
+                            },
                         ),
                         text = description?.takeIf { it.isNotBlank() },
                         palette = palette,
@@ -897,17 +930,6 @@ fun DetailScreen(
             if (isArtist) aboutItem()
         }
 
-                if (folder != null && folderState != null && folderState.selecting) {
-                    LocalFolderSelectionBar(
-                        folder = folder,
-                        state = folderState,
-                        songs = songs,
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = topBarContentPadding(), start = PAGE_GUTTER, end = PAGE_GUTTER),
-                    )
-                }
-
     }
 } else {
     ArtistShelfGridPage(
@@ -962,7 +984,9 @@ private fun ReleaseHeader(
     var artFailed by remember(page.thumbnailUrl) { mutableStateOf(false) }
     // A placeholder is a sleeve or it is nothing, as on the player: blown out
     // to the page's width it would only tint the top of the screen.
-    val bleed = fullBleed && page.thumbnailUrl != null && !artFailed
+    // A device folder has no picture but its generated cover, which runs the page's width the same way.
+    val folderCover = page.thumbnailUrl == null && folderCoverStyle(page.browseId) != null
+    val bleed = fullBleed && ((page.thumbnailUrl != null && !artFailed) || folderCover)
 
     Column(
         modifier = Modifier
@@ -985,34 +1009,38 @@ private fun ReleaseHeader(
                     }
                     .aspectRatio(1f),
             ) {
-                AsyncImage(
-                    model = page.thumbnailUrl.artworkAt(HEADER_ART_PX),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    onState = { artFailed = it is AsyncImagePainter.State.Error },
-                    modifier = Modifier
-                        .matchParentSize()
-                        // The mask below erases part of what this layer drew,
-                        // which it can only do in a buffer of its own.
-                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                        .drawWithContent {
-                            drawContent()
-                            // The player banner's dissolve, along smootherstep so
-                            // neither end of it shows as a line.
-                            drawRect(
-                                brush = Brush.verticalGradient(
-                                    colorStops = Array(FADE_CURVE_STOPS + 1) { i ->
-                                        val t = i / FADE_CURVE_STOPS.toFloat()
-                                        t to Color.Black.copy(alpha = 1f - smootherStep(t))
-                                    },
-                                    startY = size.height * (1f - FULL_BLEED_FADE_FRACTION),
-                                    endY = size.height,
-                                ),
-                                blendMode = BlendMode.DstIn,
-                            )
-                        }
-                        .background(palette.elevated),
-                )
+                val dissolve = Modifier
+                    .matchParentSize()
+                    // The mask below erases part of what this layer drew,
+                    // which it can only do in a buffer of its own.
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        // The player banner's dissolve, along smootherstep so
+                        // neither end of it shows as a line.
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colorStops = Array(FADE_CURVE_STOPS + 1) { i ->
+                                    val t = i / FADE_CURVE_STOPS.toFloat()
+                                    t to Color.Black.copy(alpha = 1f - smootherStep(t))
+                                },
+                                startY = size.height * (1f - FULL_BLEED_FADE_FRACTION),
+                                endY = size.height,
+                            ),
+                            blendMode = BlendMode.DstIn,
+                        )
+                    }
+                if (folderCover) {
+                    FolderCover(browseId = page.browseId, modifier = dissolve)
+                } else {
+                    AsyncImage(
+                        model = page.thumbnailUrl.artworkAt(HEADER_ART_PX),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        onState = { artFailed = it is AsyncImagePainter.State.Error },
+                        modifier = dissolve.background(palette.elevated),
+                    )
+                }
                 // Beside the still rather than inside its layer: a clip's
                 // TextureView takes no Compose mask, so it dissolves itself.
                 canvas?.let { clip ->
@@ -1574,71 +1602,156 @@ private fun PageBackground(
                 .height(artHeight)
                 .offset { IntOffset(0, listState.headerTop(artHeight.toPx()).roundToInt()) },
         ) {
-            AsyncImage(
-                model = art,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
+            // The photograph dissolves into the continuation below it rather than into a flat tint: the
+            // mask erases its foot, which it can only do in a buffer of its own. A clip's TextureView takes
+            // no Compose mask, so it dissolves itself.
+            Box(
+                Modifier
                     .matchParentSize()
-                    .background(palette.elevated),
-            )
-
-            // Above the still art but below the scrim, so the scrim that
-            // settles the header into the page still sits over it. Always
-            // running: unlike the player's sleeve there is no transport here
-            // to follow, and the page is only up while it's being read.
-            canvas?.let { clip ->
-                CanvasArtworkPlayer(
-                    canvas = clip,
-                    isPlaying = true,
-                    modifier = Modifier.matchParentSize(),
-                )
-            }
-
-            // The same sleeve, blurred and faded in over the lower half, so the
-            // picture loses its detail before it loses its colour — a merge
-            // rather than a fade to a flat tint. The same request as the sharp
-            // copy, so it is a memory-cache hit and lands on the same frame.
-            if (softenFoot) {
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colorStops = Array(FADE_CURVE_STOPS + 1) { i ->
+                                    val t = i / FADE_CURVE_STOPS.toFloat()
+                                    t to Color.Black.copy(alpha = 1f - smootherStep(t))
+                                },
+                                startY = size.height * (1f - FULL_BLEED_FADE_FRACTION),
+                                endY = size.height,
+                            ),
+                            blendMode = BlendMode.DstIn,
+                        )
+                    },
+            ) {
                 AsyncImage(
                     model = art,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .matchParentSize()
-                        // Offscreen so the mask cuts the blurred result rather
-                        // than each draw beneath it.
-                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                        .drawWithContent {
-                            drawContent()
-                            drawRect(SOFT_FOOT_MASK, blendMode = BlendMode.DstIn)
-                        }
-                        // Rectangle keeps the edges clamped to the picture's own
-                        // colour rather than fading to transparent at the foot.
-                        .blur(SOFT_FOOT_BLUR, BlurredEdgeTreatment.Rectangle),
+                        .background(palette.elevated),
                 )
+
+                // The same sleeve, blurred and faded in over the lower half, so the picture loses its
+                // detail before it loses its colour. The same request as the sharp copy, so it is a
+                // memory-cache hit and lands on the same frame.
+                if (softenFoot) {
+                    AsyncImage(
+                        model = art,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .matchParentSize()
+                            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(SOFT_FOOT_MASK, blendMode = BlendMode.DstIn)
+                            }
+                            // Rectangle keeps the edges clamped to the picture's own colour.
+                            .blur(SOFT_FOOT_BLUR, BlurredEdgeTreatment.Rectangle),
+                    )
+                }
             }
 
-            // Ends on the page colour at full strength, so there is no edge
-            // left where the artwork stops. Eased rather than run straight: a
-            // gradient that changes slope at a stop shows a line at that stop,
-            // however close the colours either side of it are.
+            // Above the still art. Always running: unlike the player's sleeve there is no transport here to
+            // follow, and the page is only up while it's being read.
+            canvas?.let { clip ->
+                CanvasArtworkPlayer(
+                    canvas = clip,
+                    isPlaying = true,
+                    bottomFade = FULL_BLEED_FADE_FRACTION,
+                    modifier = Modifier.matchParentSize(),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The player's still backdrop, for a page: the cover's own colours, reduced to a mesh, hung from [seam] —
+ * where the artwork stops — and fading downward into [pageColor] until nothing but that colour is left.
+ * Behind the list, scrolling with it. Nothing is drawn for a page with no artwork.
+ *
+ * Above [seam] the mesh holds the cover's bottom row, so a full-bleed sleeve dissolving into it, or the
+ * sides of a framed one, meet exactly the colour the artwork ended on. A veil of the page's colour over
+ * all of it keeps the title and rows legible against a bright sleeve.
+ */
+@Composable
+private fun CoverContinuation(
+    imageUrl: String?,
+    /** A device folder, whose cover is generated: its colours stand in for the artwork's. */
+    folderId: String? = null,
+    seam: Dp,
+    length: Dp,
+    pageColor: Color,
+    framed: Boolean,
+    listState: LazyListState,
+    modifier: Modifier = Modifier,
+) {
+    val folderStyle = if (imageUrl == null) folderCoverStyle(folderId) else null
+    if (imageUrl == null && folderStyle == null) return
+    // The folder's gradient, as the one picture the mesh is read from.
+    val folderPicture = remember(folderStyle) {
+        folderStyle?.let { style ->
+            val picture = ImageBitmap(FOLDER_MESH_PX, FOLDER_MESH_PX)
+            androidx.compose.ui.graphics.Canvas(picture).also { canvas ->
+                val paint = androidx.compose.ui.graphics.Paint().apply {
+                    shader = androidx.compose.ui.graphics.LinearGradientShader(
+                        androidx.compose.ui.geometry.Offset.Zero,
+                        androidx.compose.ui.geometry.Offset(0f, FOLDER_MESH_PX.toFloat()),
+                        listOf(style.top, style.bottom),
+                    )
+                }
+                canvas.drawRect(0f, 0f, FOLDER_MESH_PX.toFloat(), FOLDER_MESH_PX.toFloat(), paint)
+            }
+            picture
+        }
+    }
+    val mesh = rememberArtworkMesh(imageUrl, folderPicture, HEADER_ART_PX)
+    val total = seam + length
+    val seamFraction = (seam / total).coerceIn(0f, 0.95f)
+    Box(modifier.clipToBounds()) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(total)
+                .offset { IntOffset(0, listState.headerTop(total.toPx()).roundToInt()) },
+        ) {
+            ArtworkMeshBackdrop(
+                mesh = mesh,
+                seam = { seam },
+                fallback = pageColor,
+                animated = false,
+                darken = false,
+            )
+            val stops = buildList {
+                add(0f to pageColor.copy(alpha = if (framed) CONTINUATION_TOP_VEIL else CONTINUATION_VEIL))
+                add(seamFraction to pageColor.copy(alpha = CONTINUATION_VEIL))
+                for (i in 1..FADE_CURVE_STOPS) {
+                    val t = i / FADE_CURVE_STOPS.toFloat()
+                    add(
+                        (seamFraction + (1f - seamFraction) * t) to
+                            pageColor.copy(alpha = CONTINUATION_VEIL + (1f - CONTINUATION_VEIL) * smootherStep(t)),
+                    )
+                }
+            }
             Box(
                 Modifier
                     .matchParentSize()
-                    .background(
-                        Brush.verticalGradient(
-                            0.45f to Color.Transparent,
-                            0.65f to palette.wash.copy(alpha = 0.30f),
-                            0.82f to palette.wash.copy(alpha = 0.72f),
-                            0.94f to palette.wash.copy(alpha = 0.95f),
-                            1.00f to palette.wash,
-                        ),
-                    ),
+                    .background(Brush.verticalGradient(colorStops = stops.toTypedArray())),
             )
         }
     }
 }
+
+private const val FOLDER_MESH_PX = 64
+
+/** How much of the screen's height the continuation takes to fade from the cover's colours to the page's own. */
+private const val COVER_CONTINUATION_LENGTH = 0.85f
+
+private const val CONTINUATION_VEIL = 0.30f
+private const val CONTINUATION_TOP_VEIL = 0.55f
 
 /**
  * Where the top of the artwork currently is.
@@ -2135,10 +2248,16 @@ private fun CompactSongRow(
     isCurrent: Boolean = false,
     isPlaying: Boolean = false,
 ) {
+    // As [SongRow] does: a tick box while songs are being picked.
+    val selection = LocalSongSelection.current
+    val selecting = selection?.selecting == true
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .longPressMenuClickable(onClick = onClick, onLongClick = onLongPress)
+            .longPressMenuClickable(
+                onClick = if (selecting) ({ selection?.toggle(song); Unit }) else onClick,
+                onLongClick = onLongPress.takeUnless { selecting },
+            )
             .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -2173,8 +2292,24 @@ private fun CompactSongRow(
         if (downloadedTint != null) {
             DownloadedBadge(song, downloadedTint)
         }
-        RowMoreButton(onClick = onLongPress, tint = palette.onBackgroundVariant)
+        if (selecting) {
+            SelectionTick(selection?.isSelected(song) == true, palette)
+        } else {
+            RowMoreButton(onClick = onLongPress, tint = palette.onBackgroundVariant)
+        }
     }
+}
+
+/** The tick box a row ends on while songs are being picked. */
+@Composable
+private fun SelectionTick(selected: Boolean, palette: ArtworkPalette) {
+    Spacer(Modifier.width(10.dp))
+    Icon(
+        imageVector = if (selected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+        contentDescription = if (selected) stringResource(R.string.selected) else null,
+        tint = if (selected) palette.accent else palette.onBackgroundVariant,
+        modifier = Modifier.size(22.dp),
+    )
 }
 
 /**
@@ -2195,12 +2330,14 @@ private fun SuggestedSongRow(
     isCurrent: Boolean = false,
     isPlaying: Boolean = false,
 ) {
+    val selection = LocalSongSelection.current
+    val selecting = selection?.selecting == true
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .longPressMenuClickable(
-                onClick = onClick,
-                onLongClick = onLongPress,
+                onClick = if (selecting) ({ selection?.toggle(song); Unit }) else onClick,
+                onLongClick = onLongPress.takeUnless { selecting },
                 liftPadding = PaddingValues(horizontal = PAGE_GUTTER),
             )
             .padding(horizontal = PAGE_GUTTER, vertical = 4.dp),
@@ -2238,21 +2375,25 @@ private fun SuggestedSongRow(
         if (downloadedTint != null) {
             DownloadedBadge(song, downloadedTint)
         }
-        Spacer(Modifier.width(8.dp))
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(palette.accent.copy(alpha = 0.16f))
-                .clickable(onClick = onAdd),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                Icons.Rounded.Add,
-                contentDescription = stringResource(R.string.add_to_playlist),
-                tint = palette.accent,
-                modifier = Modifier.size(20.dp),
-            )
+        if (selecting) {
+            SelectionTick(selection?.isSelected(song) == true, palette)
+        } else {
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(palette.accent.copy(alpha = 0.16f))
+                    .clickable(onClick = onAdd),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Rounded.Add,
+                    contentDescription = stringResource(R.string.add_to_playlist),
+                    tint = palette.accent,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
 }

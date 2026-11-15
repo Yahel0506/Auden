@@ -187,7 +187,17 @@ import com.music.bitchord.ui.components.handleDacVolumeKey
 import com.music.bitchord.ui.components.VolumeHud
 import com.music.bitchord.ui.navigation.AppDestination
 import com.music.bitchord.ui.navigation.AppRoute
+import com.music.bitchord.ui.components.AppSongSelection
 import com.music.bitchord.ui.components.ConfirmAlert
+import com.music.bitchord.ui.components.NewPlaylistFlow
+import com.music.bitchord.ui.components.PlaylistDestination
+import com.music.bitchord.ui.components.EditPlaylistSheet
+import com.music.bitchord.ui.components.CoverCropper
+import com.music.bitchord.ui.components.SelectionActionsMenu
+import com.music.bitchord.ui.components.SelectionConfirm
+import com.music.bitchord.ui.components.SongSelectionBar
+import com.music.bitchord.ui.components.selectionKey
+import com.music.bitchord.ui.isDeviceFile
 import com.music.bitchord.ui.screens.EqualizerPresetPage
 import com.music.bitchord.ui.screens.SettingsChoicePage
 import com.music.bitchord.ui.components.SpotifyImportAlert
@@ -496,6 +506,7 @@ class MainActivity : AppCompatActivity() {
                     LocalOverscrollFactory provides iosOverscrollFactory,
                     LocalLiquidGlassEnabled provides liquidGlassEnabled,
                     LocalAppBackdrop provides appBackdrop,
+                    com.music.bitchord.ui.components.LocalSongSelection provides AppSongSelection,
                 ) {
                 // The window's width, measured rather than asked for.
                 //
@@ -744,6 +755,12 @@ private fun BitChordApp(
     var showSpotifyLogin by remember { mutableStateOf(false) }
     var discordDialog by remember { mutableStateOf<DiscordDialog?>(null) }
     var songActions by remember { mutableStateOf<Song?>(null) }
+    // The app's multi-selection of songs, and the menu its bar's ⋮ opens: a song's menu, for all of them.
+    val songSelection = AppSongSelection
+    var selectionMenuOpen by remember { mutableStateOf(false) }
+    var selectionMenuAnchor by remember { mutableStateOf<Rect?>(null) }
+    /** Asked before a selection is taken out of playlists, or its files off the device. */
+    var selectionConfirm by remember { mutableStateOf<SelectionConfirm?>(null) }
     var showLyricsOffset by remember { mutableStateOf(false) }
     /**
      * Whether the track menu that is up was opened from the player.
@@ -803,6 +820,23 @@ private fun BitChordApp(
     // Separate from [songActions] so the menu can close behind it — the picker
     // is the next step, not a second sheet stacked on the first.
     var playlistTarget by remember { mutableStateOf<Song?>(null) }
+    // The same picker over several songs at once: a selection, or a whole album or folder.
+    var playlistTargets by remember { mutableStateOf<List<Song>>(emptyList()) }
+    var offlinePlaylistTargets by remember { mutableStateOf<List<Song>>(emptyList()) }
+    // The device playlist a cover is being picked for, and the picture picked, while it is framed.
+    var coverPickTarget by rememberSaveable { mutableStateOf<String?>(null) }
+    var croppingCover by remember { mutableStateOf<Pair<String, Uri>?>(null) }
+    // The playlist whose name, cover and description are being edited, in the edit sheet.
+    var editingList by remember { mutableStateOf<EditingList?>(null) }
+    // The device playlist (browse id, name) whose cover is being made in the cover creator.
+    var creatingCover by remember { mutableStateOf<Pair<String, String>?>(null) }
+    val coverPicker = rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia(),
+    ) { uri ->
+        val target = coverPickTarget
+        coverPickTarget = null
+        if (target != null && uri != null) croppingCover = target to uri
+    }
     // The picker opened from the Library tab, where there is no track and
     // creating the playlist is the whole errand.
     var creatingPlaylist by remember { mutableStateOf(false) }
@@ -819,6 +853,8 @@ private fun BitChordApp(
     var creatingOfflinePlaylist by remember { mutableStateOf(false) }
     var showSpotifyImportDialog by remember { mutableStateOf(false) }
     var showNewPlaylistTypes by remember { mutableStateOf(false) }
+    // Where a Spotify import was asked to go, decided before its alert is opened.
+    var spotifyImportPrivacy by remember { mutableStateOf<PlaylistPrivacy?>(null) }
     // Which album or playlist the collection menu is open on, or null when it
     // is shut. One slot for every surface that can open it — the shelves on
     // three tabs, the search rows, the artist page's carousels, the release
@@ -829,7 +865,6 @@ private fun BitChordApp(
     /** The ⋯ [browseActions] was opened from — see [songMenuAnchor]. */
     var browseMenuAnchor by remember { mutableStateOf<Rect?>(null) }
     /** Rename asked for from the menu, which hands it on to a sheet holding only the form. */
-    var browseRenameInSheet by remember { mutableStateOf(false) }
     /** The playlist being rearranged, or null when the reorder page is shut. */
     var reorderTarget by remember { mutableStateOf<UserPlaylist?>(null) }
     /** Its entries as YouTube has them now — fetched fresh when the sheet opens. */
@@ -839,7 +874,6 @@ private fun BitChordApp(
     val openBrowseMenu: (BrowseTarget) -> Unit = { target ->
         browseMenuOrigin = LongPressOrigin.consume()
         browseMenuAnchor = MenuAnchor.consume()
-        browseRenameInSheet = false
         browseActions = target
     }
     val autoplay by AppSettings.autoplay.collectAsStateWithLifecycle()
@@ -913,13 +947,18 @@ private fun BitChordApp(
      * covers it. Most things want [detail] — the one actually on screen.
      */
     val playlistLocalFiles by com.music.bitchord.data.PlaylistLocalFiles.files.collectAsStateWithLifecycle()
+    val playlistNotes by dev.auden.library.PlaylistNotes.notes.collectAsStateWithLifecycle()
     val topDetail = detailStack.lastOrNull()?.let { page ->
         val extra = playlistLocalFiles[page.browseId]
         val songs = page.songs
-        if (extra.isNullOrEmpty() || songs !is UiState.Success) page
+        // What the listener wrote about a playlist of their own shows as its description.
+        val noted = playlistNotes[page.browseId.removePrefix("local:playlist:").removePrefix("local:offline:")]
+            ?.takeIf { page.browseId.startsWith("local:playlist:") || OfflinePlaylists.isOfflinePlaylist(page.browseId) }
+            ?.let { page.copy(description = it) } ?: page
+        if (extra.isNullOrEmpty() || songs !is UiState.Success) noted
         else {
             val have = songs.data.mapTo(HashSet()) { it.localUri }
-            page.copy(songs = UiState.Success(songs.data + extra.filter { it.localUri !in have }))
+            noted.copy(songs = UiState.Success(songs.data + extra.filter { it.localUri !in have }))
         }
     }
     /** The release page on screen, or null when a route or a tab is. */
@@ -928,6 +967,11 @@ private fun BitChordApp(
     // route — Back, a tab, another page over it — puts the list away with it.
     LaunchedEffect(detail?.browseId) {
         if (reorderTarget?.browseId != detail?.browseId) reorderTarget = null
+    }
+    // A selection belongs to the list it was made on: any other page or tab puts it away.
+    LaunchedEffect(route, detail?.browseId, selectedTab) {
+        songSelection.clear()
+        selectionMenuOpen = false
     }
 
     SystemBarIcons(
@@ -1560,33 +1604,8 @@ private fun BitChordApp(
             showQueueNotice(context.getString(if (ok) R.string.playlist_exported else R.string.playlist_export_failed))
         }
     }
-    // Audio files from the device, added to a playlist of any kind. Device playlists take them
-    // directly; one that lives on an account keeps them beside it (PlaylistLocalFiles), unsent.
-    var pendingLocalFilesTarget by remember { mutableStateOf<String?>(null) }
-    val localFilesLauncher = rememberLauncherForActivityResult(
-        androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments(),
-    ) { uris ->
-        val target = pendingLocalFilesTarget
-        pendingLocalFilesTarget = null
-        if (target == null || uris.isNullOrEmpty()) return@rememberLauncherForActivityResult
-        scope.launch {
-            val songs = uris.mapNotNull { uri ->
-                // Without this the grant ends with the picker and the file stops playing after a restart.
-                runCatching {
-                    context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                runCatching { LocalMediaRepository.songFromUri(context, uri) }.getOrNull()
-            }
-            val added = when {
-                OfflinePlaylists.isOfflinePlaylist(target) ->
-                    OfflinePlaylists.add(setOf(target.removePrefix(OfflinePlaylists.PREFIX)), songs).let { if (it.added > 0) songs.size else 0 }
-                target.startsWith("local:playlist:") ->
-                    dev.auden.library.LocalPlaylists.add(target.removePrefix("local:playlist:"), songs)
-                else -> com.music.bitchord.data.PlaylistLocalFiles.add(target, songs)
-            }
-            showQueueNotice(context.getString(R.string.local_files_added, added))
-        }
-    }
+    // Where the import being picked was asked to go, from the new-playlist flow.
+    var pendingImportDestination by remember { mutableStateOf(PlaylistDestination.DEVICE) }
     val importLauncher = rememberLauncherForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
     ) { uri ->
@@ -1595,6 +1614,12 @@ private fun BitChordApp(
             dev.auden.library.io.PlaylistTransfer.import(context, uri, searchOnline = true).fold(
                 onSuccess = {
                     showQueueNotice(context.getString(R.string.playlist_imported, it.name, it.local + it.online, it.total))
+                    // Meant for the account: the import is made here, then sent up as the playlist it is.
+                    if (pendingImportDestination == PlaylistDestination.YT_MUSIC) {
+                        dev.auden.library.LocalPlaylists.playlists.value.firstOrNull()?.let { made ->
+                            com.music.bitchord.data.YtPlaylistSync.start(context, made.browseId)
+                        }
+                    }
                 },
                 onFailure = { showQueueNotice(context.getString(R.string.playlist_import_failed)) },
             )
@@ -2495,13 +2520,8 @@ private fun BitChordApp(
     // The Library's "new playlist" tile. With an account there are two places to put it, so the tile lifts
     // into a menu to ask; without one there is only the device and the form opens directly.
     val openNewPlaylist: () -> Unit = {
-        val origin = com.music.bitchord.ui.components.LongPressOrigin.consume()
-        newPlaylistOptions = null
-        if (signedIn && origin != null) {
-            newPlaylistMenu = origin
-        } else {
-            creatingPlaylist = true
-        }
+        com.music.bitchord.ui.components.LongPressOrigin.consume()
+        showNewPlaylistTypes = true
     }
     val onLibraryItemClick: (ShelfItem) -> Unit = { item ->
         item.browseId?.let { id ->
@@ -3161,6 +3181,8 @@ private fun BitChordApp(
         // and dialog further down registers its own handler as it opens, and
         // so outranks all of these while it is up.
         BackHandler(enabled = canGoBack, onBack = goBack)
+        // Back closes a selection before it leaves the page it was made on.
+        BackHandler(enabled = songSelection.selecting) { songSelection.clear() }
         // Replay's stories and its share sheet are drawn over everything, and
         // unwind in the order they were opened. Only while there is a summary
         // to draw them from — otherwise back would spend a step closing
@@ -3532,6 +3554,7 @@ private fun BitChordApp(
                                     viewType = folderViewTypeOf(page.browseId),
                                     collections = downloadCollections,
                                     selectable = isDownloads || isCache,
+                                    selection = songSelection,
                                     onOpenGroup = viewModel::openLocalGroup,
                                     onGroupLongPress = { group ->
                                         openBrowseMenu(
@@ -3546,24 +3569,7 @@ private fun BitChordApp(
                                             ),
                                         )
                                     },
-                                    onDelete = if (isDownloads) {
-                                        { selected ->
-                                            scope.launch {
-                                                selected.forEach { song -> Downloads.delete(context, song.videoId) }
-                                            }
-                                        }
-                                    } else {
-                                        null
-                                    },
-                                    onUpload = if (isDownloads &&
-                                        com.music.bitchord.data.webdav.WebDavConfig.isConfigured(webdavUrl)
-                                    ) {
-                                        { selected -> uploadToWebDav(selected) }
-                                    } else {
-                                        null
-                                    },
                                     onDownload = if (isCache) downloadFromCache else null,
-                                    onRemoveFromCache = if (isCache) removeFromCache else null,
                                     tabs = if (isDevice) LocalFolderTab.DEVICE else LocalFolderTab.BASIC,
                                     playlists = if (isDevice) offlinePlaylistGroups else emptyList(),
                                     onCreatePlaylist = if (isDevice) ({ creatingOfflinePlaylist = true }) else null,
@@ -4563,6 +4569,22 @@ private fun BitChordApp(
                     },
                 )
 
+                // The selection's bar, under the top bar of whatever page songs are being picked on.
+                Isolated {
+                    if (songSelection.selecting) {
+                        SongSelectionBar(
+                            state = songSelection,
+                            onMore = {
+                                selectionMenuAnchor = MenuAnchor.consume()
+                                selectionMenuOpen = true
+                            },
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = topBarContentPadding() + 4.dp, start = 16.dp, end = 16.dp),
+                        )
+                    }
+                }
+
                 // Drawn before the bars so their own glass reads on top of it.
                 BottomFadeScrim(
                     withMiniPlayer = player.song != null,
@@ -4748,7 +4770,8 @@ private fun BitChordApp(
         Isolated {
             val pageMenuUp =
                 (songActions != null && songMenuOrigin == null && !(menuFromPlayer && playerRaised)) ||
-                    (browseActions != null && browseMenuOrigin == null && !browseRenameInSheet)
+                    (browseActions != null && browseMenuOrigin == null) ||
+                    selectionMenuOpen
             LaunchedEffect(pageMenuUp, reduceDynamicBlur) {
                 if (pageMenuUp && !reduceDynamicBlur && isGlassSupported()) {
                     pageBackdrop.capture()
@@ -4923,17 +4946,17 @@ private fun BitChordApp(
             // carries the per-entry id a removal is expressed in.
             val editable = viewModel.editablePlaylist(detail?.browseId)
                 ?.takeIf { !fromPlayer && (it.isOnDevice || song.setVideoId != null) }
-            // Asked of the cache's index off the main thread as the menu opens,
-            // so "Remove from cache" is only offered for a track it holds.
-            // Re-asked when the cache changes, which is what drops the row
-            // once the track has gone.
             val automixOn by AppSettings.smartFadeEnabled.collectAsStateWithLifecycle()
-            val cacheVersion by AudioCache.contentsChanged.collectAsStateWithLifecycle()
-            val inCache by produceState(false, song.videoId, cacheVersion) {
-                value = song.localUri == null &&
-                    withContext(Dispatchers.IO) { AudioCache.holds(song.videoId) }
-            }
             SongActionsMenu(
+                // The row as its list has it: that is the row the tick goes on.
+                onSelect = if (fromPlayer) {
+                    null
+                } else {
+                    {
+                        songActions = null
+                        songSelection.start(heldSong)
+                    }
+                },
                 onFixSpotifyMatch = song.spotifyId?.let { { songActions = null; fixingSpotifyMatch = song } },
                 // Offered for a song that is a file: a download, or a file on the device.
                 onRepairMetadata = if (song.localUri != null || song.videoId in Downloads.savedMetadata.value) {
@@ -5022,14 +5045,6 @@ private fun BitChordApp(
                             OfflinePlaylists.remove(id, song)
                         }
                     },
-                onRemoveFromCache = if (inCache) {
-                    {
-                        songActions = null
-                        removeFromCache(listOf(song))
-                    }
-                } else {
-                    null
-                },
                 onRemoveFromHistory = song.feedbackToken?.takeIf { menuFromHistory }?.let { token ->
                     {
                         songActions = null
@@ -5542,47 +5557,231 @@ private fun BitChordApp(
             }
         }
 
-        // ---- Where a new playlist goes ----
-        // Held-menu animation, opened by a tap on the tile: the tile lifts and the two places hang off it.
-        HeldContextMenu(
-            item = if (newPlaylistMenu != null) Unit else null,
-            held = newPlaylistMenu,
-            hazeState = hazeState,
-            onDismiss = { newPlaylistMenu = null },
-            onPreviewClick = null,
-        ) {
-            CompositionLocalProvider(LocalActionRowStyle provides ActionRowStyle.Menu) {
-                Column {
-                    ActionRow(
-                        icon = Icons.Rounded.PhoneIphone,
-                        label = stringResource(R.string.new_playlist_on_device),
-                        onClick = {
-                            newPlaylistMenu = null
-                            newPlaylistOptions = listOf(PlaylistPrivacy.DEVICE)
-                            creatingPlaylist = true
-                        },
-                    )
-                    ActionRow(
-                        icon = Icons.Rounded.Public,
-                        label = stringResource(R.string.new_playlist_on_youtube_music),
-                        onClick = {
-                            newPlaylistMenu = null
-                            newPlaylistOptions = PlaylistPrivacy.entries.filter { it != PlaylistPrivacy.DEVICE }
-                            creatingPlaylist = true
-                        },
-                    )
+        // ---- A selection's menu ----
+        // A song's menu for every picked song, hung off the selection bar's ⋮.
+        // Several songs, one picker: files go to the device's own playlists, anything streamed to the
+        // account's and the library's, where a file among them is kept beside the playlist.
+        val fileIntoPlaylists: (List<Song>) -> Unit = { songs ->
+            if (songs.isNotEmpty()) {
+                if (songs.all { it.isDeviceFile }) {
+                    offlinePlaylistTargets = songs
+                } else {
+                    viewModel.loadPlaylists()
+                    playlistTargets = songs
                 }
             }
+        }
+        Isolated {
+            IosMenuPopover(
+                item = if (selectionMenuOpen && songSelection.count > 0) Unit else null,
+                anchor = selectionMenuAnchor,
+                onDismiss = { selectionMenuOpen = false },
+                backdrop = pageBackdrop,
+                hazeState = hazeState,
+            ) {
+                // As picked when the menu opened: a row that closes the selection must not empty the
+                // menu it is drawn on while that plays its way out.
+                val songs = remember { songSelection.ordered() }
+                // Closes the menu, and the selection with it: the action is what it was made for.
+                val act: (() -> Unit) -> () -> Unit = { action ->
+                    {
+                        selectionMenuOpen = false
+                        songSelection.clear()
+                        action()
+                    }
+                }
+                val pageId = detail?.browseId
+                val editable = viewModel.editablePlaylist(pageId)
+                val attached = pageId != null && songs.any { com.music.bitchord.data.PlaylistLocalFiles.has(pageId, it) }
+                val offlinePage = pageId?.takeIf { OfflinePlaylists.isOfflinePlaylist(it) }
+                val removable = songs.filter { song ->
+                    (editable != null && (editable.isOnDevice || song.setVideoId != null)) ||
+                        (pageId != null && com.music.bitchord.data.PlaylistLocalFiles.has(pageId, song)) ||
+                        (offlinePage != null && song.localUri != null)
+                }
+                val removeFromPage: () -> Unit = {
+                    val (files, rows) = removable.partition {
+                        pageId != null && com.music.bitchord.data.PlaylistLocalFiles.has(pageId, it)
+                    }
+                    files.forEach { com.music.bitchord.data.PlaylistLocalFiles.remove(pageId.orEmpty(), it) }
+                    when {
+                        rows.isEmpty() -> Unit
+                        editable != null -> viewModel.removeFromPlaylist(editable.browseId, rows)
+                        offlinePage != null -> rows.forEach { OfflinePlaylists.remove(offlinePage, it) }
+                    }
+                    showQueueNotice(context.getString(R.string.song_removed_from_playlist))
+                }
+                val inCacheFolder = pageId == CACHE_FOLDER_BROWSE_ID
+                val inDownloads = pageId == "local:downloads"
+                val streamed = songs.filter { it.localUri == null }
+                val uploadable = if (com.music.bitchord.data.webdav.WebDavConfig.isConfigured(webdavUrl)) {
+                    songs.filter { com.music.bitchord.data.webdav.WebDavUploads.isUploadable(it) }
+                } else {
+                    emptyList()
+                }
+                val files = songs.filter { it.localUri != null || it.videoId in Downloads.savedMetadata.value }
+                val historyTokens = if (route == AppRoute.History) songs.mapNotNull { it.feedbackToken } else emptyList()
+                val allLiked = songs.all { likeStatusOf(it) == LikeStatus.LIKE }
+                SelectionActionsMenu(
+                    count = songs.size,
+                    allLiked = allLiked,
+                    // A file's like is the device's own; a stream's is the account's.
+                    onToggleLike = if (signedIn || songs.all { it.localUri != null }) {
+                        act {
+                            // Liking takes every song that is not liked yet; with all of them liked, it takes the like back.
+                            val targets = if (allLiked) songs else songs.filter { likeStatusOf(it) != LikeStatus.LIKE }
+                            scope.launch {
+                                targets.forEach { song ->
+                                    toggleLikeOf(song)
+                                    // One at a time: each is a request of its own to the account.
+                                    if (song.localUri == null) delay(150)
+                                }
+                            }
+                        }
+                    } else {
+                        null
+                    },
+                    // The selection stays until the picker is confirmed, so backing out of it loses nothing.
+                    onAddToPlaylist = {
+                        selectionMenuOpen = false
+                        fileIntoPlaylists(songs)
+                    },
+                    onRemoveFromPlaylist = if (removable.isNotEmpty()) {
+                        act {
+                            if (removable.size > 1) {
+                                selectionConfirm = SelectionConfirm(
+                                    title = context.resources.getQuantityString(
+                                        R.plurals.remove_songs_question, removable.size, removable.size,
+                                    ),
+                                    message = context.getString(R.string.remove_songs_from_this_playlist, detail?.title.orEmpty()),
+                                    confirmLabel = context.getString(R.string.remove),
+                                    onConfirm = removeFromPage,
+                                )
+                            } else {
+                                removeFromPage()
+                            }
+                        }
+                    } else {
+                        null
+                    },
+                    onPlayNext = act { playSongsNext(songs) },
+                    onAddToQueue = act { addSongsToQueue(songs) },
+                    // From the Cached songs folder the cache's own copy is the download, as on its rows.
+                    onDownload = when {
+                        inCacheFolder -> act { downloadFromCache(songs) }
+                        streamed.isNotEmpty() -> act { startDownload(streamed, null) }
+                        else -> null
+                    },
+                    onUploadToWebDav = if (uploadable.isNotEmpty()) act { uploadToWebDav(uploadable) } else null,
+                    onRepairMetadata = if (files.isNotEmpty()) act { MetadataRepair.start(context, files) } else null,
+                    onRemoveFromCache = if (inCacheFolder) act { removeFromCache(songs) } else null,
+                    onRemoveFromHistory = if (historyTokens.isNotEmpty()) {
+                        act {
+                            scope.launch {
+                                historyTokens.forEach { token ->
+                                    viewModel.removeFromHistory(token)
+                                    delay(150)
+                                }
+                            }
+                        }
+                    } else {
+                        null
+                    },
+                    onDeleteDownloads = if (inDownloads) {
+                        act {
+                            val delete: () -> Unit = {
+                                scope.launch { songs.forEach { Downloads.delete(context, it.videoId) } }
+                            }
+                            if (songs.size > 1) {
+                                selectionConfirm = SelectionConfirm(
+                                    title = context.resources.getQuantityString(
+                                        R.plurals.delete_downloads_question, songs.size, songs.size,
+                                    ),
+                                    message = context.getString(R.string.delete_download_warning),
+                                    confirmLabel = context.getString(R.string.delete),
+                                    onConfirm = delete,
+                                )
+                            } else {
+                                delete()
+                            }
+                        }
+                    } else {
+                        null
+                    },
+                )
+            }
+        }
+
+        selectionConfirm?.let { request ->
+            val dismiss = {
+                selectionConfirm = null
+                request.onCancel()
+            }
+            BackHandler(onBack = dismiss)
+            ConfirmAlert(
+                hazeState = hazeState,
+                title = request.title,
+                message = request.message,
+                confirmLabel = request.confirmLabel,
+                onConfirm = {
+                    selectionConfirm = null
+                    request.onConfirm()
+                },
+                onDismiss = dismiss,
+            )
+        }
+
+        creatingCover?.let { (browseId, name) ->
+            com.music.bitchord.ui.cover.CoverCreator(
+                title = name,
+                songCount = dev.auden.library.LocalPlaylists.get(browseId)?.songs?.size ?: 0,
+                onCancel = { creatingCover = null },
+                onSave = { picture ->
+                    creatingCover = null
+                    scope.launch {
+                        val saved = dev.auden.library.CustomPlaylistCovers.save(
+                            context, browseId.removePrefix("local:playlist:"), picture,
+                        )
+                        if (saved != null) viewModel.setLocalPlaylistCover(browseId, saved)
+                        showQueueNotice(context.getString(if (saved != null) R.string.cover_updated else R.string.cover_failed))
+                    }
+                },
+            )
+        }
+
+        croppingCover?.let { (browseId, uri) ->
+            CoverCropper(
+                uri = uri,
+                outputSide = dev.auden.library.CustomPlaylistCovers.MAX_SIDE,
+                onCancel = { croppingCover = null },
+                onFailed = {
+                    croppingCover = null
+                    showQueueNotice(context.getString(R.string.cover_failed))
+                },
+                onCropped = { cropped ->
+                    croppingCover = null
+                    scope.launch {
+                        val saved = dev.auden.library.CustomPlaylistCovers.save(
+                            context, browseId.removePrefix("local:playlist:"), cropped,
+                        )
+                        if (saved != null) viewModel.setLocalPlaylistCover(browseId, saved)
+                        showQueueNotice(context.getString(if (saved != null) R.string.cover_updated else R.string.cover_failed))
+                    }
+                },
+            )
         }
 
         // ---- Add to playlist / new playlist ----
         // One sheet for both, because they are one decision: the list of
         // playlists with a way to make another. `creatingPlaylist` opens it
         // straight onto the form, which is what the Library tile means.
-        if (playlistTarget != null || creatingPlaylist) {
-            val target = playlistTarget
+        if (playlistTarget != null || playlistTargets.isNotEmpty() || creatingPlaylist) {
+            // One song from its own menu, or several from a selection or a whole release.
+            val targets = playlistTarget?.let(::listOf) ?: playlistTargets
+            val target = targets.singleOrNull()
             val dismiss = {
                 playlistTarget = null
+                playlistTargets = emptyList()
                 creatingPlaylist = false
                 newPlaylistOptions = null
             }
@@ -5598,8 +5797,8 @@ private fun BitChordApp(
             // Which of these already hold the song, read as the sheet opens
             // and again if the account's list arrives after it.
             val membership by viewModel.membership.collectAsStateWithLifecycle()
-            LaunchedEffect(target?.videoId, pickerRows.map { it.playlistId }) {
-                if (target != null) viewModel.loadMembership(target, pickerRows)
+            LaunchedEffect(targets.map { it.selectionKey }, pickerRows.map { it.playlistId }) {
+                if (targets.isNotEmpty()) viewModel.loadMembership(targets, pickerRows)
             }
             DisposableEffect(Unit) { onDispose { viewModel.clearMembership() } }
             PlaylistPickerSheet(
@@ -5607,32 +5806,59 @@ private fun BitChordApp(
                 signedIn = signedIn,
                 loading = playlistsLoading,
                 song = target,
-                startCreating = target == null,
-                privacyOptions = if (target == null) newPlaylistOptions else null,
+                songs = targets,
+                startCreating = targets.isEmpty(),
+                privacyOptions = if (targets.isEmpty()) newPlaylistOptions else null,
                 present = membership.filterValues { it is MainViewModel.Member.Has && it.present }.keys,
                 checking = membership.filterValues { it is MainViewModel.Member.Checking }.keys,
                 onDismiss = dismiss,
                 onApply = { add, remove ->
-                    target?.let { song ->
-                        viewModel.applyPlaylistChanges(song, add, remove) { added, removed, failed ->
-                            // One line for the whole batch, saying what changed.
-                            (
-                                when {
-                                    added > 0 && removed > 0 -> context.getString(R.string.playlists_updated_notice)
-                                    added > 1 -> context.resources.getQuantityString(
-                                        R.plurals.added_to_playlists_notice, added, added,
-                                    )
-                                    added == 1 -> context.getString(R.string.song_added_to_playlist)
-                                    removed > 0 -> context.getString(R.string.song_removed_from_playlist)
-                                    failed > 0 -> context.getString(R.string.failed)
-                                    else -> null
-                                }
-                                )?.let(showQueueNotice)
+                    if (targets.isNotEmpty()) {
+                        // Read now: the picker's own copy is cleared as it closes, and a question may come first.
+                        val members = membership
+                        val apply: (List<UserPlaylist>) -> Unit = { removing ->
+                            viewModel.applyPlaylistChanges(targets, add, removing, members) { added, removed, failed ->
+                                // One line for the whole batch, saying what changed.
+                                (
+                                    when {
+                                        added > 0 && removed > 0 -> context.getString(R.string.playlists_updated_notice)
+                                        added > 1 -> context.resources.getQuantityString(
+                                            R.plurals.added_to_playlists_notice, added, added,
+                                        )
+                                        added == 1 -> context.getString(R.string.song_added_to_playlist)
+                                        removed > 0 -> context.getString(R.string.song_removed_from_playlist)
+                                        failed > 0 -> context.getString(R.string.failed)
+                                        else -> null
+                                    }
+                                    )?.let(showQueueNotice)
+                            }
+                        }
+                        songSelection.clear()
+                        // Taking several songs out of a playlist at once is asked about first; a "no"
+                        // still files them into the playlists that were ticked.
+                        if (targets.size > 1 && remove.isNotEmpty()) {
+                            selectionConfirm = SelectionConfirm(
+                                title = context.resources.getQuantityString(
+                                    R.plurals.remove_songs_question, targets.size, targets.size,
+                                ),
+                                message = context.getString(
+                                    R.string.remove_songs_from_playlists, remove.joinToString(", ") { it.title },
+                                ),
+                                confirmLabel = context.getString(R.string.remove),
+                                onCancel = { if (add.isNotEmpty()) apply(emptyList()) },
+                                onConfirm = { apply(remove) },
+                            )
+                        } else {
+                            apply(remove)
                         }
                     }
                 },
                 onCreate = { title, privacy ->
-                    viewModel.createPlaylist(title, privacy, target)
+                    viewModel.createPlaylist(title, privacy, targets)
+                    if (targets.size > 1) {
+                        songSelection.clear()
+                        showQueueNotice(context.getString(R.string.song_added_to_playlist))
+                    }
                 },
             )
         }
@@ -5641,11 +5867,25 @@ private fun BitChordApp(
         // The sheet above over the offline player's own playlists, for a track
         // that is a file on this device. Nothing here waits on a network, so
         // there is no loading state and the outcome is known on the tap.
-        if (offlinePlaylistTarget != null || creatingOfflinePlaylist) {
-            val target = offlinePlaylistTarget
+        if (offlinePlaylistTarget != null || offlinePlaylistTargets.isNotEmpty() || creatingOfflinePlaylist) {
+            val targets = offlinePlaylistTarget?.let(::listOf) ?: offlinePlaylistTargets
+            val target = targets.singleOrNull()
             val dismiss = {
                 offlinePlaylistTarget = null
+                offlinePlaylistTargets = emptyList()
                 creatingOfflinePlaylist = false
+            }
+            // Which lists hold every file being filed already: those start ticked, and unticking one
+            // takes the files out of it.
+            val holding = remember(targets, offlinePlaylists, localPlaylists) {
+                if (targets.isEmpty()) {
+                    emptySet()
+                } else {
+                    val wanted = targets.mapNotNullTo(HashSet()) { it.localUri }
+                    fun List<Song>.holdsAll() = mapNotNullTo(HashSet()) { it.localUri }.containsAll(wanted)
+                    (localPlaylists.filter { it.songs.holdsAll() }.map { it.id } +
+                        offlinePlaylists.filter { it.songs.holdsAll() }.map { it.id }).toSet()
+                }
             }
             // Every list kept on this device: the offline player's own, and the library's (saved copies, imports,
             // lists made here), which hold streamed songs too — so a file can sit among them.
@@ -5679,34 +5919,66 @@ private fun BitChordApp(
                 playlists = choices,
                 loading = false,
                 song = target,
-                startCreating = target == null,
+                songs = targets,
+                startCreating = targets.isEmpty(),
                 offline = true,
+                present = holding,
                 onDismiss = dismiss,
-                onApply = { picked, _ ->
-                    target?.let { song ->
+                onApply = { picked, unpicked ->
+                    if (targets.isNotEmpty()) {
                         val libraryIds = localPlaylists.mapTo(HashSet()) { it.id }
-                        val (libraryPicked, offlinePicked) = picked.partition { it.playlistId in libraryIds }
-                        val result = OfflinePlaylists.add(offlinePicked.mapTo(HashSet()) { it.playlistId }, listOf(song))
-                        var added = result.added
-                        var alreadyThere = result.alreadyThere
-                        libraryPicked.forEach { list ->
-                            if (dev.auden.library.LocalPlaylists.add(list.playlistId, listOf(song)) > 0) added++ else alreadyThere++
+                        val apply: (List<UserPlaylist>) -> Unit = { removing ->
+                            val (libraryPicked, offlinePicked) = picked.partition { it.playlistId in libraryIds }
+                            val result = OfflinePlaylists.add(offlinePicked.mapTo(HashSet()) { it.playlistId }, targets)
+                            var added = result.added
+                            var alreadyThere = result.alreadyThere
+                            libraryPicked.forEach { list ->
+                                if (dev.auden.library.LocalPlaylists.add(list.playlistId, targets) > 0) added++ else alreadyThere++
+                            }
+                            removing.forEach { list ->
+                                if (list.playlistId in libraryIds) {
+                                    targets.forEach { dev.auden.library.LocalPlaylists.removeMatching(list.playlistId, it) }
+                                } else {
+                                    targets.forEach { OfflinePlaylists.remove(list.playlistId, it) }
+                                }
+                            }
+                            showQueueNotice(
+                                when {
+                                    added > 0 && removing.isNotEmpty() -> context.getString(R.string.playlists_updated_notice)
+                                    added > 1 -> context.resources.getQuantityString(
+                                        R.plurals.added_to_playlists_notice, added, added,
+                                    )
+                                    added == 1 -> context.getString(R.string.song_added_to_playlist)
+                                    removing.isNotEmpty() -> context.getString(R.string.song_removed_from_playlist)
+                                    alreadyThere > 0 -> context.getString(R.string.song_already_in_playlist)
+                                    else -> context.getString(R.string.failed)
+                                },
+                            )
                         }
-                        showQueueNotice(
-                            when {
-                                added > 1 -> context.resources.getQuantityString(
-                                    R.plurals.added_to_playlists_notice, added, added,
-                                )
-                                added == 1 -> context.getString(R.string.song_added_to_playlist)
-                                alreadyThere > 0 -> context.getString(R.string.song_already_in_playlist)
-                                else -> context.getString(R.string.failed)
-                            },
-                        )
+                        songSelection.clear()
+                        if (targets.size > 1 && unpicked.isNotEmpty()) {
+                            selectionConfirm = SelectionConfirm(
+                                title = context.resources.getQuantityString(
+                                    R.plurals.remove_songs_question, targets.size, targets.size,
+                                ),
+                                message = context.getString(
+                                    R.string.remove_songs_from_playlists, unpicked.joinToString(", ") { it.title },
+                                ),
+                                confirmLabel = context.getString(R.string.remove),
+                                onCancel = { if (picked.isNotEmpty()) apply(emptyList()) },
+                                onConfirm = { apply(unpicked) },
+                            )
+                        } else {
+                            apply(unpicked)
+                        }
                     }
                 },
                 onCreate = { title, _ ->
-                    OfflinePlaylists.create(title, listOfNotNull(target))
-                    if (target != null) showQueueNotice(context.getString(R.string.song_added_to_playlist))
+                    OfflinePlaylists.create(title, targets)
+                    if (targets.isNotEmpty()) {
+                        songSelection.clear()
+                        showQueueNotice(context.getString(R.string.song_added_to_playlist))
+                    }
                 },
             )
         }
@@ -5740,26 +6012,65 @@ private fun BitChordApp(
 
         if (showNewPlaylistTypes) {
             BackHandler { showNewPlaylistTypes = false }
-            com.music.bitchord.ui.components.NewPlaylistTypeAlert(
+            // The account's lists, for importing one of them.
+            LaunchedEffect(Unit) { viewModel.loadPlaylists() }
+            NewPlaylistFlow(
                 hazeState = hazeState,
                 signedIn = signedIn,
-                onLocal = {
-                    showNewPlaylistTypes = false
-                    newPlaylistOptions = listOf(PlaylistPrivacy.DEVICE)
-                    creatingPlaylist = true
+                accountPlaylists = playlists,
+                onCreate = { name, destination, privacy ->
+                    viewModel.createPlaylist(
+                        name,
+                        if (destination == PlaylistDestination.DEVICE) PlaylistPrivacy.DEVICE else privacy,
+                        emptyList<Song>(),
+                    )
                 },
-                onYouTubeMusic = {
-                    showNewPlaylistTypes = false
-                    newPlaylistOptions = PlaylistPrivacy.entries.filter { it != PlaylistPrivacy.DEVICE }
-                    creatingPlaylist = true
+                onImportFile = { destination, _ ->
+                    pendingImportDestination = destination
+                    importLauncher.launch(arrayOf("*/*"))
                 },
-                onImportSpotify = {
-                    showNewPlaylistTypes = false
+                onImportSpotify = { destination, privacy ->
+                    spotifyImportPrivacy = if (destination == PlaylistDestination.DEVICE) PlaylistPrivacy.DEVICE else privacy
                     showSpotifyImportDialog = true
                 },
-                onImportFile = {
-                    showNewPlaylistTypes = false
-                    importLauncher.launch(arrayOf("*/*"))
+                onImportYouTubeMusic = { playlist, destination, privacy ->
+                    if (destination == PlaylistDestination.DEVICE) {
+                        // A synced copy, kept up to date as the original is.
+                        if (viewModel.deviceCopyOf(playlist.browseId) == null) {
+                            viewModel.saveToDevice(playlist.browseId, playlist.title, playlist.thumbnailUrl)
+                        } else {
+                            showQueueNotice(context.getString(R.string.song_already_in_playlist))
+                        }
+                    } else {
+                        scope.launch {
+                            val songs = YtMusicRepository.allSongs(playlist.browseId).getOrNull().orEmpty()
+                            if (songs.isEmpty()) {
+                                showQueueNotice(context.getString(R.string.failed))
+                            } else {
+                                viewModel.createPlaylistWithVideoIds(playlist.title, privacy, songs.map { it.videoId }, songs) { _, title, _ ->
+                                    showQueueNotice(context.getString(R.string.spotify_import_done, title))
+                                }
+                            }
+                        }
+                    }
+                },
+                onImportYouTubeLink = { browseId, destination, privacy ->
+                    scope.launch {
+                        val (title, songs) = YtMusicRepository.linkedRelease(browseId).getOrNull() ?: (null to emptyList())
+                        if (songs.isEmpty()) {
+                            showQueueNotice(context.getString(R.string.failed))
+                        } else {
+                            viewModel.createPlaylistWithVideoIds(
+                                title ?: songs.firstOrNull()?.albumName ?: context.getString(R.string.new_playlist),
+                                if (destination == PlaylistDestination.DEVICE) PlaylistPrivacy.DEVICE else privacy,
+                                songs.map { it.videoId },
+                                songs,
+                            ) { id, pTitle, _ ->
+                                showQueueNotice(context.getString(R.string.spotify_import_done, pTitle))
+                                id?.let { viewModel.openDetail(it, pTitle, "${songs.size} songs", songs.firstOrNull()?.thumbnailUrl) }
+                            }
+                        }
+                    }
                 },
                 onDismiss = { showNewPlaylistTypes = false },
             )
@@ -5770,6 +6081,7 @@ private fun BitChordApp(
             SpotifyImportAlert(
                 hazeState = hazeState,
                 signedIn = signedIn,
+                fixedPrivacy = spotifyImportPrivacy,
                 onImported = { title, privacy, songs ->
                     viewModel.createPlaylistWithVideoIds(
                         title,
@@ -5866,11 +6178,18 @@ private fun BitChordApp(
                         UserPlaylist(playlistId = it.id, title = it.title, subtitle = "", thumbnailUrl = null)
                     },
                 ),
-                onRenameInSheet = {
-                    browseRenameInSheet = true
-                    browseMenuOrigin = null
+                onEditPlaylist = if (playlist != null || offlineEditable != null) {
+                    {
+                        browseActions = null
+                        editingList = when {
+                            playlist != null && playlist.isOnDevice -> EditingList(playlist.browseId, playlist.title, EditingKind.DEVICE, playlist)
+                            playlist != null -> EditingList(playlist.browseId, playlist.title, EditingKind.ACCOUNT, playlist)
+                            else -> offlineEditable?.let { EditingList(it.browseId, it.title, EditingKind.OFFLINE, null) }
+                        }
+                    }
+                } else {
+                    null
                 },
-                startRenaming = browseRenameInSheet,
                 onPlayNext = act(playSongsNext),
                 onAddToQueue = act(addSongsToQueue),
                 onPlay = act { songs -> play(songs, 0) }.takeIf { target.fromCard },
@@ -5978,18 +6297,6 @@ private fun BitChordApp(
                         browseActions = null
                     }
                 },
-                onRename = playlist?.let { p ->
-                    { name: String ->
-                        browseActions = null
-                        viewModel.renamePlaylist(p, name)
-                    }
-                } ?: offlineEditable?.let { p ->
-                    { name: String ->
-                        browseActions = null
-                        OfflinePlaylists.rename(p.browseId, name)
-                        viewModel.retitleDetail(p.browseId, name.trim())
-                    }
-                },
                 onReorder = playlist?.let { p ->
                     {
                         browseActions = null
@@ -6048,15 +6355,16 @@ private fun BitChordApp(
                     },
                 savedOnDevice = target.browseId?.let { id -> localPlaylists.any { it.sourceId == id.removePrefix("VL") } } == true,
                 savingOnDevice = target.browseId?.removePrefix("VL") in savingToDevice,
-                onAddLocalFiles = target.browseId
-                    ?.takeIf { target.type == BrowseType.PLAYLIST && (!it.startsWith("local:") || it.startsWith("local:playlist:") || OfflinePlaylists.isOfflinePlaylist(it)) }
-                    ?.let { id ->
-                        {
-                            browseActions = null
-                            pendingLocalFilesTarget = id
-                            localFilesLauncher.launch(arrayOf("audio/*"))
-                        }
-                    },
+                // A whole album, playlist or folder into playlists at once.
+                onAddToPlaylist = act(fileIntoPlaylists).takeIf { target.type != BrowseType.ARTIST },
+                onSelectSongs = if (!target.fromCard && target.browseId != null && target.browseId == detail?.browseId) {
+                    {
+                        browseActions = null
+                        songSelection.start()
+                    }
+                } else {
+                    null
+                },
                 onFetchLyrics = act { songs -> dev.auden.library.lyrics.LyricsBatch.start(context, songs, target.title) }
                     .takeIf { target.type == BrowseType.PLAYLIST || target.type == BrowseType.ALBUM },
                 onDuplicate = playlist?.takeIf { it.isOnDevice }?.let { p ->
@@ -6087,15 +6395,54 @@ private fun BitChordApp(
         }
         // In a recompose scope of its own, as the track menu's is.
         Isolated {
-            // Rename is a text field and a keyboard, which have no place on a menu
-            // floating over the page: the menu hands it on, and the form comes up
-            // here on a sheet of its own.
-            browseActions?.takeIf { browseRenameInSheet }?.let { target ->
+            // The playlist's editor: its name, cover and description, on a sheet of its own — a text field and
+            // its keyboard have no place on a menu floating over the page.
+            editingList?.let { target ->
+                val library = localPlaylists.firstOrNull { it.browseId == target.browseId }
+                val notes by dev.auden.library.PlaylistNotes.notes.collectAsStateWithLifecycle()
+                val coverRevision by dev.auden.library.PlaylistCovers.revision.collectAsStateWithLifecycle()
                 ModalBottomSheet(
-                    onDismissRequest = { browseActions = null },
+                    onDismissRequest = { editingList = null },
                     containerColor = MaterialTheme.colorScheme.background,
                 ) {
-                    browseMenuBody(target)
+                    coverRevision
+                    EditPlaylistSheet(
+                        name = library?.title ?: target.title,
+                        description = notes[target.browseId.removePrefix("local:playlist:").removePrefix("local:offline:")].orEmpty(),
+                        coverUrl = library?.let {
+                            dev.auden.library.PlaylistCovers.coverFor(context, it)
+                                ?: it.songs.firstOrNull { s -> !s.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl
+                        },
+                        canEditCover = target.kind == EditingKind.DEVICE,
+                        hasCustomCover = dev.auden.library.CustomPlaylistCovers.isCustom(library?.coverUrl),
+                        canEditDescription = target.kind != EditingKind.ACCOUNT,
+                        onChoosePhoto = {
+                            coverPickTarget = target.browseId
+                            coverPicker.launch(
+                                androidx.activity.result.PickVisualMediaRequest(
+                                    androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly,
+                                ),
+                            )
+                        },
+                        onCreateCover = { creatingCover = target.browseId to (library?.title ?: target.title) },
+                        onRemoveCover = {
+                            viewModel.setLocalPlaylistCover(target.browseId, null)
+                            showQueueNotice(context.getString(R.string.cover_removed))
+                        },
+                        onSave = { name, note ->
+                            val renamed = name.trim() != (library?.title ?: target.title).trim()
+                            when (target.kind) {
+                                EditingKind.OFFLINE -> if (renamed) {
+                                    OfflinePlaylists.rename(target.browseId, name)
+                                    viewModel.retitleDetail(target.browseId, name.trim())
+                                }
+                                else -> if (renamed) target.playlist?.let { viewModel.renamePlaylist(it, name) }
+                            }
+                            if (target.kind != EditingKind.ACCOUNT) dev.auden.library.PlaylistNotes.set(target.browseId, note)
+                            editingList = null
+                        },
+                        onCancel = { editingList = null },
+                    )
                 }
             }
             HeldContextMenu(
@@ -6122,7 +6469,7 @@ private fun BitChordApp(
             }
             // A tap on a ⋯ — the release page's own — hangs the menu off it.
             IosMenuPopover(
-                item = browseActions?.takeIf { browseMenuOrigin == null && !browseRenameInSheet },
+                item = browseActions?.takeIf { browseMenuOrigin == null },
                 anchor = browseMenuAnchor,
                 onDismiss = { browseActions = null },
                 backdrop = pageBackdrop,
@@ -6134,7 +6481,6 @@ private fun BitChordApp(
                 if (browseActions == null) {
                     browseMenuOrigin = null
                     browseMenuAnchor = null
-                    browseRenameInSheet = false
                 }
             }
         }
@@ -7127,6 +7473,11 @@ private const val PLAYER_SCRIM_ALPHA = 0.32f
  */
 @Composable
 private fun Isolated(content: @Composable () -> Unit) = content()
+
+/** What kind of playlist the edit sheet is open on: it decides which of the editor's cards are drawn. */
+private enum class EditingKind { DEVICE, ACCOUNT, OFFLINE }
+
+private class EditingList(val browseId: String, val title: String, val kind: EditingKind, val playlist: UserPlaylist?)
 
 /** Longer than the ⋯ menu's exit, so its panel keeps its frost on the way out. */
 private const val SNAPSHOT_RELEASE_DELAY_MS = 400L

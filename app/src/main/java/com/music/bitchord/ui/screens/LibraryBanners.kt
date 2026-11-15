@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -107,7 +108,21 @@ fun LibraryReplayEntry(
             .fillMaxWidth()
             .height(72.dp)
             .clip(BannerShape)
-            .background(Brush.linearGradient(listOf(Color(0xFFF2B84B), Color(0xFFD98E2B), Color(0xFF9C5A14))))
+            .drawBehind {
+                // A mesh of green, blue and violet: a deep base with a soft pool of each colour laid over it.
+                drawRect(Color(0xFF14325C))
+                fun pool(color: Color, x: Float, y: Float, radius: Float) = drawRect(
+                    Brush.radialGradient(
+                        listOf(color, color.copy(alpha = 0f)),
+                        center = androidx.compose.ui.geometry.Offset(size.width * x, size.height * y),
+                        radius = size.width * radius,
+                    ),
+                )
+                pool(Color(0xFF1FB57A), 0.0f, 0.05f, 0.55f)
+                pool(Color(0xFF2E7BE8), 0.5f, 1.1f, 0.5f)
+                pool(Color(0xFF7B4DE0), 1.0f, 0.0f, 0.6f)
+                pool(Color(0xFF2FC7B5), 0.3f, 1.0f, 0.3f)
+            }
             .clickable { onOpenReplay(ReplayStoryPage.MINUTES) },
     ) {
         // The bars of a listening, rising to the right.
@@ -122,7 +137,7 @@ fun LibraryReplayEntry(
         }
         Column(Modifier.align(Alignment.CenterStart).padding(start = 16.dp)) {
             Text(
-                stringResource(R.string.replay).uppercase(),
+                stringResource(R.string.replay_weekly_summary).uppercase(),
                 color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.8.sp,
             )
             Text(

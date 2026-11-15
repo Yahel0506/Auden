@@ -72,6 +72,11 @@ private val IMPORT_LANGUAGES = listOf(
 fun SpotifyImportAlert(
     hazeState: HazeState,
     signedIn: Boolean,
+    /**
+     * Where the result goes, when it was decided before this alert was opened (the new-playlist flow asks first):
+     * [PlaylistPrivacy.DEVICE] to keep it here, or who can see it on YouTube Music. Null asks here, as it used to.
+     */
+    fixedPrivacy: PlaylistPrivacy? = null,
     /** Called once the songs are matched; [privacy] is meaningful only when signed in. */
     onImported: (title: String, privacy: PlaylistPrivacy, songs: List<Song>) -> Unit,
     onDismiss: () -> Unit,
@@ -79,7 +84,7 @@ fun SpotifyImportAlert(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var link by remember { mutableStateOf("") }
-    var privacy by remember { mutableStateOf(PlaylistPrivacy.PRIVATE) }
+    var privacy by remember { mutableStateOf(fixedPrivacy ?: PlaylistPrivacy.PRIVATE) }
     var selectedLanguage by remember { mutableStateOf("No Preference") }
     var customLanguageInput by remember { mutableStateOf("") }
     var working by remember { mutableStateOf(false) }
@@ -166,7 +171,7 @@ fun SpotifyImportAlert(
             } else {
                 Text(
                     text = status ?: stringResource(
-                        if (signedIn) R.string.spotify_import_description
+                        if (signedIn && fixedPrivacy != PlaylistPrivacy.DEVICE) R.string.spotify_import_description
                         else R.string.spotify_import_description_local,
                     ),
                     modifier = Modifier.padding(top = 4.dp, bottom = 14.dp),
@@ -239,7 +244,7 @@ fun SpotifyImportAlert(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Done),
                     )
                 }
-                if (signedIn) {
+                if (signedIn && fixedPrivacy == null) {
                     Text(
                         text = stringResource(R.string.who_can_see_it),
                         modifier = Modifier

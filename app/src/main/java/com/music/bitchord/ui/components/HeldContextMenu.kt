@@ -200,7 +200,14 @@ fun <T : Any> HeldContextMenu(
                     .then(if (reduceMotion) Modifier else Modifier.shadow(20.dp, cardShape, clip = false))
                     .pointerInput(Unit) {}
                     .clip(cardShape)
-                    .background(plate)
+                    // The alerts' glass: the page blurred behind it under the nav bar's tint.
+                    .then(
+                        if (reduceDynamicBlur) {
+                            Modifier.background(plate)
+                        } else {
+                            Modifier.optimizedHazeEffect(state = hazeState, style = navGlassHazeStyle())
+                        },
+                    )
                     .border(0.5.dp, hairline, cardShape)
                     .then(
                         if (onPreviewClick != null) {
@@ -224,9 +231,14 @@ fun <T : Any> HeldContextMenu(
                 Modifier
                     // Taps between rows land on the menu, not the scrim under it.
                     .pointerInput(Unit) {}
-                    // The same frosted plate the held item sits on, so the
-                    // item and its menu read as one thing lifted off the page.
-                    .iosMenuPanel(fillOverride = plate, rimOverride = hairline)
+                    // The same glass the held item sits on, so the item and its menu read as one thing
+                    // lifted off the page — and as the alerts do. Plain slab only when the blur is off.
+                    .iosMenuPanel(
+                        translucent = true,
+                        hazeState = hazeState,
+                        fillOverride = if (reduceDynamicBlur) plate else null,
+                        rimOverride = hairline,
+                    )
                     .padding(vertical = 8.dp),
             ) {
                 // Added onto the plate, on a dark one only: see [IosMenuPopover].

@@ -71,7 +71,7 @@ fun AccountProfileSelector(
 ) {
     var managing by remember { mutableStateOf(false) }
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
-    val shape = MaterialTheme.shapes.extraLarge
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(ALERT_CORNER)
     val surface = MaterialTheme.colorScheme.surface
     val dark = surface.luminance() < 0.5f
     val style = navGlassHazeStyle()
@@ -102,14 +102,6 @@ fun AccountProfileSelector(
                         )
                     },
                 )
-                // The same hairline the mini player and the nav bar wear.
-                .border(
-                    0.5.dp,
-                    // White on dark like the bars; a light surface has nothing
-                    // for a white hairline to show against.
-                    if (dark) Color.White.copy(alpha = 0.10f) else Color.Black.copy(alpha = 0.10f),
-                    shape,
-                )
                 .clickable(onClick = {}),
         ) {
             // Room under the last row to match the space between rows, so the
@@ -131,8 +123,11 @@ fun AccountProfileSelector(
                         managing, { onSelect(account, profile); onDismiss() }, { onRemoveAccount(account) })
                 }
                 }
+                item { AlertRule(Modifier.padding(top = 6.dp)) }
                 item { SelectorAction(SfIcons.Add, stringResource(R.string.add_account), onClick = onAddAccount) }
+                item { AlertRule() }
                 item { SelectorAction(SfIcons.Close, stringResource(R.string.manage_accounts)) { managing = !managing } }
+                item { AlertRule() }
                 item { SelectorAction(SfIcons.Settings, stringResource(R.string.settings), onClick = onOpenSettings) }
             }
         }

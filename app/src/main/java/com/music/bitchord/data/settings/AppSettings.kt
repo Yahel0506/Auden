@@ -1008,6 +1008,7 @@ object AppSettings {
             likedTitle = context.getString(com.music.bitchord.R.string.auto_liked),
         )
         com.music.bitchord.data.PlaylistLocalFiles.init(context)
+        dev.auden.library.PlaylistNotes.init(context)
         readAll()
         watchConnection(context)
     }
