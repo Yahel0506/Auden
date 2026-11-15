@@ -90,6 +90,8 @@ fun NewPlaylistFlow(
     onImportFile: (PlaylistDestination, PlaylistPrivacy) -> Unit,
     onImportSpotify: (PlaylistDestination, PlaylistPrivacy) -> Unit,
     onImportYouTubeMusic: (UserPlaylist, PlaylistDestination, PlaylistPrivacy) -> Unit,
+    /** A pasted link, as the page id [youTubeMusicLinkBrowseId] read off it; needs no account. */
+    onImportYouTubeLink: (browseId: String, PlaylistDestination, PlaylistPrivacy) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var step by remember { mutableStateOf(FlowStep.ROOT) }
@@ -97,6 +99,7 @@ fun NewPlaylistFlow(
     var destination by remember { mutableStateOf(PlaylistDestination.DEVICE) }
     var privacy by remember { mutableStateOf(PlaylistPrivacy.PRIVATE) }
     var name by remember { mutableStateOf("") }
+    var link by remember { mutableStateOf("") }
 
     val back: () -> Unit = {
         step = when (step) {
@@ -160,8 +163,7 @@ fun NewPlaylistFlow(
                             OptionCard(
                                 icon = vectorResource(Res.drawable.ytmusic_mono),
                                 title = stringResource(R.string.flow_dest_yt),
-                                subtitle = stringResource(if (signedIn) R.string.flow_src_yt_sub else R.string.flow_sign_in_needed),
-                                enabled = signedIn,
+                                subtitle = stringResource(if (signedIn) R.string.flow_src_yt_link_sub else R.string.flow_src_yt_link_only_sub),
                             ) { source = ImportSource.YT_MUSIC; step = FlowStep.IMPORT_DESTINATION }
                             OptionCard(vectorResource(Res.drawable.spotify_mono), stringResource(R.string.flow_src_spotify), stringResource(R.string.flow_src_spotify_sub)) {
                                 source = ImportSource.SPOTIFY; step = FlowStep.IMPORT_DESTINATION
@@ -196,16 +198,25 @@ fun NewPlaylistFlow(
 
                     FlowStep.PICK_YT -> {
                         Header(stringResource(R.string.flow_pick_playlist), back)
-                        if (accountPlaylists.isEmpty()) {
-                            Text(
-                                stringResource(R.string.flow_no_playlists),
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 24.dp),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center,
-                                fontSize = 14.sp,
+                        val linked = youTubeMusicLinkBrowseId(link)
+                        Column(Modifier.padding(horizontal = 14.dp)) {
+                            PillTextField(
+                                value = link,
+                                onValueChange = { link = it },
+                                placeholder = stringResource(R.string.flow_paste_link),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(onDone = {}),
                             )
-                        } else {
-                            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 340.dp)) {
+                        }
+                        if (signedIn && accountPlaylists.isNotEmpty()) {
+                            Text(
+                                stringResource(R.string.flow_or_yours).uppercase(),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(start = 18.dp, top = 14.dp, bottom = 4.dp),
+                            )
+                            LazyColumn(Modifier.fillMaxWidth().heightIn(max = 260.dp)) {
                                 items(accountPlaylists, key = { it.playlistId }) { playlist ->
                                     Row(
                                         Modifier
@@ -230,7 +241,14 @@ fun NewPlaylistFlow(
                                 }
                             }
                         }
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(12.dp))
+                        AlertRule()
+                        AlertAction(
+                            label = stringResource(R.string.flow_import_link),
+                            emphasised = true,
+                            enabled = linked != null,
+                            onClick = animatedExit { linked?.let { onImportYouTubeLink(it, destination, privacy) }; onDismiss() },
+                        )
                         AlertRule()
                         AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
                     }
@@ -238,6 +256,20 @@ fun NewPlaylistFlow(
             }
         }
     }
+}
+
+/**
+ * The page id a pasted YouTube Music (or YouTube) link points at — `list=` playlists, `/browse/` albums, or a bare
+ * playlist id — or null when the text is none of them.
+ */
+fun youTubeMusicLinkBrowseId(text: String): String? {
+    val t = text.trim()
+    if (t.isEmpty()) return null
+    Regex("""[?&]list=([A-Za-z0-9_-]{10,})""").find(t)?.groupValues?.get(1)?.let { return if (it.startsWith("VL")) it else "VL$it" }
+    Regex("""/browse/(MPRE[A-Za-z0-9_-]+|VL[A-Za-z0-9_-]+)""").find(t)?.groupValues?.get(1)?.let { return it }
+    Regex("""^(PL|OLAK5uy_|RDCLAK|UU|LL)[A-Za-z0-9_-]{8,}$""").find(t)?.let { return "VL$t" }
+    Regex("""^(VL|MPREb_)[A-Za-z0-9_-]{8,}$""").find(t)?.let { return t }
+    return null
 }
 
 /** The title of a step, with the way back to the one before it when there is one. */

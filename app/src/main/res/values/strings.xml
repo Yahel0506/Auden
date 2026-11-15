@@ -262,7 +262,7 @@
     <string name="appearance">Appearance</string>
     <string name="storage">Storage</string>
     <string name="your_data">Your data</string>
-    <string name="miscellaneous">Miscellaneous</string>
+    <string name="miscellaneous">Advanced</string>
     <string name="lossless_hq_audio">Lossless / HQ Audio</string>
     <string name="on_wifi">On Wi-Fi</string>
     <string name="on_mobile_data">On mobile data</string>
@@ -344,7 +344,6 @@
     <string name="show_listen_together_button_subtitle">Off, the player shows only the audio output button between lyrics and the queue</string>
     <string name="app_icon">App icon</string>
     <string name="app_icon_default">Default</string>
-    <string name="app_icon_monochrome" translatable="false">Monochrome</string>
     <string name="app_icon_liquid_glass" translatable="false">Liquid Glass</string>
     <string name="app_icon_liquid_glass_dark" translatable="false">Liquid Glass Dark</string>
     <string name="app_icon_liquid_glass_clear" translatable="false">Liquid Glass Clear</string>
@@ -357,15 +356,6 @@
     <string name="app_icon_pixel_glass_dark" translatable="false">Pixel Glass Dark</string>
     <string name="app_icon_pixel_glass_clear" translatable="false">Pixel Glass Clear</string>
     <string name="app_icon_pixel_glass_clear_dark" translatable="false">Pixel Glass Clear Dark</string>
-    <string name="app_icon_neon_silver" translatable="false">Neon Silver</string>
-    <string name="app_icon_neon_cyan" translatable="false">Neon Cyan</string>
-    <string name="app_icon_neon_violet" translatable="false">Neon Violet</string>
-    <string name="app_icon_samsung_neon_silver" translatable="false">Samsung Neon Silver</string>
-    <string name="app_icon_samsung_neon_cyan" translatable="false">Samsung Neon Cyan</string>
-    <string name="app_icon_samsung_neon_violet" translatable="false">Samsung Neon Violet</string>
-    <string name="app_icon_pixel_neon_silver" translatable="false">Pixel Neon Silver</string>
-    <string name="app_icon_pixel_neon_cyan" translatable="false">Pixel Neon Cyan</string>
-    <string name="app_icon_pixel_neon_violet" translatable="false">Pixel Neon Violet</string>
     <string name="theme">Theme</string>
     <string name="font">Font</string>
     <string name="font_default">Default</string>
@@ -1802,4 +1792,66 @@
     <string name="flow_continue">Continue</string>
     <string name="flow_pick_playlist">Choose a playlist</string>
     <string name="flow_no_playlists">Your account has no playlists yet</string>
+    <!-- Settings blocks and category summaries (phase 2) -->
+    <string name="settings_block_output">Audio output</string>
+    <string name="settings_block_sound">Sound</string>
+    <string name="settings_block_transitions">Transitions</string>
+    <string name="settings_block_queue">Queue and autoplay</string>
+    <string name="settings_block_versions">Song versions</string>
+    <string name="settings_block_devices">Devices</string>
+    <string name="settings_block_dj_app">In the app</string>
+    <string name="settings_block_dj_voice">Voice and comments</string>
+    <string name="settings_block_dj_sets">Sets</string>
+    <string name="settings_block_dl_quality">Quality and network</string>
+    <string name="settings_block_dl_files">Where and how they are kept</string>
+    <string name="settings_block_dl_lyrics">Saved with the song</string>
+    <string name="settings_block_dl_playlists">Downloaded playlists</string>
+    <string name="settings_block_local_folders">Folders</string>
+    <string name="settings_block_local_filters">Filters</string>
+    <string name="settings_block_home_sections">Sections shown</string>
+    <string name="settings_block_home_mix">Mix with your library</string>
+    <string name="settings_block_style">Theme and style</string>
+    <string name="settings_block_player_art">Player background and cover</string>
+    <string name="settings_block_player_controls">Player controls and info</string>
+    <string name="settings_block_pages">Album and artist pages</string>
+    <string name="settings_block_lyrics">Lyrics</string>
+    <string name="settings_block_app_language">App language</string>
+    <string name="settings_block_display">Screen</string>
+    <string name="settings_block_effects">Lighter effects</string>
+    <string name="settings_block_song_cache">Song cache</string>
+    <string name="settings_block_image_cache">Images</string>
+    <string name="settings_block_replay">Replay</string>
+    <string name="settings_block_backup">Backup</string>
+    <string name="settings_block_advanced">Advanced</string>
+    <string name="settings_block_watch">Smartwatch</string>
+    <string name="settings_group_music">Music</string>
+    <string name="settings_group_customize">Customize</string>
+    <string name="settings_group_device">Device and data</string>
+    <string name="settings_group_more">More</string>
+    <string name="settings_cat_playback_sub">Output, sound, transitions and queue</string>
+    <string name="settings_cat_dj_sub">Voice, comments and sets</string>
+    <string name="settings_cat_downloads_sub">Quality, folders, lyrics and synced playlists</string>
+    <string name="settings_cat_local_sub">Folders and filters</string>
+    <string name="settings_cat_home_sub">What the home feed shows</string>
+    <string name="settings_cat_appearance_sub">Theme, glass, player, covers and lyrics</string>
+    <string name="settings_cat_language_sub">The language of the app</string>
+    <string name="settings_cat_performance_sub">Refresh rate and lighter effects</string>
+    <string name="settings_cat_storage_sub">Song cache and images</string>
+    <string name="settings_cat_data_sub">Replay and backups</string>
+    <string name="settings_cat_misc_sub">Advanced options and smartwatch</string>
+    <string name="lyrics_preview_1">Hold me in the afterglow</string>
+    <string name="lyrics_preview_2">Every light is turning low</string>
+    <string name="lyrics_preview_3">Carry me where the river goes</string>
+    <string name="lyrics_preview_4">Slow down, the night is young</string>
+    <string name="lyrics_preview_5">Keep the echo, let it go</string>
+    <string name="lyrics_preview_6">Until the morning finds us</string>
+    <string name="replay_weekly_summary">Weekly recap</string>
+    <string name="home_because_you_listened">Because you listened to %1$s</string>
+    <string name="home_more_like_artist">More like %1$s</string>
+    <string name="home_best_of_artist">Best of %1$s</string>
+    <string name="flow_src_yt_link_sub">From a link, or one of your playlists</string>
+    <string name="flow_src_yt_link_only_sub">From a link</string>
+    <string name="flow_paste_link">Paste a YouTube Music link</string>
+    <string name="flow_or_yours">Or one of your playlists</string>
+    <string name="flow_import_link">Import</string>
 </resources>

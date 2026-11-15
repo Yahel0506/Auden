@@ -59,7 +59,7 @@ class ReplayState(
  */
 @Composable
 fun rememberReplayState(active: Boolean): Pair<ReplayState, (ReplayPeriod) -> Unit> {
-    var period by rememberSaveable { mutableStateOf(ReplayPeriod.THIS_YEAR) }
+    var period by rememberSaveable { mutableStateOf(ReplayPeriod.THIS_WEEK) }
     var summary by remember { mutableStateOf<ReplaySummary?>(null) }
     var loading by remember { mutableStateOf(true) }
     var memberSince by remember { mutableStateOf<String?>(null) }

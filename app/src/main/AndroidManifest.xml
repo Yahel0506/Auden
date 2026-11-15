@@ -303,8 +303,8 @@
             android:name=".LauncherMonochrome"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_monochrome"
-            android:roundIcon="@mipmap/ic_monochrome"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:targetActivity=".MainActivity">
             <intent-filter>
@@ -485,8 +485,8 @@
             android:name=".LauncherNeonSilver"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_neon_silver"
-            android:roundIcon="@mipmap/ic_neon_silver"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:targetActivity=".MainActivity">
             <intent-filter>
@@ -499,8 +499,8 @@
             android:name=".LauncherNeonCyan"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_neon_cyan"
-            android:roundIcon="@mipmap/ic_neon_cyan"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:targetActivity=".MainActivity">
             <intent-filter>
@@ -513,8 +513,8 @@
             android:name=".LauncherNeonViolet"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_neon_violet"
-            android:roundIcon="@mipmap/ic_neon_violet"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:targetActivity=".MainActivity">
             <intent-filter>
@@ -527,8 +527,8 @@
             android:name=".LauncherSamsungNeonSilver"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_samsung_neon_silver"
-            android:roundIcon="@mipmap/ic_samsung_neon_silver"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:targetActivity=".MainActivity">
             <intent-filter>
@@ -541,8 +541,8 @@
             android:name=".LauncherSamsungNeonCyan"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_samsung_neon_cyan"
-            android:roundIcon="@mipmap/ic_samsung_neon_cyan"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:targetActivity=".MainActivity">
             <intent-filter>
@@ -555,8 +555,8 @@
             android:name=".LauncherSamsungNeonViolet"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_samsung_neon_violet"
-            android:roundIcon="@mipmap/ic_samsung_neon_violet"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:targetActivity=".MainActivity">
             <intent-filter>
@@ -569,8 +569,8 @@
             android:name=".LauncherPixelNeonSilver"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_pixel_neon_silver"
-            android:roundIcon="@mipmap/ic_pixel_neon_silver"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:targetActivity=".MainActivity">
             <intent-filter>
@@ -583,8 +583,8 @@
             android:name=".LauncherPixelNeonCyan"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_pixel_neon_cyan"
-            android:roundIcon="@mipmap/ic_pixel_neon_cyan"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:targetActivity=".MainActivity">
             <intent-filter>
@@ -597,8 +597,8 @@
             android:name=".LauncherPixelNeonViolet"
             android:enabled="false"
             android:exported="true"
-            android:icon="@mipmap/ic_pixel_neon_violet"
-            android:roundIcon="@mipmap/ic_pixel_neon_violet"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher"
             android:label="@string/app_name"
             android:targetActivity=".MainActivity">
             <intent-filter>

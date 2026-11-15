@@ -748,6 +748,31 @@ object YtMusicRepository {
     }
 
     /**
+     * The playlist or album behind [browseId], read the way a link points at it: no account needed. The tracks, in
+     * order, and the title off the page's header (null when the header names none).
+     */
+    suspend fun linkedRelease(browseId: String): Result<Pair<String?, List<Song>>> = call("linked:$browseId") {
+        val response = Innertube.browse(browseId)
+        val header = response["header"]
+        val title = header?.let { firstRunsText(it) }
+        val songs = allSongs(browseId).getOrNull().orEmpty()
+        title to songs
+    }
+
+    /** The first `title.runs[0].text` found anywhere under [node], depth first. */
+    private fun firstRunsText(node: kotlinx.serialization.json.JsonElement): String? = when (node) {
+        is kotlinx.serialization.json.JsonObject -> {
+            val direct = (node["title"] as? kotlinx.serialization.json.JsonObject)
+                ?.get("runs")?.let { it as? kotlinx.serialization.json.JsonArray }
+                ?.firstOrNull()?.let { it as? kotlinx.serialization.json.JsonObject }
+                ?.get("text")?.let { it as? kotlinx.serialization.json.JsonPrimitive }?.content
+            direct ?: node.values.firstNotNullOfOrNull { firstRunsText(it) }
+        }
+        is kotlinx.serialization.json.JsonArray -> node.firstNotNullOfOrNull { firstRunsText(it) }
+        else -> null
+    }
+
+    /**
      * Joins an album's metadata page to its authoritative track listing.
      *
      * Catalogue album pages sometimes carry only a handful of preview rows.

@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.data.model.HomeShelf
@@ -159,7 +160,7 @@ fun LibraryScreen(
                     }
                 }
             }
-            item(key = "replay") { replay() }
+            item(key = "replay") { Column(Modifier.padding(top = 8.dp, bottom = 10.dp)) { replay() } }
             // Pinned lists only, at most six, centred when they do not fill a row of three.
             val shelves = (state as? UiState.Success)?.data?.shelves.orEmpty()
             val everyList = deviceItems + shelves.flatMap { it.items } + spotifyPlaylists
@@ -202,15 +203,6 @@ fun LibraryScreen(
                 }
             }
             if (!signedIn) {
-                item(key = "shelf:$PLAYLISTS") {
-                    val emptyPlaylists = HomeShelf(PLAYLISTS, emptyList())
-                    PlaylistShelf(
-                        shelf = emptyPlaylists.copy(title = ytMusicTitle),
-                        onItemClick = onShelfItemClick,
-                        onItemLongPress = onShelfItemLongPress,
-                        onShowAll = { onShowAll(emptyPlaylists) },
-                    )
-                }
                 spotifyRow()
                 item {
                     MessageState(
@@ -295,7 +287,7 @@ private fun LibraryLinkList(links: List<LibraryLink>, onClick: (ShelfItem) -> Un
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 40.dp)
+                    .heightIn(min = 44.dp)
                     .clickable { link.onClick?.invoke() ?: onClick(link.item) }
                     .padding(horizontal = PAGE_GUTTER),
             ) {
@@ -319,7 +311,7 @@ private fun LibraryLinkList(links: List<LibraryLink>, onClick: (ShelfItem) -> Un
                 Spacer(Modifier.width(LINK_ICON_GAP))
                 Text(
                     text = link.item.title,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp),
                     color = MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -515,7 +507,7 @@ private fun PinnedGrid(
     onItemClick: (ShelfItem) -> Unit,
     onItemLongPress: (ShelfItem) -> Unit,
 ) {
-    BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = PAGE_GUTTER).padding(top = 4.dp, bottom = 14.dp)) {
+    BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = PAGE_GUTTER).padding(top = 4.dp, bottom = 20.dp)) {
         val cardWidth = (maxWidth - LIBRARY_GRID_SPACING * (PINNED_COLUMNS - 1)) / PINNED_COLUMNS
         Column(verticalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
             items.chunked(PINNED_COLUMNS).forEach { rowItems ->
@@ -530,6 +522,7 @@ private fun PinnedGrid(
                             onLongPress = { onItemLongPress(item) },
                             modifier = Modifier.width(cardWidth),
                             showSubtitle = false,
+                            compactTitle = true,
                         )
                     }
                 }

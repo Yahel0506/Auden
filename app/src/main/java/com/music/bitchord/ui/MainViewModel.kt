@@ -149,8 +149,33 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * [dev.auden.home.HomeComposer]. With nothing local to add — or offline with nothing local —
      * it is the feed's own state, untouched, so a loading or failed feed still reads as one.
      */
+    /** Recommendations drawn from the app's own listening, for a listener with no account. */
+    private val _tasteShelves = MutableStateFlow<List<HomeShelf>>(emptyList())
+    private var tasteJob: Job? = null
+
+    /** Builds [_tasteShelves] while signed out; cleared once signed in, where the account's own feed does this. */
+    private fun loadTasteShelves() {
+        tasteJob?.cancel()
+        if (_signedIn.value) {
+            _tasteShelves.value = emptyList()
+            return
+        }
+        tasteJob = viewModelScope.launch {
+            val shelves = runCatching { dev.auden.home.TasteShelves.build(getApplication()) }.getOrNull().orEmpty()
+            if (!_signedIn.value) _tasteShelves.value = shelves
+        }
+    }
+
     val homeComposed: StateFlow<UiState<List<HomeShelf>>> = combine(
-        _home,
+        combine(_home, _tasteShelves, _signedIn) { remote, taste, signed ->
+            if (signed || taste.isEmpty()) {
+                remote
+            } else {
+                // After the feed's first shelf, so the page still opens as it always does.
+                val feed = (remote as? UiState.Success)?.data.orEmpty()
+                UiState.Success(feed.take(1) + taste + feed.drop(1))
+            }
+        },
         _localHomeShelves,
         AppSettings.homeLocalShelves,
         AppSettings.homeLocalWeight,
@@ -2217,6 +2242,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // one at the tail.
         _homePendingShelves.value = 1 + YtMusicRepository.HOME_SUPPLEMENT_BROWSE_IDS.size
         loadTopPicks(identity, rebuild = false)
+        loadTasteShelves()
         viewModelScope.launch {
             launch {
                 try {
@@ -2386,6 +2412,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // Top Picks keeps to its hour; a pull refreshes the feed, not the
         // picks, unless the hour has already turned over.
         if (topPicksJob?.isActive != true) loadTopPicks(identity, rebuild = false)
+        loadTasteShelves()
         YtMusicRepository.home().onSuccess { feed ->
             if (identity != listenerKey()) return@onSuccess
             homeContinuation = feed.continuation

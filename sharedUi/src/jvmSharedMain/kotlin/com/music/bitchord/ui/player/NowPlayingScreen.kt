@@ -372,6 +372,8 @@ private fun PlayerMeshBackdrop(
         playing = playing,
         soften = { panelMix },
         shade = { panelMix },
+        // The panels dim only their bright pools, inside the mesh; no even shade over all of it.
+        panelShadeScale = 0f,
         modifier = Modifier.graphicsLayer { this.alpha = alpha() },
     )
 }

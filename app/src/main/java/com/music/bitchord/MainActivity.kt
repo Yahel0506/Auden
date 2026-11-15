@@ -6054,6 +6054,24 @@ private fun BitChordApp(
                         }
                     }
                 },
+                onImportYouTubeLink = { browseId, destination, privacy ->
+                    scope.launch {
+                        val (title, songs) = YtMusicRepository.linkedRelease(browseId).getOrNull() ?: (null to emptyList())
+                        if (songs.isEmpty()) {
+                            showQueueNotice(context.getString(R.string.failed))
+                        } else {
+                            viewModel.createPlaylistWithVideoIds(
+                                title ?: songs.firstOrNull()?.albumName ?: context.getString(R.string.new_playlist),
+                                if (destination == PlaylistDestination.DEVICE) PlaylistPrivacy.DEVICE else privacy,
+                                songs.map { it.videoId },
+                                songs,
+                            ) { id, pTitle, _ ->
+                                showQueueNotice(context.getString(R.string.spotify_import_done, pTitle))
+                                id?.let { viewModel.openDetail(it, pTitle, "${songs.size} songs", songs.firstOrNull()?.thumbnailUrl) }
+                            }
+                        }
+                    }
+                },
                 onDismiss = { showNewPlaylistTypes = false },
             )
         }

@@ -174,6 +174,7 @@ import com.music.bitchord.ui.components.LIBRARY_GRID_SPACING
 import com.music.bitchord.ui.components.MessageState
 import com.music.bitchord.ui.components.FolderCover
 import com.music.bitchord.ui.components.folderCoverStyle
+import androidx.compose.ui.graphics.ImageBitmap
 import com.music.bitchord.ui.components.PAGE_GUTTER
 import com.music.bitchord.ui.components.NUMBERED_ROW_DIVIDER_INSET
 import com.music.bitchord.ui.components.RowMoreButton
@@ -592,6 +593,7 @@ fun DetailScreen(
                     }
                     CoverContinuation(
                         imageUrl = if (isArtist) appleArt?.heroUrl ?: page.thumbnailUrl else page.thumbnailUrl,
+                        folderId = page.browseId.takeIf { page.thumbnailUrl == null && !isArtist },
                         seam = continuationSeam,
                         length = maxHeight * COVER_CONTINUATION_LENGTH,
                         pageColor = pageColor,
@@ -982,7 +984,9 @@ private fun ReleaseHeader(
     var artFailed by remember(page.thumbnailUrl) { mutableStateOf(false) }
     // A placeholder is a sleeve or it is nothing, as on the player: blown out
     // to the page's width it would only tint the top of the screen.
-    val bleed = fullBleed && page.thumbnailUrl != null && !artFailed
+    // A device folder has no picture but its generated cover, which runs the page's width the same way.
+    val folderCover = page.thumbnailUrl == null && folderCoverStyle(page.browseId) != null
+    val bleed = fullBleed && ((page.thumbnailUrl != null && !artFailed) || folderCover)
 
     Column(
         modifier = Modifier
@@ -1005,34 +1009,38 @@ private fun ReleaseHeader(
                     }
                     .aspectRatio(1f),
             ) {
-                AsyncImage(
-                    model = page.thumbnailUrl.artworkAt(HEADER_ART_PX),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    onState = { artFailed = it is AsyncImagePainter.State.Error },
-                    modifier = Modifier
-                        .matchParentSize()
-                        // The mask below erases part of what this layer drew,
-                        // which it can only do in a buffer of its own.
-                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                        .drawWithContent {
-                            drawContent()
-                            // The player banner's dissolve, along smootherstep so
-                            // neither end of it shows as a line.
-                            drawRect(
-                                brush = Brush.verticalGradient(
-                                    colorStops = Array(FADE_CURVE_STOPS + 1) { i ->
-                                        val t = i / FADE_CURVE_STOPS.toFloat()
-                                        t to Color.Black.copy(alpha = 1f - smootherStep(t))
-                                    },
-                                    startY = size.height * (1f - FULL_BLEED_FADE_FRACTION),
-                                    endY = size.height,
-                                ),
-                                blendMode = BlendMode.DstIn,
-                            )
-                        }
-                        .background(palette.elevated),
-                )
+                val dissolve = Modifier
+                    .matchParentSize()
+                    // The mask below erases part of what this layer drew,
+                    // which it can only do in a buffer of its own.
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        // The player banner's dissolve, along smootherstep so
+                        // neither end of it shows as a line.
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                colorStops = Array(FADE_CURVE_STOPS + 1) { i ->
+                                    val t = i / FADE_CURVE_STOPS.toFloat()
+                                    t to Color.Black.copy(alpha = 1f - smootherStep(t))
+                                },
+                                startY = size.height * (1f - FULL_BLEED_FADE_FRACTION),
+                                endY = size.height,
+                            ),
+                            blendMode = BlendMode.DstIn,
+                        )
+                    }
+                if (folderCover) {
+                    FolderCover(browseId = page.browseId, modifier = dissolve)
+                } else {
+                    AsyncImage(
+                        model = page.thumbnailUrl.artworkAt(HEADER_ART_PX),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        onState = { artFailed = it is AsyncImagePainter.State.Error },
+                        modifier = dissolve.background(palette.elevated),
+                    )
+                }
                 // Beside the still rather than inside its layer: a clip's
                 // TextureView takes no Compose mask, so it dissolves itself.
                 canvas?.let { clip ->
@@ -1672,6 +1680,8 @@ private fun PageBackground(
 @Composable
 private fun CoverContinuation(
     imageUrl: String?,
+    /** A device folder, whose cover is generated: its colours stand in for the artwork's. */
+    folderId: String? = null,
     seam: Dp,
     length: Dp,
     pageColor: Color,
@@ -1679,8 +1689,26 @@ private fun CoverContinuation(
     listState: LazyListState,
     modifier: Modifier = Modifier,
 ) {
-    if (imageUrl == null) return
-    val mesh = rememberArtworkMesh(imageUrl, null, HEADER_ART_PX)
+    val folderStyle = if (imageUrl == null) folderCoverStyle(folderId) else null
+    if (imageUrl == null && folderStyle == null) return
+    // The folder's gradient, as the one picture the mesh is read from.
+    val folderPicture = remember(folderStyle) {
+        folderStyle?.let { style ->
+            val picture = ImageBitmap(FOLDER_MESH_PX, FOLDER_MESH_PX)
+            androidx.compose.ui.graphics.Canvas(picture).also { canvas ->
+                val paint = androidx.compose.ui.graphics.Paint().apply {
+                    shader = androidx.compose.ui.graphics.LinearGradientShader(
+                        androidx.compose.ui.geometry.Offset.Zero,
+                        androidx.compose.ui.geometry.Offset(0f, FOLDER_MESH_PX.toFloat()),
+                        listOf(style.top, style.bottom),
+                    )
+                }
+                canvas.drawRect(0f, 0f, FOLDER_MESH_PX.toFloat(), FOLDER_MESH_PX.toFloat(), paint)
+            }
+            picture
+        }
+    }
+    val mesh = rememberArtworkMesh(imageUrl, folderPicture, HEADER_ART_PX)
     val total = seam + length
     val seamFraction = (seam / total).coerceIn(0f, 0.95f)
     Box(modifier.clipToBounds()) {
@@ -1716,6 +1744,8 @@ private fun CoverContinuation(
         }
     }
 }
+
+private const val FOLDER_MESH_PX = 64
 
 /** How much of the screen's height the continuation takes to fade from the cover's colours to the page's own. */
 private const val COVER_CONTINUATION_LENGTH = 0.85f

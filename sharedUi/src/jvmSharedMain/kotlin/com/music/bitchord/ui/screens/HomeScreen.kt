@@ -995,6 +995,8 @@ internal fun ShelfCard(
     isPlaying: Boolean = false,
     /** False draws the name alone, with nothing under it. */
     showSubtitle: Boolean = true,
+    /** A smaller name, for a card that sits in a tight grid. */
+    compactTitle: Boolean = false,
 ) {
     Column(
         modifier = modifier
@@ -1042,7 +1044,11 @@ internal fun ShelfCard(
             }
             Text(
                 text = item.title,
-                style = MaterialTheme.typography.titleMedium,
+                style = if (compactTitle) {
+                    MaterialTheme.typography.titleMedium.copy(fontSize = 13.sp, lineHeight = 17.sp)
+                } else {
+                    MaterialTheme.typography.titleMedium
+                },
                 color = MaterialTheme.colorScheme.onBackground,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
