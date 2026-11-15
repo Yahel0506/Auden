@@ -5,6 +5,7 @@ import {
   onClose,
   onHello,
   onMessage,
+  networkOf,
   onTick,
   parseClientMessage,
   type Outbound,
@@ -136,13 +137,28 @@ function originAllowed(request: Request, env: Env): boolean {
     .includes(origin);
 }
 
+async function sha256Hex(text: string): Promise<string> {
+  const bytes = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === '/healthz') return Response.json({ ok: true, service: 'auden-connect' });
-    const match = /^\/ws\/([0-9a-f]{32})$/.exec(url.pathname);
-    if (!match || !ROOM_ID.test(match[1]!)) return new Response('not found', { status: 404 });
+    // `/ws/<room>` is an account's room. `/ws/local/<room>` is for devices with no account: the room is the
+    // hash of a name they share (the one they use in parties), and the server scopes it to the network the
+    // request comes from, so only devices on the same network *and* with the same name meet.
+    const match = /^\/ws\/(local\/)?([0-9a-f]{32})$/.exec(url.pathname);
+    if (!match || !ROOM_ID.test(match[2]!)) return new Response('not found', { status: 404 });
     if (!originAllowed(request, env)) return new Response('forbidden', { status: 403 });
-    return env.ROOMS.get(env.ROOMS.idFromName(match[1]!)).fetch(request);
+    let name = match[2]!;
+    if (match[1]) {
+      const ip = request.headers.get('CF-Connecting-IP');
+      if (!ip) return new Response('no network', { status: 400 });
+      name = (await sha256Hex(`local:${networkOf(ip)}:${match[2]}`)).slice(0, 32);
+    }
+    return env.ROOMS.get(env.ROOMS.idFromName(name)).fetch(request);
   },
 };

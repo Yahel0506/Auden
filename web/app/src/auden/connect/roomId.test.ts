@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 let auth: unknown;
+let spotify: unknown = undefined;
+vi.mock('@/lib/queryClient', () => ({ queryClient: { getQueryData: () => spotify } }));
 vi.mock('@/extension/useYtAuth', () => ({ ytAuthSnapshot: () => auth }));
 const { connectRoomId } = await import('@/party/listenTogether');
+
+const SPOTIFY_SOMEUSER = '1ca227dbebe11111ec5325bdc6250731';
+const LOCAL_YAEL = 'fce7ecee6ca56cd4b6f7e11bab1fba74';
+const LOCAL_GUEST = 'e8646db4ea2016f2f1747ef3303a2047';
 
 const signedIn = (email: string | null, handle: string | null = null) => ({
   signedIn: true,
@@ -38,10 +44,44 @@ describe('connectRoomId', () => {
     expect(await connectRoomId()).not.toBe('2c33f5f9e51c05093f360ef8f4dde494');
   });
 
-  it('is null when signed out or when the email is unknown', async () => {
+  it('is the local room when signed out or when the email is unknown', async () => {
     auth = { signedIn: false, active: null, accounts: [] };
-    expect(await connectRoomId()).toBeNull();
+    expect(await connectRoomId()).toMatch(/^local\/[0-9a-f]{32}$/);
     auth = signedIn(null);
-    expect(await connectRoomId()).toBeNull();
+    expect(await connectRoomId()).toMatch(/^local\/[0-9a-f]{32}$/);
+  });
+});
+
+describe('local room', () => {
+  const store = new Map<string, string>();
+  beforeEach(() => {
+    auth = { signedIn: false, active: null, accounts: [] };
+    store.clear();
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+    });
+  });
+
+  it('is the hash of the party name, lower-cased and trimmed, with the local prefix', async () => {
+    // Kotlin: ListenTogether.localRoomIdFor("yael") (ConnectRoomIdTest).
+    localStorage.setItem('bitchord:party', JSON.stringify({ nickname: ' Yael ' }));
+    expect(await connectRoomId()).toBe('local/' + LOCAL_YAEL);
+  });
+
+  it('falls back to a shared "guest" name when no name was chosen', async () => {
+    expect(await connectRoomId()).toBe('local/' + LOCAL_GUEST);
+  });
+
+  it('is the Spotify account’s room when there is no Google one', async () => {
+    // Kotlin: ListenTogether.spotifyRoomIdFor("SomeUser") (ConnectRoomIdTest).
+    spotify = { signedIn: true, user: { name: 'n', id: 'SomeUser' } };
+    expect(await connectRoomId()).toBe(SPOTIFY_SOMEUSER);
+    spotify = undefined;
+  });
+
+  it('keeps an account’s room when there is one', async () => {
+    auth = signedIn('Person@Example.com ');
+    expect(await connectRoomId()).toBe('2c33f5f9e51c05093f360ef8f4dde494');
   });
 });

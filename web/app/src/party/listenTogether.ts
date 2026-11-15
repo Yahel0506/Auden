@@ -1,3 +1,6 @@
+import type { SpotifyAuthState } from '@bitchord/shared/bridge';
+import { spotifyAuthQueryKey } from '@/extension/useSpotifyAuth';
+import { queryClient } from '@/lib/queryClient';
 import { create } from 'zustand';
 import { config } from '@/config';
 import { ytAuthSnapshot } from '@/extension/useYtAuth';
@@ -122,7 +125,12 @@ export function partySettings(): Settings {
 
 export function savePartySettings(change: Partial<Settings>): void {
   localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...partySettings(), ...change }));
+  // The Connect session's room can depend on the nickname (see [localRoomId]); let it know.
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(PARTY_SETTINGS_EVENT));
 }
+
+/** Fired on `window` when the party settings change. */
+export const PARTY_SETTINGS_EVENT = 'bitchord:party-settings';
 
 /** The server parties are made on: the custom one if set, else BitChord's. */
 export function idleServer(): string {
@@ -160,6 +168,32 @@ export async function sha256(value: string): Promise<string> {
  * to each). Null when signed out or when neither is known. Like the party's userId it is unverified, not a credential.
  */
 export async function connectRoomId(): Promise<string | null> {
+  return (await googleRoomId()) ?? (await spotifyRoomId()) ?? (await localRoomId());
+}
+
+/**
+ * The room for a Spotify account, when there is no Google one: the hash of its stable username, which the phone
+ * reads from the same place (`ListenTogether.spotifyRoomIdFor`). Null without a Spotify session that reports an id.
+ */
+export async function spotifyRoomId(): Promise<string | null> {
+  const state = queryClient.getQueryData<SpotifyAuthState>(spotifyAuthQueryKey);
+  const id = state?.signedIn ? state.user?.id?.trim().toLowerCase() : null;
+  return id ? (await sha256(`auden-connect:spotify:${id}`)).slice(0, 32) : null;
+}
+
+/**
+ * The room for a device with no account: the hash of the name this person uses in parties, which the Connect server
+ * then scopes to the network the device is on — so only devices on the same network that share the name meet.
+ * The `local/` prefix is how the server tells it from an account's room. Matches the phone's
+ * `ListenTogether.localRoomIdFor`.
+ */
+export async function localRoomId(): Promise<string> {
+  const name = partySettings().nickname.trim().toLowerCase() || 'guest';
+  return `local/${(await sha256(`auden-connect:local:${name}`)).slice(0, 32)}`;
+}
+
+/** The room for a signed-in YouTube Music account; see [connectRoomId]. Null when signed out or when neither is known. */
+export async function googleRoomId(): Promise<string | null> {
   const auth = ytAuthSnapshot();
   const active = auth.signedIn ? auth.active : null;
   if (!active) return null;

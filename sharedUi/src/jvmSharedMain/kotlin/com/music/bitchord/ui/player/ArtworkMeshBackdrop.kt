@@ -19,8 +19,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -94,126 +92,9 @@ import kotlin.random.Random
 class ArtworkMesh internal constructor(internal val image: ImageBitmap) {
     /** The same mesh blurred further, for the lyrics and the queue to stand on — made once, when first wanted. */
     internal val soft: ImageBitmap by lazy { image.boxBlurred(MESH_SOFT_PASSES) }
-
-    /**
-     * The lyrics' and the queue's own backdrop: the mesh reduced to a few large pools of colour, so the
-     * drift reads as something moving rather than as one even tone, with the contrast between them
-     * stretched and only the pools bright enough to make white text hard to read brought down.
-     */
-    internal val panel: ImageBitmap by lazy { image.toPanel() }
-
-    /**
-     * Contrast for the colours below the cover, in steps, stretched about *this mesh's own average* rather
-     * than mid-grey: about mid-grey a dark cover is pushed toward black and a light one toward white, which
-     * is a different colour from the one the cover ended on, not more contrast in it.
-     */
-    internal val contrastFilters: Array<ColorFilter> by lazy {
-        val px = image.argbPixels()
-        var sum = 0.0
-        for (c in px) sum += 0.2126 * (c shr 16 and 0xFF) + 0.7152 * (c shr 8 and 0xFF) + 0.0722 * (c and 0xFF)
-        val pivot = (sum / px.size.coerceAtLeast(1)).toFloat()
-        Array(CONTRAST_STEPS + 1) { contrastMatrixFilter(FLOW_CONTRAST * it / CONTRAST_STEPS, pivot) }
-    }
 }
 
 private const val MESH_SOFT_PASSES = 3
-
-private const val PANEL_COLUMNS = 3
-private const val PANEL_ROWS = 5
-
-/** Luminance (0..1) above which white text starts to lose contrast. */
-private const val PANEL_BRIGHT_FROM = 0.40f
-
-/** How much of what is above that is kept: 0 flattens every bright pool to the limit, 1 leaves it alone. */
-private const val PANEL_BRIGHT_KEEP = 0.30f
-
-/** How much more a saturated, bright texel counts toward its pool than a dull one. */
-private const val PANEL_ACCENT_WEIGHT = 3.5f
-
-/** A pool this much more saturated than the cover's average, and at least [PANEL_ACCENT_MIN_SAT], is an accent. */
-private const val PANEL_ACCENT_MARGIN = 0.10f
-private const val PANEL_ACCENT_MIN_SAT = 0.28f
-private const val PANEL_ACCENT_CHROMA = 1.4f
-
-/** The luminance an accent is brought up to if it is dimmer, so it reads against the dark around it. */
-private const val PANEL_ACCENT_LUM = 0.30f
-
-/** The pools' distance from the mean colour is stretched by this much, plus [PANEL_CONTRAST_SPREAD] of the cover's own range. */
-private const val PANEL_CONTRAST = 1.10f
-private const val PANEL_CONTRAST_SPREAD = 0.35f
-
-/** The spread of luminance across the pools that counts as a cover with its own lights and darks. */
-private const val PANEL_WIDE_RANGE = 0.45f
-
-private fun lum(r: Float, g: Float, b: Float) = 0.2126f * r + 0.7152f * g + 0.0722f * b
-
-private fun ImageBitmap.toPanel(): ImageBitmap {
-    val w = width
-    val h = height
-    if (w < PANEL_COLUMNS || h < PANEL_ROWS) return this
-    val src = argbPixels()
-    val n = PANEL_COLUMNS * PANEL_ROWS
-    val cells = FloatArray(n * 3)
-    val weights = FloatArray(n)
-    for (y in 0 until h) for (x in 0 until w) {
-        val cell = (y * PANEL_ROWS / h) * PANEL_COLUMNS + (x * PANEL_COLUMNS / w)
-        val c = src[y * w + x]
-        val pr = (c shr 16 and 0xFF) / 255f
-        val pg = (c shr 8 and 0xFF) / 255f
-        val pb = (c and 0xFF) / 255f
-        val hi = maxOf(pr, pg, pb)
-        val sat = if (hi > 0.08f) (hi - minOf(pr, pg, pb)) / hi else 0f
-        // A pool is the cover's accent where it has one: a colourful texel counts for far more than a grey
-        // or black one beside it, so a few gold letters on a black sleeve stay gold instead of being
-        // averaged into the dark around them.
-        val weight = 0.2f + PANEL_ACCENT_WEIGHT * sat * sat * hi
-        cells[cell * 3] += pr * weight
-        cells[cell * 3 + 1] += pg * weight
-        cells[cell * 3 + 2] += pb * weight
-        weights[cell] += weight
-    }
-    for (i in 0 until n) for (k in 0..2) cells[i * 3 + k] /= weights[i].coerceAtLeast(1e-4f)
-    val mean = FloatArray(3) { k -> (0 until n).sumOf { cells[it * 3 + k].toDouble() }.toFloat() / n }
-
-    // How wide the cover's own range of light and dark is, measured before anything is done to it.
-    val lums = FloatArray(n) { lum(cells[it * 3], cells[it * 3 + 1], cells[it * 3 + 2]) }
-    val spread = ((lums.max() - lums.min()) / PANEL_WIDE_RANGE).coerceIn(0f, 1f)
-    val contrast = PANEL_CONTRAST + PANEL_CONTRAST_SPREAD * spread
-
-    fun satOf(i: Int): Float {
-        val hi = maxOf(cells[i * 3], cells[i * 3 + 1], cells[i * 3 + 2])
-        return if (hi > 0.06f) (hi - minOf(cells[i * 3], cells[i * 3 + 1], cells[i * 3 + 2])) / hi else 0f
-    }
-    val meanSat = (0 until n).sumOf { satOf(it).toDouble() }.toFloat() / n
-
-    val out = IntArray(n)
-    for (i in 0 until n) {
-        var r = (mean[0] + (cells[i * 3] - mean[0]) * contrast).coerceIn(0f, 1f)
-        var g = (mean[1] + (cells[i * 3 + 1] - mean[1]) * contrast).coerceIn(0f, 1f)
-        var b = (mean[2] + (cells[i * 3 + 2] - mean[2]) * contrast).coerceIn(0f, 1f)
-        var l = lum(r, g, b)
-        val sat = satOf(i)
-        if (sat >= PANEL_ACCENT_MIN_SAT && sat > meanSat + PANEL_ACCENT_MARGIN) {
-            // The cover's accent: more colour, and bright enough to be seen against the darks.
-            r = (l + (r - l) * PANEL_ACCENT_CHROMA).coerceIn(0f, 1f)
-            g = (l + (g - l) * PANEL_ACCENT_CHROMA).coerceIn(0f, 1f)
-            b = (l + (b - l) * PANEL_ACCENT_CHROMA).coerceIn(0f, 1f)
-            l = lum(r, g, b)
-            if (l in 0.01f..PANEL_ACCENT_LUM) {
-                val k = (PANEL_ACCENT_LUM / l).coerceAtMost(3f)
-                r = (r * k).coerceAtMost(1f); g = (g * k).coerceAtMost(1f); b = (b * k).coerceAtMost(1f)
-                l = lum(r, g, b)
-            }
-        }
-        // Only a pool that is bright by itself is brought down; the rest keeps what it is.
-        if (l > PANEL_BRIGHT_FROM) {
-            val k = (PANEL_BRIGHT_FROM + (l - PANEL_BRIGHT_FROM) * PANEL_BRIGHT_KEEP) / l
-            r *= k; g *= k; b *= k
-        }
-        out[i] = argb((r * 255f).roundToInt(), (g * 255f).roundToInt(), (b * 255f).roundToInt())
-    }
-    return imageBitmapOf(out, PANEL_COLUMNS, PANEL_ROWS)
-}
 
 /**
  * One pre-blurred bitmap for the full-cover player backdrop.
@@ -445,22 +326,13 @@ fun ArtworkMeshBackdrop(
     soften: () -> Float = { 0f },
     /** 0..1: an extra shade over the mesh, for the same panels. */
     shade: () -> Float = { 0f },
-    /**
-     * False holds the colours still whatever the setting says, for a page that stands on the cover's
-     * colours without a player's transport to follow.
-     */
-    animated: Boolean = true,
-    /** Scales [shade]; the player's panels pass 0 as they dim only their bright pools. */
-    panelShadeScale: Float = 1f,
-    /** False leaves out the player's darkening toward the controls, for a surface that shades itself. */
-    darken: Boolean = true,
 ) {
     val reduceAnimation by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
     val motion by PlayerSettings.backdropMotion.collectAsStateWithLifecycle()
     val flow = rememberBackdropFlow(
         playing = playing,
         reactive = motion == BackdropMotion.REACTIVE && !reduceAnimation,
-        enabled = animated && motion != BackdropMotion.STATIC && !reduceAnimation,
+        enabled = motion != BackdropMotion.STATIC && !reduceAnimation,
     )
 
     // The mesh on screen, and the one fading in over it. Two states rather than
@@ -510,20 +382,18 @@ fun ArtworkMeshBackdrop(
         // The blurrier copy comes in over it: the same colours, further apart from detail.
         val softness = soften()
         if (softness > 0.005f) {
-            shown?.let { drawMesh(it, seamY, alpha = softness, flow = flow, image = it.panel, panel = true) }
-            incoming?.let { drawMesh(it, seamY, alpha = fade.value * softness, flow = flow, image = it.panel, panel = true) }
+            shown?.let { drawMesh(it, seamY, alpha = softness, flow = flow, image = it.soft) }
+            incoming?.let { drawMesh(it, seamY, alpha = fade.value * softness, flow = flow, image = it.soft) }
         }
-        // The panels' shade is no longer one even black over everything: the bright pools were brought down
-        // in the panel mesh itself, and the rest is left as it is. [shade] still reaches a surface that wants it.
         val shading = shade()
-        if (shading > 0.005f) drawRect(Color.Black.copy(alpha = shading * MESH_PANEL_SHADE * panelShadeScale))
+        if (shading > 0.005f) drawRect(Color.Black.copy(alpha = shading * MESH_PANEL_SHADE))
 
         // Vivid where the cover ends and progressively darker toward the controls, so the transport
         // buttons keep their contrast without the foot going near black. It starts at the seam, under the
         // cover, and runs the whole way down to the bottom edge, where it is darkest — rather than being
         // spread over the cover's height too, which had it already half dark by the middle of the player.
         // Linear from the first stop to the last.
-        if (darken) drawRect(
+        drawRect(
             brush = Brush.verticalGradient(
                 colors = listOf(
                     Color.Black.copy(alpha = 0.10f),
@@ -547,7 +417,6 @@ private fun DrawScope.drawMesh(
     alpha: Float,
     flow: BackdropFlow? = null,
     image: ImageBitmap = mesh.image,
-    panel: Boolean = false,
 ) {
     if (alpha <= 0.001f) return
     val width = size.width.roundToInt()
@@ -568,7 +437,7 @@ private fun DrawScope.drawMesh(
 
     val below = size.height - seamY
     if (flow != null && flow.moving() && below > 8f) {
-        drawFlowing(mesh, image, seamY, below, alpha, flow, panel)
+        drawFlowing(image, seamY, below, alpha, flow)
         return
     }
 
@@ -591,10 +460,9 @@ private fun DrawScope.drawMesh(
  * way to the backdrop — is exactly where it was, and the continuation from the cover is kept. A band is the
  * whole texture, clipped, so every draw is the same sampler pass as the still one, moved by a fractional amount.
  */
-private fun DrawScope.drawFlowing(mesh: ArtworkMesh, image: ImageBitmap, seamY: Float, below: Float, alpha: Float, flow: BackdropFlow, panel: Boolean = false) {
+private fun DrawScope.drawFlowing(image: ImageBitmap, seamY: Float, below: Float, alpha: Float, flow: BackdropFlow) {
     val width = size.width
-    // The panels have fewer, larger pools, so they are carried further for the movement to be seen.
-    val amplitude = width * FLOW_REACH * flow.strength() * (if (panel) FLOW_PANEL_REACH else 1f)
+    val amplitude = width * FLOW_REACH * flow.strength()
     val phase = flow.phase()
     val ramp = (below * FLOW_RAMP).coerceAtLeast(1f)
     val bands = (below / FLOW_BAND_PX).roundToInt().coerceIn(24, 240)
@@ -621,8 +489,7 @@ private fun DrawScope.drawFlowing(mesh: ArtworkMesh, image: ImageBitmap, seamY: 
             translate(left = dx, top = dy) {
                 scale(scaleX = reachX, scaleY = reachY, pivot = Offset(width / 2f, seamY)) {
                     drawImage(image = image, srcOffset = IntOffset.Zero, srcSize = IntSize(image.width, image.height),
-                        dstOffset = IntOffset(0, seamY.roundToInt()), dstSize = dstSize, alpha = alpha, filterQuality = FilterQuality.Low,
-                        colorFilter = mesh.contrastFilter(grow, panel))
+                        dstOffset = IntOffset(0, seamY.roundToInt()), dstSize = dstSize, alpha = alpha, filterQuality = FilterQuality.Low)
                 }
             }
         }
@@ -686,29 +553,6 @@ internal fun rememberBackdropFlow(playing: () -> Boolean, reactive: Boolean, ena
 private const val MESH_PANEL_SHADE = 0.32f
 
 private const val FLOW_REACH = 0.05f
-private const val FLOW_PANEL_REACH = 2.2f
-
-/** How much more the colours below the cover differ from one another while they drift, at full reach. */
-private const val FLOW_CONTRAST = 0.16f
-private const val CONTRAST_STEPS = 8
-
-private fun contrastMatrixFilter(gain: Float, pivot: Float): ColorFilter {
-    val c = 1f + gain
-    val t = pivot * (1f - c)
-    return ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(
-        c, 0f, 0f, 0f, t,
-        0f, c, 0f, 0f, t,
-        0f, 0f, c, 0f, t,
-        0f, 0f, 0f, 1f, 0f,
-    )))
-}
-
-/** The contrast for a band [grow] (0..1) of the way into its reach: none at the seam, so the cover's edge still meets it. */
-private fun ArtworkMesh.contrastFilter(grow: Float, panel: Boolean): ColorFilter? {
-    // The panels' own mesh already has its contrast built in.
-    if (panel) return null
-    return contrastFilters[(grow.coerceIn(0f, 1f) * CONTRAST_STEPS).roundToInt()]
-}
 private const val FLOW_RAMP = 0.34f
 private const val FLOW_BAND_PX = 5f
 private const val FLOW_WAVELENGTH_PX = 1500f
@@ -742,13 +586,13 @@ private val fullBlurCache = object : LinkedHashMap<String, ImageBitmap>(0, 0.75f
 }
 
 /** Three small box passes approximate a broad Gaussian blur at thumbnail scale. */
-internal fun ImageBitmap.boxBlurred(passes: Int, radiusDivisor: Int = 12): ImageBitmap {
+private fun ImageBitmap.boxBlurred(passes: Int): ImageBitmap {
     val width = width
     val height = height
     if (width < 2 || height < 2) return this
     var source = argbPixels()
     var target = IntArray(source.size)
-    val radius = (minOf(width, height) / radiusDivisor).coerceAtLeast(2)
+    val radius = (minOf(width, height) / 12).coerceAtLeast(2)
 
     repeat(passes) {
         boxBlurPass(source, target, width, height, radius, horizontal = true)

@@ -33,6 +33,18 @@ pnpm --filter @bitchord/connect deploy    # wrangler deploy
 - The active device may drop for 20 s without the session ending (a tunnel, a reload).
 - A plain text `ping` frame is answered with `pong` by the runtime without waking the object.
 
+## Rooms without a Google account
+
+`/ws/<room>` is an account's room. A device with no Google account still finds its own devices:
+
+- **Spotify.** A signed-in Spotify account's room is `sha256("auden-connect:spotify:<username, lower-cased>")`,
+  32 hex digits, on the same `/ws/<room>` path. The phone reads the username from Spotify's `/v1/me`, the web
+  from the extension, so both land in one room.
+- **Local.** With no account at all the path is `/ws/local/<room>`, where `<room>` is the hash of the name the
+  person uses in Listen Together (`sha256("auden-connect:local:<name>")`; `guest` when there is none). The
+  Worker scopes it to the network the request comes from (`CF-Connecting-IP`: the IPv4 address, or the IPv6
+  /64), so only devices on the same network *and* with the same name are listed together.
+
 ## What it is worth (identity)
 
 The room id is a hash of the account and profile ids, not a secret. Like the Listen Together server,
