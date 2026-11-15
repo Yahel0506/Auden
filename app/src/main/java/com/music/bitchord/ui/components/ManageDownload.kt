@@ -24,10 +24,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.DownloadDone
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
+import dev.chrisbanes.haze.HazeState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,51 +52,46 @@ import com.music.bitchord.ui.theme.ArtworkPalette
 import dev.auden.library.links.LocalCopy
 
 /**
- * "Manage download": one row that opens, in place, the list of files on this
- * device that are the song — the app's own download and any other file with the
- * same metadata. The one being played is outlined in the sheet's accent.
- *
- * Lyrics management will live under the same row later; for now it is the file
- * list and the way to delete the app's own download.
+ * "Manage download", as a page of the song's menu: the files on this device that are the song — the app's own
+ * download and any other file with the same metadata — each on a card, the one being played outlined, with the way
+ * to delete the app's own and what is kept of its lyrics. It opens in the panel the menu is in, wherever that is —
+ * the player's own or a list's — and the way back returns the menu.
  */
 @Composable
-internal fun ManageDownloadRow(
+internal fun ManageDownloadPage(
     song: com.music.bitchord.data.model.Song,
-    copies: List<LocalCopy>,
     playingUri: String?,
     palette: ArtworkPalette,
-    onDeleteOwn: () -> Unit,
+    onBack: () -> Unit,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-    ActionRow(
-        icon = Icons.Rounded.DownloadDone,
-        label = stringResource(R.string.manage_download),
-        value = if (copies.size > 1) stringResource(R.string.download_copies_count, copies.size) else null,
-        tint = palette.accent,
-        accent = palette.accent,
-    ) { expanded = !expanded }
-    AnimatedVisibility(
-        visible = expanded,
-        enter = expandVertically() + fadeIn(),
-        exit = shrinkVertically() + fadeOut(),
+    val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val revision by dev.auden.library.links.LocalLinks.revision.collectAsStateWithLifecycle()
+    val saved by com.music.bitchord.download.Downloads.saved.collectAsStateWithLifecycle()
+    val copies = remember(song.videoId, saved[song.videoId], revision) { dev.auden.library.links.LocalLinks.copiesOf(song) }
+    // Nothing left to manage once the last file is gone.
+    androidx.compose.runtime.LaunchedEffect(copies.isEmpty(), saved[song.videoId]) {
+        if (copies.isEmpty() && saved[song.videoId] == null) onBack()
+    }
+    MenuPageHeader(stringResource(R.string.manage_download), song.title, onBack)
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 22.dp, vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            copies.forEach { copy ->
-                DownloadCopyCard(
-                    copy = copy,
-                    playing = playingUri != null && playingUri == copy.uri,
-                    palette = palette,
-                    onDelete = onDeleteOwn.takeIf { copy.downloadedByApp },
-                )
-            }
-            ManageLyricsSection(song, palette)
-            Spacer(Modifier.height(6.dp))
+        copies.forEach { copy ->
+            DownloadCopyCard(
+                copy = copy,
+                playing = playingUri != null && playingUri == copy.uri,
+                palette = palette,
+                onDelete = if (copy.downloadedByApp) {
+                    { scope.launch { com.music.bitchord.download.Downloads.delete(context, song.videoId) }; Unit }
+                } else {
+                    null
+                },
+            )
         }
+        ManageLyricsSection(song, palette)
+        Spacer(Modifier.height(6.dp))
     }
 }
 

@@ -48,6 +48,7 @@ object LocalPlaylists {
     fun init(context: Context) {
         val database = AudenDb.get(context)
         db = database
+        CustomPlaylistCovers.init(context)
         scope.launch { reload(database) }
         LibraryCovers.repairAsync(context)
     }
@@ -101,7 +102,9 @@ object LocalPlaylists {
         val removed = existing.songs.size - kept.size
         val have = kept.mapTo(HashSet()) { it.videoId }
         val fresh = songs.filter { have.add(it.videoId) }
-        val newCover = coverUrl?.takeIf { it.isNotBlank() } ?: existing.coverUrl
+        // A cover the listener chose outlives every sync; only the page's own cover follows the page.
+        val newCover = if (CustomPlaylistCovers.isCustom(existing.coverUrl)) existing.coverUrl
+        else coverUrl?.takeIf { it.isNotBlank() } ?: existing.coverUrl
         if (removed > 0 || fresh.isNotEmpty() || newCover != existing.coverUrl) {
             replace(existing.copy(songs = kept + fresh, coverUrl = newCover))
         }
@@ -149,6 +152,17 @@ object LocalPlaylists {
         scope.launch { writeLock.withLock { database.playlistWrites().rename(playlist.id, title, System.currentTimeMillis()) } }
     }
 
+    /**
+     * Gives the playlist the cover at [coverUrl] — a picture saved by [CustomPlaylistCovers] — or, with
+     * null, takes its cover off, which leaves it the automatic one made of its songs' covers.
+     */
+    fun setCover(id: String, coverUrl: String?) {
+        val playlist = get(id) ?: return
+        if (playlist.coverUrl == coverUrl) return
+        if (coverUrl == null) CustomPlaylistCovers.delete(playlist.id)
+        replace(playlist.copy(coverUrl = coverUrl))
+    }
+
     /** Puts the playlist in exactly [songs]' order (the reorder page's result). */
     fun setOrder(id: String, songs: List<Song>) {
         val playlist = get(id) ?: return
@@ -169,7 +183,8 @@ object LocalPlaylists {
             playlistId = playlist.id,
             title = playlist.title,
             subtitle = "",
-            thumbnailUrl = playlist.coverUrl ?: playlist.songs.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl,
+            thumbnailUrl = playlist.coverUrl?.takeIf(CustomPlaylistCovers::usable)
+                ?: playlist.songs.firstOrNull { !it.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl,
             pageId = playlist.browseId,
         )
     }
@@ -182,6 +197,7 @@ object LocalPlaylists {
     fun delete(id: String) {
         val playlist = get(id) ?: return
         _playlists.value = _playlists.value.filterNot { it.id == playlist.id }
+        CustomPlaylistCovers.delete(playlist.id)
         val database = db ?: return
         scope.launch { writeLock.withLock { database.playlists().delete(playlist.id) } }
     }

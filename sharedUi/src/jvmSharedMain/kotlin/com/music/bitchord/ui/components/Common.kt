@@ -38,6 +38,7 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.PlaylistPlay
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SwipeToDismissBox
@@ -348,16 +349,21 @@ fun SongRow(
      */
     trailing: (@Composable () -> Unit)? = null,
 ) {
+    // While a selection is being made the row is a tick box: a tap picks it,
+    // and the hold, the swipe and the ⋮ wait until the selection is closed.
+    val selection = LocalSongSelection.current
+    val selecting = selection?.selecting == true
+    val swipe = onSwipeToQueue.takeUnless { selecting }
     SwipeToQueueBox(
-        onSwipeToQueue = onSwipeToQueue,
+        onSwipeToQueue = swipe,
         modifier = modifier,
     ) {
         SongRowContent(
             song = song,
-            onClick = onClick,
-            onLongPress = onLongPress,
-            onMore = onMore ?: onLongPress,
-            modifier = if (onSwipeToQueue != null) Modifier.background(rowBackground) else modifier,
+            onClick = if (selecting) ({ selection?.toggle(song); Unit }) else onClick,
+            onLongPress = onLongPress.takeUnless { selecting },
+            onMore = (onMore ?: onLongPress).takeUnless { selecting },
+            modifier = if (swipe != null) Modifier.background(rowBackground) else modifier,
             trackNumber = trackNumber,
             subtitleColor = subtitleColor,
             downloadedTint = downloadedTint,
@@ -365,9 +371,10 @@ fun SongRow(
             isPlaying = isPlaying,
             activeTint = activeTint,
             searchPlayingStyle = searchPlayingStyle,
-            selected = selected,
+            selected = selected || (selecting && selection?.isSelected(song) == true),
+            selecting = selecting,
             showSourceQuality = showSourceQuality,
-            trailing = trailing,
+            trailing = trailing.takeUnless { selecting },
         )
     }
 }
@@ -507,6 +514,8 @@ private fun SongRowContent(
     activeTint: Color = MaterialTheme.colorScheme.primary,
     searchPlayingStyle: Boolean = false,
     selected: Boolean = false,
+    /** A selection is on: every row carries a tick box, empty or filled. */
+    selecting: Boolean = false,
     showSourceQuality: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
 ) {
@@ -615,7 +624,8 @@ private fun SongRowContent(
         if (downloadedTint != null) {
             DownloadedBadge(song, downloadedTint)
         }
-        if (selected) {
+        // In a selection the tick closes the row, where the ⋮ was — see below.
+        if (selected && !selecting) {
             Spacer(Modifier.width(8.dp))
             Icon(
                 Icons.Rounded.CheckCircle,
@@ -655,7 +665,15 @@ private fun SongRowContent(
             trailing()
         }
         // Same sheet the long-press opens, for anyone who doesn't think to hold.
-        if (onMore != null && !matching && !unavailable) {
+        if (selecting) {
+            Spacer(Modifier.width(10.dp))
+            Icon(
+                imageVector = if (selected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
+                contentDescription = if (selected) stringResource(Res.string.selected) else null,
+                tint = if (selected) activeTint else subtitleColor,
+                modifier = Modifier.size(22.dp),
+            )
+        } else if (onMore != null && !matching && !unavailable) {
             RowMoreButton(onClick = onMore, tint = subtitleColor)
         }
     }

@@ -112,6 +112,12 @@ fun PlaylistPickerSheet(
     onCreate: (String, PlaylistPrivacy) -> Unit,
     onDismiss: () -> Unit,
     song: Song? = null,
+    /**
+     * A whole selection being filed instead of one [song]. A playlist then starts ticked only when
+     * it holds every one of them ([present]), ticking it adds the ones it lacks, and unticking it
+     * takes them all out.
+     */
+    songs: List<Song> = emptyList(),
     startCreating: Boolean = false,
     /** Signed out, a playlist can only live on this device. */
     signedIn: Boolean = true,
@@ -129,7 +135,8 @@ fun PlaylistPickerSheet(
     var creating by remember { mutableStateOf(startCreating) }
     // By id rather than by value: the list is re-fetched under an open sheet,
     // and a refreshed row must stay ticked.
-    var choices by remember(song?.videoId) { mutableStateOf(emptyMap<String, Boolean>()) }
+    var choices by remember(song?.videoId, songs.size) { mutableStateOf(emptyMap<String, Boolean>()) }
+    val filing = song != null || songs.isNotEmpty()
     val ticked: (UserPlaylist) -> Boolean = { choices[it.playlistId] ?: (it.playlistId in present) }
     val toAdd = playlists.filter { ticked(it) && it.playlistId !in present }
     val toRemove = playlists.filter { !ticked(it) && it.playlistId in present }
@@ -199,12 +206,15 @@ fun PlaylistPickerSheet(
                     confirmEnabled = toAdd.isNotEmpty() || toRemove.isNotEmpty(),
                     onConfirm = { closeAfter { onApply(toAdd, toRemove) } },
                 )
-                if (song != null) {
-                    SheetTrackHeader(song)
+                if (songs.size > 1) {
+                    SheetSelectionHeader(songs)
+                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+                } else (song ?: songs.singleOrNull())?.let {
+                    SheetTrackHeader(it)
                     HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
                 }
                 SheetHeading(
-                    stringResource(if (song != null) R.string.add_to_playlist else R.string.your_playlists)
+                    stringResource(if (filing) R.string.add_to_playlist else R.string.your_playlists)
                         .uppercase(Locale.getDefault()),
                 )
 
@@ -262,6 +272,65 @@ fun PlaylistPickerSheet(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * A selection at the head of the picker, where one track's cover and title go: the first covers,
+ * fanned, and how many songs are being filed.
+ */
+@Composable
+private fun SheetSelectionHeader(songs: List<Song>) {
+    val covers = remember(songs) {
+        songs.mapNotNull { it.thumbnailUrl?.takeIf(String::isNotBlank) }.distinct().take(3)
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(width = 52.dp + 10.dp * (covers.size - 1).coerceAtLeast(0), height = 52.dp)) {
+            if (covers.isEmpty()) {
+                Box(
+                    Modifier
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                )
+            }
+            // Last first, so the first cover is the one on top.
+            covers.indices.reversed().forEach { index ->
+                AsyncImage(
+                    model = covers[index].artworkAt(ROW_ART_PX),
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier
+                        .padding(start = 10.dp * index)
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .thumbnailBorder(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                )
+            }
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = pluralStringResource(R.plurals.songs_selected_count, songs.size, songs.size),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = songs.take(3).joinToString(", ") { it.title },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }

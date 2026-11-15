@@ -13,9 +13,12 @@ import com.music.bitchord.ui.icons.BitChordIcons
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.PhoneIphone
 import androidx.compose.material3.MaterialTheme
@@ -140,7 +143,11 @@ fun BrowseActionsMenu(
      */
     isPinned: Boolean = false,
     onTogglePin: (() -> Unit)? = null,
-    onRename: ((String) -> Unit)? = null,
+    /**
+     * Opens the dedicated editor for this list — its name, its cover, its description — in place of a row for
+     * each: set for a playlist the account owns and for any kept on this device.
+     */
+    onEditPlaylist: (() -> Unit)? = null,
     /**
      * Opens the reorder page for one of the account's own playlists — set
      * under the same rule as [onRename], since YouTube refuses to rearrange a
@@ -169,13 +176,6 @@ fun BrowseActionsMenu(
      */
     onSyncYtMusic: (() -> Unit)? = null,
     ytSync: YtSyncRowState = YtSyncRowState(),
-    /**
-     * Rename: a text field and its keyboard have no place on a menu floating
-     * over the page, so the row hands the job to the host, which raises a
-     * sheet holding only the form — this, composed again with [startRenaming].
-     */
-    onRenameInSheet: (() -> Unit)? = null,
-    startRenaming: Boolean = false,
     /** Playlists kept on this device: opens the picker of formats to write the playlist as. */
     onExport: (() -> Unit)? = null,
     /** Playlists kept on this device: makes a copy to change without touching the original. */
@@ -186,149 +186,132 @@ fun BrowseActionsMenu(
     onToggleDevice: (() -> Unit)? = null,
     savedOnDevice: Boolean = false,
     savingOnDevice: Boolean = false,
-    /** A playlist of any kind: picks audio files from this device to add to it (never sent to an account). */
-    onAddLocalFiles: (() -> Unit)? = null,
+    /** Files every song of the release into playlists at once — the picker a single song opens, for all of them. */
+    onAddToPlaylist: (() -> Unit)? = null,
+    /** The release's own page only: starts a multi-selection on its track list. */
+    onSelectSongs: (() -> Unit)? = null,
 ) {
-    var renaming by remember { mutableStateOf(startRenaming) }
+    var page by remember { mutableStateOf(MenuPage.MAIN) }
 
-
-    val playlist = target.playlist
-    if (renaming && playlist != null && onRename != null) {
-        RenamePlaylistForm(
-            playlist = playlist,
-            onBack = { renaming = false },
-            onRename = onRename,
-            modifier = modifier,
-        )
-        return
+    // Each group is a handful of related rows. With more than one it is a door to a page of its own; with a single
+    // row a door would only hide it, so that row stays where it is.
+    val tags: @Composable ColumnScope.() -> Unit = {
+        onFetchLyrics?.let { ActionRow(BitChordIcons.Lyrics, stringResource(R.string.find_lyrics_for_all), onClick = it) }
+        onRepairMetadata?.let { ActionRow(SfIcons.Upgrade, stringResource(R.string.metadata_repair), onClick = it) }
     }
+    val tagsCount = listOf(onFetchLyrics, onRepairMetadata).count { it != null }
+    val manage: @Composable ColumnScope.() -> Unit = {
+        onReorder?.let { ActionRow(SfIcons.Reorder, stringResource(R.string.reorder_songs), onClick = it) }
+        onDuplicate?.let { ActionRow(Icons.Rounded.ContentCopy, stringResource(R.string.duplicate_playlist), onClick = it) }
+        onExport?.let { ActionRow(Icons.Rounded.FileUpload, stringResource(R.string.export_playlist), onClick = it) }
+        onSyncYtMusic?.let { sync -> YtSyncRow(ytSync, sync) }
+        onTogglePin?.let { ActionRow(SfIcons.Pin, stringResource(if (isPinned) R.string.unpin else R.string.pin), onClick = it) }
+        onShare?.let { ActionRow(SfIcons.Share, stringResource(R.string.share), onClick = it) }
+    }
+    val manageCount = listOf(onReorder, onDuplicate, onExport, onSyncYtMusic, onTogglePin, onShare).count { it != null }
+    val filing = onToggleDevice != null || onDownloadAll != null || onDeleteDownload != null
 
     CompositionLocalProvider(LocalActionRowStyle provides ActionRowStyle.Menu) {
-        Column(
-            modifier
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState()),
-        ) {
-            onPlay?.let { ActionRow(SfIcons.Play, stringResource(R.string.play), onClick = it) }
-            onShuffle?.let { ActionRow(SfIcons.Shuffle, stringResource(R.string.shuffle), onClick = it) }
-            ActionRow(
-                SfIcons.PlayNext,
-                stringResource(R.string.play_next),
-                onClick = onPlayNext,
-            )
-            ActionRow(
-                SfIcons.PlayLast,
-                stringResource(R.string.add_to_queue),
-                onClick = onAddToQueue,
-            )
-            onToggleDevice?.let {
-                ActionRow(
-                    icon = when {
-                        savingOnDevice -> BitChordIcons.Clock
-                        savedOnDevice -> BitChordIcons.Check
-                        else -> Icons.Rounded.PhoneIphone
-                    },
-                    label = stringResource(if (savedOnDevice) R.string.remove_from_device else R.string.save_to_device),
-                    value = if (savingOnDevice) stringResource(R.string.saving_ellipsis) else null,
-                    onClick = it,
-                )
-            }
-            onDownloadAll?.let { download ->
-                // Saying which of the three it is, rather than offering the same row
-                // whatever the state — this is where a release is asked for now that
-                // its page's header spends that spot on the search, and a menu that
-                // can't say "already on the device" leaves the question open. The
-                // tap is left live in every state: [Downloads.enqueue] leaves a
-                // track that is saved, queued or running alone.
-                val active by Downloads.active.collectAsStateWithLifecycle()
-                val requested by Downloads.requested.collectAsStateWithLifecycle()
-                val saved by Downloads.saved.collectAsStateWithLifecycle()
-                // Only the tracks *this release* asked for — two releases can share
-                // a track, and reading the whole queue would show this release
-                // waiting on a download some other one started. Failed entries stay
-                // in [Downloads.active] until dismissed, and a failure is not a wait.
-                val waiting = target.browseId?.let { requested[it] }.orEmpty().any { id ->
-                    when (active[id]) {
-                        is DownloadState.Queued, is DownloadState.Running -> true
-                        else -> false
+        MenuPages(page, { it.ordinal.coerceAtMost(1) }, Modifier.fillMaxWidth()) { current ->
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                when (current) {
+                    MenuPage.MAIN -> {
+                        // What is done with the release itself, in the order it is wanted: play, queue, file, change.
+                        onPlay?.let { ActionRow(SfIcons.Play, stringResource(R.string.play), onClick = it) }
+                        onShuffle?.let { ActionRow(SfIcons.Shuffle, stringResource(R.string.shuffle), onClick = it) }
+                        ActionRow(SfIcons.PlayNext, stringResource(R.string.play_next), onClick = onPlayNext)
+                        ActionRow(SfIcons.PlayLast, stringResource(R.string.add_to_queue), onClick = onAddToQueue)
+                        if (onAddToPlaylist != null || onSelectSongs != null) IosMenuSeparator()
+                        onAddToPlaylist?.let { ActionRow(SfIcons.AddToPlaylist, stringResource(R.string.add_to_playlist), onClick = it) }
+                        onSelectSongs?.let { ActionRow(Icons.Rounded.Checklist, stringResource(R.string.select_songs), onClick = it) }
+                        onOpen?.let { ActionRow(SfIcons.Open, target.type.localizedOpenLabel(), onClick = it) }
+                        // Keeping it: Download is a button of its own, and once there is a download, so is deleting it.
+                        if (filing) IosMenuSeparator()
+                        onToggleDevice?.let {
+                            ActionRow(
+                                icon = when {
+                                    savingOnDevice -> BitChordIcons.Clock
+                                    savedOnDevice -> BitChordIcons.Check
+                                    else -> Icons.Rounded.PhoneIphone
+                                },
+                                label = stringResource(if (savedOnDevice) R.string.remove_from_device else R.string.save_to_device),
+                                value = if (savingOnDevice) stringResource(R.string.saving_ellipsis) else null,
+                                onClick = it,
+                            )
+                        }
+                        onDownloadAll?.let { DownloadAllRow(target, it) }
+                        if (onDeleteDownload != null) {
+                            ActionRow(SfIcons.Trash, stringResource(R.string.delete_download), tint = MaterialTheme.colorScheme.error, onClick = onDeleteDownload)
+                        }
+                        // Everything else sits behind a few named doors, each with only its own options.
+                        if (onEditPlaylist != null || tagsCount + manageCount > 0) IosMenuSeparator()
+                        onEditPlaylist?.let { ActionRow(SfIcons.Pencil, stringResource(R.string.edit_playlist), onClick = it) }
+                        if (tagsCount > 1) {
+                            ActionRow(BitChordIcons.Lyrics, stringResource(R.string.browse_group_tags), chevron = true) { page = MenuPage.TAGS }
+                        } else {
+                            tags()
+                        }
+                        if (manageCount > 1) {
+                            ActionRow(Icons.Rounded.MoreHoriz, stringResource(R.string.browse_group_more), chevron = true) { page = MenuPage.MORE }
+                        } else {
+                            manage()
+                        }
+                        if (onDelete != null) {
+                            IosMenuSeparator()
+                            ActionRow(SfIcons.Trash, stringResource(R.string.delete_playlist), tint = MaterialTheme.colorScheme.error, onClick = onDelete)
+                        }
+                    }
+                    MenuPage.TAGS -> {
+                        MenuPageHeader(stringResource(R.string.browse_group_tags)) { page = MenuPage.MAIN }
+                        tags()
+                    }
+                    MenuPage.MORE -> {
+                        MenuPageHeader(stringResource(R.string.browse_group_more)) { page = MenuPage.MAIN }
+                        manage()
                     }
                 }
-                // The same reading [DownloadedBadge] does per row: a release counts
-                // as downloaded once every one of its tracks is in the saved set,
-                // not from any record of the release itself. Empty for a card whose
-                // page was never opened, which is not an answer either way.
-                val ids = remember(target.songs) { target.songs.mapTo(HashSet()) { it.videoId } }
-                val downloaded = !waiting && ids.isNotEmpty() &&
-                    target.songs.all { it.videoId in saved || dev.auden.library.links.LocalLinks.has(it) }
-                ActionRow(
-                    icon = when {
-                        waiting -> SfIcons.Clock
-                        downloaded -> SfIcons.Downloaded
-                        else -> SfIcons.Download
-                    },
-                    label = stringResource(R.string.download_all),
-                    value = when {
-                        waiting -> stringResource(R.string.downloading)
-                        downloaded -> stringResource(R.string.downloaded)
-                        else -> null
-                    },
-                    onClick = download,
-                )
-            }
-            onOpen?.let {
-                ActionRow(
-                    SfIcons.Open,
-                    target.type.localizedOpenLabel(),
-                    onClick = it,
-                )
-            }
-            onShare?.let {
-                ActionRow(SfIcons.Share, stringResource(R.string.share), onClick = it)
-            }
-            onTogglePin?.let {
-                ActionRow(
-                    SfIcons.Pin,
-                    stringResource(if (isPinned) R.string.unpin else R.string.pin),
-                    onClick = it,
-                )
-            }
-            if (onRename != null) {
-                ActionRow(SfIcons.Pencil, stringResource(R.string.rename)) {
-                    if (onRenameInSheet != null) {
-                        onRenameInSheet()
-                    } else {
-                        renaming = true
-                    }
-                }
-            }
-            onAddLocalFiles?.let {
-                ActionRow(SfIcons.Add, stringResource(R.string.add_local_files), onClick = it)
-            }
-            onReorder?.let {
-                ActionRow(SfIcons.Reorder, stringResource(R.string.reorder_songs), onClick = it)
-            }
-            onDuplicate?.let {
-                ActionRow(Icons.Rounded.ContentCopy, stringResource(R.string.duplicate_playlist), onClick = it)
-            }
-            onFetchLyrics?.let {
-                ActionRow(BitChordIcons.Lyrics, stringResource(R.string.find_lyrics_for_all), onClick = it)
-            }
-            onExport?.let { export ->
-                // The formats are chosen in a picker of their own, in the middle of the screen.
-                ActionRow(Icons.Rounded.FileUpload, stringResource(R.string.export_playlist), onClick = export)
-            }
-            onRepairMetadata?.let {
-                ActionRow(SfIcons.Upgrade, stringResource(R.string.metadata_repair), onClick = it)
-            }
-            onSyncYtMusic?.let { sync -> YtSyncRow(ytSync, sync) }
-            if (onDelete != null) {
-                ActionRow(SfIcons.Trash, stringResource(R.string.delete_playlist), tint = MaterialTheme.colorScheme.error, onClick = onDelete)
-            }
-            if (onDeleteDownload != null) {
-                ActionRow(SfIcons.Trash, stringResource(R.string.delete_download), tint = MaterialTheme.colorScheme.error, onClick = onDeleteDownload)
             }
         }
     }
+}
+
+private enum class MenuPage { MAIN, TAGS, MORE }
+
+/**
+ * Saying which of the three it is, rather than offering the same row whatever the state: a release is asked for
+ * here, and a menu that can't say "already on the device" leaves the question open. The tap is left live in every
+ * state: [Downloads.enqueue] leaves a track that is saved, queued or running alone.
+ */
+@Composable
+private fun DownloadAllRow(target: BrowseTarget, download: () -> Unit) {
+    val active by Downloads.active.collectAsStateWithLifecycle()
+    val requested by Downloads.requested.collectAsStateWithLifecycle()
+    val saved by Downloads.saved.collectAsStateWithLifecycle()
+    // Only the tracks *this release* asked for — two releases can share a track, and reading the whole queue would
+    // show this release waiting on a download some other one started. A failure is not a wait.
+    val waiting = target.browseId?.let { requested[it] }.orEmpty().any { id ->
+        when (active[id]) {
+            is DownloadState.Queued, is DownloadState.Running -> true
+            else -> false
+        }
+    }
+    val ids = remember(target.songs) { target.songs.mapTo(HashSet()) { it.videoId } }
+    val downloaded = !waiting && ids.isNotEmpty() &&
+        target.songs.all { it.videoId in saved || dev.auden.library.links.LocalLinks.has(it) }
+    ActionRow(
+        icon = when {
+            waiting -> SfIcons.Clock
+            downloaded -> SfIcons.Downloaded
+            else -> SfIcons.Download
+        },
+        label = stringResource(R.string.download_all),
+        value = when {
+            waiting -> stringResource(R.string.downloading)
+            downloaded -> stringResource(R.string.downloaded)
+            else -> null
+        },
+        onClick = download,
+    )
 }
 
 @Composable

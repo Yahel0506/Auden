@@ -326,13 +326,20 @@ fun ArtworkMeshBackdrop(
     soften: () -> Float = { 0f },
     /** 0..1: an extra shade over the mesh, for the same panels. */
     shade: () -> Float = { 0f },
+    /**
+     * False holds the colours still whatever the setting says, for a page that stands on the cover's
+     * colours without a player's transport to follow.
+     */
+    animated: Boolean = true,
+    /** False leaves out the player's darkening toward the controls, for a surface that shades itself. */
+    darken: Boolean = true,
 ) {
     val reduceAnimation by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
     val motion by PlayerSettings.backdropMotion.collectAsStateWithLifecycle()
     val flow = rememberBackdropFlow(
         playing = playing,
         reactive = motion == BackdropMotion.REACTIVE && !reduceAnimation,
-        enabled = motion != BackdropMotion.STATIC && !reduceAnimation,
+        enabled = animated && motion != BackdropMotion.STATIC && !reduceAnimation,
     )
 
     // The mesh on screen, and the one fading in over it. Two states rather than
@@ -393,7 +400,7 @@ fun ArtworkMeshBackdrop(
         // cover, and runs the whole way down to the bottom edge, where it is darkest — rather than being
         // spread over the cover's height too, which had it already half dark by the middle of the player.
         // Linear from the first stop to the last.
-        drawRect(
+        if (darken) drawRect(
             brush = Brush.verticalGradient(
                 colors = listOf(
                     Color.Black.copy(alpha = 0.10f),
@@ -586,13 +593,13 @@ private val fullBlurCache = object : LinkedHashMap<String, ImageBitmap>(0, 0.75f
 }
 
 /** Three small box passes approximate a broad Gaussian blur at thumbnail scale. */
-private fun ImageBitmap.boxBlurred(passes: Int): ImageBitmap {
+internal fun ImageBitmap.boxBlurred(passes: Int, radiusDivisor: Int = 12): ImageBitmap {
     val width = width
     val height = height
     if (width < 2 || height < 2) return this
     var source = argbPixels()
     var target = IntArray(source.size)
-    val radius = (minOf(width, height) / 12).coerceAtLeast(2)
+    val radius = (minOf(width, height) / radiusDivisor).coerceAtLeast(2)
 
     repeat(passes) {
         boxBlurPass(source, target, width, height, radius, horizontal = true)
