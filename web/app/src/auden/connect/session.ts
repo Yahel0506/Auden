@@ -9,7 +9,7 @@ import {
 } from '@bitchord/shared/connect';
 import { config } from '@/config';
 import type { Track } from '@/data/music/types';
-import { connectRoomId, deviceId, useParty } from '@/party/listenTogether';
+import { connectRoomIds, deviceId, useParty } from '@/party/listenTogether';
 import { isShareable } from '@/playback/source';
 import { isRestoringLastSession } from '@/state/lastSession';
 import {
@@ -24,7 +24,7 @@ import {
   type MirrorHooks,
   type MirrorView,
 } from '@/state/player';
-import { ConnectClient } from './client';
+import { ConnectClient, MultiConnectClient, type ConnectLink, type ConnectStatus } from './client';
 import { applyOptimistic } from './optimistic';
 import { remotePlayheadSec, useConnect } from './store';
 
@@ -39,7 +39,7 @@ import { remotePlayheadSec, useConnect } from './store';
  * AutoPlay and Listen Together all follow that store, and none of them acts on a song that plays on a phone.
  */
 
-let client: ConnectClient | null = null;
+let client: ConnectLink | null = null;
 /** The ids of the entries last published, by published index: a remote's "jump" names one. */
 let published: string[] = [];
 let heartbeat: ReturnType<typeof setInterval> | null = null;
@@ -416,17 +416,17 @@ export function remoteCommand(command: Command): boolean {
 /** Joins the account's room until the returned function is called. A no-op without a server or a signed-in account. */
 export async function startConnect(identity: { room?: string; deviceId?: string; name?: string } = {}): Promise<() => void> {
   if (!config.connectUrl) return () => {};
-  const room = identity.room ?? (await connectRoomId());
-  if (!room) return () => {};
+  const rooms = identity.room ? [identity.room] : await connectRoomIds();
+  if (!rooms.length) return () => {};
   const myId = identity.deviceId ?? deviceId();
   useConnect.setState({ myId, devices: [], activeId: null, remote: null });
-  const c = new ConnectClient({
+  const link = {
     url: config.connectUrl,
-    room,
     device: { deviceId: myId, name: identity.name ?? deviceName(), platform: platform() },
     onMessage,
-    onStatus: (status) => useConnect.setState({ status }),
-  });
+    onStatus: (status: ConnectStatus) => useConnect.setState({ status }),
+  };
+  const c: ConnectLink = rooms.length === 1 ? new ConnectClient({ ...link, room: rooms[0]! }) : new MultiConnectClient({ ...link, rooms });
   client = c;
   c.start();
 

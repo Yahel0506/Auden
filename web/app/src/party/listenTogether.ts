@@ -168,7 +168,19 @@ export async function sha256(value: string): Promise<string> {
  * to each). Null when signed out or when neither is known. Like the party's userId it is unverified, not a credential.
  */
 export async function connectRoomId(): Promise<string | null> {
-  return (await googleRoomId()) ?? (await spotifyRoomId()) ?? (await localRoomId());
+  return (await connectRoomIds())[0] ?? null;
+}
+
+/**
+ * Every room this device belongs in. A Google account's room is the one: it is the account's own, and the rest
+ * would only open it to strangers on the network. With no Google account the Spotify account's room (when there is
+ * one) and the room for the party name on this network are both joined, at once.
+ */
+export async function connectRoomIds(): Promise<string[]> {
+  const google = await googleRoomId();
+  if (google) return [google];
+  const spotify = await spotifyRoomId();
+  return [...(spotify ? [spotify] : []), await localRoomId()];
 }
 
 /**

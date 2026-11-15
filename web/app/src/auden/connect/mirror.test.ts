@@ -14,7 +14,7 @@ const loads: { id: string; startSec: number | undefined; autoplay: boolean | und
 
 vi.mock('@/state/lastSession', () => ({ isRestoringLastSession: () => restoring.on }));
 vi.mock('@/config', () => ({ config: { connectUrl: 'https://connect.test' } }));
-vi.mock('@/party/listenTogether', () => ({ connectRoomId: async () => 'a'.repeat(32), deviceId: () => 'web1', useParty: { getState: () => ({ code: null }) } }));
+vi.mock('@/party/listenTogether', () => ({ connectRoomIds: async () => ['a'.repeat(32)], deviceId: () => 'web1', useParty: { getState: () => ({ code: null }) } }));
 vi.mock('./client', () => ({
   ConnectClient: class {
     constructor(o: { onMessage: typeof handler; onStatus: typeof setStatus }) {

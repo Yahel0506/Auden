@@ -1,4 +1,4 @@
-import { CONNECT_PROTOCOL, type ClientMessage, type ConnectDevice, type ServerMessage } from '@bitchord/shared/connect';
+import { CONNECT_PROTOCOL, RoomMerger, type ClientMessage, type ConnectDevice, type ServerMessage } from '@bitchord/shared/connect';
 
 export type ConnectStatus = 'off' | 'connecting' | 'online';
 
@@ -112,5 +112,65 @@ export class ConnectClient {
     this.timers = [];
     if (this.keepalive) clearInterval(this.keepalive);
     this.keepalive = null;
+  }
+}
+
+/** What the session needs of its link to the rooms: one room or several. */
+export interface ConnectLink {
+  start(): void;
+  stop(): void;
+  send(message: ClientMessage): boolean;
+}
+
+/**
+ * A device in several rooms at once — its Spotify account's and the one for its network. One socket per room; what
+ * comes in is folded into one stream by [RoomMerger] and what goes out is sent to every room that is open (a room
+ * that does not hold the target of a command or a transfer ignores it).
+ */
+export class MultiConnectClient implements ConnectLink {
+  private readonly clients: ConnectClient[];
+  private readonly statuses: ConnectStatus[];
+  private readonly merger: RoomMerger;
+  private last: ConnectStatus = 'off';
+
+  constructor(private readonly options: Omit<ConnectClientOptions, 'room'> & { rooms: string[] }) {
+    this.merger = new RoomMerger(options.device.deviceId);
+    this.statuses = options.rooms.map(() => 'off' as ConnectStatus);
+    this.clients = options.rooms.map(
+      (room, index) =>
+        new ConnectClient({
+          url: options.url,
+          room,
+          device: options.device,
+          onMessage: (message) => {
+            for (const out of this.merger.feed(index, message)) options.onMessage(out);
+          },
+          onStatus: (status) => {
+            this.statuses[index] = status;
+            this.publishStatus();
+          },
+        }),
+    );
+  }
+
+  start(): void {
+    for (const c of this.clients) c.start();
+  }
+
+  stop(): void {
+    for (const c of this.clients) c.stop();
+  }
+
+  send(message: ClientMessage): boolean {
+    let sent = false;
+    for (const c of this.clients) sent = c.send(message) || sent;
+    return sent;
+  }
+
+  private publishStatus(): void {
+    const status: ConnectStatus = this.statuses.includes('online') ? 'online' : this.statuses.includes('connecting') ? 'connecting' : 'off';
+    if (status === this.last) return;
+    this.last = status;
+    this.options.onStatus(status);
   }
 }

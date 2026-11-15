@@ -4,7 +4,7 @@ let auth: unknown;
 let spotify: unknown = undefined;
 vi.mock('@/lib/queryClient', () => ({ queryClient: { getQueryData: () => spotify } }));
 vi.mock('@/extension/useYtAuth', () => ({ ytAuthSnapshot: () => auth }));
-const { connectRoomId } = await import('@/party/listenTogether');
+const { connectRoomId, connectRoomIds } = await import('@/party/listenTogether');
 
 const SPOTIFY_SOMEUSER = '1ca227dbebe11111ec5325bdc6250731';
 const LOCAL_YAEL = 'fce7ecee6ca56cd4b6f7e11bab1fba74';
@@ -83,5 +83,32 @@ describe('local room', () => {
   it('keeps an account’s room when there is one', async () => {
     auth = signedIn('Person@Example.com ');
     expect(await connectRoomId()).toBe('2c33f5f9e51c05093f360ef8f4dde494');
+  });
+});
+
+describe('connectRoomIds', () => {
+  const store = new Map<string, string>();
+  beforeEach(() => {
+    store.clear();
+    spotify = undefined;
+    vi.stubGlobal('localStorage', { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) });
+  });
+
+  it('is the Google account’s room alone: the others would only open it to the network', async () => {
+    auth = signedIn('Person@Example.com ');
+    spotify = { signedIn: true, user: { name: 'n', id: 'SomeUser' } };
+    expect(await connectRoomIds()).toEqual(['2c33f5f9e51c05093f360ef8f4dde494']);
+  });
+
+  it('is the Spotify room and the local room together when there is no Google account', async () => {
+    auth = { signedIn: false, active: null, accounts: [] };
+    spotify = { signedIn: true, user: { name: 'n', id: 'SomeUser' } };
+    store.set('bitchord:party', JSON.stringify({ nickname: 'Yael' }));
+    expect(await connectRoomIds()).toEqual([SPOTIFY_SOMEUSER, 'local/' + LOCAL_YAEL]);
+  });
+
+  it('is the local room alone with no account at all', async () => {
+    auth = { signedIn: false, active: null, accounts: [] };
+    expect(await connectRoomIds()).toEqual(['local/' + LOCAL_GUEST]);
   });
 });
