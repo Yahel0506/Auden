@@ -2723,7 +2723,11 @@ class CrossfadeController(
                 return loopBail("the incoming song was not playing ${LOOP_INCOMING_READY_SECONDS}s after its start", settle = true)
             }
         }
-        if (!handedOff && m >= session.clock.handoffAt) {
+        // Not before the incoming player has been started: the session moves onto it at the handoff, and
+        // a player still waiting for its start (its song is shorter than the mix's timeline, so it
+        // starts late) has playWhenReady false, which the pause check above would read as the listener
+        // pausing and drop the mix, leaving playback stopped.
+        if (!handedOff && loopIncomingStarted && m >= session.clock.handoffAt) {
             handOff(out, into)
         }
         publishLoopBeat(session, m, now)
