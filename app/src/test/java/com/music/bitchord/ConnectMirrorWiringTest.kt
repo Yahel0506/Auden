@@ -78,8 +78,10 @@ class ConnectMirrorWiringTest {
         for (action in listOf("ACTION_START_BOUNDED_CONTEXT", "ACTION_START_STATION", "ACTION_BEGIN_RADIO_QUEUE")) {
             val at = source.indexOf("$action ->")
             assertTrue("$action not handled", at > 0)
-            assertTrue("$action must end the mirror", source.substring(at, at + 140).contains("mirrorDoor.newSession()"))
+            assertTrue("$action must end the mirror", source.substring(at, at + 420).contains("mirrorDoor.newSession()"))
         }
+        // An album or playlist tapped while another device plays is sent there first; it only ends the mirror when it cannot be.
+        assertTrue(source.contains("sendBoundedContextToRemote(args)"))
         assertTrue(source.contains("mirrorDoor.shuffle(!QueueShuffle.enabled.value)"))
     }
 

@@ -131,11 +131,16 @@ enum class CommandAction {
     @SerialName("remove") REMOVE,
     @SerialName("move") MOVE,
     @SerialName("clearUpcoming") CLEAR_UPCOMING,
+
+    // New content started on a remote: the active device replaces its queue with [Command.tracks], at the index
+    // in [Command.value], and plays it.
+    @SerialName("load") LOAD,
 }
 
 /**
  * seek: ms; volume: 0..1; jump / remove: queue index; move: the index to take ([value]) and where it goes ([to]);
- * shuffle: boolean; repeat: "off" | "all" | "one"; playNext / addToQueue: the songs, in order ([tracks]).
+ * shuffle: boolean; repeat: "off" | "all" | "one"; playNext / addToQueue / load: the songs, in order ([tracks]);
+ * load starts them at the index in [value].
  */
 @Serializable
 data class Command(
@@ -162,6 +167,7 @@ data class Command(
         fun remove(index: Int) = Command(CommandAction.REMOVE, JsonPrimitive(index))
         fun move(from: Int, to: Int) = Command(CommandAction.MOVE, JsonPrimitive(from), to = to)
         fun clearUpcoming() = Command(CommandAction.CLEAR_UPCOMING)
+        fun load(tracks: List<ConnectTrack>, index: Int) = Command(CommandAction.LOAD, JsonPrimitive(index), tracks = tracks)
         fun playNext(tracks: List<ConnectTrack>) = Command(CommandAction.PLAY_NEXT, tracks = tracks)
         fun addToQueue(tracks: List<ConnectTrack>) = Command(CommandAction.ADD_TO_QUEUE, tracks = tracks)
         fun shuffle(on: Boolean) = Command(CommandAction.SHUFFLE, JsonPrimitive(on))

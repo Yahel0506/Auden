@@ -94,6 +94,13 @@ export function applyOptimistic(held: Held, command: Command, serverNowMs: numbe
       next.splice(to, 0, entry!);
       return edited(next, index, state.order);
     }
+    case 'load': {
+      const tracks = command.tracks ?? [];
+      const at3 = command.value;
+      if (!tracks.length || typeof at3 !== 'number') return held;
+      const { order: _dropped, ...rest } = state;
+      return { state: { ...rest, queue: tracks, index: at3, positionMs: 0, isPlaying: true }, atServerMs: serverNowMs };
+    }
     case 'clearUpcoming': {
       const next = queue.slice(0, index + 1);
       return edited(next, index, withOrder(next));

@@ -276,26 +276,20 @@ describe('controls in mirror mode are commands to the phone', () => {
 describe('starting something here leaves the mirror and claims the session', () => {
   beforeEach(() => join());
 
-  it('playTracks releases the phone, plays here and is not pulled back by the phone’s old states', async () => {
+  it('playTracks is sent to the phone as a load: it keeps playing there and the mirror stays', async () => {
     usePlayer.getState().playTracks([track('x1'), track('x2')], 1, SOURCE);
     await flush();
     const s = usePlayer.getState();
-    expect(s.mirror).toBe(false);
+    expect(s.mirror).toBe(true);
+    expect(sent.filter((m) => m.type === 'claim')).toHaveLength(0);
+    const command = sent.filter((m): m is Extract<ClientMessage, { type: 'command' }> => m.type === 'command').at(-1)!.command;
+    expect(command).toMatchObject({ action: 'load', value: 1 });
+    expect(command.tracks?.map((t) => t.videoId)).toEqual(['x1', 'x2']);
+    expect(useConnect.getState().activeId).not.toBe('web1');
+    // The screen answers at once with the new queue; the phone's next state is the truth.
     expect(ids()).toEqual(['x1', 'x2']);
-    expect(loads.at(-1)?.id).toBe('x2');
-    const claims = sent.filter((m) => m.type === 'claim');
-    expect(claims).toHaveLength(1);
-    expect(useConnect.getState()).toMatchObject({ activeId: 'web1', remote: null });
-    // The phone is released by the server: a state of its own still in flight changes nothing here.
-    phoneSays(phoneState({ index: 2 }));
-    expect(usePlayer.getState().mirror).toBe(false);
-    expect(ids()).toEqual(['x1', 'x2']);
-    // And what plays here is published as the session.
-    usePlayer.setState({ status: 'playing' });
-    vi.advanceTimersByTime(200);
-    const state = sent.filter((m): m is Extract<ClientMessage, { type: 'state' }> => m.type === 'state').at(-1)!.state;
-    expect(state.queue.map((t) => t.videoId)).toEqual(['x1', 'x2']);
-    expect(state.index).toBe(1);
+    expect(useConnect.getState().remote?.state.index).toBe(1);
+    expect(loads).toHaveLength(0);
   });
 
   it('a local file claims too: the phone is released and the session says nothing is queued', async () => {
@@ -306,11 +300,12 @@ describe('starting something here leaves the mirror and claims the session', () 
     expect(claim?.state).toMatchObject({ queue: [], index: -1, isPlaying: false });
   });
 
-  it('playTrack and a DJ start also end it', async () => {
+  it('playTrack is sent to the phone too', async () => {
     usePlayer.getState().playTrack(track('solo'), SOURCE);
     await flush();
-    expect(usePlayer.getState().mirror).toBe(false);
-    expect(sent.filter((m) => m.type === 'claim')).toHaveLength(1);
+    expect(usePlayer.getState().mirror).toBe(true);
+    expect(sent.filter((m) => m.type === 'claim')).toHaveLength(0);
+    expect(sent.filter((m) => m.type === 'command').at(-1)).toMatchObject({ command: { action: 'load', value: 0 } });
   });
 });
 

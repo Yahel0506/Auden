@@ -87,6 +87,12 @@ interface MirrorDoor {
     fun remove(from: Int, to: Int, currentIndex: Int, count: Int)
     fun move(from: Int, to: Int)
 
+    /**
+     * The user starts a queue of songs on this phone while another device plays: they play there instead, from
+     * [index]. False when they cannot be sent, and the caller ends the mirror as it always did.
+     */
+    fun load(tracks: List<ConnectTrack>, index: Int): Boolean
+
     /** The user starts something of their own on this phone: the mirror ends and the phone is its own player. */
     fun newSession()
 }
@@ -107,6 +113,7 @@ object NoMirror : MirrorDoor {
     override fun add(index: Int, tracks: List<ConnectTrack>, currentIndex: Int) = Unit
     override fun remove(from: Int, to: Int, currentIndex: Int, count: Int) = Unit
     override fun move(from: Int, to: Int) = Unit
+    override fun load(tracks: List<ConnectTrack>, index: Int) = false
     override fun newSession() = Unit
 }
 
@@ -166,7 +173,20 @@ class MirrorRouting(private val manager: ConnectManager) : MirrorDoor {
         if (from != to) send(Command.move(from, to))
     }
 
+    override fun load(tracks: List<ConnectTrack>, index: Int): Boolean {
+        if (tracks.isEmpty() || index !in tracks.indices) return false
+        // A window of a long list around the song, as a published state carries it.
+        val from = (index - LOAD_BEHIND).coerceAtLeast(0)
+        val window = tracks.subList(from, minOf(tracks.size, index + LOAD_AHEAD + 1))
+        return manager.remoteCommand(Command.load(window, index - from))
+    }
+
     override fun newSession() = manager.leaveMirror()
+
+    private companion object {
+        const val LOAD_BEHIND = 10
+        const val LOAD_AHEAD = 89
+    }
 }
 
 /**

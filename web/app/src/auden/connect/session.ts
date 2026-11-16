@@ -260,6 +260,16 @@ const mirrorHooks: MirrorHooks = {
   removeAt: (index) => void remoteCommand({ action: 'remove', value: index }),
   move: (from, to) => void remoteCommand({ action: 'move', value: from, to }),
   clearUpNext: () => void remoteCommand({ action: 'clearUpcoming' }),
+  load: (tracks, index) => {
+    // A window of a long list around the song, as a published state carries it.
+    const picked = tracks[index];
+    if (!picked || !isShareable(picked)) return false;
+    const list = tracks.filter(isShareable);
+    const at = list.findIndex((t) => t === picked);
+    const from = Math.max(0, at - BEHIND);
+    const slice = list.slice(from, at + AHEAD + 1);
+    return remoteCommand({ action: 'load', value: at - from, tracks: slice.map(toConnectTrack) });
+  },
   leave: leaveForNewContext,
   playhead: () => {
     const remote = useConnect.getState().remote;
@@ -328,6 +338,13 @@ function applyCommand(command: Command): void {
       const from = entryAt(command.value);
       const to = entryAt(command.to);
       if (from >= 0 && to >= 0) p.move(from, to);
+      break;
+    }
+    case 'load': {
+      const tracks = (command.tracks ?? []).map(toTrack);
+      const at = typeof command.value === 'number' ? command.value : 0;
+      // A new context, as if it had been started here: shuffle and repeat stay as they were.
+      if (tracks.length) p.playTracks(tracks, at, { title: 'Auden Connect', type: 'queue' });
       break;
     }
     case 'clearUpcoming':

@@ -56,18 +56,20 @@ export interface PlaybackState {
 export type CommandAction =
   | 'play' | 'pause' | 'toggle' | 'next' | 'previous' | 'seek' | 'volume' | 'shuffle' | 'repeat' | 'jump'
   // Queue edits: the active device applies them and publishes the new queue, so every device shows the same one.
-  | 'playNext' | 'addToQueue' | 'remove' | 'move' | 'clearUpcoming';
+  | 'playNext' | 'addToQueue' | 'remove' | 'move' | 'clearUpcoming'
+  // New content started on a remote: the active device replaces its queue with `tracks`, at `value`, and plays it.
+  | 'load';
 
 export interface Command {
   action: CommandAction;
   /**
-   * seek: ms; volume: 0..1; jump / remove: queue index; move: the index to take; shuffle: boolean;
+   * seek: ms; volume: 0..1; jump / remove / load: queue index; move: the index to take; shuffle: boolean;
    * repeat: 'off' | 'all' | 'one'.
    */
   value?: number | boolean | ConnectRepeat;
   /** move: where the song goes. */
   to?: number;
-  /** playNext / addToQueue: the songs, in order. */
+  /** playNext / addToQueue / load: the songs, in order. */
   tracks?: ConnectTrack[];
 }
 
@@ -175,7 +177,7 @@ export function parsePlaybackState(raw: unknown): PlaybackState | null {
 
 const ACTIONS: readonly CommandAction[] = [
   'play', 'pause', 'toggle', 'next', 'previous', 'seek', 'volume', 'shuffle', 'repeat', 'jump',
-  'playNext', 'addToQueue', 'remove', 'move', 'clearUpcoming',
+  'playNext', 'addToQueue', 'remove', 'move', 'clearUpcoming', 'load',
 ];
 
 function parseCommand(raw: unknown): Command | null {
@@ -199,6 +201,16 @@ function parseCommand(raw: unknown): Command | null {
         tracks.push(track);
       }
       return { action, tracks };
+    }
+    case 'load': {
+      if (!Array.isArray(raw.tracks) || raw.tracks.length === 0 || raw.tracks.length > MAX_QUEUE) return null;
+      const tracks: ConnectTrack[] = [];
+      for (const item of raw.tracks) {
+        const track = parseTrack(item);
+        if (!track) return null;
+        tracks.push(track);
+      }
+      return isFiniteNumber(value) && value >= 0 && value < tracks.length ? { action, value: Math.round(value), tracks } : null;
     }
     case 'volume':
       return isFiniteNumber(value) ? { action, value: Math.min(1, Math.max(0, value)) } : null;

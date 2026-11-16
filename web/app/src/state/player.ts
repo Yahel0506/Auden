@@ -594,7 +594,12 @@ export interface MirrorHooks {
   removeAt(index: number): void;
   move(from: number, to: number): void;
   clearUpNext(): void;
-  /** The listener starts something new here: the mirror ends and the other device is released. */
+  /**
+   * The listener starts a queue of songs here while another device plays: it plays them there instead, from
+   * [index]. False when they cannot be sent (a local file), and the mirror ends as it always did.
+   */
+  load(tracks: Track[], index: number): boolean;
+  /** The listener starts something new here that cannot be sent: the mirror ends and the other device is released. */
   leave(): void;
   /** Where the other device's song is now. */
   playhead(): { sec: number; paused: boolean } | null;
@@ -645,6 +650,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
 
   playTracks(tracks, startIndex, source) {
     if (!tracks.length) return;
+    if (mirrored()?.load(tracks, startIndex)) return;
     leaveMirror();
     leaveDj();
     const { queue, index, shuffle } = get();
@@ -662,6 +668,7 @@ export const usePlayer = create<PlayerState>()((set, get) => ({
   },
 
   playTrack(track, source) {
+    if (mirrored()?.load([track], 0)) return;
     leaveMirror();
     leaveDj();
     const { queue, index } = get();

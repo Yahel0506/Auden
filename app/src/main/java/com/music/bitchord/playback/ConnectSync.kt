@@ -32,6 +32,8 @@ import kotlinx.coroutines.flow.map
 import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.model.QueueTier
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.data.canvas.SpotifyAccountId
+import com.music.bitchord.data.connect.MultiRoomTransport
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.sources.TrackMatcher
 import kotlinx.coroutines.CoroutineScope
@@ -149,7 +151,7 @@ class ConnectSync(
 
     /** Joins, leaves or moves between rooms to match the setting and the signed-in account. */
     private fun reconcile() {
-        val room = if (AppSettings.connectEnabled.value) ListenTogether.accountRoomId() else null
+        val room = if (AppSettings.connectEnabled.value) currentRoom() else null
         if (room == joinedRoom) return
         joinedRoom = room
         if (room == null) {
@@ -166,6 +168,43 @@ class ConnectSync(
             local = this,
         )
     }
+
+    /**
+     * The rooms this device belongs in, as one string (see [MultiRoomTransport]): its Google account's alone; else its
+     * Spotify account's and the one for the name it uses in parties, which the server scopes to this network, both
+     * at once; with no account at all, just the latter. A Spotify session
+     * whose id has not been read yet holds the room back for that moment (and for good after one failed read), so a
+     * device does not join the local room only to jump out of it.
+     */
+    private fun currentRoom(): String? {
+        // A Google account's own room, and only it: the others would just open it to the network.
+        ListenTogether.accountRoomId()?.let { return it }
+        // Without one, the Spotify account's room (when there is one) and the one for this network, both at once.
+        val rooms = mutableListOf<String>()
+        if (AppSettings.spotifySpdcToken.value.isNotBlank()) {
+            val id = AppSettings.spotifyAccountId.value
+            if (id.isNotBlank()) {
+                ListenTogether.spotifyRoomIdFor(id)?.let(rooms::add)
+            } else if (!spotifyLookupFailed) {
+                if (!spotifyLookup) {
+                    spotifyLookup = true
+                    scope.launch {
+                        if (SpotifyAccountId.read() == null) spotifyLookupFailed = true
+                        spotifyLookup = false
+                        reconcile()
+                    }
+                }
+                return null
+            }
+        } else {
+            spotifyLookupFailed = false
+        }
+        rooms += ListenTogether.localRoomIdFor(ListenTogether.nickname())
+        return MultiRoomTransport.join(rooms)
+    }
+
+    @Volatile private var spotifyLookup = false
+    @Volatile private var spotifyLookupFailed = false
 
     private fun deviceName(): String =
         (Build.MODEL?.trim()?.takeIf { it.isNotEmpty() } ?: "Android").take(ConnectLimits.MAX_DEVICE_NAME)
@@ -446,10 +485,32 @@ class ConnectSync(
                 val to = command.to?.let(::localIndex)
                 if (from != null && to != null && from != to) exo.moveMediaItem(from, to)
             }
+            CommandAction.LOAD -> loadQueue(command)
             CommandAction.CLEAR_UPCOMING -> editQueue { exo ->
                 val first = exo.currentMediaItemIndex + 1
                 if (first < exo.mediaItemCount) exo.removeMediaItems(first, exo.mediaItemCount)
             }
+        }
+    }
+
+    /**
+     * New content a remote started: this device keeps the floor and plays it, as it would a queue of its own. Shuffle
+     * and repeat stay as they are (a shuffled phone shuffles the new queue). Not in a party: its queue is the server's.
+     */
+    private fun loadQueue(command: Command) {
+        if (isPartyQueue()) return
+        val tracks = command.tracks?.take(ConnectLimits.MAX_QUEUE) ?: return
+        val at = command.index?.takeIf { it in tracks.indices } ?: return
+        scope.launch {
+            val items = withContext(Dispatchers.Default) { tracks.map { it.toSong().toMediaItem() } }
+            val exo = player() ?: return@launch
+            val wasShuffled = QueueShuffle.enabled.value
+            exo.setMediaItems(items, at, 0L)
+            QueueShuffle.adoptUnshuffled()
+            exo.prepare()
+            exo.playWhenReady = true
+            if (wasShuffled) QueueShuffle.toggle(exo)
+            manager.onLocalChanged()
         }
     }
 

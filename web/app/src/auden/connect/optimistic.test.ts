@@ -70,3 +70,16 @@ describe('what a mirror shows before the playing device answers', () => {
     expect(reorderUpcoming(['a', 'c', 'x', 'b'].map((i) => t(i)), 0, ['a', 'b', 'c']).map((x) => x.videoId)).toEqual(['a', 'b', 'c', 'x']);
   });
 });
+
+describe('load', () => {
+  it('replaces the queue, starts at the index and plays', () => {
+    const t = (id: string) => ({ videoId: id, title: id, artist: 'a' });
+    const held = { state: { queue: [t('a'), t('b')], index: 1, positionMs: 5000, isPlaying: false, volume: 1, shuffle: true, repeat: 'off' as const, order: ['a', 'b'] }, atServerMs: 0 };
+    const out = applyOptimistic(held, { action: 'load', value: 1, tracks: [t('x'), t('y')] }, 100);
+    expect(out.state.queue.map((q) => q.videoId)).toEqual(['x', 'y']);
+    expect(out.state.index).toBe(1);
+    expect(out.state.isPlaying).toBe(true);
+    expect(out.state.positionMs).toBe(0);
+    expect(out.state.order).toBeUndefined();
+  });
+});

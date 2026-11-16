@@ -34,6 +34,16 @@ fun PlaybackState.afterCommand(command: Command, headMs: Long): PlaybackState = 
         val to = command.to
         if (from != null && to != null && from in queue.indices && to in queue.indices) moved(from, to) else this
     }
+    CommandAction.LOAD -> {
+        val tracks = command.tracks
+        val at = command.index
+        // The new queue arrives in its own order: the one the old shuffle remembered no longer applies.
+        if (!tracks.isNullOrEmpty() && at != null && at in tracks.indices) {
+            copy(queue = tracks, index = at, positionMs = 0L, isPlaying = true, order = null)
+        } else {
+            this
+        }
+    }
     CommandAction.CLEAR_UPCOMING ->
         if (index in queue.indices && index + 1 < queue.size) copy(queue = queue.subList(0, index + 1)) else this
 }
@@ -41,7 +51,7 @@ fun PlaybackState.afterCommand(command: Command, headMs: Long): PlaybackState = 
 /** True when the command moves the playhead or the play state, so the state's clock has to be re-anchored. */
 fun Command.reanchors(): Boolean = when (action) {
     CommandAction.PLAY, CommandAction.PAUSE, CommandAction.TOGGLE, CommandAction.SEEK,
-    CommandAction.NEXT, CommandAction.PREVIOUS, CommandAction.JUMP -> true
+    CommandAction.NEXT, CommandAction.PREVIOUS, CommandAction.JUMP, CommandAction.LOAD -> true
     else -> false
 }
 

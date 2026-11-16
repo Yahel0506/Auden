@@ -79,6 +79,10 @@ object BoundedContextRequests {
         return token
     }
 
+    /** The request waiting under [token], left in place. */
+    @Synchronized
+    fun peek(token: String?): Request? = pending?.takeIf { it.token == token }?.request
+
     @Synchronized
     fun take(token: String?): Request? {
         if (token == null) return null

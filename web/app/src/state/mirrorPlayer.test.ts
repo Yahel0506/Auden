@@ -60,6 +60,7 @@ const SOURCE = { title: 'Playlist', type: 'playlist' as const };
 const hooks = {
   togglePlay: vi.fn(), next: vi.fn(), previous: vi.fn(), seek: vi.fn(), toggleShuffle: vi.fn(), cycleRepeat: vi.fn(), setVolume: vi.fn(), toggleMute: vi.fn(),
   jumpTo: vi.fn(), playNext: vi.fn(), addToQueue: vi.fn(), removeAt: vi.fn(), move: vi.fn(), clearUpNext: vi.fn(),
+  load: vi.fn((_tracks: unknown, _index: number) => true),
   leave: vi.fn(() => mirrorPlayer.leave(true)),
   playhead: vi.fn(() => ({ sec: 42, paused: false })),
 };
@@ -262,25 +263,26 @@ describe('starting something new here ends the mirror', () => {
   };
   beforeEach(() => mirrorPlayer.show(view(['a', 'b', 'c'], { shuffle: true, repeat: 'all' })));
 
-  it('playTracks', async () => {
-    usePlayer.getState().playTracks([track('n1'), track('n2')], 0, SOURCE);
+  it('playTracks is sent to the other device instead, and the mirror stays', async () => {
+    usePlayer.getState().playTracks([track('n1'), track('n2')], 1, SOURCE);
     await flush();
-    ended();
-    // The other device’s rows are not carried into the new context.
-    expect(usePlayer.getState().queue.map((e) => e.track.videoId)).toEqual(['n1', 'n2']);
-    expect(loads.map((l) => l.id)).toEqual(['n1']);
+    expect(hooks.load).toHaveBeenCalledTimes(1);
+    expect(hooks.load.mock.calls[0]![1]).toBe(1);
+    expect(usePlayer.getState().mirror).toBe(true);
+    expect(hooks.leave).not.toHaveBeenCalled();
+    expect(loads).toHaveLength(0);
   });
 
-  it('playTrack and playVideo', async () => {
+  it('playTrack and playVideo are sent too', async () => {
     usePlayer.getState().playTrack(track('solo'), SOURCE);
     await flush();
-    ended();
-    expect(loads.map((l) => l.id)).toEqual(['solo']);
-    mirrorPlayer.show(view(['a']));
-    hooks.leave.mockClear();
+    expect(hooks.load).toHaveBeenCalledTimes(1);
     await usePlayer.getState().playVideo('abcdefghijk');
     await flush();
-    ended();
+    expect(hooks.load).toHaveBeenCalledTimes(2);
+    expect(usePlayer.getState().mirror).toBe(true);
+    expect(hooks.leave).not.toHaveBeenCalled();
+    expect(loads).toHaveLength(0);
   });
 
   it('a DJ start', async () => {
@@ -298,6 +300,7 @@ describe('starting something new here ends the mirror', () => {
   });
 
   it('a local file opened here (any playTracks of a track only this browser has)', async () => {
+    hooks.load.mockReturnValueOnce(false);
     usePlayer.getState().playTracks([track('auden:local:1', { source: 'local' })], 0, SOURCE);
     await flush();
     ended();
