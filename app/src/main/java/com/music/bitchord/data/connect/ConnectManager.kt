@@ -369,14 +369,19 @@ class ConnectManager(
         val shared: ConnectManager by lazy {
             ConnectManager(
                 scope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main),
+                // A room string may name several rooms (see [MultiRoomTransport]): one socket each, as one.
                 factory = ConnectTransportFactory { room, device, listener ->
-                    ConnectClient(
-                        serverUrl = com.music.bitchord.BuildConfig.CONNECT_SERVER,
-                        room = room,
-                        device = device,
-                        listener = listener,
-                        scope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO),
-                    )
+                    val single = ConnectTransportFactory { id, dev, l ->
+                        ConnectClient(
+                            serverUrl = com.music.bitchord.BuildConfig.CONNECT_SERVER,
+                            room = id,
+                            device = dev,
+                            listener = l,
+                            scope = CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO),
+                        )
+                    }
+                    val rooms = room.split(MultiRoomTransport.SEPARATOR).filter { it.isNotBlank() }
+                    if (rooms.size <= 1) single.create(room, device, listener) else MultiRoomTransport(rooms, device, listener, single)
                 },
             )
         }

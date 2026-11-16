@@ -26,4 +26,17 @@ class ConnectRoomIdTest {
         assertNull(ListenTogether.connectRoomIdFor(""))
         assertNull(ListenTogether.connectRoomIdFor("   "))
     }
+
+    @Test
+    fun spotifyRoomHashesTheLowerCasedUsernameLikeTheWeb() {
+        assertEquals("1ca227dbebe11111ec5325bdc6250731", ListenTogether.spotifyRoomIdFor("SomeUser"))
+        assertEquals("1ca227dbebe11111ec5325bdc6250731", ListenTogether.spotifyRoomIdFor(" someuser "))
+        assertNull(ListenTogether.spotifyRoomIdFor("  "))
+    }
+
+    @Test
+    fun localRoomIsTheHashedPartyNameBehindTheLocalPrefix() {
+        assertEquals("local/fce7ecee6ca56cd4b6f7e11bab1fba74", ListenTogether.localRoomIdFor(" Yael "))
+        assertEquals("local/e8646db4ea2016f2f1747ef3303a2047", ListenTogether.localRoomIdFor(""))
+    }
 }

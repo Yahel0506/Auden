@@ -1445,6 +1445,12 @@ object ListenTogether {
 
     // ------------------------------------------------------------- plumbing --
 
+    /** What a guest with no nickname is called. */
+    private const val GUEST_NAME = "Guest"
+
+    /** The shortest avatar-URL length any party server we know of accepts. */
+    private const val AVATAR_URL_LIMIT = 100
+
     private data class Identity(
         val userId: String,
         val deviceId: String,
@@ -1467,8 +1473,10 @@ object ListenTogether {
      */
     private fun identity(nickname: String = nickname()): Identity? {
         val store = BitChordApplication.authStore
-        if (!store.isSignedIn) return null
-        val account = store.activeSession ?: return null
+        val account = store.activeSession?.takeIf { store.isSignedIn }
+            // No account, no problem: a party only needs someone to be, and the server never checks who. A guest
+            // is this device's own random id and the nickname they chose.
+            ?: return guestIdentity(nickname)
         val profile = account.profiles.firstOrNull { it.profileId == account.activeProfileId }
             ?: account.profiles.firstOrNull()
         val name = nickname.trim().takeIf { it.isNotBlank() }
@@ -1480,8 +1488,37 @@ object ListenTogether {
             userId = sha256("${account.accountId}:${profile?.profileId.orEmpty()}").take(32),
             deviceId = deviceId(),
             name = name,
-            avatar = profile?.avatar?.takeIf { it.startsWith("http") },
+            avatar = profile?.avatar?.takeIf { it.startsWith("http") }?.let(::fitAvatarUrl),
         )
+    }
+
+    /**
+     * Who a device with no account jams as. The id is the device's own — stable across launches, so the party
+     * recognises it coming back — and not tied to anyone; there is no picture, so the party shows the initial.
+     */
+    private fun guestIdentity(nickname: String): Identity = Identity(
+        userId = sha256("guest:${deviceId()}").take(32),
+        deviceId = deviceId(),
+        name = nickname.trim().takeIf { it.isNotBlank() } ?: GUEST_NAME,
+        avatar = null,
+    )
+
+    /**
+     * The profile picture's URL as a party server will take it. Servers cap it — an older one at 100 characters —
+     * and a Google photo URL, with its size and crop suffix, is often longer than that, which made creating or
+     * joining a party fail outright for those accounts. The picture is optional, so the URL is shortened where it
+     * can be (Google's size suffix is replaced by the plainest one) and left out where it still doesn't fit: the
+     * party shows the member's initial instead of refusing them.
+     */
+    internal fun fitAvatarUrl(url: String): String? {
+        if (url.length <= AVATAR_URL_LIMIT) return url
+        val host = url.substringAfter("://").substringBefore('/')
+        val google = host.endsWith("googleusercontent.com") || host.endsWith("ggpht.com")
+        if (google && url.contains('=')) {
+            val short = url.substringBeforeLast('=') + "=s96-c"
+            if (short.length <= AVATAR_URL_LIMIT) return short
+        }
+        return null
     }
 
     /**
@@ -1509,6 +1546,21 @@ object ListenTogether {
         val e = email.trim().lowercase()
         return e.takeIf { it.isNotEmpty() }?.let { sha256("auden-connect:v1:$it").take(32) }
     }
+
+    /**
+     * The Connect room of a Spotify account — the hash of its lower-cased username — for a device with no Google
+     * account. The web reads the same id from the extension (`spotifyRoomId` in listenTogether.ts).
+     */
+    fun spotifyRoomIdFor(spotifyId: String): String? =
+        spotifyId.trim().lowercase().takeIf { it.isNotEmpty() }?.let { sha256("auden-connect:spotify:$it").take(32) }
+
+    /**
+     * The Connect room of a device with no account at all: the hash of the name it uses in parties, behind the
+     * `local/` prefix that tells the server to scope it to the network the device is on. Only devices on one
+     * network that share the name meet. A device with no name shares "guest". Matches the web's `localRoomId`.
+     */
+    fun localRoomIdFor(partyName: String): String =
+        "local/" + sha256("auden-connect:local:${partyName.trim().lowercase().ifEmpty { "guest" }}").take(32)
 
     /** This install's id, the one Listen Together counts devices by; Connect lists devices under it too. */
     fun installDeviceId(): String = deviceId()
