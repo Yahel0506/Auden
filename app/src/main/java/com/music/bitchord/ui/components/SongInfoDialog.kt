@@ -40,7 +40,13 @@ private val INFO_BODY_MAX_HEIGHT = 360.dp
  * surface the other alerts fall back to under "reduce dynamic blur".
  */
 @Composable
-internal fun SongInfoDialog(song: Song, onDismiss: () -> Unit) {
+internal fun SongInfoDialog(
+    song: Song,
+    onDismiss: () -> Unit,
+    /** Where the song's album and artist lead: offered here, with the rest of what is known about it. */
+    onOpenAlbum: ((String) -> Unit)? = null,
+    onOpenArtist: ((String) -> Unit)? = null,
+) {
     var retry by remember(song.videoId) { mutableIntStateOf(0) }
     val info by produceState<SongInfo?>(null, song, retry) {
         value = null
@@ -123,6 +129,15 @@ internal fun SongInfoDialog(song: Song, onDismiss: () -> Unit) {
             }
 
             AlertRule()
+            // Where the song leads: its artist and its album, named under the button as a menu's "Go to" does.
+            song.artistId?.takeIf { onOpenArtist != null }?.let { id ->
+                AlertAction(label = stringResource(R.string.open_artist), emphasised = false, onClick = { onDismiss(); onOpenArtist?.invoke(id) })
+                AlertRule()
+            }
+            song.albumId?.takeIf { onOpenAlbum != null }?.let { id ->
+                AlertAction(label = stringResource(R.string.open_album), emphasised = false, onClick = { onDismiss(); onOpenAlbum?.invoke(id) })
+                AlertRule()
+            }
             if (info?.failed == true) {
                 AlertAction(label = stringResource(R.string.song_info_retry), emphasised = false, onClick = { retry++ })
                 AlertRule()

@@ -357,7 +357,7 @@ fun <T : Any> HeldContextMenu(
     }
 }
 
-private val CARD_RADIUS = 20.dp
+private val CARD_RADIUS = 24.dp
 
 private suspend fun PointerInputScope.swallowAll() {
     awaitPointerEventScope {

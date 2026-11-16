@@ -1,6 +1,8 @@
 package com.music.bitchord.ui.components
 
+import android.os.Build
 import android.provider.Settings
+import com.music.bitchord.ui.components.backdrop.effects.lens
 import com.music.bitchord.ui.player.PlayerBackHandler
 import com.music.bitchord.ui.player.additiveChrome
 import com.music.bitchord.ui.utils.containSheetGestures
@@ -35,10 +37,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -129,22 +134,30 @@ private val LightMenu = IosMenuColors(
     pressed = Color.Black.copy(alpha = 0.07f),
 )
 
+/**
+ * Whether the rows of the menu on screen are added onto its glass (the dark panels' way: a glyph or a label takes the
+ * colour behind it). A menu that carries a picture — the audio output's cover — turns it off: added onto glass that is
+ * itself bright and saturated, a picture comes out far too bright.
+ */
+val LocalMenuAdditive = compositionLocalOf { true }
+
 /** The panel colours for the theme in force. */
 @Composable
 fun iosMenuColors(): IosMenuColors {
     val plain by AppSettings.disableBlendEffects.collectAsStateWithLifecycle()
+    val additive = LocalMenuAdditive.current
     return when {
         MaterialTheme.colorScheme.background.luminance() >= 0.5f -> LightMenu
-        plain -> PlainDarkMenu
+        plain || !additive -> PlainDarkMenu
         else -> DarkMenu
     }
 }
 
 /** The panel's silhouette: a large, continuously curved corner. */
-val IosMenuShape: Shape = RoundedCornerShape(30.dp).continuous()
+val IosMenuShape: Shape = RoundedCornerShape(33.dp).continuous()
 
 /** [IosMenuShape]'s plain rounded-rect twin, for a shadow drawn while it scales. */
-private val IosMenuShadowShape: Shape = RoundedCornerShape(30.dp)
+private val IosMenuShadowShape: Shape = RoundedCornerShape(33.dp)
 
 /** Wide enough for "Remove from listening history" on one line or two. */
 val IosMenuWidth = 256.dp
@@ -216,20 +229,38 @@ fun Modifier.menuBackdropFrost(backdrop: Backdrop, shape: Shape, fill: Color): M
     backdrop = backdrop,
     shape = { shape },
     effects = {
-        // iOS menus carry the page's hue through more strongly than the page
-        // has it.
-        colorControls(saturation = 1.8f)
+        // Real glass takes the colour of what is behind it: the cover, or the page, saturated well past what it has,
+        // blurred less than it used to be so its shapes still show as light and colour, and bent at the edges.
+        colorControls(saturation = MENU_GLASS_SATURATION)
         blur(MENU_BLUR.toPx() * MENU_BACKDROP_SCALE)
+        if (shape is CornerBasedShape && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            lens(
+                refractionHeight = MENU_LENS_HEIGHT.toPx() * MENU_BACKDROP_SCALE,
+                refractionAmount = MENU_LENS_AMOUNT.toPx() * MENU_BACKDROP_SCALE,
+                depthEffect = true,
+                chromaticAberration = true,
+            )
+        }
     },
-    highlight = null,
+    // The rim catching light, as the nav bar's has it.
+    highlight = { NAV_GLASS_RIM },
     shadow = null,
-    onDrawSurface = { drawRect(fill) },
+    // The film is thinner than it was, so the colour behind comes through it; what stays keeps the labels readable.
+    onDrawSurface = { drawRect(fill.copy(alpha = fill.alpha * MENU_FILM_SHARE)) },
     // Sampled small: the blur hides the upscale, and the effect then runs over
     // a fraction of the pixels.
     backdropScale = MENU_BACKDROP_SCALE,
+    // The page's colour along the rim too, thin, so the edge is the glass's and not a white line.
+    edgeTint = MENU_EDGE_TINT,
 )
 
-private val MENU_BLUR = 24.dp
+private val MENU_LENS_HEIGHT = 20.dp
+private val MENU_LENS_AMOUNT = 24.dp
+private const val MENU_GLASS_SATURATION = 2.3f
+private const val MENU_FILM_SHARE = 0.72f
+private const val MENU_EDGE_TINT = 0.4f
+
+private val MENU_BLUR = 18.dp
 private const val MENU_BACKDROP_SCALE = 0.25f
 
 /** The longest a menu waits for its frost's still before growing without it. */
@@ -284,7 +315,7 @@ fun RowScope.IosMenuQuickAction(
         modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(19.dp))
             .background(if (pressed) colors.pressed else Color.Transparent)
             .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
             .padding(horizontal = 4.dp, vertical = 8.dp),
@@ -343,7 +374,7 @@ fun IosMenuRow(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(17.dp))
             .background(if (pressed) colors.pressed else Color.Transparent)
             .then(
                 if (onClick != null) {
@@ -443,6 +474,8 @@ fun <T : Any> IosMenuPopover(
      */
     centered: Boolean = false,
     menuWidth: Dp = IosMenuWidth,
+    /** False draws the rows plainly rather than added onto the glass; see [LocalMenuAdditive]. */
+    additive: Boolean = true,
     content: @Composable (T) -> Unit,
 ) {
     var last by remember { mutableStateOf<Pair<T, Rect?>?>(null) }
@@ -562,7 +595,7 @@ fun <T : Any> IosMenuPopover(
                 Column(
                     Modifier
                         .then(
-                            if (dark && !plain) {
+                            if (dark && !plain && additive) {
                                 Modifier.additiveChrome(true)
                             } else {
                                 Modifier.graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
@@ -570,7 +603,7 @@ fun <T : Any> IosMenuPopover(
                         )
                         .padding(vertical = 8.dp),
                 ) {
-                    content(menuItem)
+                    CompositionLocalProvider(LocalMenuAdditive provides additive) { content(menuItem) }
                 }
             }
         },

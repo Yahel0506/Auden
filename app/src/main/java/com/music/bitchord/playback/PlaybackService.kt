@@ -2082,8 +2082,8 @@ class PlaybackService : MediaLibraryService() {
      * against, unless it is a local file or a download, which is liked into the
      * device's own Liked playlist instead (see [OfflinePlaylists]).
      */
-    private fun canLike(item: MediaItem?): Boolean =
-        item != null && (item.toSong().localUri != null || SignedIn.state(this).value)
+    // Every song can be hearted: on the device without an account, on the account too once one is signed in.
+    private fun canLike(item: MediaItem?): Boolean = item != null
 
     /** Whether [item] is liked, by whichever of the two records owns it. */
     private fun isLiked(item: MediaItem?): Boolean {
@@ -2091,7 +2091,8 @@ class PlaybackService : MediaLibraryService() {
         return if (song.localUri != null) {
             OfflinePlaylists.isLiked(song)
         } else {
-            LikeState.overrides.value[song.videoId] == LikeStatus.LIKE
+            // The override is what was done since the account was read; the device's list is what is kept here.
+            LikeState.overrides.value[song.videoId]?.let { it == LikeStatus.LIKE } ?: OfflinePlaylists.isLiked(song)
         }
     }
 
@@ -3497,23 +3498,31 @@ class PlaybackService : MediaLibraryService() {
         exoPlayer.addMediaItems(restored)
     }
 
-    private fun toggleFavoriteFromNotification(videoId: String) {
+    private fun toggleFavoriteFromNotification(song: Song) {
+        val videoId = song.videoId
         favoriteActionJob?.cancel()
-        val previous = LikeState.overrides.value[videoId] ?: LikeStatus.INDIFFERENT
+        val previous = if (isLiked(song.toMediaItem())) LikeStatus.LIKE else LikeStatus.INDIFFERENT
         val target = if (previous == LikeStatus.LIKE) {
             LikeStatus.INDIFFERENT
         } else {
             LikeStatus.LIKE
         }
 
+        // The device's own list first, as the app's heart does: it works without an account, and with one it keeps
+        // the song here too.
+        if ((target == LikeStatus.LIKE) != OfflinePlaylists.isLiked(song)) OfflinePlaylists.toggleLike(song)
+        if (target == LikeStatus.LIKE) OfflinePlaylists.showAccountLike(videoId)
+        val toAccount = SignedIn.state(this).value && AppSettings.likeSync.value != com.music.bitchord.data.LikeSync.LOCAL
         // Match the player UI: update both surfaces immediately, then reconcile
         // the optimistic state with YouTube in the background.
         LikeState.set(videoId, target)
         refreshCustomLayouts()
+        if (!toAccount) return
         favoriteActionJob = scope.launch {
             YtMusicRepository.rate(videoId, target)
                 .onFailure {
                     LikeState.set(videoId, previous)
+                    if ((previous == LikeStatus.LIKE) != OfflinePlaylists.isLiked(song)) OfflinePlaylists.toggleLike(song)
                     refreshCustomLayouts()
                     TrackLog.w("BitChord", "notification favorite failed: ${it.message}", about = videoId)
                 }
@@ -8914,7 +8923,7 @@ class PlaybackService : MediaLibraryService() {
                             // reconcile, and the button follows [OfflinePlaylists.liked].
                             OfflinePlaylists.toggleLike(song)
                         } else {
-                            toggleFavoriteFromNotification(item.mediaId)
+                            toggleFavoriteFromNotification(song)
                         }
                     }
                 else -> return Futures.immediateFuture(

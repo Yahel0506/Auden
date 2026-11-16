@@ -101,7 +101,7 @@ import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-private val PopupShape = RoundedCornerShape(24.dp)
+private val PopupShape = RoundedCornerShape(29.dp)
 private val ScrimColor = Color.Black.copy(alpha = 0.6f)
 private val PopupColor = Color(0xFF0D0D0D)
 private val PopupMaxWidth = 480.dp
@@ -429,7 +429,7 @@ private fun MixDecks(view: MixTransitionView, progress: State<Float>, live: Bool
                 .offset(x = panelStart, y = 0.dp)
                 .width(panelWidth)
                 .height(DecksHeight - 20.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(17.dp))
                 .background(PanelColor.copy(alpha = 0.85f)),
         )
         Canvas(Modifier.fillMaxSize()) {
@@ -454,7 +454,7 @@ private fun MixDecks(view: MixTransitionView, progress: State<Float>, live: Bool
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .offset(x = width * ((BoxStart + BoxEnd) / 2f) - width / 2)
-                .clip(RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(17.dp))
                 .background(ChipColor)
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,

@@ -57,6 +57,7 @@ import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import kotlin.random.Random
 
 /**
@@ -382,15 +383,15 @@ fun ArtworkMeshBackdrop(
             .background(fallback),
     ) {
         val seamY = seam().toPx().coerceIn(0f, size.height)
-        shown?.let { drawMesh(it, seamY, alpha = 1f, flow = flow) }
+        shown?.let { drawMeshFaded(it, seamY, alpha = 1f, flow = flow) }
         // Read here rather than in composition: an Animatable read inside a
         // draw lambda invalidates the drawing and leaves composition out of it.
-        incoming?.let { drawMesh(it, seamY, alpha = fade.value, flow = flow) }
+        incoming?.let { drawMeshFaded(it, seamY, alpha = fade.value, flow = flow) }
         // The blurrier copy comes in over it: the same colours, further apart from detail.
         val softness = soften()
         if (softness > 0.005f) {
-            shown?.let { drawMesh(it, seamY, alpha = softness, flow = flow, image = it.soft) }
-            incoming?.let { drawMesh(it, seamY, alpha = fade.value * softness, flow = flow, image = it.soft) }
+            shown?.let { drawMeshFaded(it, seamY, alpha = softness, flow = flow, image = it.soft) }
+            incoming?.let { drawMeshFaded(it, seamY, alpha = fade.value * softness, flow = flow, image = it.soft) }
         }
         val shading = shade()
         if (shading > 0.005f) drawRect(Color.Black.copy(alpha = shading * MESH_PANEL_SHADE))
@@ -410,7 +411,50 @@ fun ArtworkMeshBackdrop(
                 endY = size.height,
             ),
         )
+        // A whisper of noise over all of it: a long, slow gradient in eight bits steps from one level to the next in
+        // bands, and the noise breaks each step's straight edge up into grain the eye does not read as a line.
+        drawRect(brush = ditherBrush)
     }
+}
+
+/**
+ * [drawMesh] at [alpha], as one picture. A mesh that flows is drawn in thin bands that overlap by a pixel, and
+ * drawing each of them at a fraction of full strength blended that pixel twice: a lighter or darker line every few
+ * pixels across the screen for as long as a change of cover was fading. Drawn whole into a layer at full strength and
+ * the layer faded once, the bands are never seen to meet.
+ */
+private fun DrawScope.drawMeshFaded(
+    mesh: ArtworkMesh,
+    seamY: Float,
+    alpha: Float,
+    flow: BackdropFlow?,
+    image: ImageBitmap = mesh.image,
+) {
+    if (alpha <= 0.001f) return
+    if (alpha >= 0.999f) return drawMesh(mesh, seamY, alpha = 1f, flow = flow, image = image)
+    val paint = androidx.compose.ui.graphics.Paint().apply { this.alpha = alpha }
+    drawIntoCanvas { canvas ->
+        canvas.saveLayer(androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height), paint)
+        drawMesh(mesh, seamY, alpha = 1f, flow = flow, image = image)
+        canvas.restore()
+    }
+}
+
+/** A tile of black and white specks, each almost transparent, repeated over the backdrop. */
+private val ditherBrush: androidx.compose.ui.graphics.Brush by lazy {
+    val side = 96
+    val random = Random(7)
+    val pixels = IntArray(side * side) {
+        val v = if (random.nextBoolean()) 255 else 0
+        (4 shl 24) or (v shl 16) or (v shl 8) or v
+    }
+    androidx.compose.ui.graphics.ShaderBrush(
+        androidx.compose.ui.graphics.ImageShader(
+            imageBitmapOf(pixels, side, side),
+            androidx.compose.ui.graphics.TileMode.Repeated,
+            androidx.compose.ui.graphics.TileMode.Repeated,
+        ),
+    )
 }
 
 /**
@@ -717,7 +761,7 @@ private const val MESH_GRID = 6
  * thread, and the control points come through untouched, so the artwork's
  * proportions are exactly what they were.
  */
-private const val MESH_TEX = 32
+private const val MESH_TEX = 64
 
 /**
  * The mesh's blur, baked in rather than left to a `RenderEffect`: a full-screen

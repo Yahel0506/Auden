@@ -80,7 +80,7 @@ import kotlinx.coroutines.withContext
 // playlists the app makes itself. Each is one decorated object of its own, so the top of the page is three things
 // to look at and not a wallet of cards and a list of folders.
 
-private val BannerShape = RoundedCornerShape(14.dp)
+private val BannerShape = RoundedCornerShape(17.dp)
 
 /**
  * Replay as a slim banner in the manner of Apple Music's Replay: a small caps caption, a bold line, over a golden gradient. Opens the numbers.

@@ -143,7 +143,7 @@ fun SongSelectionBar(
     modifier: Modifier = Modifier,
 ) {
     val count = state.count
-    val shape = RoundedCornerShape(14.dp)
+    val shape = RoundedCornerShape(17.dp)
     val foreground = if (isSystemInDarkTheme()) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
     Row(
         modifier = modifier

@@ -332,7 +332,7 @@ private fun PrimaryButton(text: String, enabled: Boolean, onClick: () -> Unit) {
             .fillMaxWidth()
             .height(50.dp)
             .alpha(if (enabled) 1f else 0.35f)
-            .clip(RoundedCornerShape(25.dp))
+            .clip(RoundedCornerShape(30.dp))
             .background(MaterialTheme.colorScheme.primary)
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,

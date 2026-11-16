@@ -1190,6 +1190,10 @@ private fun BitChordApp(
     // rating: the file has no identity there to rate. One rule for every
     // surface that draws a heart — the player and the track menu alike.
     val offlineLiked by OfflinePlaylists.liked.collectAsStateWithLifecycle()
+    // The likes kept on this device, asked about once when an account is signed in: add them to it, or keep them here.
+    val likeSyncMode by AppSettings.likeSync.collectAsStateWithLifecycle()
+    val accountLikedIds by viewModel.accountLikedIds.collectAsStateWithLifecycle()
+    var likesPromptLater by rememberSaveable { mutableStateOf(false) }
     val offlinePlaylists by OfflinePlaylists.playlists.collectAsStateWithLifecycle()
     val offlinePlaylistGroups = remember(offlinePlaylists) { offlinePlaylists.map { it.toGroup() } }
     val likeStatusOf: (Song) -> LikeStatus = { song ->
@@ -1200,7 +1204,8 @@ private fun BitChordApp(
         }
     }
     val toggleLikeOf: (Song) -> Unit = { song ->
-        if (song.localUri != null) OfflinePlaylists.toggleLike(song) else viewModel.toggleLike(song.videoId)
+        // A file's heart is the device's own; a stream's is the device's too, and the account's when one is signed in.
+        if (song.localUri != null) OfflinePlaylists.toggleLike(song) else viewModel.toggleLike(song)
     }
     // Which tracks are being held on YouTube's own upload, so the player's menu
     // offers the way back out of a revert rather than the revert again.
@@ -5066,7 +5071,7 @@ private fun BitChordApp(
                 // in place, and people often thumb a song and then queue it.
                 onToggleLike = { toggleLikeOf(song) },
                 onToggleDislike = {
-                    val previousStatus = viewModel.toggleDislike(song.videoId)
+                    val previousStatus = viewModel.toggleDislike(song)
                     if (
                         previousStatus != null &&
                         shouldSkipAfterDislike(
@@ -5474,6 +5479,8 @@ private fun BitChordApp(
                         backdrop = if (playerLiveCanvas) livePlayerBackdrop else playerBackdrop,
                         centered = true,
                         menuWidth = AudioOutputMenuWidth,
+                        // Its cover is a picture: added onto the glass it came out far too bright.
+                        additive = false,
                     ) {
                         AudioOutputMenu(
                             song = playerSong,
@@ -5669,8 +5676,8 @@ private fun BitChordApp(
                 SelectionActionsMenu(
                     count = songs.size,
                     allLiked = allLiked,
-                    // A file's like is the device's own; a stream's is the account's.
-                    onToggleLike = if (signedIn || songs.all { it.localUri != null }) {
+                    // Every heart works: the device's own, and the account's too when one is signed in.
+                    onToggleLike = run {
                         act {
                             // Liking takes every song that is not liked yet; with all of them liked, it takes the like back.
                             val targets = if (allLiked) songs else songs.filter { likeStatusOf(it) != LikeStatus.LIKE }
@@ -5682,8 +5689,6 @@ private fun BitChordApp(
                                 }
                             }
                         }
-                    } else {
-                        null
                     },
                     // The selection stays until the picker is confirmed, so backing out of it loses nothing.
                     onAddToPlaylist = {
@@ -6703,6 +6708,31 @@ private fun BitChordApp(
                 notes = remember(whatsNewContext) { com.music.bitchord.data.ReleaseNotes.forInstalledVersion(whatsNewContext) },
                 onBack = { showWhatsNew = false },
             )
+        }
+
+        // ---- Likes kept on this device, with an account signed in ----
+        run {
+            val account = accountLikedIds
+            val pending = remember(offlineLiked, account) {
+                if (account == null) emptyList() else OfflinePlaylists.likedStreams().filter { it.videoId !in account }
+            }
+            if (signedIn && likeSyncMode == com.music.bitchord.data.LikeSync.ASK && !likesPromptLater && pending.isNotEmpty() &&
+                onboardingComplete && !showDiwali && !showUpdateDialog
+            ) {
+                com.music.bitchord.ui.components.LikesMergeAlert(
+                    hazeState = hazeState,
+                    count = pending.size,
+                    onUpload = {
+                        AppSettings.setLikeSync(com.music.bitchord.data.LikeSync.ACCOUNT)
+                        scope.launch {
+                            val added = viewModel.uploadDeviceLikes(pending)
+                            if (added > 0) Toast.makeText(context, context.getString(R.string.likes_uploaded, added), Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onKeepHere = { AppSettings.setLikeSync(com.music.bitchord.data.LikeSync.LOCAL) },
+                    onLater = { likesPromptLater = true },
+                )
+            }
         }
 
         // Dialogs and alerts, in a scope of their own: BitChordApp had outgrown the JVM's method limit.

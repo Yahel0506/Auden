@@ -87,7 +87,7 @@ fun TvSongMenu(
         isLiked = isLiked,
         viewModel = viewModel,
         mediaController = mediaController,
-        onToggleLike = { viewModel.toggleLike(song.videoId) },
+        onToggleLike = { viewModel.toggleLike(song) },
         onOpenAlbum = song.albumId?.let { id ->
             { _: String -> onNavigateToDetail(id, song.albumName.orEmpty(), song.artist, song.thumbnailUrl, BrowseType.ALBUM) }
         },

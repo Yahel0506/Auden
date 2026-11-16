@@ -294,9 +294,9 @@ private fun LibraryLinkList(links: List<LibraryLink>, onClick: (ShelfItem) -> Un
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 44.dp)
+                    .heightIn(min = 52.dp)
                     .clickable { link.onClick?.invoke() ?: onClick(link.item) }
-                    .padding(horizontal = PAGE_GUTTER),
+                    .padding(horizontal = PAGE_GUTTER, vertical = 3.dp),
             ) {
                 if (link.logo != null) {
                     // A mark, not a glyph: white on dark, black on light, with

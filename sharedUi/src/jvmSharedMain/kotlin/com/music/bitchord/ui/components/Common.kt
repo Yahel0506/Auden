@@ -988,7 +988,7 @@ fun SignInBanner(
                 scaleX = scale
                 scaleY = scale
             }
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(26.dp))
             .clickable(interactionSource = interaction, indication = null, onClick = onSignIn),
     ) {
         // A card is a few hundred dp the reader is looking straight at, which

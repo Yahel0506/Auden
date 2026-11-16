@@ -200,10 +200,11 @@ fun SongActionsMenu(
 ) {
     var showingSongInfo by remember(song.videoId) { mutableStateOf(false) }
     var pickingSleepTimer by remember { mutableStateOf(false) }
+    var otherOpen by remember(song.videoId) { mutableStateOf(false) }
     // Managing the song's downloaded files is a page of this menu, in whatever panel the menu is in.
     var managing by remember(song.videoId) { mutableStateOf(false) }
     // A menu has no pages to swap, so Song Info opens as a dialog.
-    if (showingSongInfo) SongInfoDialog(song) { showingSongInfo = false }
+    if (showingSongInfo) SongInfoDialog(song, onDismiss = { showingSongInfo = false }, onOpenAlbum = onOpenAlbum, onOpenArtist = onOpenArtist)
     // Neutral rather than the sleeve's colours: the panel floats over the page
     // or the player, and an accent pitched against the artwork's tint is not
     // guaranteed to read against the panel.
@@ -220,7 +221,8 @@ fun SongActionsMenu(
         // group is empty doesn't end on a stray line.
         var drawnAny = false
         fun startsGroup(): Boolean = drawnAny.also { drawnAny = true }
-        val canRate = isOffline || signedIn
+        // Every song can be hearted: on the device without an account, and on the account too once one is signed in.
+        val canRate = true
         val shareAction = onShare?.takeIf { !isOffline }
 
         // Leads with the actions it is opened for most, as tiles: the rating
@@ -249,6 +251,8 @@ fun SongActionsMenu(
                 shareAction?.let {
                     IosMenuQuickAction(icon = SfIcons.Share, label = stringResource(R.string.share), onClick = it)
                 }
+                // What is known of the song, with the way to its artist and its album.
+                IosMenuQuickAction(icon = SfIcons.Info, label = stringResource(R.string.song_info), onClick = { showingSongInfo = true })
             }
         }
 
@@ -382,83 +386,75 @@ fun SongActionsMenu(
             )
         }
 
-        if (startsGroup()) IosMenuSeparator()
-        // Names where each one leads under it, as a menu's "Go to" does.
-        when (val id = song.albumId) {
-            null -> if (resolvingLinks) {
-                LoadingActionRow(SfIcons.Album, stringResource(R.string.open_album), palette)
-            }
-            else -> ActionRow(
-                SfIcons.Album,
-                stringResource(R.string.open_album),
-                accent = palette.accent,
-                description = song.albumName,
-            ) { onOpenAlbum(id) }
-        }
-        when (val id = song.artistId) {
-            null -> if (resolvingLinks) {
-                LoadingActionRow(SfIcons.Artist, stringResource(R.string.open_artist), palette)
-            }
-            else -> ActionRow(
-                SfIcons.Artist,
-                stringResource(R.string.open_artist),
-                accent = palette.accent,
-                description = song.artist.takeIf { it.isNotBlank() },
-            ) { onOpenArtist(id) }
-        }
-
-        ActionRow(SfIcons.Info, stringResource(R.string.song_info), accent = palette.accent) {
-            showingSongInfo = true
-        }
-
-        // The player's own: about the track playing right now rather than
-        // about the song as a thing in a library.
+        // The player's own, kept in a menu of their own: the sleep timer, the Automix summary, the lyrics' timing and
+        // the log, about the track playing right now rather than the song as a thing in a library.
         if (showSleepTimer || onLyricsOffset != null || onAutomixOverview != null || onCopyLog != null) {
             if (startsGroup()) IosMenuSeparator()
-            if (showSleepTimer) {
-                ActionRow(
-                    icon = SfIcons.SleepTimer,
-                    label = stringResource(R.string.sleep_timer),
-                    value = sleepTimerStatus(),
-                    accent = palette.accent,
-                ) { pickingSleepTimer = true }
-            }
-            // The same popup "Mixing" opens mid-blend, on the transition
-            // still to come.
-            onAutomixOverview?.let {
-                ActionRow(
-                    icon = SfIcons.GraphicEq,
-                    label = stringResource(R.string.automix_overview),
-                    accent = palette.accent,
-                    onClick = it,
-                )
-            }
-            // Local files and completed downloads use the same player lyric
-            // clock (including embedded synced lyrics), so they need this
-            // control just as much as streamed songs do.
-            onLyricsOffset?.let {
-                ActionRow(
-                    icon = SfIcons.Sliders,
-                    label = stringResource(R.string.lyrics_offset),
-                    accent = palette.accent,
-                    onClick = it,
-                )
-            }
-            // Last: the one row here nobody reaches for by accident.
-            onCopyLog?.let {
-                ActionRow(SfIcons.Bug, stringResource(R.string.copy_log), accent = palette.accent, onClick = it)
-            }
+            ActionRow(
+                icon = SfIcons.Sliders,
+                label = stringResource(R.string.other_functions),
+                accent = palette.accent,
+            ) { otherOpen = true }
+        }
+    }
+
+    // The page the "other functions" open: each of them as it was a row of the menu.
+    val otherRows: @Composable ColumnScope.() -> Unit = {
+        MenuPageHeader(stringResource(R.string.other_functions)) { otherOpen = false }
+        if (showSleepTimer) {
+            ActionRow(
+                icon = SfIcons.SleepTimer,
+                label = stringResource(R.string.sleep_timer),
+                value = sleepTimerStatus(),
+                accent = palette.accent,
+            ) { pickingSleepTimer = true }
+        }
+        // The same popup "Mixing" opens mid-blend, on the transition still to come.
+        onAutomixOverview?.let {
+            ActionRow(
+                icon = SfIcons.GraphicEq,
+                label = stringResource(R.string.automix_overview),
+                accent = palette.accent,
+                onClick = it,
+            )
+        }
+        // Local files and completed downloads use the same player lyric clock (including embedded synced lyrics),
+        // so they need this control just as much as streamed songs do.
+        onLyricsOffset?.let {
+            ActionRow(
+                icon = SfIcons.Sliders,
+                label = stringResource(R.string.lyrics_offset),
+                accent = palette.accent,
+                onClick = it,
+            )
+        }
+        // Last: the one row here nobody reaches for by accident.
+        onCopyLog?.let {
+            ActionRow(SfIcons.Bug, stringResource(R.string.copy_log), accent = palette.accent, onClick = it)
+        }
+    }
+
+    // The system's back takes a page of this menu back one step — the sleep timer to the other functions, those and
+    // the download manager to the rows — and only from the rows does it close the menu. Not a plain BackHandler: inside
+    // the player's sheet that loses to the sheet's own dismiss (see the menu panel's own).
+    com.music.bitchord.ui.player.PlayerBackHandler(enabled = pickingSleepTimer || managing || otherOpen) {
+        when {
+            pickingSleepTimer -> pickingSleepTimer = false
+            managing -> managing = false
+            else -> otherOpen = false
         }
     }
 
     CompositionLocalProvider(LocalActionRowStyle provides ActionRowStyle.Menu) {
         // The sleep timer and the download manager are pages of this menu: each opens over the rows, in the same
         // panel and the same place, and gives them back.
-        MenuPages(if (pickingSleepTimer) 1 else if (managing) 2 else 0, { it }, Modifier.fillMaxWidth()) { current ->
+        // Pages, deeper the further in: the rows, the other functions, the sleep timer opened from them, the download manager.
+        MenuPages(if (pickingSleepTimer) 2 else if (managing) 3 else if (otherOpen) 1 else 0, { it }, Modifier.fillMaxWidth()) { current ->
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                 when (current) {
-                    1 -> SleepTimerPicker(palette = palette, onBack = { pickingSleepTimer = false })
-                    2 -> ManageDownloadPage(song, playingUri, palette) { managing = false }
+                    1 -> otherRows()
+                    2 -> SleepTimerPicker(palette = palette, onBack = { pickingSleepTimer = false })
+                    3 -> ManageDownloadPage(song, playingUri, palette) { managing = false }
                     else -> rows()
                 }
             }

@@ -1144,7 +1144,7 @@ private fun DjCard(onClick: () -> Unit, motion: Boolean = true) {
                 scaleX = scale
                 scaleY = scale
             }
-            .clip(RoundedCornerShape(26.dp))
+            .clip(RoundedCornerShape(31.dp))
             .clickable(interactionSource = interaction, indication = null, onClick = onClick),
     ) {
         MeshGradientBackground(

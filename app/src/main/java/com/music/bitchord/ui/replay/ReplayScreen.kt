@@ -410,7 +410,7 @@ private fun ReplayActionRow(icon: ImageVector, label: String, dark: Boolean, onC
         Modifier
             .padding(horizontal = PAGE_GUTTER + 4.dp, vertical = 18.dp)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(17.dp))
             .background(textColor.copy(alpha = 0.12f))
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
@@ -573,7 +573,7 @@ private fun StatTile(label: String, value: String, dark: Boolean, modifier: Modi
     val textColor = if (dark) Color.White else Color.Black
     Column(
         modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(17.dp))
             .background(textColor.copy(alpha = 0.09f))
             .padding(vertical = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

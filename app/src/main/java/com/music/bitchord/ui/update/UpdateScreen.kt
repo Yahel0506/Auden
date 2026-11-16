@@ -125,7 +125,7 @@ fun UpdateScreen(
 /** The changelog's container: a faint film with a hairline rim, as the glass has, drawn flat. */
 @Composable
 private fun ChangelogCard(notes: String?) {
-    val shape = RoundedCornerShape(28.dp)
+    val shape = RoundedCornerShape(34.dp)
     Column(
         Modifier
             .padding(horizontal = 20.dp)

@@ -129,7 +129,7 @@ fun ReplayShareSheet(
                 .fillMaxWidth(0.42f)
                 .align(Alignment.CenterHorizontally)
                 .aspectRatio(9f / 16f)
-                .clip(RoundedCornerShape(18.dp))
+                .clip(RoundedCornerShape(22.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center,
         ) {
@@ -225,7 +225,7 @@ internal fun ShareAction(
     }
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(17.dp))
             .background(background.copy(alpha = if (enabled) 1f else 0.4f))
             .clickable(enabled = enabled, onClick = onClick)
             // The sides carried nothing but the label's own advance, so the

@@ -109,7 +109,7 @@ fun EditPlaylistSheet(
                 Box(
                     Modifier
                         .size(112.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(17.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -125,7 +125,7 @@ fun EditPlaylistSheet(
                     }
                 }
                 // The ways to give it one, as the rows of a card: each is a different errand.
-                Column(Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                Column(Modifier.weight(1f).clip(RoundedCornerShape(17.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) {
                     CardRow(Icons.Rounded.PhotoLibrary, stringResource(R.string.cover_choose_photo), onChoosePhoto)
                     CardDivider()
                     CardRow(Icons.Rounded.AutoAwesome, stringResource(R.string.cover_creator_title), onCreateCover)

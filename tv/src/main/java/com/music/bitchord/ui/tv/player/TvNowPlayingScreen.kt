@@ -278,7 +278,7 @@ fun TvNowPlayingScreen(
                     if (scrubTarget != null) commitScrub() else togglePlay()
                 },
                 onOpenUpNext = { upNextOpen = true },
-                onToggleLike = { viewModel.toggleLike(song.videoId) },
+                onToggleLike = { viewModel.toggleLike(song) },
                 onToggleLyrics = { lyricsHidden = !lyricsHidden },
                 onToggleUpNext = { upNextOpen = !upNextOpen },
                 onMore = { sheet = PlayerSheet.Menu },
@@ -325,7 +325,7 @@ fun TvNowPlayingScreen(
             isLiked = isLiked,
             viewModel = viewModel,
             mediaController = mediaController,
-            onToggleLike = { viewModel.toggleLike(song.videoId) },
+            onToggleLike = { viewModel.toggleLike(song) },
             onDismiss = { sheet = null },
         )
         null -> Unit

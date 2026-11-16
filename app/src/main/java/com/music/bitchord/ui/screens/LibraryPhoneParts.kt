@@ -75,7 +75,20 @@ fun libraryLinks(onOpenOther: () -> Unit): List<LibraryLink> {
 @Composable
 fun libraryDeviceItems(downloadedReleases: List<SavedCollection>): List<ShelfItem> {
     val downloadedPlaylist = stringResource(R.string.downloaded_playlist)
-    return downloadedReleases.map { release ->
+    // "Mis favoritas": what is liked on this device, first among the lists, once there is anything in it.
+    val deviceLiked by com.music.bitchord.data.OfflinePlaylists.liked.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val favoritesTitle = stringResource(R.string.my_favorites)
+    val favorites = if (deviceLiked.isEmpty()) emptyList() else listOf(
+        ShelfItem(
+            title = favoritesTitle,
+            subtitle = "",
+            thumbnailUrl = androidx.compose.runtime.remember { com.music.bitchord.data.FavoritesCover.uri(context) },
+            videoId = null,
+            browseId = com.music.bitchord.data.OfflinePlaylists.PREFIX + com.music.bitchord.data.OfflinePlaylists.LIKED_ID,
+        ),
+    )
+    return favorites + downloadedReleases.map { release ->
         ShelfItem(
             title = release.title,
             // The credit the release was downloaded with, because this is also

@@ -44,7 +44,7 @@ import dev.chrisbanes.haze.materials.HazeMaterials
 
 /** UIAlertController's own metrics: fixed narrow width, 14pt corner, 44pt rows. */
 internal val ALERT_WIDTH = 270.dp
-internal val ALERT_CORNER = 14.dp
+internal val ALERT_CORNER = 22.dp
 internal val ACTION_HEIGHT = 44.dp
 
 /**

@@ -83,7 +83,7 @@ internal fun <T> PreviewTiles(
     ) {
         items.forEach { item ->
             val on = item == selected
-            val shape = RoundedCornerShape(18.dp)
+            val shape = RoundedCornerShape(22.dp)
             Column(
                 Modifier
                     .weight(1f)
@@ -137,7 +137,7 @@ internal fun LyricsBlurPreview(amount: Int) {
         Modifier
             .fillMaxWidth()
             .padding(start = ROW_INSET - 6.dp, end = ROW_INSET - 6.dp, top = 4.dp, bottom = 16.dp)
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(26.dp))
             .background(Brush.verticalGradient(listOf(Color(0xFF3A3A46), Color(0xFF1B1B22)))),
     ) {
         Column(

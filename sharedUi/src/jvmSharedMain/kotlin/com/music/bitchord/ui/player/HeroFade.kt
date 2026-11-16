@@ -14,7 +14,9 @@ object HeroFade {
     /** Share of the banner's height the dissolve takes, from its bottom edge upwards. */
     const val FRACTION = 0.52f
 
-    private const val STEPS = 16
+    // Many stops: between two the alpha is a straight ramp, and with few the creases at the stops read as lines
+    // across the cover where it dissolves.
+    private const val STEPS = 64
 
     /** Positions of the stops along the dissolve, 0 at its top and 1 at the banner's bottom edge. */
     val positions: FloatArray = FloatArray(STEPS + 1) { it / STEPS.toFloat() }

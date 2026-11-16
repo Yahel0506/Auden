@@ -582,6 +582,24 @@ fun SettingsScreen(
                         onClick = onAccountScrobbling,
                     )
                 }
+                // Where a heart goes once an account is signed in: the account and this device, or this device only.
+                if (signedIn) {
+                    val likeSyncTitle = stringResource(R.string.likes_sync_title)
+                    val likeSyncMode by AppSettings.likeSync.collectAsStateWithLifecycle()
+                    row(likeSyncTitle, "likes", "hearts", "liked", "sync", "favorites") {
+                        SettingsRow(
+                            icon = SfIcons.Star,
+                            title = likeSyncTitle,
+                            subtitle = stringResource(R.string.likes_sync_subtitle),
+                        )
+                        SegmentedControl(
+                            options = listOf(stringResource(R.string.likes_sync_account), stringResource(R.string.likes_sync_device)),
+                            selectedIndex = if (likeSyncMode == com.music.bitchord.data.LikeSync.LOCAL) 1 else 0,
+                            onSelect = { AppSettings.setLikeSync(if (it == 1) com.music.bitchord.data.LikeSync.LOCAL else com.music.bitchord.data.LikeSync.ACCOUNT) },
+                            modifier = Modifier.padding(start = TEXT_INSET, end = ROW_INSET, bottom = 14.dp),
+                        )
+                    }
+                }
                 // Sits with the account rather than with Playback: a party is up to
                 // five signed-in people, and being signed in is the whole of what
                 // the row needs before it will do anything.
@@ -1580,7 +1598,7 @@ fun SettingsScreen(
                         Column(
                             modifier = Modifier
                                 .width(84.dp)
-                                .clip(RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(19.dp))
                                 .clickable {
                                     selectedIcon = option
                                     AppIcon.apply(context, option)
@@ -1599,7 +1617,7 @@ fun SettingsScreen(
                                     },
                                     modifier = Modifier
                                         .size(68.dp)
-                                        .clip(RoundedCornerShape(22.dp)),
+                                        .clip(RoundedCornerShape(26.dp)),
                                 )
                             } else {
                                 Image(
@@ -2959,7 +2977,7 @@ private fun bitPerfectSubtitle(mode: BitPerfectMode, status: BitPerfectOutput.St
 
 // ---- Building blocks --------------------------------------------------------
 
-internal val GroupShape = RoundedCornerShape(14.dp)
+internal val GroupShape = RoundedCornerShape(24.dp)
 internal val GROUP_INSET = 16.dp
 internal val ROW_INSET = 16.dp
 internal val ICON_SIZE = 22.dp
