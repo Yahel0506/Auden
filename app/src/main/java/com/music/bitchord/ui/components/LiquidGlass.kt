@@ -65,9 +65,13 @@ fun isGlassSupported(sdkInt: Int = Build.VERSION.SDK_INT): Boolean = sdkInt >= B
 private const val VIBRANCY = 1f
 private const val BLUR_RADIUS_DP = 8f
 private const val LENS_HEIGHT = 0.5f
-private const val LENS_AMOUNT = 0.5f
+private const val LENS_AMOUNT = 0.3f
 private const val LENS_MAX_DP = 48f
 private const val SURFACE_OPACITY = 0.4f
+
+/** How much of the film's opacity is left along the middle line, against its top and bottom edges. */
+private const val GLASS_MIDDLE_SHARE = 0.74f
+private const val GLASS_MIDDLE_SHARE_GAIN = 0.13f
 
 /**
  * Resolution fraction the glass surface records and processes its backdrop at.
@@ -83,15 +87,6 @@ private const val SURFACE_OPACITY = 0.4f
 private const val GLASS_RESOLUTION_SCALE = 0.33f
 
 /**
- * The blur and resolution under [AppSettings.glassPerformance]. With no lens to
- * bend what is behind it, the frost alone has to break up a page's text, so it
- * is twice the radius — and that wider blur hides a smaller recording, which
- * takes the surface from about 11% of its pixels to about 6%.
- */
-private const val FROST_BLUR_RADIUS_DP = 16f
-private const val FROST_RESOLUTION_SCALE = 0.25f
-
-/**
  * The hairline along a bar's edge, and what stands in for the glass rim
  * wherever the glass itself is not drawn.
  *
@@ -100,7 +95,7 @@ private const val FROST_RESOLUTION_SCALE = 0.25f
  * its edge from [Highlight], and this is that edge for everything that does not.
  */
 internal val GLASS_EDGE_WIDTH = 0.5.dp
-internal val GLASS_EDGE_COLOR = Color.White.copy(alpha = 0.10f)
+internal val GLASS_EDGE_COLOR = Color.White.copy(alpha = 0.055f)
 
 /**
  * Icon and label colour for content sitting on a glass surface.
@@ -138,15 +133,18 @@ private const val DARK_INDICATOR_OPACITY = 0.42f
  * whitish film over the page rather than a dark one — so the darker selection reads in it.
  */
 @Composable
-fun navGlassTint(): Color =
-    if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
+fun navGlassTint(): Color {
+    val opacity by AppSettings.glassOpacity.collectAsStateWithLifecycle()
+    val base = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
         Color(0xFFFFFFFF).copy(alpha = 0.66f)
     } else {
         Color(0xFF3A3A3D).copy(alpha = 0.68f)
     }
+    return base.copy(alpha = (base.alpha * opacity).coerceIn(0f, 0.97f))
+}
 
 /** How much more opaque the nav bar's glass grows from its centre out to its edges. */
-const val NAV_GLASS_EDGE = 0.45f
+const val NAV_GLASS_EDGE = 0.3f
 
 /**
  * The nav bar's rim, as Apple's: a fine line, but bright, and lit from one side — light caught in the glass's
@@ -156,10 +154,10 @@ val NAV_GLASS_RIM = Highlight(
     width = 0.6.dp,
     blurRadius = 0.2.dp,
     style = com.music.bitchord.ui.components.backdrop.highlight.HighlightStyle.Default(
-        color = Color.White.copy(alpha = 0.3f),
+        color = Color.White.copy(alpha = 0.12f),
         // Lit from above: the long top and bottom edges carry it, the round ends and corners much less.
         angle = 90f,
-        falloff = 1.6f,
+        falloff = 2.8f,
     ),
 )
 
@@ -172,9 +170,6 @@ const val NAV_GLASS_DEPTH = 0.8f
  */
 const val NAV_GLASS_BLUR = 0.2f
 const val NAV_GLASS_VIBRANCY = 1.6f
-
-/** Under "improve glass performance", only a touch more blur than the full effect, not the frost's double. */
-const val NAV_GLASS_PERFORMANCE_BLUR = 1.3f
 
 /**
  * A lightweight visual match for liquid glass over a stable background.
@@ -245,8 +240,7 @@ fun Modifier.liquidGlassRim(shape: CornerBasedShape): Modifier {
  * recording the backdrop layer when it is on, and a surface that still tried to
  * sample would be sampling a layer nothing is drawing into.
  *
- * Under [AppSettings.glassPerformance] the lens goes and the blur frosts instead,
- * for phones that can't spare the refraction shader. The vibrancy, tint, rim and
+ *  * for phones that can't spare the refraction shader. The vibrancy, tint, rim and
  * shadow are the same either way.
  *
  * [shape] is restricted to [CornerBasedShape] because the backdrop's lens effect
@@ -270,11 +264,6 @@ fun Modifier.liquidGlass(
     depth: Float = 1f,
     /** The blur's radius against the default, 1 as it is. */
     blur: Float = 1f,
-    /**
-     * Under [AppSettings.glassPerformance], the blur as this many times the full effect's, in place of the
-     * frost's doubled radius — for a surface whose look should barely change between the two.
-     */
-    performanceBlur: Float? = null,
 ): Modifier {
     if (!isGlassSupported()) return this
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -282,13 +271,12 @@ fun Modifier.liquidGlass(
         return background(MaterialTheme.colorScheme.surface, shape)
             .border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, shape)
     }
-    val glassPerformance by AppSettings.glassPerformance.collectAsStateWithLifecycle()
+    val glassOpacity by AppSettings.glassOpacity.collectAsStateWithLifecycle()
     val backdrop = LocalAppBackdrop.current
     val exportedBackdrop = LocalGlassExport.current
     val density = LocalDensity.current
-    val resolutionScale = if (glassPerformance) FROST_RESOLUTION_SCALE else GLASS_RESOLUTION_SCALE
-    val blurRadiusDp = if (glassPerformance) FROST_BLUR_RADIUS_DP else BLUR_RADIUS_DP
-    val radiusDp = if (glassPerformance && performanceBlur != null) BLUR_RADIUS_DP * performanceBlur else blurRadiusDp
+    val resolutionScale = GLASS_RESOLUTION_SCALE
+    val radiusDp = BLUR_RADIUS_DP
     val blurPx = with(density) { (radiusDp * blur).dp.toPx() } * resolutionScale
     val lensHeightPx = with(density) { (LENS_HEIGHT * depth * LENS_MAX_DP).dp.toPx() } * resolutionScale
     val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP).dp.toPx() } * resolutionScale
@@ -297,7 +285,8 @@ fun Modifier.liquidGlass(
     } else {
         Color(0xFF121212)
     }
-    val surfaceTintColor = surfaceTint ?: themeTint.copy(alpha = SURFACE_OPACITY)
+    // A tint handed in (navGlassTint) is already scaled by the opacity setting; the default one is scaled here.
+    val surfaceTintColor = surfaceTint ?: themeTint.copy(alpha = (SURFACE_OPACITY * glassOpacity).coerceIn(0f, 0.97f))
 
     return drawBackdrop(
         backdrop = backdrop,
@@ -305,7 +294,7 @@ fun Modifier.liquidGlass(
         effects = {
             colorControls(saturation = 1f + 0.5f * vibrancy)
             blur(blurPx)
-            if (!glassPerformance && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 lens(
                     refractionHeight = lensHeightPx,
                     refractionAmount = lensAmountPx,
@@ -317,26 +306,20 @@ fun Modifier.liquidGlass(
         highlight = { rim ?: Highlight.Default },
         shadow = { Shadow.Default },
         onDrawSurface = {
-            drawRect(color = surfaceTintColor, size = size)
-            if (edgeThickening > 0f) {
-                val edge = surfaceTintColor.copy(alpha = edgeThickening)
-                val clear = edge.copy(alpha = 0f)
-                // Top and bottom: the long edges, thickest.
-                drawRect(
-                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                        0f to edge, 0.38f to clear, 0.62f to clear, 1f to edge,
-                    ),
-                    size = size,
-                )
-                // The round ends, over as far as they curve.
-                val end = (size.height / size.width).coerceAtMost(0.5f)
-                drawRect(
-                    brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
-                        0f to edge, end * 0.6f to clear, 1f - end * 0.6f to clear, 1f to edge,
-                    ),
-                    size = size,
-                )
-            }
+            // The film is never uniform, whatever the opacity: it is thickest along the top and bottom edges and thins
+            // towards the horizontal line through the middle, which is always the most transparent part. Nothing is
+            // added at the sides: the round ends are as clear as the middle.
+            val base = surfaceTintColor.alpha
+            val edge = surfaceTintColor.copy(alpha = (base + (1f - base) * edgeThickening * glassOpacity).coerceIn(0f, 0.97f))
+            // The more opaque the glass is set, the less the middle falls short of its edges.
+            val share = GLASS_MIDDLE_SHARE + GLASS_MIDDLE_SHARE_GAIN * (glassOpacity / 1.5f).coerceIn(0f, 1f)
+            val middle = surfaceTintColor.copy(alpha = edge.alpha * share)
+            drawRect(
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    0f to edge, 0.36f to middle, 0.64f to middle, 1f to edge,
+                ),
+                size = size,
+            )
         },
         exportedBackdrop = exportedBackdrop,
         backdropScale = resolutionScale,
@@ -357,7 +340,6 @@ fun Modifier.navGlass(shape: CornerBasedShape): Modifier = liquidGlass(
     blur = NAV_GLASS_BLUR,
     vibrancy = NAV_GLASS_VIBRANCY,
     edgeThickening = NAV_GLASS_EDGE,
-    performanceBlur = NAV_GLASS_PERFORMANCE_BLUR,
 )
 
 /**

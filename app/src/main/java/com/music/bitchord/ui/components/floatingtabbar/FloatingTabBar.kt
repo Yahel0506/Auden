@@ -80,6 +80,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.core.spring
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -116,6 +117,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
@@ -321,19 +323,29 @@ fun FloatingTabBar(
 /**
  * A [NestedScrollConnection] that handles scroll events to transition between inline and expanded states.
  *
+ * The distance that counts as a swipe is [scrollThresholdPx], as it always was; what is dynamic is whether going that
+ * far flips the bar. It does only when the finger is quick: a drag that is not fast — however far it goes — leaves
+ * the bar as it is. Reaching the top of the page expands it, whatever else is going on.
+ *
  * @param initialIsInline Initial state of the tab bar (inline or expanded).
- * @param scrollThresholdPx The minimum scroll distance in pixels required to trigger a state change.
+ * @param scrollThresholdPx The scroll distance in pixels a swipe has to cover.
+ * @param flipSpeedPx Scroll speed, in px/s, a swipe has to reach for the bar to change state.
  * @param inlineBehavior Defines when the tab bar should transition to inline state.
  */
 class FloatingTabBarScrollConnection(
     initialIsInline: Boolean = false,
     private val scrollThresholdPx: Float,
-    private val inlineBehavior: FloatingTabBarInlineBehavior = FloatingTabBarInlineBehavior.OnScrollDown
+    private val inlineBehavior: FloatingTabBarInlineBehavior = FloatingTabBarInlineBehavior.OnScrollDown,
+    private val flipSpeedPx: Float = 0f,
 ) : NestedScrollConnection {
     var isInline by mutableStateOf(initialIsInline)
         private set
 
     private var accumulatedScroll = 0f
+
+    /** The drag's speed in px/s, smoothed, and when the last scroll event arrived. */
+    private var speed = 0f
+    private var lastEventNanos = 0L
 
     fun expand() {
         isInline = false
@@ -345,6 +357,19 @@ class FloatingTabBarScrollConnection(
         accumulatedScroll = 0f
     }
 
+    private fun measureSpeed(delta: Float) {
+        val now = System.nanoTime()
+        val dt = (now - lastEventNanos) / 1e9f
+        lastEventNanos = now
+        // The first event of a gesture, or one after a pause, has no speed of its own to read.
+        if (dt <= 0f || dt > 0.12f) {
+            speed = 0f
+            return
+        }
+        val instant = kotlin.math.abs(delta) / dt.coerceAtLeast(0.004f)
+        speed += (instant - speed) * 0.35f
+    }
+
     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
         // If behavior is Never, don't change state
         if (inlineBehavior == FloatingTabBarInlineBehavior.Never) {
@@ -352,48 +377,44 @@ class FloatingTabBarScrollConnection(
         }
 
         val scrollDelta = available.y
+        if (scrollDelta == 0f) return Offset.Zero
 
         // Reset accumulated scroll if changing direction
         if ((accumulatedScroll > 0 && scrollDelta < 0) || (accumulatedScroll < 0 && scrollDelta > 0)) {
             accumulatedScroll = 0f
+            speed = 0f
         }
 
-        // Accumulate scroll
+        // Accumulate scroll, and how fast it is going
         accumulatedScroll += scrollDelta
+        measureSpeed(scrollDelta)
+        // A swipe that is not quick changes nothing; the distance keeps adding up, and it takes a quick moment
+        // to turn it into a change.
+        if (speed < flipSpeedPx) return Offset.Zero
 
-        when (inlineBehavior) {
-            FloatingTabBarInlineBehavior.OnScrollDown -> {
-                // Check if we've scrolled enough to trigger state change
-                if (accumulatedScroll <= -scrollThresholdPx && !isInline) {
-                    // Scrolling down enough - transition to inline mode
-                    isInline = true
-                    accumulatedScroll = 0f // Reset after state change
-                } else if (accumulatedScroll >= scrollThresholdPx && isInline) {
-                    // Scrolling up enough - transition to expanded mode
-                    isInline = false
-                    accumulatedScroll = 0f // Reset after state change
-                }
-            }
-
-            FloatingTabBarInlineBehavior.OnScrollUp -> {
-                // Check if we've scrolled enough to trigger state change
-                if (accumulatedScroll >= scrollThresholdPx && !isInline) {
-                    // Scrolling up enough - transition to inline mode
-                    isInline = true
-                    accumulatedScroll = 0f // Reset after state change
-                } else if (accumulatedScroll <= -scrollThresholdPx && isInline) {
-                    // Scrolling down enough - transition to expanded mode
-                    isInline = false
-                    accumulatedScroll = 0f // Reset after state change
-                }
-            }
-
-            FloatingTabBarInlineBehavior.Never -> {
-                // Already handled above, but included for completeness
-            }
+        // Toward inline is the content moving up (finger up, negative); back to expanded is the opposite.
+        val towardInline = if (inlineBehavior == FloatingTabBarInlineBehavior.OnScrollDown) -1f else 1f
+        val signed = accumulatedScroll * towardInline
+        if (signed >= scrollThresholdPx && !isInline) {
+            isInline = true
+            accumulatedScroll = 0f
+        } else if (-signed >= scrollThresholdPx && isInline) {
+            isInline = false
+            accumulatedScroll = 0f
         }
 
         return Offset.Zero // Don't consume the scroll, let it pass through
+    }
+
+    // What the list under the bar could not scroll any further up is the top of the page: expanded there, always.
+    override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+        if (inlineBehavior != FloatingTabBarInlineBehavior.Never && available.y > 0f && isInline) expand()
+        return Offset.Zero
+    }
+
+    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+        if (inlineBehavior != FloatingTabBarInlineBehavior.Never && available.y > 0f && isInline) expand()
+        return Velocity.Zero
     }
 }
 
@@ -413,7 +434,13 @@ fun rememberFloatingTabBarScrollConnection(
 ): FloatingTabBarScrollConnection = with(LocalDensity.current) {
     val scrollThresholdPx = scrollThreshold.toPx()
     remember(scrollThresholdPx, inlineBehavior, initialIsInline) {
-        FloatingTabBarScrollConnection(initialIsInline, scrollThresholdPx, inlineBehavior)
+        FloatingTabBarScrollConnection(
+            initialIsInline = initialIsInline,
+            scrollThresholdPx = scrollThresholdPx,
+            inlineBehavior = inlineBehavior,
+            // A quick swipe: about 1.4 screens a second on a phone, a flick rather than a drag.
+            flipSpeedPx = 1_100.dp.toPx(),
+        )
     }
 }
 
@@ -572,8 +599,8 @@ private fun SharedTransitionScope.InlineTab(
                 color = colors.backgroundColor,
                 shape = shapes.tabBarShape
             )
-            .clip(shapes.tabBarShape)
             .then(tabBarContentModifier())
+            .clip(shapes.tabBarShape)
             .clickable(
                 onClick = {
                     onInlineTabClick()
@@ -632,8 +659,8 @@ private fun SharedTransitionScope.InlineStandaloneTab(
                 color = colors.backgroundColor,
                 shape = shapes.standaloneTabShape
             )
-            .clip(shapes.standaloneTabShape)
             .then(tabBarContentModifier())
+            .clip(shapes.standaloneTabShape)
             .clickable(
                 onClick = standaloneTab.onClick,
                 indication = standaloneTab.indication?.invoke(),
@@ -966,8 +993,8 @@ private fun SharedTransitionScope.ExpandedTabs(
                         color = colors.backgroundColor,
                         shape = shapes.tabBarShape
                     )
-                    .clip(shapes.tabBarShape)
                     .then(tabBarContentModifier())
+                    .clip(shapes.tabBarShape)
                     .drawWithContent {
                         drawContent()
                         // The light the finger carries: a soft bloom round the pill, brightest at its centre.
@@ -1186,8 +1213,8 @@ private fun SharedTransitionScope.ExpandedStandaloneTab(
                 color = colors.backgroundColor,
                 shape = shapes.standaloneTabShape
             )
-            .clip(shapes.standaloneTabShape)
             .then(tabBarContentModifier())
+            .clip(shapes.standaloneTabShape)
             .clickable(
                 onClick = standaloneTab.onClick,
                 indication = standaloneTab.indication?.invoke(),

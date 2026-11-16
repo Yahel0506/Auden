@@ -50,6 +50,12 @@ class LayerBackdrop internal constructor(
 
     internal var layerCoordinates: LayoutCoordinates? by mutableStateOf(null)
 
+    /**
+     * Vendored addition: drawn into this layer, over what the exporting surface recorded, and nowhere else — so
+     * what is refracted from the layer can carry something (a rim) the surface itself does not draw twice.
+     */
+    var onExport: (DrawScope.() -> Unit)? = null
+
     private var inverseLayerScope: InverseLayerScope? = null
 
     override fun DrawScope.drawBackdrop(

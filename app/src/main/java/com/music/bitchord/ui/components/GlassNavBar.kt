@@ -152,6 +152,7 @@ fun GlassNavBar(
     val pillShape = remember { RoundedCornerShape(percent = 50) }
     val contentColor = glassContentColor()
     val selectedColor = contentColor
+    val navAccent = navAccentColor()
     // Near full strength, as Apple's: over clear glass a dimmed label is lost in the page behind it.
     val unselectedColor = contentColor.copy(alpha = 0.92f)
     val haptics = rememberHaptics()
@@ -330,7 +331,7 @@ fun GlassNavBar(
                     tabBarContentPadding = PaddingValues(horizontal = NAV_END_PADDING, vertical = NAV_PILL_INSET),
                     tabExpandedContentPadding = PaddingValues(vertical = TAB_VERTICAL_PADDING + (PILL_INSET - NAV_PILL_INSET)),
                 ),
-                contentKey = remember(selectedIndex, tabs, contentColor) { listOf(selectedIndex, tabs, contentColor) },
+                contentKey = remember(selectedIndex, tabs, contentColor, navAccent) { listOf(selectedIndex, tabs, contentColor, navAccent) },
                 standaloneInExpandedBar = true,
             ) {
         tabs.forEachIndexed { index, tab ->
@@ -341,7 +342,7 @@ fun GlassNavBar(
                 currentOnTabSelected(index)
             }
             // The tab that is open wears the accent: a soft gradient over its glyph and its name.
-            val accent = if (isSelected) Modifier.navAccent() else Modifier
+            val accent = if (isSelected) Modifier.navAccent(navAccent) else Modifier
             // The glyphs that travel in the fold stand aside while their travelling copies are out, and say
             // where they are for those copies to start from.
             val travels = index == standaloneIndex || index == inlineIndex
@@ -787,15 +788,12 @@ private fun GlassNowPlaying(
  * The selected tab's accent: what is drawn is kept as a mask and filled with one flat blue — Apple Music's
  * place for its red, in Auden's colour.
  */
-internal fun Modifier.navAccent(): Modifier = this
+internal fun Modifier.navAccent(color: Color): Modifier = this
     .graphicsLayer(compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen)
     .drawWithContent {
         drawContent()
-        drawRect(color = NAV_ACCENT, blendMode = androidx.compose.ui.graphics.BlendMode.SrcIn)
+        drawRect(color = color, blendMode = androidx.compose.ui.graphics.BlendMode.SrcIn)
     }
-
-/** Flat, and a step darker than the gradient's lead blue (5C9DFF) it replaces. */
-private val NAV_ACCENT = Color(0xFF4A8BEE)
 
 /**
  * How far the first and last tabs sit from the bar's ends: more than the tabs' own spacing, which closes them up
@@ -923,7 +921,7 @@ private fun BoxScope.TravellingGlyph(
                 }
             }
             .graphicsLayer { alpha = if (shown()) 1f else 0f }
-            .then(if (accent) Modifier.navAccent() else Modifier),
+            .then(if (accent) Modifier.navAccent(navAccentColor()) else Modifier),
     )
 }
 

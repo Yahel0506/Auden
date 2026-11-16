@@ -20,6 +20,8 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.runtime.neverEqualPolicy
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
@@ -29,6 +31,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
@@ -524,9 +527,6 @@ internal fun FlatSelectionPill(
  * At the end of that it is drawing the bar, the fill and the tabs with no lens,
  * which is exactly what [FlatSelectionPill] under the tabs draws.
  *
- * Under [AppSettings.glassPerformance] it makes the same moves with no lens. The
- * fill stays on throughout, because with nothing bending behind it, a clear pill
- * would be a rim around nothing.
  */
 @Composable
 internal fun GlassSelectionPill(
@@ -538,11 +538,9 @@ internal fun GlassSelectionPill(
 ) {
     val page = LocalAppBackdrop.current
     val shape = remember { RoundedCornerShape(percent = 50) }
-    val glassPerformance by AppSettings.glassPerformance.collectAsStateWithLifecycle()
-    val backdrop = remember(page, barGlass, tabRow, fillColor, glassPerformance) {
-        SelectionPillBackdrop(page, barGlass, tabRow) {
-            if (glassPerformance) fillColor
-            else fillColor.copy(alpha = fillColor.alpha * (1f - motion.material))
+    val backdrop = remember(page, barGlass, tabRow, fillColor) {
+        SelectionPillBackdrop(page, barGlass, tabRow, lift = { motion.glassPresence }) {
+            fillColor.copy(alpha = fillColor.alpha * (1f - motion.material))
         }
     }
     Box(
@@ -550,11 +548,15 @@ internal fun GlassSelectionPill(
             backdrop = backdrop,
             shape = { shape },
             effects = {
-                if (!glassPerformance && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     lens(
                         refractionHeight = LENS_HEIGHT.toPx() * motion.glassPresence,
                         refractionAmount = LENS_AMOUNT.toPx() * motion.material,
                         chromaticAberration = true,
+                        // The surroundings carried in at the rim: the bar's edge, running just inside the drop,
+                        // is bent inward from it instead of being folded away.
+                        inward = false,
+                        chromaticStrength = 1.4f,
                     )
                 }
             },
@@ -574,8 +576,11 @@ internal fun GlassSelectionPill(
 private fun rimOf(presence: Float): Float = ((presence - 0.45f) / 0.55f).coerceIn(0f, 1f)
 
 /** The drop's edge: a wider and stronger bend than the bar's, the clear centre left as it is. */
-private val LENS_HEIGHT = 16.dp
-private val LENS_AMOUNT = 19.dp
+/** How far the bar's edge, as the drop sees it, is pressed in from where it really is. */
+private val BAR_EDGE_DENT = 8.dp
+
+private val LENS_HEIGHT = 22.dp
+private val LENS_AMOUNT = 11.dp
 
 private val PILL_SHADOW = Shadow(
     radius = 12.dp,
@@ -590,8 +595,10 @@ private val PILL_SHADOW = Shadow(
  */
 private class SelectionPillBackdrop(
     private val page: Backdrop,
-    private val bar: Backdrop,
+    private val bar: LayerBackdrop,
     private val tabs: Backdrop,
+    /** How lifted the drop is, 0 at rest to 1: the bar's edge is pressed in only as far as the drop is up. */
+    private val lift: () -> Float,
     private val fill: () -> Color,
 ) : Backdrop {
 
@@ -603,7 +610,17 @@ private class SelectionPillBackdrop(
         layerBlock: (GraphicsLayerScope.() -> Unit)?,
     ) {
         with(page) { drawBackdrop(density, coordinates, layerBlock) }
-        with(bar) { drawBackdrop(density, coordinates, layerBlock) }
+        // The bar's glass was recorded as a plain rectangle; only its own rounded shape is glass. Outside that, under
+        // the drop, is the page — not the bar's tint.
+        val barShape = barShapeIn(coordinates)
+        if (barShape != null) {
+            clipPath(barShape) {
+                with(bar) { drawBackdrop(density, coordinates, layerBlock) }
+            }
+        } else {
+            with(bar) { drawBackdrop(density, coordinates, layerBlock) }
+        }
+        drawBarEdge(coordinates)
         val color = fill()
         if (color.alpha > 0f) {
             // Past every edge: the recorded area includes the lens's padding.
@@ -614,5 +631,56 @@ private class SelectionPillBackdrop(
             )
         }
         with(tabs) { drawBackdrop(density, coordinates, layerBlock) }
+    }
+
+    /**
+     * The bar's own edge — its rim — drawn where the bar is under the drop, so the lens
+     * carries it with everything else. The bar's glass is recorded without them (the bar draws them around itself),
+     * and a drop that only saw the glass would see no edge to bend.
+     */
+    private fun DrawScope.drawBarEdge(coordinates: LayoutCoordinates?) {
+        val drop = coordinates ?: return
+        val glass = bar.layerCoordinates ?: return
+        if (!glass.isAttached) return
+        val offset = try {
+            glass.localPositionOf(drop)
+        } catch (e: Exception) {
+            return
+        }
+        // Pressed in: the lens carries an edge out toward the drop's rim, so the edge it is given sits this much
+        // deeper than the bar's real one, and what shows ends up further from the rim.
+        val dent = BAR_EDGE_DENT.toPx() * lift()
+        val topLeft = Offset(-offset.x + dent, -offset.y + dent)
+        val barSize = Size(glass.size.width.toFloat() - 2f * dent, glass.size.height.toFloat() - 2f * dent)
+        val radius = androidx.compose.ui.geometry.CornerRadius(barSize.height / 2f)
+        val stroke = { width: Float -> androidx.compose.ui.graphics.drawscope.Stroke(width) }
+        // The rim as the bar has it: a fine bright line, with the faint light just inside it.
+        drawRoundRect(Color.White.copy(alpha = 0.06f * lift()), topLeft, barSize, radius, style = stroke(7.dp.toPx()))
+        drawRoundRect(Color.White.copy(alpha = 0.26f * lift()), topLeft, barSize, radius, style = stroke(1.8.dp.toPx()))
+    }
+
+    /** The bar's rounded outline, in the drop's own coordinates; null until both are placed. */
+    private fun DrawScope.barShapeIn(coordinates: LayoutCoordinates?): androidx.compose.ui.graphics.Path? {
+        val drop = coordinates ?: return null
+        val glass = bar.layerCoordinates ?: return null
+        if (!glass.isAttached) return null
+        val offset = try {
+            glass.localPositionOf(drop)
+        } catch (e: Exception) {
+            return null
+        }
+        // Pressed in by [BAR_EDGE_DENT], as the edge drawn with it: under the drop the page shows out to there, and the
+        // lens — which carries what is deeper toward the rim — has page to carry, not the bar's tint.
+        val dent = BAR_EDGE_DENT.toPx() * lift()
+        val w = glass.size.width.toFloat() - 2f * dent
+        val h = glass.size.height.toFloat() - 2f * dent
+        return androidx.compose.ui.graphics.Path().apply {
+            addRoundRect(
+                androidx.compose.ui.geometry.RoundRect(
+                    -offset.x + dent, -offset.y + dent, -offset.x + dent + w, -offset.y + dent + h,
+                    androidx.compose.ui.geometry.CornerRadius(h / 2f),
+                ),
+            )
+        }
     }
 }

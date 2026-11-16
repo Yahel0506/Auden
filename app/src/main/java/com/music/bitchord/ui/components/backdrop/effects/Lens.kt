@@ -25,12 +25,23 @@ fun BackdropEffectScope.lens(
     @FloatRange(from = 0.0) refractionHeight: Float,
     @FloatRange(from = 0.0) refractionAmount: Float,
     depthEffect: Boolean = false,
-    chromaticAberration: Boolean = false
+    chromaticAberration: Boolean = false,
+    /**
+     * Vendored addition: false samples what is *inside* the edge, so the rim shows the interior stretched
+     * outward (the original look); true samples what is *outside* it, so the rim shows the surroundings carried
+     * in — a line that runs just inside the edge is bent inward from it, as through a drop of glass.
+     */
+    inward: Boolean = false,
+    /** Vendored addition: how strong the colour fringing is when [chromaticAberration] is on, 1 as it was. */
+    chromaticStrength: Float = 1f
 ) {
     if (!isRuntimeShaderSupported()) return
     if (refractionHeight <= 0f || refractionAmount <= 0f) return
 
-    if (padding > 0f) {
+    if (inward) {
+        // It reads past the edge, so the recorded area has to reach that far.
+        padding += refractionAmount
+    } else if (padding > 0f) {
         padding = (padding - refractionHeight).fastCoerceAtLeast(0f)
     }
 
@@ -54,10 +65,10 @@ fun BackdropEffectScope.lens(
                 setFloatUniform("offset", -padding, -padding)
                 setFloatUniform("cornerRadii", cornerRadii)
                 setFloatUniform("refractionHeight", refractionHeight)
-                setFloatUniform("refractionAmount", -refractionAmount)
+                setFloatUniform("refractionAmount", if (inward) refractionAmount else -refractionAmount)
                 setFloatUniform("depthEffect", if (depthEffect) 1f else 0f)
                 if (chromaticAberration) {
-                    setFloatUniform("chromaticAberration", 1f)
+                    setFloatUniform("chromaticAberration", chromaticStrength)
                 }
             }
             RuntimeShaderEffect(shader, "content")

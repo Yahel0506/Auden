@@ -273,6 +273,7 @@ fun FloatingBottomBar(
             .border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, pillShape)
             .padding(horizontal = PILL_INSET, vertical = PILL_INSET),
     ) {
+        val accentIndicator = navAccentColor().copy(alpha = 0.14f)
         if (tabWidthPx > 0f) {
             Box(
                 modifier = Modifier
@@ -289,7 +290,7 @@ fun FloatingBottomBar(
                         scaleY = 1f - lag * STRETCH * SQUASH
                     }
                     .clip(pillShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)),
+                    .background(accentIndicator),
             )
         }
 
@@ -348,12 +349,14 @@ fun FloatingBottomBar(
             // Echo's floating nav bar uses for its own liquid glass.
             val glassTint = glassContentColor()
             val adaptiveTint = if (useGlass) glassTint else null
+            val navAccent = navAccentColor()
             tabs.forEachIndexed { index, tab ->
                 BottomBarItem(
                     tab = tab,
                     selected = index == selectedIndex,
                     glassSpec = glassSpec,
-                    selectedTint = adaptiveTint,
+                    // The open tab wears the app's accent, as on the liquid glass bar.
+                    selectedTint = navAccent,
                     unselectedTint = adaptiveTint?.copy(alpha = 0.65f),
                     onClick = { onTabSelected(index) },
                     modifier = Modifier.weight(1f),
