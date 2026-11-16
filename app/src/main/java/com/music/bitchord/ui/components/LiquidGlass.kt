@@ -40,9 +40,6 @@ import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 
-/** Whether the liquid glass nav bar is turned on — see [AppSettings.liquidGlass]. */
-val LocalLiquidGlassEnabled = staticCompositionLocalOf { false }
-
 /** The backdrop content (app UI) that a liquid glass surface samples from. */
 val LocalAppBackdrop = staticCompositionLocalOf<Backdrop> { error("No AppBackdrop provided") }
 
@@ -69,9 +66,48 @@ private const val LENS_AMOUNT = 0.3f
 private const val LENS_MAX_DP = 48f
 private const val SURFACE_OPACITY = 0.4f
 
+/** The slider position (0..1) the glass's blur and refraction are as designed at: 60%. */
+private const val GLASS_DESIGN_POINT = 0.6f
+
+private fun slider(opacity: Float) = (opacity / 1.5f).coerceIn(0f, 1f)
+
+/**
+ * The blur against the designed one, for a glass set to [opacity] (the stored value, 1.5 at the slider's top). The
+ * more see-through the glass, the more it blurs, so what shows through stays legible; the more opaque, the less it
+ * needs. Bounded both ways: at most 2.6 times the designed blur, at least half.
+ */
+internal fun glassBlurScale(opacity: Float): Float {
+    val p = slider(opacity)
+    return if (p <= GLASS_DESIGN_POINT) 1f + 1.6f * (GLASS_DESIGN_POINT - p) / GLASS_DESIGN_POINT
+    else 1f - 0.5f * (p - GLASS_DESIGN_POINT) / (1f - GLASS_DESIGN_POINT)
+}
+
+/**
+ * How much of the glass's colour boost is kept, for a glass set to [opacity]: the more see-through it is, the more
+ * muted the colours it shows. Full at the designed point, 40% of it at the slider's bottom, a little more above.
+ */
+internal fun glassSaturationScale(opacity: Float): Float {
+    val p = slider(opacity)
+    return if (p <= GLASS_DESIGN_POINT) 0.4f + 0.6f * p / GLASS_DESIGN_POINT
+    else 1f + 0.1f * (p - GLASS_DESIGN_POINT) / (1f - GLASS_DESIGN_POINT)
+}
+
+/**
+ * The refraction against the designed one, bounded tighter than the blur: it costs more to draw and is the part of
+ * the glass that can look wrong when strong. At most 1.2 times the designed, at least 0.4.
+ */
+internal fun glassRefractionScale(opacity: Float): Float {
+    val p = slider(opacity)
+    return if (p <= GLASS_DESIGN_POINT) 1f + 0.2f * (GLASS_DESIGN_POINT - p) / GLASS_DESIGN_POINT
+    else 1f - 0.6f * (p - GLASS_DESIGN_POINT) / (1f - GLASS_DESIGN_POINT)
+}
+
+/** How much of the page's own colour the glass's edge line takes (see drawBackdrop's edgeTint). */
+private const val EDGE_TINT = 0.1f
+
 /** How much of the film's opacity is left along the middle line, against its top and bottom edges. */
-private const val GLASS_MIDDLE_SHARE = 0.74f
-private const val GLASS_MIDDLE_SHARE_GAIN = 0.13f
+private const val GLASS_MIDDLE_SHARE = 0.8f
+private const val GLASS_MIDDLE_SHARE_GAIN = 0.11f
 
 /**
  * Resolution fraction the glass surface records and processes its backdrop at.
@@ -94,7 +130,7 @@ private const val GLASS_RESOLUTION_SCALE = 0.33f
  * against a dark page — it is the same near-black the page is. The glass gets
  * its edge from [Highlight], and this is that edge for everything that does not.
  */
-internal val GLASS_EDGE_WIDTH = 0.5.dp
+internal val GLASS_EDGE_WIDTH = 0.4.dp
 internal val GLASS_EDGE_COLOR = Color.White.copy(alpha = 0.055f)
 
 /**
@@ -138,7 +174,7 @@ fun navGlassTint(): Color {
     val base = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
         Color(0xFFFFFFFF).copy(alpha = 0.66f)
     } else {
-        Color(0xFF3A3A3D).copy(alpha = 0.68f)
+        Color(0xFF454549).copy(alpha = 0.68f)
     }
     return base.copy(alpha = (base.alpha * opacity).coerceIn(0f, 0.97f))
 }
@@ -151,10 +187,10 @@ const val NAV_GLASS_EDGE = 0.3f
  * edge, strongest along the top and round the curved ends — rather than an even grey outline.
  */
 val NAV_GLASS_RIM = Highlight(
-    width = 0.6.dp,
+    width = 0.45.dp,
     blurRadius = 0.2.dp,
     style = com.music.bitchord.ui.components.backdrop.highlight.HighlightStyle.Default(
-        color = Color.White.copy(alpha = 0.12f),
+        color = Color.White.copy(alpha = 0.18f),
         // Lit from above: the long top and bottom edges carry it, the round ends and corners much less.
         angle = 90f,
         falloff = 2.8f,
@@ -169,7 +205,7 @@ const val NAV_GLASS_DEPTH = 0.8f
  * [NAV_GLASS_VIBRANCY]), and the lens at the edges has something sharp to bend.
  */
 const val NAV_GLASS_BLUR = 0.2f
-const val NAV_GLASS_VIBRANCY = 1.6f
+const val NAV_GLASS_VIBRANCY = 1.95f
 
 /**
  * A lightweight visual match for liquid glass over a stable background.
@@ -184,7 +220,7 @@ fun Modifier.lightweightLiquidGlass(
     shape: CornerBasedShape,
     fallbackColor: Color,
 ): Modifier {
-    val useGlass = LocalLiquidGlassEnabled.current && isGlassSupported()
+    val useGlass = isGlassSupported()
     val glassTint = navGlassTint()
     val shapeProvider = ShapeProvider { shape }
 
@@ -217,7 +253,7 @@ fun Modifier.lightweightLiquidGlass(
  */
 @Composable
 fun Modifier.liquidGlassRim(shape: CornerBasedShape): Modifier {
-    if (!LocalLiquidGlassEnabled.current || !isGlassSupported()) return this
+    if (!isGlassSupported()) return this
     val shapeProvider = remember(shape) { ShapeProvider { shape } }
     return then(
         HighlightElement(
@@ -277,13 +313,13 @@ fun Modifier.liquidGlass(
     val density = LocalDensity.current
     val resolutionScale = GLASS_RESOLUTION_SCALE
     val radiusDp = BLUR_RADIUS_DP
-    val blurPx = with(density) { (radiusDp * blur).dp.toPx() } * resolutionScale
+    val blurPx = with(density) { (radiusDp * blur * glassBlurScale(glassOpacity)).dp.toPx() } * resolutionScale
     val lensHeightPx = with(density) { (LENS_HEIGHT * depth * LENS_MAX_DP).dp.toPx() } * resolutionScale
-    val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP).dp.toPx() } * resolutionScale
+    val lensAmountPx = with(density) { (LENS_AMOUNT * LENS_MAX_DP * glassRefractionScale(glassOpacity)).dp.toPx() } * resolutionScale
     val themeTint = if (MaterialTheme.colorScheme.surface.luminance() > 0.5f) {
         Color(0xFFFAFAFA)
     } else {
-        Color(0xFF121212)
+        Color(0xFF1C1C1E)
     }
     // A tint handed in (navGlassTint) is already scaled by the opacity setting; the default one is scaled here.
     val surfaceTintColor = surfaceTint ?: themeTint.copy(alpha = (SURFACE_OPACITY * glassOpacity).coerceIn(0f, 0.97f))
@@ -292,7 +328,7 @@ fun Modifier.liquidGlass(
         backdrop = backdrop,
         shape = { shape },
         effects = {
-            colorControls(saturation = 1f + 0.5f * vibrancy)
+            colorControls(saturation = 1f + 0.5f * vibrancy * glassSaturationScale(glassOpacity))
             blur(blurPx)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 lens(
@@ -323,6 +359,7 @@ fun Modifier.liquidGlass(
         },
         exportedBackdrop = exportedBackdrop,
         backdropScale = resolutionScale,
+        edgeTint = EDGE_TINT,
     )
 }
 

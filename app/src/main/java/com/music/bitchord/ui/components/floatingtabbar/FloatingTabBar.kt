@@ -1172,6 +1172,7 @@ private fun SharedTransitionScope.ExpandedTabs(
                 fillColor = colors.indicatorColor,
                 barGlass = barGlass,
                 tabRow = tabRow,
+                accent = com.music.bitchord.ui.components.navAccentColor(),
                 modifier = Modifier
                     .matchParentSize()
                     .pillPlacement(

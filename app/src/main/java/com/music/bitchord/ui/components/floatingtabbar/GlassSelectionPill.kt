@@ -27,7 +27,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -55,7 +57,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sign
 
 /** How much taller than the bar the pill stands while it is lifted. */
-internal val PILL_GROW_HEIGHT = 9.dp
+internal val PILL_GROW_HEIGHT = 7.dp
 
 /**
  * The selection pill's physics, owned by the tab bar and handed to whichever
@@ -534,12 +536,15 @@ internal fun GlassSelectionPill(
     fillColor: Color,
     barGlass: LayerBackdrop,
     tabRow: LayerBackdrop,
+    /** The colour every tab takes inside the drop, as if it were the selected one. */
+    accent: Color,
     modifier: Modifier,
 ) {
     val page = LocalAppBackdrop.current
     val shape = remember { RoundedCornerShape(percent = 50) }
-    val backdrop = remember(page, barGlass, tabRow, fillColor) {
-        SelectionPillBackdrop(page, barGlass, tabRow, lift = { motion.glassPresence }) {
+    val opacity by AppSettings.glassOpacity.collectAsStateWithLifecycle()
+    val backdrop = remember(page, barGlass, tabRow, fillColor, accent) {
+        SelectionPillBackdrop(page, barGlass, tabRow, accent, lift = { motion.glassPresence }) {
             fillColor.copy(alpha = fillColor.alpha * (1f - motion.material))
         }
     }
@@ -551,18 +556,20 @@ internal fun GlassSelectionPill(
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     lens(
                         refractionHeight = LENS_HEIGHT.toPx() * motion.glassPresence,
-                        refractionAmount = LENS_AMOUNT.toPx() * motion.material,
+                        refractionAmount = LENS_AMOUNT.toPx() * motion.material *
+                            com.music.bitchord.ui.components.glassRefractionScale(opacity),
                         chromaticAberration = true,
                         // The surroundings carried in at the rim: the bar's edge, running just inside the drop,
                         // is bent inward from it instead of being folded away.
                         inward = false,
-                        chromaticStrength = 1.4f,
+                        chromaticStrength = 1.1f,
                     )
                 }
             },
             highlight = {
                 val alpha = motion.material * rimOf(motion.glassPresence)
-                if (alpha > 0f) Highlight.Default.copy(alpha = alpha) else null
+                // A dark edge, not a light one: laid over, not added to, what is under it.
+                if (alpha > 0f) DROP_RIM.copy(alpha = alpha * 0.6f) else null
             },
             shadow = {
                 val alpha = motion.material * rimOf(motion.glassPresence)
@@ -579,8 +586,15 @@ private fun rimOf(presence: Float): Float = ((presence - 0.45f) / 0.55f).coerceI
 /** How far the bar's edge, as the drop sees it, is pressed in from where it really is. */
 private val BAR_EDGE_DENT = 8.dp
 
+private val DROP_RIM = Highlight(
+    style = com.music.bitchord.ui.components.backdrop.highlight.HighlightStyle.Default(
+        color = Color.Black,
+        blendMode = androidx.compose.ui.graphics.BlendMode.SrcOver,
+    ),
+)
+
 private val LENS_HEIGHT = 22.dp
-private val LENS_AMOUNT = 11.dp
+private val LENS_AMOUNT = 14.dp
 
 private val PILL_SHADOW = Shadow(
     radius = 12.dp,
@@ -597,6 +611,7 @@ private class SelectionPillBackdrop(
     private val page: Backdrop,
     private val bar: LayerBackdrop,
     private val tabs: Backdrop,
+    private val accent: Color,
     /** How lifted the drop is, 0 at rest to 1: the bar's edge is pressed in only as far as the drop is up. */
     private val lift: () -> Float,
     private val fill: () -> Color,
@@ -630,7 +645,15 @@ private class SelectionPillBackdrop(
                 size = Size(size.width * 3, size.height * 3),
             )
         }
-        with(tabs) { drawBackdrop(density, coordinates, layerBlock) }
+        // Every tab in the accent, as if it were the selected one: the row's glyphs keep their shapes and take its colour.
+        val paint = androidx.compose.ui.graphics.Paint().apply {
+            colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(accent, androidx.compose.ui.graphics.BlendMode.SrcIn)
+        }
+        drawIntoCanvas { canvas ->
+            canvas.saveLayer(Rect(-size.width, -size.height, size.width * 2, size.height * 2), paint)
+            with(tabs) { drawBackdrop(density, coordinates, layerBlock) }
+            canvas.restore()
+        }
     }
 
     /**
@@ -655,8 +678,8 @@ private class SelectionPillBackdrop(
         val radius = androidx.compose.ui.geometry.CornerRadius(barSize.height / 2f)
         val stroke = { width: Float -> androidx.compose.ui.graphics.drawscope.Stroke(width) }
         // The rim as the bar has it: a fine bright line, with the faint light just inside it.
-        drawRoundRect(Color.White.copy(alpha = 0.06f * lift()), topLeft, barSize, radius, style = stroke(7.dp.toPx()))
-        drawRoundRect(Color.White.copy(alpha = 0.26f * lift()), topLeft, barSize, radius, style = stroke(1.8.dp.toPx()))
+        drawRoundRect(Color.White.copy(alpha = 0.04f * lift()), topLeft, barSize, radius, style = stroke(7.dp.toPx()))
+        drawRoundRect(Color.White.copy(alpha = 0.15f * lift()), topLeft, barSize, radius, style = stroke(1.8.dp.toPx()))
     }
 
     /** The bar's rounded outline, in the drop's own coordinates; null until both are placed. */

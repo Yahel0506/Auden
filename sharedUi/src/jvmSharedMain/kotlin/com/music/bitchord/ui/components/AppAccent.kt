@@ -60,5 +60,13 @@ fun accentColor(): Color {
 @Composable
 fun navAccentColor(): Color {
     val choice by AppAccent.choice.collectAsStateWithLifecycle()
-    return if (choice == AccentChoice.WHITE) choice.shown() else choice.nav
+    // Always a touch lighter than the accent itself, as the bar's glass washes its colours a little: red lands near #F04B64.
+    if (choice == AccentChoice.WHITE) return choice.shown()
+    // On the dark theme a touch lighter than the accent, as the bar's glass washes its colours a little (red lands
+    // near #F04B64); on the light theme a touch deeper, so it holds against the pale glass.
+    return if (isLightTheme()) androidx.compose.ui.graphics.lerp(choice.nav, Color.Black, NAV_ACCENT_DARKEN)
+    else androidx.compose.ui.graphics.lerp(choice.nav, Color.White, NAV_ACCENT_LIGHTEN)
 }
+
+private const val NAV_ACCENT_LIGHTEN = 0.09f
+private const val NAV_ACCENT_DARKEN = 0.12f

@@ -372,6 +372,74 @@ private class DrawBackdropNode(
         }
     }
 
+    private val tintPaint = androidx.compose.ui.graphics.Paint().apply {
+        colorFilter = androidx.compose.ui.graphics.ColorFilter.colorMatrix(
+            androidx.compose.ui.graphics.ColorMatrix().apply {
+                setToSaturation(1.5f)
+                // Some white stays in it: the line is the page's colour lightened, not the colour alone.
+                timesAssign(
+                    androidx.compose.ui.graphics.ColorMatrix(
+                        floatArrayOf(
+                            1f, 0f, 0f, 0f, 70f,
+                            0f, 1f, 0f, 0f, 70f,
+                            0f, 0f, 1f, 0f, 70f,
+                            0f, 0f, 0f, 1f, 0f,
+                        ),
+                    ),
+                )
+            },
+        )
+    }
+
+    /**
+     * The page behind, in its own colours and more saturated, along the rim: the backdrop drawn a second time through
+     * one thin line at the edge. A single line, not a fade, so there is no stepping to see.
+     */
+    private fun DrawScope.drawEdgeTint() {
+        if (graphicsLayer == null) return
+        val inset = 1.2.dp.toPx()
+        if (size.minDimension <= inset * 2f) return
+        val outline = shapeProvider.shape.createOutline(size, layoutDirection, this)
+        val inner = androidx.compose.ui.graphics.Path().apply {
+            when (outline) {
+                is androidx.compose.ui.graphics.Outline.Rounded -> {
+                    val r = outline.roundRect
+                    addRoundRect(
+                        androidx.compose.ui.geometry.RoundRect(
+                            r.left + inset, r.top + inset, r.right - inset, r.bottom - inset,
+                            androidx.compose.ui.geometry.CornerRadius(
+                                (r.topLeftCornerRadius.x - inset).coerceAtLeast(0f),
+                                (r.topLeftCornerRadius.y - inset).coerceAtLeast(0f),
+                            ),
+                        ),
+                    )
+                }
+                is androidx.compose.ui.graphics.Outline.Generic -> addPath(outline.path)
+                is androidx.compose.ui.graphics.Outline.Rectangle -> addRect(outline.rect.deflate(inset))
+            }
+        }
+        tintPaint.alpha = edgeTint.coerceIn(0f, 1f)
+        clipPath(inner, androidx.compose.ui.graphics.ClipOp.Difference) {
+            drawIntoCanvas { canvas ->
+                canvas.saveLayer(androidx.compose.ui.geometry.Rect(0f, 0f, size.width, size.height), tintPaint)
+                drawRecordedBackdrop()
+                // Only along the top and the bottom: the line fades out before the round ends, so it does not go
+                // round the pill.
+                drawRect(
+                    brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                        0f to androidx.compose.ui.graphics.Color.Transparent,
+                        0.22f to androidx.compose.ui.graphics.Color.Black,
+                        0.78f to androidx.compose.ui.graphics.Color.Black,
+                        1f to androidx.compose.ui.graphics.Color.Transparent,
+                    ),
+                    size = size,
+                    blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                )
+                canvas.restore()
+            }
+        }
+    }
+
     override fun MeasureScope.measure(
         measurable: Measurable,
         constraints: Constraints
@@ -390,6 +458,7 @@ private class DrawBackdropNode(
         onDrawBehind?.invoke(this)
         drawBackdropLayer()
         onDrawSurface?.invoke(this)
+        if (edgeTint > 0f) drawEdgeTint()
         drawContent()
         onDrawFront?.invoke(this)
 
