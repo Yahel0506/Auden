@@ -46,6 +46,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -80,7 +81,6 @@ import kotlinx.coroutines.withContext
 // to look at and not a wallet of cards and a list of folders.
 
 private val BannerShape = RoundedCornerShape(14.dp)
-private val BackupAccent = Color(0xFF0A84FF)
 
 /**
  * Replay as a slim banner in the manner of Apple Music's Replay: a small caps caption, a bold line, over a golden gradient. Opens the numbers.
@@ -102,6 +102,8 @@ fun LibraryReplayEntry(
         return
     }
     if (lead == null) return
+    val accent = com.music.bitchord.ui.components.accentColor()
+    val meshColors = remember(accent) { ReplayMesh.of(accent) }
     Box(
         Modifier
             .padding(horizontal = PAGE_GUTTER, vertical = 6.dp)
@@ -109,8 +111,9 @@ fun LibraryReplayEntry(
             .height(72.dp)
             .clip(BannerShape)
             .drawBehind {
-                // A mesh of green, blue and violet: a deep base with a soft pool of each colour laid over it.
-                drawRect(Color(0xFF14325C))
+                // A mesh of the accent and its neighbours on the colour wheel: a deep base with a soft pool of
+                // each laid over it.
+                drawRect(meshColors.base)
                 fun pool(color: Color, x: Float, y: Float, radius: Float) = drawRect(
                     Brush.radialGradient(
                         listOf(color, color.copy(alpha = 0f)),
@@ -118,10 +121,10 @@ fun LibraryReplayEntry(
                         radius = size.width * radius,
                     ),
                 )
-                pool(Color(0xFF1FB57A), 0.0f, 0.05f, 0.55f)
-                pool(Color(0xFF2E7BE8), 0.5f, 1.1f, 0.5f)
-                pool(Color(0xFF7B4DE0), 1.0f, 0.0f, 0.6f)
-                pool(Color(0xFF2FC7B5), 0.3f, 1.0f, 0.3f)
+                pool(meshColors.cool, 0.0f, 0.05f, 0.55f)
+                pool(meshColors.lead, 0.5f, 1.1f, 0.5f)
+                pool(meshColors.warm, 1.0f, 0.0f, 0.6f)
+                pool(meshColors.mid, 0.3f, 1.0f, 0.3f)
             }
             .clickable { onOpenReplay(ReplayStoryPage.MINUTES) },
     ) {
@@ -158,6 +161,7 @@ fun LibraryReplayEntry(
  */
 @Composable
 fun LibraryBackupBanner(onOpen: (ShelfItem) -> Unit, onPlay: () -> Unit) {
+    val BackupAccent = com.music.bitchord.ui.components.accentColor()
     val title = stringResource(R.string.music_backup)
     val subtitle = stringResource(R.string.music_backup_subtitle)
     var covers by remember { mutableStateOf<List<String?>>(emptyList()) }
@@ -267,5 +271,29 @@ fun rememberSpotifyShelf(): List<ShelfItem> {
             videoId = null,
             browseId = SPOTIFY_PAGE_PREFIX + playlist.id,
         )
+    }
+}
+
+
+/** The banner's mesh, drawn from the accent: a deep base, and pools of the accent and the hues beside it. */
+private class ReplayMesh(val base: Color, val cool: Color, val lead: Color, val warm: Color, val mid: Color) {
+    companion object {
+        fun of(accent: Color): ReplayMesh {
+            val hsv = FloatArray(3)
+            android.graphics.Color.colorToHSV(accent.toArgb(), hsv)
+            val hue = hsv[0]
+            // A white or grey accent has no hue to move along: the neighbours are the same grey.
+            val sat = hsv[1]
+            fun tone(shift: Float, s: Float, v: Float) =
+                Color(android.graphics.Color.HSVToColor(floatArrayOf((hue + shift + 360f) % 360f, (sat * s).coerceIn(0f, 1f), (hsv[2] * v).coerceIn(0f, 1f))))
+            // Close to the accent: the pools differ from it by a few degrees of hue and a little light, nothing more.
+            return ReplayMesh(
+                base = tone(0f, 1.0f, 0.62f),
+                cool = tone(-14f, 0.92f, 1.0f),
+                lead = tone(0f, 1.0f, 1.0f),
+                warm = tone(14f, 0.9f, 1.0f),
+                mid = tone(-7f, 0.95f, 0.9f),
+            )
+        }
     }
 }

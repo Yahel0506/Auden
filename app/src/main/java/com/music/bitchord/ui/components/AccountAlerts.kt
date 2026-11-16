@@ -791,6 +791,8 @@ fun <T> ChoiceAlert(
     selected: T,
     label: (T) -> String,
     detail: (T) -> String? = { null },
+    /** Drawn before the label, e.g. a colour's dot. */
+    leading: (@Composable (T) -> Unit)? = null,
     onSelect: (T) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -823,6 +825,7 @@ fun <T> ChoiceAlert(
                 label = label(option),
                 detail = detail(option),
                 checked = option == selected,
+                leading = leading?.let { draw -> { draw(option) } },
                 onClick = { onSelect(option) },
             )
         }
@@ -836,6 +839,7 @@ private fun ChoiceRow(
     label: String,
     detail: String?,
     checked: Boolean,
+    leading: (@Composable () -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -856,6 +860,10 @@ private fun ChoiceRow(
             .padding(horizontal = 16.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (leading != null) {
+            leading()
+            Spacer(Modifier.width(12.dp))
+        }
         Column(Modifier.weight(1f)) {
             Text(
                 text = label,

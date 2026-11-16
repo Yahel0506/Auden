@@ -321,6 +321,8 @@ fun DetailScreen(
     onSongLongPress: (Song) -> Unit,
     onSongSwipe: (Song) -> Unit,
     onShuffle: (List<Song>) -> Unit,
+    /** The Play button: starts the page in order, whatever shuffle was. Falls back to [onSongClick] from the top. */
+    onPlayAll: ((List<Song>) -> Unit)? = null,
     onSectionItemClick: (ShelfItem) -> Unit,
     onArtistClick: (String, String) -> Unit,
     onAddSuggested: (Song) -> Unit,
@@ -639,7 +641,7 @@ fun DetailScreen(
                         fullBleed = fullBleedSleeve,
                         canvas = canvas,
                         songs = songs,
-                        onPlay = { onSongClick(songs, 0) },
+                        onPlay = { onPlayAll?.invoke(songs) ?: onSongClick(songs, 0) },
                         onShuffle = { onShuffle(songs) },
                         // A folder's credit says where its tracks live, not who made them.
                         onArtistClick = onArtistClick.takeIf { folder == null },
@@ -671,7 +673,7 @@ fun DetailScreen(
             if (songs.isNotEmpty() && isArtist) {
                 item(key = "actions") {
                     ActionRow(
-                        onPlay = { onSongClick(songs, 0) },
+                        onPlay = { onPlayAll?.invoke(songs) ?: onSongClick(songs, 0) },
                         onShuffle = { onShuffle(songs) },
                         subscription = page.subscription?.takeIf { onToggleSubscription != null },
                         onToggleSubscription = onToggleSubscription,
@@ -1097,15 +1099,27 @@ private fun ReleaseHeader(
         }
 
         Spacer(Modifier.height(20.dp))
-        Text(
-            text = page.title,
-            style = MaterialTheme.typography.headlineMedium,
-            color = palette.onBackground,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
+        val nowPlaying = com.music.bitchord.ui.components.LocalNowPlayingList.current
+        Row(
             modifier = Modifier.padding(horizontal = HEADER_GUTTER),
-        )
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = page.title,
+                style = MaterialTheme.typography.headlineMedium,
+                color = palette.onBackground,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            // The list that is playing: the bars beside its name, in the page's own text colour.
+            if (nowPlaying.matches(page.browseId)) {
+                Spacer(Modifier.width(10.dp))
+                com.music.bitchord.ui.components.NowPlayingBars(playing = nowPlaying.playing, color = palette.onBackground)
+            }
+        }
         if (credit.isNotBlank()) {
             Spacer(Modifier.height(2.dp))
             // "[logo] Synced with Spotify" on a copy of another service's playlist: the logo is

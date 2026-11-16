@@ -80,10 +80,11 @@ fun IosSwitch(
         animationSpec = spring(dampingRatio = 0.7f, stiffness = 900f),
         label = "iosSwitchStretch",
     )
+    // The app's accent, where iOS has its green.
+    val accent = accentColor()
     val track by animateColorAsState(
         targetValue = when {
-            checked && dark -> Color(0xFF30D158)
-            checked -> Color(0xFF34C759)
+            checked -> accent
             else -> Color(0xFF8E8E93).copy(alpha = if (dark) 0.36f else 0.22f)
         },
         label = "iosSwitchTrack",
@@ -133,7 +134,8 @@ fun IosSwitch(
                 }
                 .size(ThumbWidth, ThumbHeight)
                 .shadow(2.dp, CircleShape)
-                .background(Color.White, CircleShape),
+                // A white accent leaves a white track, where a white thumb would vanish.
+                .background(if (checked && accent.luminance() > 0.8f) Color(0xFF2C2C2E) else Color.White, CircleShape),
         )
     }
 }

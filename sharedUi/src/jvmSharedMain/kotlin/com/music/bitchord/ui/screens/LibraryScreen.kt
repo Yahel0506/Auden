@@ -41,6 +41,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.music.bitchord.ui.components.accentColor
+import com.music.bitchord.ui.components.NowPlayingBars
+import com.music.bitchord.ui.components.LocalNowPlayingList
+import com.music.bitchord.ui.components.LocalMarkNowPlaying
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -129,6 +134,7 @@ fun LibraryScreen(
     val pinnedPlaylists by AppUi.host.pinnedPlaylists.collectAsStateWithLifecycle()
     val onDevice = stringResource(Res.string.on_device)
     val ytMusicTitle = stringResource(Res.string.library_yt_music)
+    CompositionLocalProvider(LocalMarkNowPlaying provides true) {
     PullToRefresh(
         refreshing = refreshing,
         onRefresh = onRefresh,
@@ -262,6 +268,7 @@ fun LibraryScreen(
             }
         }
     }
+    }
 }
 
 /** One of the Library's folder rows: the page [item] opens, behind [icon]. */
@@ -304,19 +311,29 @@ private fun LibraryLinkList(links: List<LibraryLink>, onClick: (ShelfItem) -> Un
                     Icon(
                         imageVector = link.icon,
                         contentDescription = null,
-                        tint = LINK_ACCENT,
+                        tint = accentColor(),
                         modifier = Modifier.size(LINK_ICON_SIZE),
                     )
                 }
                 Spacer(Modifier.width(LINK_ICON_GAP))
-                Text(
-                    text = link.item.title,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp),
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
+                val nowPlaying = LocalNowPlayingList.current
+                val onAir = nowPlaying.matches(link.item.browseId)
+                // The name and, when this folder is playing, its bars take the room the chevron leaves, so the
+                // chevrons stay in one column.
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = link.item.title,
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp),
+                        color = if (onAir) accentColor() else MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (onAir) {
+                        Spacer(Modifier.width(8.dp))
+                        NowPlayingBars(playing = nowPlaying.playing, color = accentColor())
+                    }
+                }
                 Icon(
                     imageVector = BitChordIcons.ChevronRight,
                     contentDescription = null,
@@ -336,7 +353,6 @@ private fun LibraryLinkList(links: List<LibraryLink>, onClick: (ShelfItem) -> Un
 }
 
 /** The blue every row's icon is drawn in. */
-private val LINK_ACCENT = Color(0xFF0A84FF)
 private val LINK_ICON_SIZE = 22.dp
 private val LINK_ICON_GAP = 14.dp
 

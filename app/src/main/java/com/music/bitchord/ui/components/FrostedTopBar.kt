@@ -495,12 +495,13 @@ private fun artworkPageSurface(
     val useLiquidGlass = LocalLiquidGlassEnabled.current && isGlassSupported()
 
     return Modifier
-        .clip(shape)
         .then(
             when {
+                // Not clipped first: the glass draws its own drop shadow outside its bounds, the navbar's exactly,
+                // and a clip ahead of it would cut that shadow off.
                 useLiquidGlass -> Modifier.navGlass(shape)
-                reduceDynamicBlur || hazeState == null -> Modifier.background(container)
-                else -> Modifier.optimizedHazeEffect(
+                reduceDynamicBlur || hazeState == null -> Modifier.clip(shape).background(container)
+                else -> Modifier.clip(shape).optimizedHazeEffect(
                     state = hazeState,
                     style = navGlassHazeStyle(),
                 )
