@@ -154,7 +154,6 @@ fun ListenTogetherScreen(
     var codeInput by remember(inviteCode) { mutableStateOf(inviteCode.orEmpty()) }
     var busy by remember { mutableStateOf(false) }
     var failure by remember { mutableStateOf<String?>(null) }
-    var nickname by remember { mutableStateOf(ListenTogether.nickname()) }
     var maxMembers by remember { mutableIntStateOf(5) }
     var pendingServerSwitchInvite by remember { mutableStateOf<Pair<String, String>?>(null) }
     var sheet by remember { mutableStateOf<PartySheet?>(null) }
@@ -356,11 +355,7 @@ fun ListenTogetherScreen(
             when (open) {
                 PartySheet.Create -> CreatePartySheet(
                     avatarUrl = ListenTogether.myAvatarUrl(),
-                    nickname = nickname,
-                    onNicknameChange = {
-                        nickname = it.take(80)
-                        ListenTogether.setNickname(nickname)
-                    },
+                    name = ListenTogether.myName(),
                     maxMembers = maxMembers,
                     onMaxMembersChange = { maxMembers = it.coerceIn(2, 10) },
                     busy = busy,
@@ -370,7 +365,7 @@ fun ListenTogetherScreen(
                         busy = true
                         failure = null
                         scope.launch {
-                            failure = ListenTogether.createParty(nickname, maxMembers)
+                            failure = ListenTogether.createParty(ListenTogether.nickname(), maxMembers)
                                 .exceptionOrNull()?.message
                             busy = false
                             if (failure == null) showInviteAfterCreate()
@@ -398,11 +393,7 @@ fun ListenTogetherScreen(
                 is PartySheet.Confirm -> JoinConfirmSheet(
                     preview = open.preview,
                     avatarUrl = ListenTogether.myAvatarUrl(),
-                    nickname = nickname,
-                    onNicknameChange = {
-                        nickname = it.take(80)
-                        ListenTogether.setNickname(nickname)
-                    },
+                    name = ListenTogether.myName(),
                     busy = busy,
                     error = failure,
                     onDismiss = {
@@ -426,7 +417,7 @@ fun ListenTogetherScreen(
                                     val switched = ListenTogether.switchPartyWithRecovery(
                                         target,
                                         open.preview.code,
-                                        nickname,
+                                        ListenTogether.nickname(),
                                     )
                                 ) {
                                     is ListenTogether.SwitchPartyResult.Success -> null
@@ -436,7 +427,7 @@ fun ListenTogetherScreen(
                                         switched.targetError
                                 }
                             } else {
-                                ListenTogether.joinParty(open.preview.code, nickname)
+                                ListenTogether.joinParty(open.preview.code, ListenTogether.nickname())
                                     .exceptionOrNull()?.message
                             }
                             failure = problem

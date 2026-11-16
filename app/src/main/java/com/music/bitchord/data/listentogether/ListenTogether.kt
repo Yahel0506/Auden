@@ -767,6 +767,9 @@ object ListenTogether {
 
     fun nickname(): String = prefs.getString(KEY_NICKNAME, null).orEmpty()
 
+    /** The name this device goes by in a party and in Connect: the one chosen in Account, or what the account is called. */
+    fun myName(): String = identity()?.name ?: GUEST_NAME
+
     fun setNickname(value: String) {
         prefs.edit().putString(KEY_NICKNAME, value.trim().take(80)).apply()
     }

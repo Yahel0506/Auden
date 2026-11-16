@@ -55,6 +55,7 @@ import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.withoutRepeatsOf
 import com.music.bitchord.data.model.LibraryPage
 import com.music.bitchord.data.model.LibraryState
+import com.music.bitchord.data.LikeSync
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.MoodGenre
 import com.music.bitchord.data.model.MoodGenreSection
@@ -887,12 +888,38 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     /** Every rating known for this account: the library's, then this session's. */
     val likeStatuses: StateFlow<Map<String, LikeStatus>> =
-        combine(_library, LikeState.overrides) { library, overrides ->
-            val liked = (library as? UiState.Success)?.data?.likedSongs
+        combine(_library, LikeState.overrides, OfflinePlaylists.liked, OfflinePlaylists.hiddenAccountLikes) { library, overrides, device, hidden ->
+            // One heart over two lists: what the account likes (less what was un-liked here while the likes stay on
+            // this device), and what is liked on the device. Whatever was done since either was read wins.
+            val account = (library as? UiState.Success)?.data?.likedSongs
+                ?.filter { it.videoId !in hidden }
                 ?.associate { it.videoId to LikeStatus.LIKE }
                 .orEmpty()
-            liked + overrides
+            val local = device.associateWith { LikeStatus.LIKE }
+            account + local + overrides
         }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    /** The ids the account says it likes; null until its library has been read. */
+    val accountLikedIds: StateFlow<Set<String>?> =
+        _library.map { state -> (state as? UiState.Success)?.data?.likedSongs?.mapTo(HashSet()) { it.videoId } }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /**
+     * Adds the likes kept on this device to the account, one request each (a rating is a request of its own), and
+     * returns how many went through. The device keeps its copies either way.
+     */
+    suspend fun uploadDeviceLikes(songs: List<Song>): Int {
+        var added = 0
+        for (song in songs) {
+            if (YtMusicRepository.rate(song.videoId, LikeStatus.LIKE).isSuccess) {
+                LikeState.set(song.videoId, LikeStatus.LIKE)
+                added++
+            }
+            kotlinx.coroutines.delay(150)
+        }
+        if (added > 0) libraryStale = true
+        return added
+    }
 
     fun likeStatusOf(videoId: String): LikeStatus =
         likeStatuses.value[videoId] ?: LikeStatus.INDIFFERENT
@@ -905,10 +932,33 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * on a round trip before the heart fills reads as the tap not having
      * registered, and people tap again.
      */
-    fun setLike(videoId: String, status: LikeStatus) {
-        if (!requireSignIn()) return
+    fun setLike(song: Song, status: LikeStatus) {
+        val videoId = song.videoId
+        val signedIn = authStore.isSignedIn
+        val toAccount = signedIn && AppSettings.likeSync.value != LikeSync.LOCAL
+        // A dislike steers the account's recommendations and nothing on the device: it needs the account.
+        if (status == LikeStatus.DISLIKE && !(signedIn && toAccount) && !requireSignIn()) return
         val previous = likeStatusOf(videoId)
         if (previous == status) return
+        // The heart is the device's own first: it works without an account, and with one it keeps the song here
+        // too, so signing out loses nothing.
+        val onDevice = videoId in OfflinePlaylists.liked.value
+        when (status) {
+            LikeStatus.LIKE -> {
+                if (!onDevice) OfflinePlaylists.toggleLike(song)
+                OfflinePlaylists.showAccountLike(videoId)
+            }
+            LikeStatus.INDIFFERENT -> {
+                if (onDevice) OfflinePlaylists.toggleLike(song)
+                // Kept on the device only, an un-like of something the account likes is a hiding of it, not a rating.
+                if (!toAccount && previous == LikeStatus.LIKE) OfflinePlaylists.hideAccountLike(videoId)
+            }
+            LikeStatus.DISLIKE -> if (onDevice) OfflinePlaylists.toggleLike(song)
+        }
+        if (!toAccount) {
+            if (status != LikeStatus.DISLIKE) LikeState.set(videoId, status)
+            return
+        }
         LikeState.set(videoId, status)
         viewModelScope.launch {
             YtMusicRepository.rate(videoId, status).fold(
@@ -924,6 +974,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 },
                 onFailure = {
                     LikeState.set(videoId, previous)
+                    // The device's copy follows the account's refusal, so the two never disagree about a heart.
+                    val nowOnDevice = videoId in OfflinePlaylists.liked.value
+                    if ((previous == LikeStatus.LIKE) != nowOnDevice) OfflinePlaylists.toggleLike(song)
                 },
             )
         }
@@ -986,17 +1039,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** The heart: liked becomes neutral, anything else becomes liked. */
-    fun toggleLike(videoId: String) = setLike(
-        videoId,
-        if (likeStatusOf(videoId) == LikeStatus.LIKE) LikeStatus.INDIFFERENT else LikeStatus.LIKE,
+    fun toggleLike(song: Song) = setLike(
+        song,
+        if (likeStatusOf(song.videoId) == LikeStatus.LIKE) LikeStatus.INDIFFERENT else LikeStatus.LIKE,
     )
 
     /** As [toggleLike], for the thumb-down. */
-    fun toggleDislike(videoId: String): LikeStatus? {
+    fun toggleDislike(song: Song): LikeStatus? {
         if (!requireSignIn()) return null
-        val previous = likeStatusOf(videoId)
+        val previous = likeStatusOf(song.videoId)
         setLike(
-            videoId,
+            song,
             if (previous == LikeStatus.DISLIKE) {
                 LikeStatus.INDIFFERENT
             } else {
@@ -3671,7 +3724,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             // A playlist deleted while its page was still reachable — from
             // "Playing from", say — is an empty page, not a YouTube lookup.
             val playlist = OfflinePlaylists.get(browseId) ?: return UiState.Error(text(R.string.no_tracks_here))
-            return nonEmpty(LocalMediaRepository.present(context, playlist.songs)) {
+            // Files are checked for being still there; the streams liked on the device have no file to check.
+            val files = LocalMediaRepository.present(context, playlist.songs.filter { it.localUri != null }).toSet()
+            val kept = playlist.songs.filter { it.localUri == null || it in files }
+            return nonEmpty(kept) {
                 text(if (playlist.isLiked) R.string.offline_liked_empty else R.string.offline_playlist_empty)
             }
         }

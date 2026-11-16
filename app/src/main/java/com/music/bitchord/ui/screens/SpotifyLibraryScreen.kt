@@ -226,7 +226,7 @@ private fun SpotifyProblem(problem: SpotifyException, onRetry: () -> Unit, onSig
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(17.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(16.dp),
     ) {

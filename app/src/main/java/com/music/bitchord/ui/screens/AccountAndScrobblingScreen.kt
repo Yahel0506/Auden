@@ -23,7 +23,11 @@ import androidx.compose.material3.MaterialTheme
 import com.music.bitchord.ui.components.IosSwitch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
@@ -98,6 +102,26 @@ fun AccountAndScrobblingScreen(
                 )
                 FullWidthDivider()
                 DestructiveRow(label = stringResource(R.string.sign_out), onClick = onSignOut)
+            }
+        }
+
+        // The name this device goes by in a party and in Connect: set once, here, rather than every time a party is made.
+        SettingsGroup(
+            header = stringResource(R.string.account_name_header),
+            footer = stringResource(R.string.account_name_footer),
+        ) {
+            var name by remember { mutableStateOf(com.music.bitchord.data.listentogether.ListenTogether.nickname()) }
+            Box(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                com.music.bitchord.ui.components.PillTextField(
+                    value = name,
+                    onValueChange = {
+                        name = it.take(80)
+                        com.music.bitchord.data.listentogether.ListenTogether.setNickname(name)
+                    },
+                    placeholder = com.music.bitchord.data.listentogether.ListenTogether.myName(),
+                    container = MaterialTheme.colorScheme.surfaceVariant,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                )
             }
         }
 

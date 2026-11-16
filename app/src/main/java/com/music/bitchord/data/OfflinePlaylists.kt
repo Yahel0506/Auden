@@ -67,13 +67,44 @@ object OfflinePlaylists {
 
     private val _liked = MutableStateFlow<Set<String>>(emptySet())
 
-    /** The [Song.localUri]s in [LIKED_ID], for a heart to be drawn without a scan. */
+    /**
+     * What is in [LIKED_ID], for a heart to be drawn without a scan: a file by its [Song.localUri], a stream (liked
+     * without an account, or kept here after signing out) by its video id.
+     */
     val liked: StateFlow<Set<String>> = _liked.asStateFlow()
+
+    private const val KEY_HIDDEN = "hidden_account_likes"
+    private val _hidden = MutableStateFlow<Set<String>>(emptySet())
+
+    /**
+     * Songs the account likes that the listener un-liked while their likes stay on this device only: hidden from
+     * the merged view, never sent to the account (the account's own list is left as it is).
+     */
+    val hiddenAccountLikes: StateFlow<Set<String>> = _hidden.asStateFlow()
+
+    fun hideAccountLike(videoId: String) = setHidden(_hidden.value + videoId)
+
+    fun showAccountLike(videoId: String) {
+        if (videoId in _hidden.value) setHidden(_hidden.value - videoId)
+    }
+
+    private fun setHidden(ids: Set<String>) {
+        _hidden.value = ids
+        if (this::prefs.isInitialized) prefs.edit().putStringSet(KEY_HIDDEN, ids).apply()
+    }
+
+    /** The streamed songs liked on this device, newest first: what an account may be offered when one is signed in. */
+    fun likedStreams(): List<Song> =
+        _playlists.value.firstOrNull { it.isLiked }?.songs.orEmpty().filter { it.localUri == null }
+
+    /** A song's key in the liked set: the file for a file, the video id for a stream. */
+    fun likeKey(song: Song): String = song.localUri ?: song.videoId
 
     fun init(context: Context, likedTitle: String) {
         if (this::prefs.isInitialized) return
         this.likedTitle = likedTitle
         prefs = context.applicationContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+        _hidden.value = prefs.getStringSet(KEY_HIDDEN, emptySet()).orEmpty().toSet()
         publish(load())
         // Everything after what was just read, however soon it comes: a like
         // made before this collector is up is still the newest state when it is.
@@ -92,17 +123,17 @@ object OfflinePlaylists {
         return _playlists.value.firstOrNull { it.id == id }
     }
 
-    fun isLiked(song: Song): Boolean = song.localUri?.let { it in _liked.value } == true
+    fun isLiked(song: Song): Boolean = likeKey(song) in _liked.value
 
-    /** Likes or unlikes a device file; returns whether it is liked now. */
+    /** Likes or unlikes a song kept on the device — a file, or a stream; returns whether it is liked now. */
     fun toggleLike(song: Song): Boolean {
-        val key = song.localUri ?: return false
+        val key = likeKey(song)
         var nowLiked = false
         mutate { list ->
             nowLiked = key !in _liked.value
             list.map { playlist ->
                 if (!playlist.isLiked) return@map playlist
-                val rest = playlist.songs.filterNot { it.localUri == key }
+                val rest = playlist.songs.filterNot { likeKey(it) == key }
                 playlist.copy(songs = if (nowLiked) listOf(song.stored()) + rest else rest)
             }
         }
@@ -177,7 +208,7 @@ object OfflinePlaylists {
         val liked = list.firstOrNull { it.isLiked } ?: OfflinePlaylist(LIKED_ID, likedTitle, emptyList())
         val ordered = listOf(liked.copy(title = likedTitle)) + list.filterNot { it.isLiked }
         _playlists.value = ordered
-        _liked.value = liked.songs.mapNotNullTo(HashSet()) { it.localUri }
+        _liked.value = liked.songs.mapTo(HashSet()) { likeKey(it) }
     }
 
     /**
@@ -255,9 +286,11 @@ object OfflinePlaylists {
 
     private fun songFrom(obj: JSONObject): Song? {
         fun JSONObject.text(key: String): String? = if (isNull(key)) null else optString(key).takeIf { it.isNotEmpty() }
-        val uri = obj.text("localUri") ?: return null
+        // A file is held by its uri; a stream, liked without an account, by its video id.
+        val uri = obj.text("localUri")
+        val videoId = obj.text("videoId") ?: uri ?: return null
         return Song(
-            videoId = obj.text("videoId") ?: uri,
+            videoId = videoId,
             title = obj.optString("title"),
             artist = obj.optString("artist"),
             thumbnailUrl = obj.text("thumbnailUrl"),

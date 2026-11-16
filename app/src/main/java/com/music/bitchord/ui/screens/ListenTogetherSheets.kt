@@ -305,8 +305,8 @@ private fun SheetError(message: String?) {
 @Composable
 internal fun CreatePartySheet(
     avatarUrl: String?,
-    nickname: String,
-    onNicknameChange: (String) -> Unit,
+    /** Who the party will know this device as: set in Account and integrations, not here. */
+    name: String,
     maxMembers: Int,
     onMaxMembersChange: (Int) -> Unit,
     busy: Boolean,
@@ -323,18 +323,7 @@ internal fun CreatePartySheet(
             subtitle = stringResource(R.string.listen_together_create_sheet_subtitle),
         )
         Spacer(Modifier.height(22.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            PartySheetAvatar(url = avatarUrl)
-            Spacer(Modifier.width(ICON_GAP))
-            PillTextField(
-                value = nickname,
-                onValueChange = onNicknameChange,
-                placeholder = stringResource(R.string.listen_together_nickname_hint),
-                container = MaterialTheme.colorScheme.surfaceVariant,
-                enabled = enabled,
-                keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-            )
-        }
+        PartySheetName(avatarUrl, name)
         Spacer(Modifier.height(18.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -390,6 +379,29 @@ internal fun CreatePartySheet(
 private fun StepperButton(label: String, enabled: Boolean, onClick: () -> Unit) {
     TextButton(onClick = onClick, enabled = enabled) {
         Text(label, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+/** Who the party will know this device as, with where to change it. */
+@Composable
+private fun PartySheetName(avatarUrl: String?, name: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        PartySheetAvatar(url = avatarUrl)
+        Spacer(Modifier.width(ICON_GAP))
+        Column {
+            Text(
+                text = stringResource(R.string.listen_together_as, name),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringResource(R.string.listen_together_as_where),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
@@ -544,8 +556,7 @@ internal fun MemberAvatarStack(
 internal fun JoinConfirmSheet(
     preview: PartyPreview,
     avatarUrl: String?,
-    nickname: String,
-    onNicknameChange: (String) -> Unit,
+    name: String,
     busy: Boolean,
     error: String?,
     onJoin: () -> Unit,
@@ -596,18 +607,7 @@ internal fun JoinConfirmSheet(
             }
         }
         Spacer(Modifier.height(20.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            PartySheetAvatar(url = avatarUrl)
-            Spacer(Modifier.width(ICON_GAP))
-            PillTextField(
-                value = nickname,
-                onValueChange = onNicknameChange,
-                placeholder = stringResource(R.string.listen_together_nickname_hint),
-                container = MaterialTheme.colorScheme.surfaceVariant,
-                enabled = !busy,
-                keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-            )
-        }
+        PartySheetName(avatarUrl, name)
         Spacer(Modifier.height(20.dp))
         Button(
             onClick = onJoin,
