@@ -223,6 +223,8 @@ import com.music.bitchord.ui.screens.ListenTogetherScreen
 import com.music.bitchord.ui.screens.PartyServerEditor
 import com.music.bitchord.ui.screens.SignatureApiEditor
 import com.music.bitchord.ui.screens.SettingsScreen
+import com.music.bitchord.ui.screens.labelRes
+import com.music.bitchord.ui.components.shown
 import com.music.bitchord.ui.screens.SourceEditorAlert
 import com.music.bitchord.ui.screens.SourcesScreen
 import com.music.bitchord.data.sources.TrackMatcher
@@ -506,6 +508,9 @@ class MainActivity : AppCompatActivity() {
                     LocalOverscrollFactory provides iosOverscrollFactory,
                     LocalLiquidGlassEnabled provides liquidGlassEnabled,
                     LocalAppBackdrop provides appBackdrop,
+                    com.music.bitchord.ui.components.LocalSignInBannerBackground provides { m, motion ->
+                        com.music.bitchord.ui.components.SignInBannerBackground(m, motion)
+                    },
                     com.music.bitchord.ui.components.LocalSongSelection provides AppSongSelection,
                 ) {
                 // The window's width, measured rather than asked for.
@@ -519,13 +524,47 @@ class MainActivity : AppCompatActivity() {
                 // longer exists and a page squeezed to a sliver to pay for it.
                 // A measured constraint cannot be stale — it is the very width
                 // the split is about to be laid out in.
-                BoxWithConstraints(Modifier.fillMaxSize()) {
-                    BitChordApp(
-                        darkTheme = darkTheme,
-                        windowWidth = maxWidth,
-                        windowHeight = maxHeight,
-                        appBackdrop = appBackdrop,
-                    )
+                // Once per launch: saved with the instance, so a rotation does not play it again. The app is not
+                // composed until the video's picture has stopped moving, so that its start-up does not fight the
+                // video for the device while it is still playing.
+                var splashing by rememberSaveable { mutableStateOf(true) }
+                var appStarted by rememberSaveable { mutableStateOf(false) }
+                // Shown on every launch for now, while the page is being iterated on.
+                var welcoming by rememberSaveable { mutableStateOf(true) }
+                // The app's first composition holds the screen for a couple of seconds, so it is not done while the
+                // splash or the welcome is playing: it starts when the welcome is dismissed, and the welcome stays
+                // up until it is in, then fades away over a finished app.
+                var welcomeDone by rememberSaveable { mutableStateOf(false) }
+                androidx.compose.runtime.LaunchedEffect(welcomeDone) {
+                    if (!welcomeDone) return@LaunchedEffect
+                    repeat(4) { androidx.compose.runtime.withFrameNanos { } }
+                    welcoming = false
+                }
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
+                    if ((welcomeDone || !welcoming) && (!splashing || appStarted)) {
+                        BoxWithConstraints(Modifier.fillMaxSize()) {
+                            BitChordApp(
+                                darkTheme = darkTheme,
+                                windowWidth = maxWidth,
+                                windowHeight = maxHeight,
+                                appBackdrop = appBackdrop,
+                            )
+                        }
+                    }
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = welcoming && appStarted,
+                        enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(420)),
+                        exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(300)),
+                    ) {
+                        com.music.bitchord.ui.welcome.WelcomeScreen(playing = !splashing, onDone = { welcomeDone = true })
+                    }
+                    if (splashing) {
+                        com.music.bitchord.ui.splash.LaunchSplash(
+                            dark = darkTheme,
+                            onStatic = { appStarted = true },
+                            onDone = { splashing = false },
+                        )
+                    }
                 }
                 }
             }
@@ -741,6 +780,7 @@ private fun BitChordApp(
     var showLyricsSources by remember { mutableStateOf(false) }
     var showAppLanguage by remember { mutableStateOf(false) }
     var showTranslationLanguage by remember { mutableStateOf(false) }
+    var showAccentPicker by remember { mutableStateOf(false) }
     var showAccountSelector by remember { mutableStateOf(false) }
     var showListenBrainzLogin by remember { mutableStateOf(false) }
     var showLastfmLogin by remember { mutableStateOf(false) }
@@ -3515,6 +3555,7 @@ private fun BitChordApp(
                                 },
                                 onLyricsSources = { showLyricsSources = true },
                                 onTranslationLanguage = { showTranslationLanguage = true },
+                                onAccentColor = { showAccentPicker = true },
                                 onSources = { navigator.push(AppRoute.Sources) },
                                 onListenTogether = { navigator.push(AppRoute.ListenTogether) },
                                 onWearOs = { navigator.push(AppRoute.WearOs) },
@@ -3651,6 +3692,14 @@ private fun BitChordApp(
                                 // Album/playlist playback hands the page snapshot to
                                 // the service, which then owns continuation loading.
                                 onSongClick = ::playDetailSongs,
+                                // Play starts the page in order, even with shuffle on in the player — as
+                                // Shuffle turns it on.
+                                onPlayAll = { songs ->
+                                    if (songs.isNotEmpty()) {
+                                        QueueShuffle.disableForNextQueue()
+                                        playDetailSongs(songs, 0)
+                                    }
+                                },
                                 onSongLongPress = { openSongMenu(withAlbum(it)) },
                                 onSongSwipe = { onSongSwipe(withAlbum(it)) },
                                 onShuffle = { songs ->
@@ -4124,7 +4173,13 @@ private fun BitChordApp(
                     // the background, or this page on its way out: each frame of
                     // them redraws the page under the glass, for nobody.
                     val barsMotion = artworkMotion && transition.targetState == EnterExitState.Visible
-                    CompositionLocalProvider(LocalPlayingBarsMotion provides barsMotion) {
+                    val nowPlayingList = remember(player.song?.playbackSourceId, player.isPlaying) {
+                        com.music.bitchord.ui.components.NowPlayingList(player.song?.playbackSourceId, player.isPlaying)
+                    }
+                    CompositionLocalProvider(
+                        LocalPlayingBarsMotion provides barsMotion,
+                        com.music.bitchord.ui.components.LocalNowPlayingList provides nowPlayingList,
+                    ) {
                         if (destination is AppDestination.Tab) {
                             pageContent()
                         } else {
@@ -6192,7 +6247,10 @@ private fun BitChordApp(
                 },
                 onPlayNext = act(playSongsNext),
                 onAddToQueue = act(addSongsToQueue),
-                onPlay = act { songs -> play(songs, 0) }.takeIf { target.fromCard },
+                onPlay = act { songs ->
+                    QueueShuffle.disableForNextQueue()
+                    play(songs, 0)
+                }.takeIf { target.fromCard },
                 onShuffle = act { songs ->
                     // As on a release page: shuffle goes on before the queue
                     // is built, so it is built shuffled rather than played
@@ -6750,6 +6808,32 @@ private fun BitChordApp(
                 TranslationLanguageDialog(
                     hazeState = hazeState,
                     onDismiss = { showTranslationLanguage = false },
+                )
+            }
+
+            if (showAccentPicker) {
+                BackHandler { showAccentPicker = false }
+                val currentAccent by AppSettings.accentColor.collectAsStateWithLifecycle()
+                com.music.bitchord.ui.components.ChoiceAlert(
+                    hazeState = hazeState,
+                    title = stringResource(R.string.accent_color),
+                    message = null,
+                    options = com.music.bitchord.ui.components.AccentChoice.entries.toList(),
+                    selected = currentAccent,
+                    label = { choice -> context.getString(choice.labelRes()) },
+                    leading = { choice ->
+                        Box(
+                            Modifier
+                                .size(20.dp)
+                                .clip(androidx.compose.foundation.shape.CircleShape)
+                                .background(choice.shown()),
+                        )
+                    },
+                    onSelect = { choice ->
+                        AppSettings.setAccentColor(choice)
+                        showAccentPicker = false
+                    },
+                    onDismiss = { showAccentPicker = false },
                 )
             }
 

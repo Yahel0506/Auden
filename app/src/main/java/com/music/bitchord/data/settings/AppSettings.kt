@@ -530,11 +530,10 @@ object AppSettings {
     val liquidGlass = MutableStateFlow(false)
 
     /**
-     * Frosts the glass instead of refracting it, for phones the lens shader is too
-     * much for: the bar's rim, shadow, tint and motion all stay. A Liquid Glass
-     * option, honoured only while [liquidGlass] is on.
+     * How opaque the glass's film is, against the default (1 = the opacity it was designed at; the slider shows it out of 1.5, and starts at 0.75 of that, 1.125): a lower value lets more of the page
+     * show through, a higher one makes the glass milkier.
      */
-    val glassPerformance = MutableStateFlow(false)
+    val glassOpacity = MutableStateFlow(1.125f)
 
     /**
      * Blurs what scrolls under the status bar and the top controls, easing out
@@ -552,6 +551,9 @@ object AppSettings {
 
     /** How strong the blur on unfocused lyrics is, in percent: 75 is the strength the table in PlayerLyrics was tuned at; the default is a little under it. */
     val lyricsBlurAmount = MutableStateFlow(DEFAULT_LYRICS_BLUR_AMOUNT)
+
+    /** The colour the app wears as its accent; see [com.music.bitchord.ui.components.AppAccent]. */
+    val accentColor = MutableStateFlow(com.music.bitchord.ui.components.AccentChoice.BLUE)
 
     /** Positive values delay synced lyrics; negative values bring them forward. */
     val lyricsOffsetMs = MutableStateFlow(0)
@@ -827,6 +829,9 @@ object AppSettings {
     val listenBrainzToken = MutableStateFlow("")
     val listenBrainzPrimaryArtistOnly = MutableStateFlow(false)
     val spotifySpdcToken = MutableStateFlow("")
+
+    /** The signed-in Spotify account's stable username, read once for Auden Connect's room; blank until then. */
+    val spotifyAccountId = MutableStateFlow("")
 
     // ── Discord Rich Presence ───────────────────────────────────────────
 
@@ -1129,11 +1134,13 @@ object AppSettings {
         reduceDynamicBlur.value = prefs.getBoolean(KEY_REDUCE_BLUR, false)
         disableBlendEffects.value = prefs.getBoolean(KEY_DISABLE_BLEND_EFFECTS, false)
         liquidGlass.value = prefs.getBoolean(KEY_LIQUID_GLASS, false)
-        glassPerformance.value = prefs.getBoolean(KEY_GLASS_PERFORMANCE, false)
+        glassOpacity.value = prefs.getFloat(KEY_GLASS_OPACITY, 1.125f).coerceIn(0f, 1.5f)
         progressiveBlur.value = prefs.getBoolean(KEY_PROGRESSIVE_BLUR, false)
         showDjTab.value = prefs.getBoolean(KEY_SHOW_DJ_TAB, true)
         lyricsBlur.value = prefs.getBoolean(KEY_LYRICS_BLUR, true)
         lyricsBlurAmount.value = prefs.getInt(KEY_LYRICS_BLUR_AMOUNT, DEFAULT_LYRICS_BLUR_AMOUNT).coerceIn(0, 100)
+        accentColor.value = com.music.bitchord.ui.components.AccentChoice.fromKey(prefs.getString(KEY_ACCENT_COLOR, null))
+        com.music.bitchord.ui.components.AppAccent.set(accentColor.value)
         lyricsOffsetMs.value = prefs.getInt(KEY_LYRICS_OFFSET_MS, 0)
             .coerceIn(MIN_LYRICS_OFFSET_MS, MAX_LYRICS_OFFSET_MS)
         translationLanguage.value = prefs.getString(KEY_TRANSLATION_LANGUAGE, "").orEmpty()
@@ -1195,6 +1202,7 @@ object AppSettings {
         listenBrainzToken.value = prefs.getString(KEY_LISTENBRAINZ_TOKEN, "").orEmpty()
         listenBrainzPrimaryArtistOnly.value = prefs.getBoolean(KEY_LISTENBRAINZ_PRIMARY_ARTIST_ONLY, false)
         spotifySpdcToken.value = prefs.getString(KEY_SPOTIFY_SPDC_TOKEN, "").orEmpty()
+        spotifyAccountId.value = prefs.getString(KEY_SPOTIFY_ACCOUNT_ID, "").orEmpty()
         replayGenres.value = prefs.getBoolean(KEY_REPLAY_GENRES, true)
         filterNonMusicAudio.value = prefs.getBoolean(KEY_FILTER_NON_MUSIC_AUDIO, true)
         localMusicSort.value = readLocalMusicSort(KEY_LOCAL_MUSIC_SORT)
@@ -1632,9 +1640,10 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_LIQUID_GLASS, value).apply()
     }
 
-    fun setGlassPerformance(value: Boolean) {
-        glassPerformance.value = value
-        prefs.edit().putBoolean(KEY_GLASS_PERFORMANCE, value).apply()
+    fun setGlassOpacity(value: Float) {
+        val clamped = value.coerceIn(0f, 1.5f)
+        glassOpacity.value = clamped
+        prefs.edit().putFloat(KEY_GLASS_OPACITY, clamped).apply()
     }
 
     fun setProgressiveBlur(value: Boolean) {
@@ -1665,6 +1674,12 @@ object AppSettings {
     fun setShowDjTab(value: Boolean) {
         showDjTab.value = value
         prefs.edit().putBoolean(KEY_SHOW_DJ_TAB, value).apply()
+    }
+
+    fun setAccentColor(choice: com.music.bitchord.ui.components.AccentChoice) {
+        accentColor.value = choice
+        com.music.bitchord.ui.components.AppAccent.set(choice)
+        prefs.edit().putString(KEY_ACCENT_COLOR, choice.key).apply()
     }
 
     fun setLyricsBlurAmount(percent: Int) {
@@ -1944,8 +1959,15 @@ object AppSettings {
 
     fun setSpotifySpdcToken(value: String) {
         spotifySpdcToken.value = value
-        prefs.edit().putString(KEY_SPOTIFY_SPDC_TOKEN, value).apply()
+        // Another session may be another account: the id read for the last one no longer stands.
+        spotifyAccountId.value = ""
+        prefs.edit().putString(KEY_SPOTIFY_SPDC_TOKEN, value).remove(KEY_SPOTIFY_ACCOUNT_ID).apply()
         SpotifyToken.invalidate()
+    }
+
+    fun setSpotifyAccountId(value: String) {
+        spotifyAccountId.value = value
+        prefs.edit().putString(KEY_SPOTIFY_ACCOUNT_ID, value).apply()
     }
 
     fun setLastfmScrobbleEnabled(value: Boolean) {
@@ -2512,11 +2534,12 @@ object AppSettings {
     private const val KEY_REDUCE_BLUR = "reduce_dynamic_blur"
     private const val KEY_DISABLE_BLEND_EFFECTS = "disable_blend_effects"
     private const val KEY_LIQUID_GLASS = "liquid_glass"
-    private const val KEY_GLASS_PERFORMANCE = "glass_performance"
+    private const val KEY_GLASS_OPACITY = "glass_opacity"
     private const val KEY_PROGRESSIVE_BLUR = "progressive_blur"
     private const val KEY_LYRICS_BLUR = "lyrics_blur"
     private const val KEY_SHOW_DJ_TAB = "show_dj_tab"
     private const val KEY_LYRICS_BLUR_AMOUNT = "lyrics_blur_amount"
+    private const val KEY_ACCENT_COLOR = "accent_color"
     const val DEFAULT_LYRICS_BLUR_AMOUNT = 65
     private const val KEY_LYRICS_OFFSET_MS = "lyrics_offset_ms"
     private const val KEY_TRANSLATION_LANGUAGE = "translation_language"
@@ -2586,6 +2609,7 @@ object AppSettings {
     private const val KEY_LISTENBRAINZ_TOKEN = "listenbrainz_token"
     private const val KEY_LISTENBRAINZ_PRIMARY_ARTIST_ONLY = "listenbrainz_primary_artist_only"
     private const val KEY_SPOTIFY_SPDC_TOKEN = "spotify_spdc_token"
+    private const val KEY_SPOTIFY_ACCOUNT_ID = "spotify_account_id"
 
     private const val KEY_DISCORD_USERNAME = "discord_username"
     private const val KEY_DISCORD_NAME = "discord_name"

@@ -2837,6 +2837,26 @@ class PlaybackService : MediaLibraryService() {
      * service so the physical edit uses the raw ExoPlayer and never trips the
      * PartySync user-intent path.
      */
+    /**
+     * A context started while another device plays goes to that device as its queue (the shareable songs around the
+     * chosen one) and, when it asked for shuffle, a shuffle command. False, with the request left untouched, when it
+     * cannot be sent: nothing is playing elsewhere, or the chosen song is not one another device can play.
+     */
+    private fun sendBoundedContextToRemote(args: Bundle): Boolean {
+        if (!mirrorDoor.active) return false
+        val token = args.getString(EXTRA_BOUNDED_CONTEXT_SONGS) ?: return false
+        val request = BoundedContextRequests.peek(token) ?: return false
+        val songs = request.songs.filterNot { it.isUnresolvedSpotify }
+        val chosen = songs.getOrNull(request.startIndex) ?: return false
+        if (!chosen.isShareable()) return false
+        val shareable = songs.filter { it.isShareable() }
+        val at = songs.take(request.startIndex).count { it.isShareable() }
+        if (!mirrorDoor.load(shareable.map { it.toConnectTrack(null) }, at)) return false
+        if (request.shuffle) mirrorDoor.shuffle(true)
+        BoundedContextRequests.discard(token)
+        return true
+    }
+
     private fun startBoundedContext(args: Bundle) {
         val exoPlayer = player ?: return
         val requestToken = args.getString(EXTRA_BOUNDED_CONTEXT_SONGS) ?: return
@@ -8593,8 +8613,18 @@ class PlaybackService : MediaLibraryService() {
             super.seekToDefaultPosition(mediaItemIndex)
         }
 
+        /** Starts [items] on the device that is playing instead of here, from [startIndex]; false when they cannot be sent. */
+        private fun MirrorDoor.loadOnRemote(items: List<MediaItem>, startIndex: Int): Boolean {
+            val chosen = items.getOrNull(startIndex)?.toSong() ?: return false
+            if (!chosen.isShareable()) return false
+            val songs = items.map { it.toSong() }
+            val at = songs.take(startIndex).count { it.isShareable() }
+            return load(songs.filter { it.isShareable() }.map { it.toConnectTrack(null) }, at)
+        }
+
         override fun setMediaItems(mediaItems: List<MediaItem>, resetPosition: Boolean) {
-            if (mirror.active) mirror.newSession()
+            if (mirror.active && !mirror.loadOnRemote(mediaItems, 0)) mirror.newSession()
+            if (mirror.active) return
             if (locked()) return
             onUserIntent()
             super.setMediaItems(mediaItems, resetPosition)
@@ -8605,7 +8635,8 @@ class PlaybackService : MediaLibraryService() {
             startIndex: Int,
             startPositionMs: Long,
         ) {
-            if (mirror.active) mirror.newSession()
+            if (mirror.active && !mirror.loadOnRemote(mediaItems, startIndex)) mirror.newSession()
+            if (mirror.active) return
             if (locked()) return
             onUserIntent()
             super.setMediaItems(mediaItems, startIndex, startPositionMs)
@@ -8831,8 +8862,11 @@ class PlaybackService : MediaLibraryService() {
         ): ListenableFuture<SessionResult> {
             when (customCommand.customAction) {
                 ACTION_START_BOUNDED_CONTEXT -> {
-                    mirrorDoor.newSession()
-                    startBoundedContext(args)
+                    // While another device plays, an album or playlist tapped here starts there; its shuffle goes along.
+                    if (!sendBoundedContextToRemote(args)) {
+                        mirrorDoor.newSession()
+                        startBoundedContext(args)
+                    }
                 }
                 ACTION_CLEAR_BOUNDED_CONTEXT -> clearBoundedContext()
                 ACTION_TOGGLE_AUTOPLAY -> toggleAutoplayFromNotification()
