@@ -11,6 +11,7 @@ import com.music.bitchord.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -236,6 +237,20 @@ object AppUpdateChecker {
                 DownloadState.Failed(error.message ?: "Download failed")
             }
         }
+    }
+
+    /**
+     * Where a download runs: the process's own, not the screen's or the activity's. Closing the update screen (or
+     * leaving the app for a while) neither stops it nor loses what it has fetched, and the screen reopens onto the
+     * state [download] has reached.
+     */
+    private val downloadScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
+
+    /** Starts the download in the background; a second ask while one is running does nothing. */
+    fun startDownload(context: Context) {
+        if (_download.value is DownloadState.Downloading) return
+        val app = context.applicationContext
+        downloadScope.launch { downloadApk(app) }
     }
 
     /** Stops an in-flight download; the next read loop sees this and bails. */
