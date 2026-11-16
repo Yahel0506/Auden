@@ -99,6 +99,10 @@ import java.util.Locale
 import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.ui.components.MessageState
 import com.music.bitchord.ui.components.FolderCover
+import com.music.bitchord.ui.components.accentColor
+import com.music.bitchord.ui.components.LocalMarkNowPlaying
+import com.music.bitchord.ui.components.LocalNowPlayingList
+import com.music.bitchord.ui.components.NowPlayingBars
 import com.music.bitchord.ui.components.PAGE_GUTTER
 import com.music.bitchord.ui.components.TAB_TITLE_GAP
 import com.music.bitchord.ui.components.TAB_TITLE_ROW_HEIGHT
@@ -502,21 +506,33 @@ private fun HomeTitle(
             .padding(start = PAGE_GUTTER),
         contentAlignment = Alignment.CenterStart,
     ) {
-        val logoModifier = Modifier
-            .height(logoHeight)
-            .aspectRatio(LOGO_ASPECT)
-        if (festiveLogo) {
-            GoldenLogo(
-                painter = painterResource(Res.drawable.ic_logo),
-                modifier = logoModifier,
-                onClick = onFestiveLogoClick,
-            )
-        } else {
-            Icon(
-                painter = painterResource(Res.drawable.ic_logo),
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onBackground,
-                modifier = logoModifier,
+        androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+            val logoModifier = Modifier
+                .height(logoHeight)
+                .aspectRatio(LOGO_ASPECT)
+            if (festiveLogo) {
+                GoldenLogo(
+                    painter = painterResource(Res.drawable.ic_logo),
+                    modifier = logoModifier,
+                    onClick = onFestiveLogoClick,
+                )
+            } else {
+                Icon(
+                    painter = painterResource(Res.drawable.ic_logo),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = logoModifier,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
+            // The name beside the mark, sized from the same heading so the two keep their proportion.
+            Text(
+                text = "Auden",
+                style = style,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = (-1.5).sp,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
             )
         }
         // "Listen now" is hidden for now; the wordmark above stays.
@@ -529,10 +545,10 @@ private fun HomeTitle(
 }
 
 /** The wordmark's height against the heading's font size. */
-private const val LOGO_TO_FONT = 0.9f
+private const val LOGO_TO_FONT = 1.05f
 
-/** ic_logo's viewport, 730 x 484. */
-private const val LOGO_ASPECT = 730f / 484f
+/** ic_logo's viewport, 1261 x 1435: the note is taller than it is wide. */
+private const val LOGO_ASPECT = 1261f / 1435f
 
 /**
  * Shared by the home feed, Explore and Library so headings line up across tabs.
@@ -998,6 +1014,9 @@ internal fun ShelfCard(
     /** A smaller name, for a card that sits in a tight grid. */
     compactTitle: Boolean = false,
 ) {
+    val nowPlaying = LocalNowPlayingList.current
+    // The list the player is on, marked where cards ask for it (the Library): its name in the accent, bars beside it.
+    val onAir = LocalMarkNowPlaying.current && nowPlaying.matches(item.browseId)
     Column(
         modifier = modifier
             .longPressMenuClickable(onClick = onClick, onLongClick = onLongPress)
@@ -1049,11 +1068,15 @@ internal fun ShelfCard(
                 } else {
                     MaterialTheme.typography.titleMedium
                 },
-                color = MaterialTheme.colorScheme.onBackground,
+                color = if (onAir) accentColor() else MaterialTheme.colorScheme.onBackground,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false),
             )
+            if (onAir) {
+                Spacer(Modifier.width(6.dp))
+                NowPlayingBars(playing = nowPlaying.playing, color = accentColor())
+            }
         }
         if (showSubtitle) {
         val logo = when (item.platform) {

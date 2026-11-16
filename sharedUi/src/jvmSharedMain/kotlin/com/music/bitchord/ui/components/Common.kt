@@ -24,6 +24,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.geometry.CornerRadius
@@ -768,6 +769,87 @@ private fun playingBarHeight(index: Int, minimum: Float, ms: Long): Float {
     }
 }
 
+/**
+ * The list the player's queue came from, and whether it is playing: what a card or a page reads to mark itself as the
+ * list that is on. [id] is the browse id the queue was started from (see `Song.playbackSourceId`).
+ */
+@androidx.compose.runtime.Immutable
+data class NowPlayingList(val id: String?, val playing: Boolean) {
+    /** Whether [browseId] is this list; a playlist's `VL` prefix is the same list without it. */
+    fun matches(browseId: String?): Boolean =
+        id != null && browseId != null && id.removePrefix("VL") == browseId.removePrefix("VL")
+}
+
+val LocalNowPlayingList = compositionLocalOf { NowPlayingList(null, false) }
+
+/** True where a card of a list should mark itself as playing — the Library, not every shelf of every page. */
+val LocalMarkNowPlaying = compositionLocalOf { false }
+
+/** The meter is shared by everything that listens to it, and on only while something does. */
+private object MusicLevelMeterUsers {
+    private var users = 0
+    fun acquire() { if (users++ == 0) com.music.bitchord.ui.player.PlayerPlatform.host.settings.setMusicLevelMeter(true) }
+    fun release() { if (--users == 0) com.music.bitchord.ui.player.PlayerPlatform.host.settings.setMusicLevelMeter(false) }
+}
+
+private val NOW_PLAYING_BAR_BASE = floatArrayOf(0.55f, 0.95f, 0.7f, 0.85f)
+private val NOW_PLAYING_BAR_SPEED = floatArrayOf(5.2f, 7.1f, 6.0f, 8.3f)
+
+/**
+ * Small vertical bars that follow the music's level while it plays and stand still, at rest heights, when it is
+ * paused. Drawn in [color], with nothing behind them.
+ */
+@Composable
+fun NowPlayingBars(playing: Boolean, color: Color, modifier: Modifier = Modifier) {
+    val level = remember { mutableFloatStateOf(0f) }
+    val phase = remember { mutableFloatStateOf(0f) }
+    val motion = LocalPlayingBarsMotion.current
+    val live = playing && motion
+    DisposableEffect(live) {
+        if (live) MusicLevelMeterUsers.acquire()
+        onDispose { if (live) MusicLevelMeterUsers.release() }
+    }
+    LaunchedEffect(live) {
+        if (!live) { level.floatValue = 0f; return@LaunchedEffect }
+        var last = Long.MIN_VALUE
+        while (true) {
+            withFrameNanos { now ->
+                if (last != Long.MIN_VALUE) {
+                    val dt = (now - last) / 1e9f
+                    phase.floatValue += dt
+                    val target = com.music.bitchord.ui.player.PlayerPlatform.host.settings.musicLevel().coerceIn(0f, 1f)
+                    // Quick up on a beat, slower to let go of it.
+                    level.floatValue += (target - level.floatValue) * (if (target > level.floatValue) 0.5f else 0.12f)
+                }
+                last = now
+            }
+            delay(MOTION_FRAME_GAP_MS)
+        }
+    }
+    Canvas(modifier.size(width = 16.dp, height = 14.dp)) {
+        val bars = NOW_PLAYING_BAR_BASE.size
+        val barWidth = 2.5.dp.toPx()
+        val gap = (size.width - barWidth * bars) / (bars - 1)
+        val corner = CornerRadius(barWidth / 2f)
+        for (i in 0 until bars) {
+            val h = if (live) {
+                // The music's level sets how high they reach; each bar wanders on its own beat inside that.
+                val wander = 0.5f + 0.5f * kotlin.math.sin(phase.floatValue * NOW_PLAYING_BAR_SPEED[i] + i * 1.7f)
+                (0.22f + 0.78f * (0.3f + 0.7f * level.floatValue) * (0.35f + 0.65f * wander)).coerceIn(0.2f, 1f)
+            } else {
+                NOW_PLAYING_BAR_BASE[i] * 0.7f
+            }
+            val height = size.height * h
+            drawRoundRect(
+                color = color,
+                topLeft = Offset(i * (barWidth + gap), size.height - height),
+                size = Size(barWidth, height),
+                cornerRadius = corner,
+            )
+        }
+    }
+}
+
 @Composable
 fun SearchPlayingBars(modifier: Modifier = Modifier) {
     // Time in motion rather than an animation per bar: read only in the draw
@@ -871,6 +953,12 @@ fun PullToRefresh(
 }
 
 /**
+ * What fills the sign-in card in place of the mesh, where the platform has something better to draw: handed the
+ * modifier that sizes it to the card and whether it may move. Null on a platform that has nothing, which keeps the mesh.
+ */
+val LocalSignInBannerBackground = compositionLocalOf<(@Composable (Modifier, Boolean) -> Unit)?> { null }
+
+/**
  * The prompt atop Home while signed out: a card in the welcome pages' living
  * mesh, so the one thing Home asks of a signed-out listener looks like an
  * invitation from the app rather than a settings row that wandered in.
@@ -905,7 +993,10 @@ fun SignInBanner(
     ) {
         // A card is a few hundred dp the reader is looking straight at, which
         // is the case the mesh lets keep moving — see its `continuous` note.
-        MeshGradientBackground(
+        val custom = LocalSignInBannerBackground.current
+        if (custom != null) {
+            custom(Modifier.matchParentSize(), motion)
+        } else MeshGradientBackground(
             palette = cyclingMeshPalette(WelcomeMeshPalettes, running = motion),
             modifier = Modifier.matchParentSize(),
             continuous = true,
