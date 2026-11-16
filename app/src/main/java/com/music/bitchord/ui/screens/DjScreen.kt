@@ -46,6 +46,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -196,6 +197,19 @@ fun DjScreen(
         onOpenPlayer()
     }
 
+    /** A session's songs, kept as a playlist on this device. */
+    fun sessionToPlaylist(entry: DjSavedSets.Entry) {
+        val songs = entry.songs.map { s ->
+            com.music.bitchord.data.model.Song(
+                videoId = s.id, title = s.title, artist = s.artist, thumbnailUrl = s.art, albumName = s.album,
+            )
+        }
+        if (songs.isEmpty()) return
+        val name = entry.title.ifBlank { context.getString(R.string.dj_home_title) }
+        dev.auden.library.LocalPlaylists.create(name, songs)
+        android.widget.Toast.makeText(context, context.getString(R.string.dj_session_playlist_saved, name), android.widget.Toast.LENGTH_SHORT).show()
+    }
+
     fun startTyped(text: String) {
         val ask = text.trim().ifEmpty { return }
         DjSavedSets.logStart(
@@ -264,6 +278,7 @@ fun DjScreen(
                     SessionList(
                         saved = sessions.filter { it.saved }, recent = sessions.filter { !it.saved },
                         onStart = ::startEntry, onSave = { e, s -> DjSavedSets.setSaved(context, e, s) },
+                        onPlaylist = ::sessionToPlaylist,
                     )
                 }
             }
@@ -293,6 +308,7 @@ private fun variantKey(card: DjSetCard): String = when (card.kind) {
     DjCardKind.THEME_ALBUM -> "theme-album"
     DjCardKind.THEME_DECADE -> "theme-decade"
     DjCardKind.THEME_GENRE -> "theme-genre"
+    DjCardKind.TOP_ALBUM -> "top-album"
     else -> card.id
 }
 
@@ -352,9 +368,9 @@ private fun OnAir(theme: String?, onOpen: () -> Unit, onStop: () -> Unit) {
         modifier = Modifier
             .padding(horizontal = Gutter)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(26.dp))
             .background(Glass)
-            .border(1.dp, GlassRim, RoundedCornerShape(22.dp))
+            .border(1.dp, GlassRim, RoundedCornerShape(26.dp))
             .clickable(onClick = onOpen)
             .padding(horizontal = Inset, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -415,13 +431,15 @@ private fun Mosaic(covers: List<String>, modifier: Modifier = Modifier, px: Int 
     }
 }
 
-/** A spring in as its row is drawn, staggered by place; and a press that gives under the finger. */
+/** A spring in as its row is drawn, staggered by place for the first few; and a press that gives under the finger. */
 @Composable
 private fun rememberEntrance(index: Int): Float {
     val enter = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
-        delay(index * 70L)
-        enter.animateTo(1f, spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow))
+        // The stagger stops at the fifth: a row has many more now, and the ones further along are drawn off the edge
+        // (or arrive as it is scrolled), so waiting on their place in the row only made them late.
+        delay(index.coerceAtMost(4) * 40L)
+        enter.animateTo(1f, spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMedium))
     }
     return enter.value
 }
@@ -577,9 +595,9 @@ private fun AskField(onSend: (String) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(26.dp))
+            .clip(RoundedCornerShape(31.dp))
             .background(Glass)
-            .border(1.dp, GlassRim, RoundedCornerShape(26.dp))
+            .border(1.dp, GlassRim, RoundedCornerShape(31.dp))
             // Anywhere on the bar opens the keyboard, not only on the line of text: the field is as wide as the
             // bar's own inside, and what is left of it — the padding, the gap before the button — asks for focus too.
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
@@ -624,7 +642,7 @@ private fun CoverRow(cards: List<DjSetCard>, actions: SetActions) {
             val enter = rememberEntrance(index)
             val source = remember { MutableInteractionSource() }
             val press = pressScale(source)
-            val shape = RoundedCornerShape(26.dp)
+            val shape = RoundedCornerShape(31.dp)
             // The cover breathes: a slow push in and out, each set on its own beat.
             val drift by rememberInfiniteTransition(label = "drift").animateFloat(
                 initialValue = 1f, targetValue = 1.07f,
@@ -661,7 +679,7 @@ private fun RowList(cards: List<DjSetCard>, actions: SetActions) {
             val enter = rememberEntrance(index)
             val source = remember { MutableInteractionSource() }
             val press = pressScale(source)
-            val shape = RoundedCornerShape(22.dp)
+            val shape = RoundedCornerShape(26.dp)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -673,7 +691,7 @@ private fun RowList(cards: List<DjSetCard>, actions: SetActions) {
                     .padding(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Mosaic(card.covers, Modifier.size(68.dp).clip(RoundedCornerShape(16.dp)), ROW_ART_PX)
+                Mosaic(card.covers, Modifier.size(68.dp).clip(RoundedCornerShape(19.dp)), ROW_ART_PX)
                 Spacer(Modifier.width(Inset))
                 Column(Modifier.weight(1f)) {
                     Text(actions.title(card), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -695,7 +713,7 @@ private fun WideRow(cards: List<DjSetCard>, actions: SetActions) {
             val enter = rememberEntrance(index)
             val source = remember { MutableInteractionSource() }
             val press = pressScale(source)
-            val shape = RoundedCornerShape(28.dp)
+            val shape = RoundedCornerShape(34.dp)
             val tint = remember(card.id) { Color.hsv(((card.id.hashCode() and 0xFF) / 255f) * 360f, 0.45f, 1f) }
             Box(
                 Modifier
@@ -715,8 +733,8 @@ private fun WideRow(cards: List<DjSetCard>, actions: SetActions) {
                                 .offset(x = (-(i * 34)).dp, y = ((i - 1) * 6).dp)
                                 .size(84.dp)
                                 .graphicsLayer { rotationZ = (i - 1) * 7f }
-                                .clip(RoundedCornerShape(16.dp))
-                                .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp)),
+                                .clip(RoundedCornerShape(19.dp))
+                                .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(19.dp)),
                             ROW_ART_PX,
                         )
                     }
@@ -737,11 +755,14 @@ private fun WideRow(cards: List<DjSetCard>, actions: SetActions) {
 @Composable
 private fun MomentBlock(cards: List<DjSetCard>, actions: SetActions) {
     val first = cards.firstOrNull() ?: return
-    Column(Modifier.padding(horizontal = Gutter), verticalArrangement = Arrangement.spacedBy(ItemGap)) {
-        MomentTile(first, actions, featured = true, order = 0, modifier = Modifier.fillMaxWidth().height(156.dp))
-        if (cards.size > 1) Row(horizontalArrangement = Arrangement.spacedBy(ItemGap)) {
-            cards.drop(1).forEachIndexed { i, card ->
-                MomentTile(card, actions, featured = false, order = i + 1, modifier = Modifier.weight(1f).height(112.dp))
+    Column(verticalArrangement = Arrangement.spacedBy(ItemGap)) {
+        MomentTile(first, actions, featured = true, order = 0, modifier = Modifier.padding(horizontal = Gutter).fillMaxWidth().height(156.dp))
+        if (cards.size > 1) LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(ItemGap),
+            contentPadding = PaddingValues(horizontal = Gutter),
+        ) {
+            itemsIndexed(cards.drop(1), key = { _, c -> c.id }) { i, card ->
+                MomentTile(card, actions, featured = false, order = i + 1, modifier = Modifier.width(150.dp).height(112.dp))
             }
         }
     }
@@ -814,7 +835,7 @@ private fun ExploreBlock(cards: List<DjSetCard>, actions: SetActions, onShuffle:
                         .graphicsLayer { scaleX = press * (0.8f + 0.2f * enter); scaleY = press * (0.8f + 0.2f * enter); alpha = enter }
                         .combinedClickable(interactionSource = source, indication = null, onClick = { actions.onStart(card) }, onLongClick = { actions.onSave(card, !actions.isSaved(card)) }),
                 ) {
-                    Cover(card.covers.firstOrNull(), Modifier.size(124.dp).clip(RoundedCornerShape(18.dp)).border(if (actions.isSaved(card)) 2.dp else 1.dp, if (actions.isSaved(card)) Color.White else GlassRim, RoundedCornerShape(18.dp)))
+                    Cover(card.covers.firstOrNull(), Modifier.size(124.dp).clip(RoundedCornerShape(22.dp)).border(if (actions.isSaved(card)) 2.dp else 1.dp, if (actions.isSaved(card)) Color.White else GlassRim, RoundedCornerShape(22.dp)))
                     Spacer(Modifier.height(6.dp))
                     Text(actions.title(card), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(card.preview.firstOrNull().orEmpty(), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -850,12 +871,13 @@ private fun SessionList(
     recent: List<DjSavedSets.Entry>,
     onStart: (DjSavedSets.Entry) -> Unit,
     onSave: (DjSavedSets.Entry, Boolean) -> Unit,
+    onPlaylist: (DjSavedSets.Entry) -> Unit,
 ) {
     Column(Modifier.padding(horizontal = Gutter), verticalArrangement = Arrangement.spacedBy(ItemGap)) {
         if (saved.isNotEmpty()) Label(stringResource(R.string.dj_sec_sessions_saved))
-        saved.forEach { SessionRow(it, onStart, onSave) }
+        saved.forEach { SessionRow(it, onStart, onSave, onPlaylist) }
         if (recent.isNotEmpty()) Label(stringResource(R.string.dj_sec_sessions_recent))
-        recent.take(5).forEach { SessionRow(it, onStart, onSave) }
+        recent.take(5).forEach { SessionRow(it, onStart, onSave, onPlaylist) }
     }
 }
 
@@ -863,8 +885,13 @@ private fun SessionList(
 private fun Label(text: String) = Text(text, color = Color.White.copy(alpha = 0.75f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
 
 @Composable
-private fun SessionRow(entry: DjSavedSets.Entry, onStart: (DjSavedSets.Entry) -> Unit, onSave: (DjSavedSets.Entry, Boolean) -> Unit) {
-    val shape = RoundedCornerShape(18.dp)
+private fun SessionRow(
+    entry: DjSavedSets.Entry,
+    onStart: (DjSavedSets.Entry) -> Unit,
+    onSave: (DjSavedSets.Entry, Boolean) -> Unit,
+    onPlaylist: (DjSavedSets.Entry) -> Unit,
+) {
+    val shape = RoundedCornerShape(27.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -880,6 +907,11 @@ private fun SessionRow(entry: DjSavedSets.Entry, onStart: (DjSavedSets.Entry) ->
         Column(Modifier.weight(1f)) {
             Text(entry.title, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(entry.reason ?: stringResource(R.string.dj_session_typed), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        // What the session played, kept as a playlist: only once it has played something.
+        if (entry.songs.isNotEmpty()) {
+            RoundIcon(Icons.Rounded.PlaylistAdd, stringResource(R.string.dj_session_to_playlist), Color.White.copy(alpha = 0.16f)) { onPlaylist(entry) }
+            Spacer(Modifier.width(6.dp))
         }
         RoundIcon(
             if (entry.saved) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
@@ -909,6 +941,18 @@ private fun moodName(mood: DjMood?): String = stringResource(
         DjMood.CHILL -> R.string.dj_mood_chill
         DjMood.ENERGY -> R.string.dj_mood_energy
         DjMood.ACOUSTIC, null -> R.string.dj_mood_acoustic
+        DjMood.PARTY -> R.string.dj_mood_party
+        DjMood.WORKOUT -> R.string.dj_mood_workout
+        DjMood.ROMANTIC -> R.string.dj_mood_romantic
+        DjMood.MELANCHOLY -> R.string.dj_mood_melancholy
+        DjMood.HAPPY -> R.string.dj_mood_happy
+        DjMood.SLEEP -> R.string.dj_mood_sleep
+        DjMood.ROAD_TRIP -> R.string.dj_mood_road_trip
+        DjMood.NOSTALGIC -> R.string.dj_mood_nostalgic
+        DjMood.LATIN -> R.string.dj_mood_latin
+        DjMood.NIGHT -> R.string.dj_mood_night
+        DjMood.COFFEE -> R.string.dj_mood_coffee
+        DjMood.RAINY -> R.string.dj_mood_rainy
     },
 )
 
@@ -917,6 +961,18 @@ private fun moodColor(mood: DjMood?): Color = when (mood) {
     DjMood.CHILL -> Color(0xFF6FE3C0)
     DjMood.ENERGY -> Color(0xFFFF8FA9)
     DjMood.ACOUSTIC -> Color(0xFFFFD86B)
+    DjMood.PARTY -> Color(0xFFFF5FD2)
+    DjMood.WORKOUT -> Color(0xFFFF7A3D)
+    DjMood.ROMANTIC -> Color(0xFFFF6B8B)
+    DjMood.MELANCHOLY -> Color(0xFF7C8CFF)
+    DjMood.HAPPY -> Color(0xFFFFE15C)
+    DjMood.SLEEP -> Color(0xFF8E7CFF)
+    DjMood.ROAD_TRIP -> Color(0xFFFFA24D)
+    DjMood.NOSTALGIC -> Color(0xFFD9A066)
+    DjMood.LATIN -> Color(0xFF3DDC84)
+    DjMood.NIGHT -> Color(0xFF5B6CFF)
+    DjMood.COFFEE -> Color(0xFFC49A6C)
+    DjMood.RAINY -> Color(0xFF5FB6D9)
     null -> Color.White
 }
 
@@ -946,6 +1002,8 @@ private fun cardWords(card: DjSetCard): Pair<String, String?> {
                 else -> R.string.dj_moment_reason_night
             },
         )
+        DjCardKind.TOP_ALBUM -> subject to stringResource(R.string.dj_top_artist_reason, n)
+        DjCardKind.TOP_DECADE -> stringResource(R.string.dj_theme_decade, if (n >= 2000) n else n % 100) to stringResource(R.string.dj_top_decade_reason)
         DjCardKind.THEME_ARTIST, DjCardKind.THEME_GENRE, DjCardKind.THEME_ALBUM -> subject to stringResource(R.string.dj_theme_reason, card.songs)
         // "the 90s", "the 2000s": a century's decades by their last two digits, the new ones whole.
         DjCardKind.THEME_DECADE -> stringResource(R.string.dj_theme_decade, if (n >= 2000) n else n % 100) to stringResource(R.string.dj_theme_reason, card.songs)

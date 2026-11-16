@@ -101,7 +101,9 @@ class DjPlanner(
 
     /** The next set, or null when the pool has nothing left that makes a set of at least [MIN_BLOCK]. */
     fun next(): DjBlock? {
-        val surprise = request == null
+        // A request the DJ did not understand is no reason to fall back on the most played: it is a surprise, drawn
+        // across the library's families of sets, not weighted by plays (which put one artist in nearly every set).
+        val surprise = request == null || !request!!.understood
         // Themes whose artists are resting are passed over while any other theme can make a set; only
         // when none can does a theme go back to its artists, so a surprise never turns into a repeat by default.
         val candidates = candidatesFor(surprise, allowResting = false).ifEmpty { candidatesFor(surprise, allowResting = true) }
@@ -339,7 +341,7 @@ class DjPlanner(
             DjTheme.Fresh -> if (r.fresh) 1.0 else 0.0
             DjTheme.Rediscover -> if (r.rediscover) 1.0 else 0.0
             is DjTheme.ByArtist -> if (r.artist.equals(theme.artist, ignoreCase = true)) 1.0 else 0.0
-            is DjTheme.ByDecade -> if (r.decade == theme.decade) 1.0 else 0.0
+            is DjTheme.ByDecade -> if (theme.decade in r.allDecades) 1.0 else 0.0
             is DjTheme.ByGenre -> if (r.genre == theme.genre) 1.0 else 0.0
             is DjTheme.ByMood -> if (r.mood == theme.mood) 1.0 else 0.0
             is DjTheme.ByAlbum -> if (r.album.equals(theme.album, ignoreCase = true)) 1.0 else 0.0
@@ -473,7 +475,7 @@ class DjPlanner(
             { it.copy(localOnly = false) },
             { it.copy(localOnly = false, mood = null) },
             { it.copy(localOnly = false, mood = null, genre = null) },
-            { it.copy(localOnly = false, mood = null, genre = null, decade = null) },
+            { it.copy(localOnly = false, mood = null, genre = null, decade = null, decades = emptyList()) },
         )
         for ((i, step) in steps.withIndex()) {
             val r = step(request)
@@ -489,7 +491,7 @@ class DjPlanner(
 
     private fun passes(t: DjTrack, r: DjRequest): Boolean =
         (r.artist == null || t.leadArtist.equals(r.artist, ignoreCase = true)) &&
-            (r.decade == null || t.decade == r.decade) &&
+            (r.allDecades.isEmpty() || t.decade in r.allDecades) &&
             (r.genre == null || t.genreKey == r.genre) &&
             (r.mood == null || moodOf(t, r.mood)) &&
             (r.album == null || t.album.equals(r.album, ignoreCase = true)) &&
@@ -532,6 +534,55 @@ class DjPlanner(
                     evening || hour !in 5..11 -> 0.9
                     else -> 0.6
                 }
+                DjMood.PARTY -> when {
+                    weekend && (evening || !(morning || afternoon)) -> 1.0
+                    evening -> 0.5
+                    else -> 0.15
+                }
+                DjMood.WORKOUT -> when {
+                    morning -> if (weekend) 0.8 else 1.0
+                    afternoon -> 0.8
+                    evening -> 0.6
+                    else -> 0.1
+                }
+                DjMood.ROMANTIC -> if (evening || hour !in 5..18) 1.0 else 0.4
+                DjMood.MELANCHOLY -> when {
+                    hour !in 5..22 -> 0.9
+                    evening -> 0.8
+                    else -> 0.35
+                }
+                DjMood.HAPPY -> when {
+                    morning -> 1.0
+                    afternoon -> 0.9
+                    evening -> 0.6
+                    else -> 0.2
+                }
+                DjMood.SLEEP -> when {
+                    hour !in 5..22 -> 1.0
+                    evening -> 0.6
+                    else -> 0.1
+                }
+                DjMood.ROAD_TRIP -> when {
+                    weekend -> 1.0
+                    afternoon -> 0.6
+                    else -> 0.4
+                }
+                DjMood.NOSTALGIC -> if (evening) 0.8 else 0.5
+                DjMood.LATIN -> when {
+                    weekend && evening -> 1.0
+                    else -> 0.6
+                }
+                DjMood.NIGHT -> when {
+                    hour !in 5..22 -> 1.0
+                    evening -> 0.8
+                    else -> 0.15
+                }
+                DjMood.COFFEE -> when {
+                    morning -> 1.0
+                    afternoon -> 0.7
+                    else -> 0.3
+                }
+                DjMood.RAINY -> if (evening || hour !in 5..22) 0.7 else 0.4
             }
         }
 

@@ -23,18 +23,37 @@ class DjClip(
  * behind it (no key, no network, a language with no voice) fails with the reason, and the caller
  * shows the words and plays on.
  */
-class DjClipRenderer(context: Context, private val voice: FishVoice = FishVoice()) {
+class DjClipRenderer(private val context: Context, private val voice: FishVoice = FishVoice()) {
+    /** The names the voice is known to get wrong, and how to say them: bundled with the app. */
+    private val lexicon: DjPronunciation.Lexicon by lazy {
+        runCatching {
+            context.assets.open("dj/pronunciations.tsv").bufferedReader().use { DjPronunciation.Lexicon.parse(it.readText()) }
+        }.getOrDefault(DjPronunciation.Lexicon.EMPTY)
+    }
+    private val lookup by lazy { NameLookup(context) }
+
+    /** How the dictionary's names are said, for the parser to hear them in what the listener asks. */
+    val spokenAliases: Map<String, String> by lazy { lexicon.spokenToName() }
+
     private val dir = File(context.cacheDir, "dj/clips").apply { mkdirs() }
     private val mutex = Mutex()
     private var counter = 0L
 
     fun canSpeak(language: String): Boolean = voice.configured && FishVoice.voiceFor(language) != null
 
-    suspend fun render(language: String, line: String, seed: Long): DjClip? {
+    /**
+     * [names] are the artists the line may be about. The voice is given the line with those names respelled (see
+     * [DjPronunciation]); the clip keeps the words as they were written, which are what the screen shows.
+     */
+    suspend fun render(language: String, line: String, seed: Long, names: Collection<String> = emptyList()): DjClip? {
         if (line.isBlank()) return null
         return withContext(Dispatchers.IO) {
             mutex.withLock {
-                val pcm = voice.say(language, line)
+                // A name in a script the voices cannot read is looked up (once, then remembered) for a readable one.
+                val aliases = names.filter { DjPronunciation.needsAlias(it) && DjPronunciation.mentions(line, it) }
+                    .associateWith { lookup.aliasOf(it) }
+                val spoken = DjPronunciation.prepare(line, language, names, lexicon) { aliases[it] }
+                val pcm = voice.say(language, spoken)
                 val id = "clip-${seed.toString(36)}-${++counter}"
                 val file = File(dir, "$id.wav")
                 ClipWriter.writeWav(file, pcm, FishVoice.SAMPLE_RATE)

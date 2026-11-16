@@ -68,6 +68,36 @@ object DjTaste {
     }
 
     /**
+     * The songs for a set made of [name]'s own: what the search ranked as theirs, in the order it ranked them, first;
+     * then, only to fill the set, the others it returned, no artist twice. A name that is asked for is what is played.
+     */
+    fun mergeForArtist(results: List<Pair<Query, List<Hit>>>, name: String, limit: Int): List<String> =
+        mergeForArtists(results, listOf(name), limit)
+
+    /** The same for several artists asked for together ("SZA y Taylor Swift"): each one's songs in turn, then the fill. */
+    fun mergeForArtists(results: List<Pair<Query, List<Hit>>>, names: List<String>, limit: Int): List<String> {
+        val wanted = names.map { fold(it).filter { c -> c.isLetterOrDigit() } }.filter { it.isNotEmpty() }
+        fun isOf(h: Hit, w: String) = fold(DjTrack.leadOf(h.artist)).filter { it.isLetterOrDigit() }.let {
+            it.isNotEmpty() && (it.contains(w) || w.contains(it) || DjRequestParser.distance(it, w, 1) <= 1) ||
+                fold(h.artist).filter { c -> c.isLetterOrDigit() }.contains(w)
+        }
+        val hits = results.flatMap { it.second }.distinctBy { it.id }
+        val perName = wanted.map { w -> hits.filter { isOf(it, w) } }
+        val ownIds = perName.flatten().mapTo(HashSet()) { it.id }
+        val others = hits.filter { it.id !in ownIds }
+        val out = LinkedHashSet<String>()
+        // Each artist's songs in turn, so a set for two of them is not one of them and then the other.
+        var round = 0
+        while (out.size < limit && perName.any { round < it.size }) {
+            perName.forEach { list -> if (out.size < limit && round < list.size) out += list[round].id }
+            round++
+        }
+        val seenArtists = HashSet<String>()
+        others.forEach { if (out.size < limit && seenArtists.add(fold(DjTrack.leadOf(it.artist)))) out += it.id }
+        return out.toList()
+    }
+
+    /**
      * The songs for a set, in order. The genre searches take turns, one song each, so a rock and hip-hop
      * listener gets both; within each, the artists the listener already plays come first. The artists' own
      * songs that fit join the turns (a few: they are a welcome extra, not the set). The ask on its own only

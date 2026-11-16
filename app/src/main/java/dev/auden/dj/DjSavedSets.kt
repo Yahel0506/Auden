@@ -20,6 +20,17 @@ object DjSavedSets {
     private const val KEY = "entries"
     private const val RECENT_MAX = 12
     private const val SAVED_MAX = 60
+    private const val MAX_SONGS = 300
+
+    /** A song a session played: enough to put it in a playlist afterwards. */
+    @Serializable
+    data class SessionSong(
+        val id: String,
+        val title: String,
+        val artist: String,
+        val album: String? = null,
+        val art: String? = null,
+    )
 
     @Serializable
     data class Entry(
@@ -50,6 +61,8 @@ object DjSavedSets {
         val text: String = "",
         /** A set typed in words has no card: this is what was typed. */
         val typed: Boolean = false,
+        /** What this session actually played, in order, so it can be kept as a playlist. */
+        val songs: List<SessionSong> = emptyList(),
     ) {
         /** The request that starts it again; null for a set the DJ chose itself ([DjCardKind.FOR_YOU]). */
         fun request(): DjRequest? = if (kind == DjCardKind.FOR_YOU && !typed) null else DjRequest(
@@ -67,6 +80,9 @@ object DjSavedSets {
 
     private var loaded = false
 
+    /** The session that is playing now (as it was logged): the songs it plays are written to it. */
+    private var playing: Entry? = null
+
     @Synchronized
     fun load(context: Context) {
         if (loaded) return
@@ -80,8 +96,23 @@ object DjSavedSets {
     fun logStart(context: Context, entry: Entry) {
         load(context)
         val kept = _entries.value.firstOrNull { it.sameSet(entry) }
-        val now = entry.copy(startedAt = System.currentTimeMillis(), saved = kept?.saved == true)
+        // A new session of a set starts its list of songs afresh: what it played is what it played this time.
+        val now = entry.copy(startedAt = System.currentTimeMillis(), saved = kept?.saved == true, songs = emptyList())
+        playing = now
         persist(context, listOf(now) + _entries.value.filterNot { it.sameSet(entry) })
+    }
+
+    /** A song of the running session started: kept with the session, for [Entry.songs]. */
+    @Synchronized
+    fun recordPlayed(context: Context, song: SessionSong) {
+        load(context)
+        val current = playing ?: return
+        val index = _entries.value.indexOfFirst { it.sameSet(current) }
+        if (index < 0) return
+        val entry = _entries.value[index]
+        if (entry.songs.any { it.id == song.id }) return
+        val updated = entry.copy(songs = (entry.songs + song).takeLast(MAX_SONGS))
+        persist(context, _entries.value.toMutableList().also { it[index] = updated })
     }
 
     /** Keeps a set, or lets it go (it then stays among the recent ones until they push it out). */

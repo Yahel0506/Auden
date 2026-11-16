@@ -48,6 +48,18 @@ enum class DjMood(val keywords: Set<String>) {
     CHILL(setOf("chill", "lounge", "downtempo", "bossa", "soft", "jazz", "r&b", "soul", "trip hop", "easy listening", "dream pop", "indie pop")),
     ENERGY(setOf("rock", "metal", "punk", "dance", "edm", "electro", "house", "techno", "hip hop", "hip-hop", "rap", "reggaeton", "trap", "workout", "hard", "drum", "pop", "funk")),
     ACOUSTIC(setOf("acoustic", "acústico", "acustico", "unplugged", "folk", "singer-songwriter", "country", "bluegrass")),
+    PARTY(setOf("party", "fiesta", "club", "dance", "edm", "house", "reggaeton", "dembow", "perreo", "electro", "disco", "antro")),
+    WORKOUT(setOf("workout", "gym", "entreno", "ejercicio", "metal", "trap", "drill", "hip hop", "hip-hop", "rap", "edm", "hard", "drum and bass")),
+    ROMANTIC(setOf("love", "amor", "romantic", "romántic", "romantico", "romántico", "ballad", "balada", "bolero", "r&b", "soul", "serenata", "corazón", "corazon")),
+    MELANCHOLY(setOf("sad", "triste", "melanchol", "blues", "heartbreak", "desamor", "dolor", "lágrimas", "lagrimas", "indie folk", "slowcore", "emo")),
+    HAPPY(setOf("happy", "feliz", "sunshine", "summer", "verano", "tropical", "good vibes", "dance pop", "funk", "disco", "reggae", "ska", "alegr")),
+    SLEEP(setOf("sleep", "dormir", "ambient", "lullaby", "nana", "piano", "nature", "white noise", "meditation", "meditación", "meditacion")),
+    ROAD_TRIP(setOf("road trip", "highway", "carretera", "viaje", "classic rock", "country", "americana", "southern", "soft rock", "heartland")),
+    NOSTALGIC(setOf("nostalg", "retro", "oldies", "classic", "clásic", "vintage", "golden", "synthpop", "new wave", "80s", "90s", "70s", "60s")),
+    LATIN(setOf("latin", "latino", "reggaeton", "salsa", "bachata", "cumbia", "merengue", "regional", "mexic", "corrido", "banda", "vallenato", "urbano")),
+    NIGHT(setOf("night", "noche", "midnight", "nocturn", "synthwave", "deep house", "trip hop", "downtempo", "noir", "chillwave", "darkwave")),
+    COFFEE(setOf("coffee", "café", "cafe", "jazz", "bossa", "lounge", "brunch", "singer-songwriter", "indie", "acoustic")),
+    RAINY(setOf("rain", "lluvia", "rainy", "mellow", "shoegaze", "dream pop", "slowcore", "lo-fi", "lofi", "indie folk")),
 }
 
 /** What a block of songs has in common: the thing the DJ says out loud, and the rule the songs obey. */
@@ -83,6 +95,8 @@ data class DjRequest(
     val text: String = "",
     val artist: String? = null,
     val decade: Int? = null,
+    /** Several decades at once ("los 80 y 90", "de los 70 a los 2000"); [decade] stays the first of them. */
+    val decades: List<Int> = emptyList(),
     val genre: String? = null,
     val mood: DjMood? = null,
     val favorites: Boolean = false,
@@ -101,7 +115,9 @@ data class DjRequest(
     val discoverFar: Boolean = false,
 ) {
     /** True when the text said something the DJ could act on. */
+    val allDecades: List<Int> get() = decades.ifEmpty { listOfNotNull(decade) }
+
     val understood: Boolean
-        get() = artist != null || decade != null || genre != null || mood != null || favorites || fresh || rediscover ||
+        get() = artist != null || allDecades.isNotEmpty() || genre != null || mood != null || favorites || fresh || rediscover ||
             localOnly || album != null || playlist != null || discover
 }

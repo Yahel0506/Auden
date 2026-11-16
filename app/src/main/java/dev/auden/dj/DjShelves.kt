@@ -33,6 +33,7 @@ enum class DjCardKind {
     DISCOVER_NEAR, DISCOVER_ARTIST, DISCOVER_FAR,
     MOMENT,
     THEME_ARTIST, THEME_GENRE, THEME_DECADE, THEME_ALBUM,
+    TOP_ALBUM, TOP_DECADE,
 }
 
 /**
@@ -157,7 +158,7 @@ object DjShelves {
         val monthly = tracks.groupBy { it.leadArtist.lowercase(Locale.ROOT) }
             .filterValues { ts -> ts.size >= min && ts.sumOf { it.plays30 } >= 6 }
             .entries.sortedByDescending { e -> e.value.sumOf { it.plays30 } }
-        for ((n, entry) in rotate(monthly, variant("top-artist")).take(1).withIndex()) {
+        for ((n, entry) in rotate(monthly, variant("top-artist")).take(4).withIndex()) {
             val of = entry.value
             val artist = of.first().leadArtist
             if (!fresh(of.ids())) continue
@@ -173,13 +174,47 @@ object DjShelves {
             // A habit is a history: a genre with hardly a play in it is not what the listener lives in.
             .filterValues { ts -> ts.size >= 8 && distinctArtists(ts) >= min && ts.sumOf { it.plays } >= 30 }
             .entries.sortedByDescending { e -> e.value.sumOf { it.plays } }
-        byGenre.firstOrNull()?.let { (genre, of) ->
+        for ((n, entry) in byGenre.take(3).withIndex()) {
+            val (genre, of) = entry
+            // Past the first, only genres the listener is in now: an old habit is a "come back" set, not a made-for-you one.
+            if (n > 0 && of.sumOf { it.plays30 } < 10) continue
+            if (!fresh(of.ids())) continue
+            if (usedGenre == null) usedGenre = genre
+            // The first keeps the id it always had, so a saved set of it is still recognised.
+            val id = if (n == 0) "habitual-genre" else "habitual-genre-$n"
+            forYou += DjSetCard(
+                id, DjSection.FOR_YOU, DjCardKind.HABITUAL_GENRE, subject = genre.replaceFirstChar { it.uppercase() },
+                songs = of.size, preview = preview(id, of), covers = covers(id, of),
+                request = DjRequest(text = genre, genre = genre),
+            )
+        }
+        // The albums of this month, like the artists: where the listener's attention has been lately.
+        val monthlyAlbums = tracks.filter { !it.album.isNullOrBlank() }
+            .groupBy { it.album!!.lowercase(Locale.ROOT) to it.leadArtist.lowercase(Locale.ROOT) }
+            .filterValues { ts -> ts.size >= min && ts.sumOf { it.plays30 } >= 6 }
+            .entries.sortedByDescending { e -> e.value.sumOf { it.plays30 } }
+        for ((n, entry) in rotate(monthlyAlbums, variant("top-album")).take(3).withIndex()) {
+            val of = entry.value
+            val album = of.first().album!!
+            if (album.lowercase(Locale.ROOT) in usedAlbums) continue
+            if (!fresh(of.ids())) continue
+            usedAlbums += album.lowercase(Locale.ROOT)
+            forYou += DjSetCard(
+                "top-album-$n", DjSection.FOR_YOU, DjCardKind.TOP_ALBUM, subject = album, number = of.sumOf { it.plays30 },
+                songs = of.size, preview = listOf(of.first().leadArtist), covers = covers("top-album-$n", of),
+                request = DjRequest(text = album, album = album, artist = of.first().leadArtist),
+            )
+        }
+        // The decade the listener is playing most this month, when one stands out.
+        val byDecade = tracks.filter { it.decade != null }.groupBy { it.decade!! }
+            .filterValues { ts -> ts.size >= 8 && distinctArtists(ts) >= min && ts.sumOf { it.plays30 } >= 10 }
+            .entries.sortedByDescending { e -> e.value.sumOf { it.plays30 } }
+        byDecade.firstOrNull()?.let { (decade, of) ->
             if (fresh(of.ids())) {
-                usedGenre = genre
                 forYou += DjSetCard(
-                    "habitual-genre", DjSection.FOR_YOU, DjCardKind.HABITUAL_GENRE, subject = genre.replaceFirstChar { it.uppercase() },
-                    songs = of.size, preview = preview("habitual-genre", of), covers = covers("habitual-genre", of),
-                    request = DjRequest(text = genre, genre = genre),
+                    "top-decade", DjSection.FOR_YOU, DjCardKind.TOP_DECADE, number = decade, songs = of.size,
+                    preview = preview("top-decade", of), covers = covers("top-decade", of),
+                    request = DjRequest(text = "${decade}s", decade = decade),
                 )
             }
         }
@@ -202,7 +237,7 @@ object DjShelves {
             }
             .filterKeys { it !in usedArtists }
             .entries.sortedByDescending { e -> e.value.sumOf { it.plays } }
-        for ((n, entry) in rotate(lostArtists, variant("lost-artist")).take(1).withIndex()) {
+        for ((n, entry) in rotate(lostArtists, variant("lost-artist")).take(2).withIndex()) {
             val of = entry.value
             val artist = of.first().leadArtist
             if (!fresh(of.ids())) continue
@@ -218,7 +253,7 @@ object DjShelves {
                 ts.size >= min && ts.sumOf { it.plays } >= 6 && ts.maxOf { it.lastPlayedAt } in 1 until now - LOST_ARTIST_AFTER_DAYS * DAY_MS
             }
             .entries.sortedByDescending { e -> e.value.sumOf { it.plays } }
-        for ((n, entry) in rotate(lostAlbums, variant("lost-album")).take(1).withIndex()) {
+        for ((n, entry) in rotate(lostAlbums, variant("lost-album")).take(2).withIndex()) {
             val of = entry.value
             val album = of.first().album!!
             if (album.lowercase(Locale.ROOT) in usedAlbums) continue
@@ -243,11 +278,12 @@ object DjShelves {
                 covers = covers("discover-near", streamed, 3), request = DjRequest(text = "discover", discover = true),
             )
             val loved = streamed.groupBy { it.leadArtist }.entries.sortedByDescending { e -> e.value.sumOf { it.plays } }
-            if (loved.isNotEmpty()) {
-                val pick = rotate(loved, variant("discover-artist")).first()
+            // Three of the artists the listener streams most, each a line of new music to follow.
+            for ((n, pick) in rotate(loved, variant("discover-artist")).take(3).withIndex()) {
+                val id = if (n == 0) "discover-artist" else "discover-artist-$n"
                 discover += DjSetCard(
-                    "discover-artist", DjSection.DISCOVER, DjCardKind.DISCOVER_ARTIST, subject = pick.key,
-                    covers = covers("discover-artist", pick.value, 3),
+                    id, DjSection.DISCOVER, DjCardKind.DISCOVER_ARTIST, subject = pick.key,
+                    covers = covers(id, pick.value, 3),
                     request = DjRequest(text = pick.key, discover = true, discoverSeed = pick.key),
                 )
             }
@@ -263,7 +299,7 @@ object DjShelves {
 
         // ── By the moment ─────────────────────────────────────────────────
         val moment = moods.sortedByDescending { (mood, _) -> DjPlanner.moodPrior(mood, hour, weekend) }
-            .take(3)
+            .take(6)
             .map { (mood, of) ->
                 DjSetCard(
                     "moment-${mood.name}", DjSection.MOMENT, DjCardKind.MOMENT, mood = mood, number = momentOf(hour),
@@ -276,11 +312,11 @@ object DjShelves {
         // ── Explore your music ────────────────────────────────────────────
         val explore = ArrayList<DjSetCard>()
         val artists = tracks.groupBy { it.leadArtist.lowercase(Locale.ROOT) }
-            .filterValues { it.size >= 6 }
+            .filterValues { it.size >= 5 }
             .filterKeys { it !in usedArtists }
             .entries.sortedByDescending { e -> e.value.sumOf { it.plays } }
-            .take(12)
-        for ((n, entry) in rotate(artists, variant("theme-artist")).take(3).withIndex()) {
+            .take(30)
+        for ((n, entry) in rotate(artists, variant("theme-artist")).take(8).withIndex()) {
             val of = entry.value
             val artist = of.first().leadArtist
             if (!fresh(of.ids())) continue
@@ -293,7 +329,7 @@ object DjShelves {
         val genres = tracks.filter { it.genreKey != null && it.genreKey != usedGenre }.groupBy { it.genreKey!! }
             .filterValues { ts -> ts.size >= 8 && distinctArtists(ts) >= min }
             .entries.sortedByDescending { e -> e.value.size }
-        for ((n, entry) in rotate(genres, variant("theme-genre")).take(2).withIndex()) {
+        for ((n, entry) in rotate(genres, variant("theme-genre")).take(5).withIndex()) {
             if (!fresh(entry.value.ids())) continue
             explore += DjSetCard(
                 "theme-genre-$n", DjSection.EXPLORE, DjCardKind.THEME_GENRE, subject = entry.key.replaceFirstChar { it.uppercase() },
@@ -304,7 +340,7 @@ object DjShelves {
         val decades = tracks.filter { it.decade != null }.groupBy { it.decade!! }
             .filterValues { ts -> ts.size >= 8 && distinctArtists(ts) >= min }
             .entries.sortedByDescending { e -> e.value.size }
-        for ((n, entry) in rotate(decades, variant("theme-decade")).take(2).withIndex()) {
+        for ((n, entry) in rotate(decades, variant("theme-decade")).take(4).withIndex()) {
             if (!fresh(entry.value.ids())) continue
             explore += DjSetCard(
                 "theme-decade-$n", DjSection.EXPLORE, DjCardKind.THEME_DECADE, number = entry.key, songs = entry.value.size,
@@ -316,7 +352,7 @@ object DjShelves {
             .filterValues { it.size >= 5 }
             .filterKeys { it.first !in usedAlbums }
             .entries.sortedByDescending { e -> e.value.sumOf { it.plays } }
-        for ((n, entry) in rotate(albums, variant("theme-album")).take(2).withIndex()) {
+        for ((n, entry) in rotate(albums, variant("theme-album")).take(6).withIndex()) {
             val of = entry.value
             if (!fresh(of.ids())) continue
             explore += DjSetCard(

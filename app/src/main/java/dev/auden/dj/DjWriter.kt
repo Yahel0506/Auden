@@ -48,7 +48,8 @@ class DjWriter(
         return join(
             pick(greetingKey(this.hour)),
             when {
-                request != null && !request.understood && request.text.isNotBlank() -> pick("unrecognized")
+                // Not understood but searched for and found: the set says what it went looking for, not "I did not get that".
+                request != null && !request.understood && request.text.isNotBlank() && first.theme !is DjTheme.ByRequest -> pick("unrecognized")
                 relaxed -> pick("relaxed")
                 else -> null
             },

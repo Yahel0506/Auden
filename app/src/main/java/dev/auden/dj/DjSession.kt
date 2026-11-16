@@ -417,7 +417,7 @@ object DjSession {
             tracks.putAll(loaded.tracks.associateBy { it.id })
             songs.putAll(loaded.songs)
             val text = requestText
-            var parsed = structured ?: text.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, loaded.tracks) }
+            var parsed = structured ?: text.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, loaded.tracks, renderer.spokenAliases) }
             withContext(planning) {
                 planner = DjPlanner(loaded.tracks, now, seed = now, blockSize = blockSize, request = parsed, genresOf = ArtistFacts::genresForDj,
                     recently = DjHistory.recent(app), recentOrder = DjHistory.recentOrdered(app),
@@ -432,7 +432,18 @@ object DjSession {
                     withContext(planning) { planner.setRequest(parsed) }
                 }
             }
-            val firstPlanned = withContext(planning) { planner.next() }
+            // What the library has no words for (an artist it does not hold, a song, a mood of the listener's own) is looked
+            // for, not guessed at, as it is when the ask changes mid-session: the DJ answers with what was asked rather
+            // than with the songs played most.
+            // An artist the library holds too few songs of, or several artists at once, count as asks it could not answer.
+            val needsSearch = text.isNotBlank() &&
+                (parsed?.understood != true || planner.relaxed || DjRequestParser.artistNamesIn(text).size >= 2)
+            if (structured == null && needsSearch) {
+                searched = true
+                withTimeoutOrNull(OPENING_SEARCH_MS) { searchFor(text.trim()) }
+                ensureOpen()
+            }
+            val firstPlanned = takeFound() ?: withContext(planning) { planner.next() }
             val relaxed = planner.relaxed
             lap("begin planned")
             ensureOpen()
@@ -674,9 +685,12 @@ object DjSession {
          */
         private suspend fun renderLine(line: String, seed: Long, budgetMs: Long? = null): DjClip? {
             if (!speakable() || line.isBlank()) return null
+            // The artists this line may name, for the voice to be told how to say them: read here, on the main thread,
+            // where the session's sets live.
+            val names = sets.flatMapTo(LinkedHashSet()) { block -> block.tracks.map { it.leadArtist } }
             // Its own job, so a budget can stop waiting for it: the call itself does not stop when asked.
             val job = scope.async(Dispatchers.IO) {
-                runCatching { renderer.render(lang, line, seed) }
+                runCatching { renderer.render(lang, line, seed, names) }
                     .also { result -> if (!isActive) result.getOrNull()?.file?.delete() }
             }
             val result = try {
@@ -716,7 +730,13 @@ object DjSession {
             }
             val (set, pos) = at
             // A song, not the DJ's own voice, goes in the memory that keeps the next session fresh.
-            if (pos >= 0) DjHistory.record(app, id)
+            if (pos >= 0) {
+                DjHistory.record(app, id)
+                // Kept with the session too, so a recent one can be saved as a playlist later.
+                sets[set].tracks.getOrNull(pos)?.takeIf { it.localUri == null }?.let { t ->
+                    DjSavedSets.recordPlayed(app, DjSavedSets.SessionSong(t.id, t.title, t.artist, t.album, t.art))
+                }
+            }
             // The first song of a set is the one it is announced with: remembered, with the set's theme, so the
             // next session neither opens on it nor offers the same set (a request's theme is the listener's own).
             if (pos == 0) {
@@ -760,7 +780,15 @@ object DjSession {
         private suspend fun searchFor(text: String) {
             val explicit = DjRequestParser.namesGenre(text)
             val profile = DjTaste.profile(tracks.values, ArtistFacts::genresForDj)
-            val plan = DjTaste.queries(text, profile, explicit)
+            // An ask that is only a name is searched as that name: not in each of the listener's genres and from each of
+            // their artists, which turned a request for one artist into a mix of everyone else's.
+            val nameAsks = DjRequestParser.artistNamesIn(text)
+            // Each name on its own, and the ask whole (which finds one artist whose name has a joiner in it).
+            val plan = if (nameAsks.isNotEmpty()) {
+                (nameAsks + nameAsks.joinToString(" ")).distinct().map { DjTaste.Query.Plain(it) }
+            } else {
+                DjTaste.queries(text, profile, explicit)
+            }
             val found = withContext(Dispatchers.IO) {
                 coroutineScope {
                     plan.map { q ->
@@ -783,7 +811,7 @@ object DjSession {
                     .map { DjTaste.Hit(it.videoId, it.artist) }
             }
             val known = tracks.values.filter { !it.discovery }.mapTo(HashSet()) { DjRequestParser.fold(it.leadArtist) }
-            DjTaste.merge(hits, known, SEARCH_SONGS).forEach { id ->
+            (if (nameAsks.isNotEmpty()) DjTaste.mergeForArtists(hits, nameAsks, SEARCH_SONGS) else DjTaste.merge(hits, known, SEARCH_SONGS)).forEach { id ->
                 val song = byId[id] ?: return@forEach
                 val track = tracks.getOrPut(id) {
                     DjTrack(id = id, title = song.title, artist = song.artist, album = song.albumName, art = song.thumbnailUrl, discovery = true)
@@ -948,7 +976,7 @@ object DjSession {
             awaiting = Int.MAX_VALUE
             queueing += scope.launch(Dispatchers.Main) {
                 val known = tracks.values.toList()
-                val parsed = if (text.isBlank()) null else withContext(Dispatchers.Default) { DjRequestParser.parse(text, known) }
+                val parsed = if (text.isBlank()) null else withContext(Dispatchers.Default) { DjRequestParser.parse(text, known, renderer.spokenAliases) }
                 withContext(planning) { planner.setRequest(parsed) }
                 if (closed) return@launch
                 lap("steer parsed understood=${parsed?.understood}")
@@ -958,7 +986,7 @@ object DjSession {
                 searched = false
                 // What the library has no words for ("rock en español", a song, a mood of the listener's
                 // own) is looked for, not guessed at: the DJ answers with what was asked.
-                if (text.isNotBlank() && parsed?.understood != true) {
+                if (text.isNotBlank() && (parsed?.understood != true || planner.relaxed || DjRequestParser.artistNamesIn(text).size >= 2)) {
                     searched = true
                     searchFor(text.trim())
                     if (closed) return@launch
@@ -1105,6 +1133,18 @@ object DjSession {
                     DjMood.CHILL -> R.string.dj_theme_chill
                     DjMood.ENERGY -> R.string.dj_theme_energy
                     DjMood.ACOUSTIC -> R.string.dj_theme_acoustic
+                    DjMood.PARTY -> R.string.dj_theme_party
+                    DjMood.WORKOUT -> R.string.dj_theme_workout
+                    DjMood.ROMANTIC -> R.string.dj_theme_romantic
+                    DjMood.MELANCHOLY -> R.string.dj_theme_melancholy
+                    DjMood.HAPPY -> R.string.dj_theme_happy
+                    DjMood.SLEEP -> R.string.dj_theme_sleep
+                    DjMood.ROAD_TRIP -> R.string.dj_theme_road_trip
+                    DjMood.NOSTALGIC -> R.string.dj_theme_nostalgic
+                    DjMood.LATIN -> R.string.dj_theme_latin
+                    DjMood.NIGHT -> R.string.dj_theme_night
+                    DjMood.COFFEE -> R.string.dj_theme_coffee
+                    DjMood.RAINY -> R.string.dj_theme_rainy
                 },
             )
             DjTheme.Favorites -> app.getString(R.string.dj_theme_favorites)
@@ -1137,6 +1177,8 @@ private const val FAR_MAX_PLAYS = 6
      * library load around it; lines rendered a set ahead have the voice's own timeout instead.
      */
     private const val WAITED_RENDER_MS = 12_000L
+    /** How long the opening waits on a search for an ask the library could not answer. */
+    private const val OPENING_SEARCH_MS = 6_000L
 
     /** How long the clips of an ended session are kept, so a queue being replaced never meets a missing file. */
     private const val CLIP_GRACE_MS = 10_000L

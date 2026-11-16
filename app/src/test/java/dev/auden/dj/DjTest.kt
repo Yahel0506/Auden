@@ -288,7 +288,7 @@ class DjTest {
         val wide = (1..12).flatMap { a ->
             (1..6).map { n -> t("w$a-$n", "Artist$a", album = "Album$a", genre = listOf("Rock", "Jazz", "Pop")[a % 3], year = 1990 + a, plays = 4 + n) }
         }
-        val planner = DjPlanner(wide, now, seed = 21, blockSize = 4, request = null)
+        val planner = DjPlanner(wide, now, seed = 23, blockSize = 4, request = null)
         val sets = generateSequence { planner.next() }.take(4).toList()
         assertTrue(sets.size >= 2)
         for (i in 1 until sets.size) {
