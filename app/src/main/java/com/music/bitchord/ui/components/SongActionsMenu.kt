@@ -211,8 +211,10 @@ fun SongActionsMenu(
     val palette = neutralMenuPalette()
     val liked = likeStatus == LikeStatus.LIKE
     val disliked = likeStatus == LikeStatus.DISLIKE
-    // A local file or a finished download has no YouTube identity behind it to
-    // rate, save, queue into a playlist, fetch again, or share a link for.
+    // A local file or a finished download is played off the device, with no account
+    // behind it to rate, save, queue into a playlist or fetch again. A download
+    // still keeps the YouTube id it came from, so it can share its link; only a
+    // device-only file has no link to share.
     val isOffline = song.localUri != null
 
     val rows: @Composable ColumnScope.() -> Unit = {
@@ -223,7 +225,10 @@ fun SongActionsMenu(
         fun startsGroup(): Boolean = drawnAny.also { drawnAny = true }
         // Every song can be hearted: on the device without an account, and on the account too once one is signed in.
         val canRate = true
-        val shareAction = onShare?.takeIf { !isOffline }
+        // A finished download keeps the YouTube id it was downloaded from, so its link still
+        // shares; only a device-only file has no link to share. MainActivity already hides
+        // Share when there is no video id at all — this is the same guard, at the menu.
+        val shareAction = onShare?.takeIf { song.videoId.isNotBlank() }
 
         // Leads with the actions it is opened for most, as tiles: the rating
         // — kept up after a tap, so the new state shows in place — and Share.

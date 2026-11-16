@@ -410,9 +410,16 @@ object DjSession {
             // The cover the notification and the lock screen show while the DJ speaks, drawn once and kept.
             coverUri = withContext(Dispatchers.IO) { DjCoverArt.ensure(app) }
             ensureOpen()
-            val loaded = DjPool.load(app)
+            var loaded = DjPool.load(app)
             lap("begin pool tracks=${loaded.tracks.size}")
             ensureOpen()
+            // A brand-new listener has nothing for the DJ to draw on: seed the pool from what
+            // is popular on YouTube Music's charts, so the first set still plays. Offline, the
+            // seed finds nothing and the check below still applies — then there is nothing to play at all.
+            if (loaded.tracks.size < DjPlanner.MIN_BLOCK) {
+                withTimeoutOrNull(DISCOVER_WAIT_MS) { seedFromPopularMusic(loaded.tracks.mapTo(HashSet()) { it.id }) }
+                    ?.let { seeded -> loaded = DjPool.Loaded(loaded.tracks + seeded.tracks, loaded.songs + seeded.songs) }
+            }
             if (loaded.tracks.size < DjPlanner.MIN_BLOCK) throw NotEnoughMusic()
             tracks.putAll(loaded.tracks.associateBy { it.id })
             songs.putAll(loaded.songs)
@@ -633,6 +640,24 @@ object DjSession {
          * never announces a song or an artist that is then missing from the queue.
          */
         private fun playable(set: DjBlock): DjBlock = set.copy(tracks = set.tracks.filter { songs.containsKey(it.id) })
+
+        /**
+         * Seeds an empty pool from what is popular on YouTube Music — the charts
+         * first, Quick picks when the charts page gives nothing — with no taste
+         * to draw on and no account needed. The songs arrive as discoveries, so
+         * the DJ introduces them as new, which they are.
+         */
+        private suspend fun seedFromPopularMusic(exclude: Set<String>): DjPool.Loaded? = withContext(Dispatchers.IO) {
+            val picks = com.music.bitchord.data.YtMusicRepository.charts(exclude).getOrNull().orEmpty()
+                .ifEmpty { com.music.bitchord.data.YtMusicRepository.quickPicks(exclude).getOrNull().orEmpty() }
+            val fresh = picks.filter { it.videoId.isNotBlank() && it.videoId !in exclude }.map { song ->
+                DjTrack(
+                    id = song.videoId, title = song.title, artist = song.artist, album = song.albumName,
+                    art = song.thumbnailUrl, discovery = true,
+                ) to song
+            }
+            if (fresh.isEmpty()) null else DjPool.Loaded(fresh.map { it.first }, fresh.associate { it.first.id to it.second })
+        }
 
         /** Asks YouTube Music's radio for songs like the listener's favourites, and offers them to the planner. */
         /** True when something was found and added to the pool. */
@@ -1151,6 +1176,7 @@ object DjSession {
             DjTheme.Rediscover -> app.getString(R.string.home_shelf_rediscover)
             DjTheme.Fresh -> app.getString(R.string.home_shelf_recently_added)
             DjTheme.Discover -> app.getString(R.string.dj_theme_discover)
+            DjTheme.Mix -> app.getString(R.string.dj_theme_mix)
             is DjTheme.ByPlaylist -> theme.name
             is DjTheme.ByRequest -> theme.text.replaceFirstChar { it.uppercase() }
         }

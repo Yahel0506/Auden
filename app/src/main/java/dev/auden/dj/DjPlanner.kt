@@ -107,6 +107,7 @@ class DjPlanner(
         // Themes whose artists are resting are passed over while any other theme can make a set; only
         // when none can does a theme go back to its artists, so a surprise never turns into a repeat by default.
         val candidates = candidatesFor(surprise, allowResting = false).ifEmpty { candidatesFor(surprise, allowResting = true) }
+            .ifEmpty { mixCandidates() }
         if (candidates.isEmpty()) return null
 
         val maxAffinity = candidates.maxOf { affinity(it.tracks) }.coerceAtLeast(1e-6)
@@ -218,6 +219,17 @@ class DjPlanner(
             if (!enough) null else Candidate(theme, tracks)
         }
 
+    /**
+     * Last resort: whatever the pool still has, with no theme to obey. Only reached
+     * when no theme can make a set — a library of three songs by one artist, a
+     * listener with no tags and no plays — so the DJ plays instead of giving up.
+     * Empty only when the pool itself is empty: nothing left to play at all.
+     */
+    private fun mixCandidates(): List<Candidate> {
+        val tracks = eligible(DjTheme.Mix, surprise = false, allowResting = true)
+        return if (tracks.isEmpty()) emptyList() else listOf(Candidate(DjTheme.Mix, tracks))
+    }
+
     // ── Themes ──────────────────────────────────────────────────────────────
 
     private fun themes(surprise: Boolean): List<DjTheme> {
@@ -266,6 +278,8 @@ class DjPlanner(
         DjTheme.Fresh -> t.addedAt > 0 && now - t.addedAt <= FRESH_MS && t.localUri != null
         DjTheme.Discover -> t.discovery
         is DjTheme.ByPlaylist -> t.playlists.any { it.equals(theme.name, ignoreCase = true) }
+        // No theme to obey: every song left in the pool is one of the mix.
+        DjTheme.Mix -> true
         // Made by the session from a search, never chosen by the planner.
         is DjTheme.ByRequest -> false
     }
@@ -347,6 +361,7 @@ class DjPlanner(
             is DjTheme.ByAlbum -> if (r.album.equals(theme.album, ignoreCase = true)) 1.0 else 0.0
             is DjTheme.ByPlaylist -> if (r.playlist.equals(theme.name, ignoreCase = true)) 1.0 else 0.0
             DjTheme.Discover -> if (r.discover) 1.0 else 0.0
+            DjTheme.Mix -> 0.0
             is DjTheme.ByRequest -> 0.0
         }
     }
@@ -365,13 +380,15 @@ class DjPlanner(
      */
     private fun assemble(theme: DjTheme, eligible: List<DjTrack>, surprise: Boolean): List<DjTrack> {
         val artists = distinctArtists(eligible)
-        val n = if (surprise) minOf(blockSize, artists) else minOf(blockSize, eligible.size)
+        // A mix has no theme to fill: it plays what there is, up to a full set.
+        val n = if (theme is DjTheme.Mix) minOf(blockSize, eligible.size) else if (surprise) minOf(blockSize, artists) else minOf(blockSize, eligible.size)
         if (theme is DjTheme.ByAlbum) return eligible.sortedBy { it.trackNumber ?: Int.MAX_VALUE }.take(n)
         if (theme == DjTheme.Fresh) return eligible.sortedByDescending { it.addedAt }.take(n)
 
         // A surprise gives each artist one place in its set. A request keeps the artist it names, and
-        // otherwise allows two of an artist.
+        // otherwise allows two of an artist. A mix has no such rule: it plays what there is.
         val artistCap = when {
+            theme is DjTheme.Mix -> n
             !surprise -> if (theme is DjTheme.ByArtist) n else 2
             else -> 1
         }

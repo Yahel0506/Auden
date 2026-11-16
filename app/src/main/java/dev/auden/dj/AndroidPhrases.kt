@@ -33,6 +33,7 @@ class AndroidPhrases(context: Context, language: String) : DjPhrases {
         "intro_fresh" to R.array.dj_intro_fresh,
         "intro_discover" to R.array.dj_intro_discover,
         "intro_discover_plain" to R.array.dj_intro_discover_plain,
+        "intro_mix" to R.array.dj_intro_mix,
         "intro_playlist" to R.array.dj_intro_playlist,
         "intro_mood_focus" to R.array.dj_intro_mood_focus,
         "intro_mood_chill" to R.array.dj_intro_mood_chill,

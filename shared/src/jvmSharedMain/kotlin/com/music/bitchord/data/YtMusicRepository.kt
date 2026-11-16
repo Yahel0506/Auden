@@ -290,6 +290,28 @@ object YtMusicRepository {
         allHomeTrackSongs.ifEmpty { exploreSongs }
     }
 
+    /**
+     * The songs on YouTube Music's charts — what is popular right now, in the
+     * listener's region. No account needed: the charts page is public, and it
+     * is the same browse shape as Home, so its shelves parse the same way.
+     * A music video's entry comes back as a song too: the player resolves its
+     * audio, so it plays like any other track.
+     */
+    suspend fun charts(excludeSongIds: Set<String> = emptySet()): Result<List<Song>> = call("charts") {
+        shelvesOf("FEmusic_charts")
+            .flatMap { shelf -> shelf.items }
+            .mapNotNull { item ->
+                item.videoId?.takeUnless { it in excludeSongIds }?.let { vid ->
+                    Song(
+                        videoId = vid,
+                        title = item.title,
+                        artist = InnertubeParser.artistFromSubtitle(item.subtitle),
+                        thumbnailUrl = item.thumbnailUrl,
+                    )
+                }
+            }.distinctBy { it.videoId }
+    }
+
     private const val HISTORY = "FEmusic_history"
     const val RECENT_TITLE = "Recents"
 

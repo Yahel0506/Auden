@@ -120,6 +120,12 @@
         <item>Let’s see what you make of this: {opener}.</item>
         <item>That was {prev}. Now something you don’t know yet: {opener}.</item>
     </string-array>
+    <string-array name="dj_intro_mix">
+        <item>Let’s start with a bit of everything. Here’s {opener}.</item>
+        <item>No theme this time, just your music. Starting with {opener}.</item>
+        <item>A little of this, a little of that. Up first: {opener}.</item>
+        <item>That was {prev}. Now something else from your music: {opener}.</item>
+    </string-array>
     <string-array name="dj_intro_playlist">
         <item>Let’s pull something from your {playlist} playlist, starting with {opener}.</item>
         <item>Your {playlist} playlist deserves a turn. Starting with {opener}.</item>

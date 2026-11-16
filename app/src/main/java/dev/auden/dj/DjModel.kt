@@ -80,6 +80,12 @@ sealed interface DjTheme {
     data object Fresh : DjTheme { override val key get() = "fresh" }
     data object Discover : DjTheme { override val key get() = "discover" }
 
+    /**
+     * Last resort: whatever is left, with no theme to obey. The DJ still plays,
+     * even for a listener with three songs and no tags, no plays and no playlists.
+     */
+    data object Mix : DjTheme { override val key get() = "mix" }
+
     /** What the listener typed, as YouTube Music understood it: songs the DJ found by searching it, not chose from the library. */
     data class ByRequest(val text: String, val taste: String? = null) : DjTheme { override val key get() = "request:${text.lowercase(Locale.ROOT)}" }
 
