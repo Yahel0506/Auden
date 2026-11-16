@@ -692,7 +692,7 @@ private fun drawRuns(
 }
 
 /**
- * The BitChord mark, baseline-aligned with the word beside it.
+ * The Auden mark, baseline-aligned with the word beside it.
  *
  * The same vector the app draws everywhere, tinted and given bounds rather than
  * rasterised to a PNG first — a vector drawable renders into an ordinary canvas
@@ -768,8 +768,8 @@ private const val POSTER_H = 1920
 private const val MARGIN = 72f
 
 /** The mark's drawn size. 1040×440 in the vector, so this keeps its proportions. */
-private const val LOGO_W = 74f
-private const val LOGO_H = 31f
+private const val LOGO_W = 30f
+private const val LOGO_H = 34f
 private const val LOGO_GAP = 20f
 
 /** The width type and artwork are laid out in. */

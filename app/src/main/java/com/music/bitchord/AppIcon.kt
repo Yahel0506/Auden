@@ -8,17 +8,27 @@ import android.content.pm.PackageManager
  * The home-screen icon choices. Each is an `<activity-alias>` in the manifest
  * carrying the launcher intent filter; exactly one is enabled at a time.
  *
- * Minimal is the default: the white A-waveform on black. The two Liquid Glass
- * icons are adaptive icons whose foreground already holds the finished icon in
- * its own Apple squircle, so [previewRes] — that foreground — shows the variant
- * as designed rather than through the device's launcher mask. All three keep the
- * alias names of the icons they replaced, so a choice made before the update
- * stays enabled.
+ * Liquid Glass Dark is the default. The two Liquid Glass icons are adaptive icons whose foreground already holds
+ * the finished icon in its own squircle, so [previewRes] — that foreground — shows the variant as designed rather
+ * than through the device's launcher mask. The colour icons are plain adaptive icons, filled edge to edge. Every one
+ * carries the same silhouette as its monochrome layer, for Android's themed icons. The alias names of the icons
+ * that came before stay valid: a choice made before the update stays enabled, and `LauncherGlassDark` (now the
+ * default) moves to it.
  */
 enum class AppIcon(val alias: String, val iconRes: Int, val labelRes: Int, val previewRes: Int? = null) {
-    Default("LauncherDefault", R.mipmap.ic_launcher, R.string.app_icon_default),
+    Default("LauncherDefault", R.mipmap.ic_launcher, R.string.app_icon_default, R.mipmap.ic_liquid_glass_dark_foreground),
     LiquidGlass("LauncherGlassLight", R.mipmap.ic_liquid_glass, R.string.app_icon_liquid_glass, R.mipmap.ic_liquid_glass_foreground),
-    LiquidGlassDark("LauncherGlassDark", R.mipmap.ic_liquid_glass_dark, R.string.app_icon_liquid_glass_dark, R.mipmap.ic_liquid_glass_dark_foreground);
+    Black("LauncherBlack", R.mipmap.ic_icon_black, R.string.app_icon_black),
+    White("LauncherWhite", R.mipmap.ic_icon_white, R.string.app_icon_white),
+    Blue("LauncherBlue", R.mipmap.ic_icon_blue, R.string.app_icon_blue),
+    Green("LauncherGreen", R.mipmap.ic_icon_green, R.string.app_icon_green),
+    Lime("LauncherLime", R.mipmap.ic_icon_lime, R.string.app_icon_lime),
+    Yellow("LauncherYellow", R.mipmap.ic_icon_yellow, R.string.app_icon_yellow),
+    Orange("LauncherOrange", R.mipmap.ic_icon_orange, R.string.app_icon_orange),
+    Red("LauncherRed", R.mipmap.ic_icon_red, R.string.app_icon_red),
+    Pink("LauncherPink", R.mipmap.ic_icon_pink, R.string.app_icon_pink),
+    Magenta("LauncherMagenta", R.mipmap.ic_icon_magenta, R.string.app_icon_magenta),
+    Violet("LauncherViolet", R.mipmap.ic_icon_violet, R.string.app_icon_violet);
 
     private fun component(context: Context) =
         ComponentName(context.packageName, "com.music.bitchord.$alias")
@@ -26,6 +36,8 @@ enum class AppIcon(val alias: String, val iconRes: Int, val labelRes: Int, val p
     companion object {
         /** Retired variants of the old mark; still declared so no phone is left without a launcher entry. */
         private val legacyAliases = listOf(
+            // The dark glass icon is the default now.
+            "LauncherGlassDark",
             "LauncherGlassClear", "LauncherGlassClearDark",
             "LauncherSamsungGlass", "LauncherSamsungGlassDark",
             "LauncherSamsungGlassClear", "LauncherSamsungGlassClearDark",

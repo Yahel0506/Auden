@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@drawable/ic_icon_magenta" />
+    <foreground>
+        <!-- The whole art inside the 72dp the launcher shows, not zoomed to the 108dp canvas it is cropped from. -->
+        <inset
+            android:drawable="@drawable/ic_icon_magenta"
+            android:inset="16.67%" />
+    </foreground>
+    <monochrome android:drawable="@drawable/ic_monochrome" />
+</adaptive-icon>

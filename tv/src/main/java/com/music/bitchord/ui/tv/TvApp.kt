@@ -565,8 +565,8 @@ private fun TvTopBar(
             tint = TvGlass.TextPrimary,
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .height(18.dp)
-                .aspectRatio(1040f / 440f),
+                .height(26.dp)
+                .aspectRatio(1261f / 1435f),
         )
         TvAvatarButton(
             imageUrl = if (signedIn) avatarUrl else null,
@@ -670,7 +670,7 @@ fun TvAppMark(modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp =
             painter = painterResource(R.drawable.ic_logo),
             contentDescription = "Auden",
             tint = Color.White,
-            modifier = Modifier.size(size * 0.52f),
+            modifier = Modifier.height(size * 0.52f).aspectRatio(1261f / 1435f),
         )
     }
 }

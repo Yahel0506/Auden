@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The themed-icon silhouette, inside the 72dp the launcher shows rather than zoomed to the 108dp canvas it is cropped from. -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_monochrome_art"
+    android:inset="16.67%" />
