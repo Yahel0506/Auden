@@ -307,9 +307,7 @@ fun SettingsScreen(
     val showDjTab by AppSettings.showDjTab.collectAsStateWithLifecycle()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val disableBlendEffects by AppSettings.disableBlendEffects.collectAsStateWithLifecycle()
-    val liquidGlass by AppSettings.liquidGlass.collectAsStateWithLifecycle()
     val glassOpacity by AppSettings.glassOpacity.collectAsStateWithLifecycle()
-    val progressiveBlur by AppSettings.progressiveBlur.collectAsStateWithLifecycle()
     val liquidGlassSupported = isGlassSupported()
     val lyricsBlur by AppSettings.lyricsBlur.collectAsStateWithLifecycle()
     val lyricsBlurAmount by AppSettings.lyricsBlurAmount.collectAsStateWithLifecycle()
@@ -1627,34 +1625,26 @@ fun SettingsScreen(
                     }
                 }
             }
-            val liquidGlassTitle = stringResource(R.string.liquid_glass)
-            row(liquidGlassTitle, "glass", "blur") {
+            val materialTitle = stringResource(R.string.glass_material)
+            row(materialTitle, "glass", "solid", "blur", "material", "liquid") {
                 SettingsRow(
                     icon = SfIcons.AutoAwesome,
-                    title = liquidGlassTitle,
+                    title = materialTitle,
                     subtitle = stringResource(
-                        if (liquidGlassSupported) {
-                            R.string.liquid_glass_subtitle
-                        } else {
-                            R.string.liquid_glass_unavailable
-                        },
+                        if (liquidGlassSupported) R.string.glass_material_subtitle else R.string.liquid_glass_unavailable,
                     ),
+                )
+                SegmentedControl(
+                    options = listOf(stringResource(R.string.glass_material_glass), stringResource(R.string.glass_material_solid)),
+                    // Solid is what "reduce dynamic blur" was: every surface filled instead of sampled.
+                    selectedIndex = if (reduceDynamicBlur || !liquidGlassSupported) 1 else 0,
+                    onSelect = { AppSettings.setReduceDynamicBlur(it == 1) },
                     enabled = liquidGlassSupported,
-                    trailing = {
-                        IosSwitch(
-                            checked = liquidGlass,
-                            onCheckedChange = AppSettings::setLiquidGlass,
-                            enabled = liquidGlassSupported,
-                        )
-                    },
-                    onClick = { AppSettings.setLiquidGlass(!liquidGlass) },
+                    modifier = Modifier.padding(start = TEXT_INSET, end = ROW_INSET, bottom = 14.dp),
                 )
             }
-            // One line each, like Direct Source Stream under Sources, and only
-            // while Liquid Glass is on: they qualify the glass rather than standing
-            // on their own. Progressive Blur has its own switch because it costs
-            // frames of its own. Reduce dynamic blur turns it off.
-            if (liquidGlass && liquidGlassSupported) {
+            // The opacity only means something while the material is glass.
+            if (!reduceDynamicBlur && liquidGlassSupported) {
                 val glassOpacityTitle = stringResource(R.string.glass_opacity)
                 row(glassOpacityTitle, "glass", "opacity", "transparency", "tint", divided = false) {
                     SliderRow(
@@ -1666,14 +1656,6 @@ fun SettingsScreen(
                         onSliderValue = { AppSettings.setGlassOpacity((it * 20).roundToInt() / 20f * 1.5f) },
                         valueRange = 0f..1f,
                         steps = 19,
-                    )
-                }
-                val progressiveBlurTitle = stringResource(R.string.progressive_blur)
-                row(progressiveBlurTitle, "blur", "status bar", "top", divided = false) {
-                    SettingsSubRow(
-                        title = progressiveBlurTitle,
-                        checked = progressiveBlur,
-                        onCheckedChange = AppSettings::setProgressiveBlur,
                     )
                 }
             }
@@ -2145,21 +2127,6 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setReduceAnimation(!reduceAnimation) },
-                )
-            }
-            val reduceDynamicBlurTitle = stringResource(R.string.reduce_dynamic_blur)
-            row(reduceDynamicBlurTitle, "blur", "performance") {
-                SettingsRow(
-                    icon = SfIcons.BlurOff,
-                    title = reduceDynamicBlurTitle,
-                    subtitle = stringResource(R.string.reduce_dynamic_blur_subtitle),
-                    trailing = {
-                        IosSwitch(
-                            checked = reduceDynamicBlur,
-                            onCheckedChange = AppSettings::setReduceDynamicBlur,
-                        )
-                    },
-                    onClick = { AppSettings.setReduceDynamicBlur(!reduceDynamicBlur) },
                 )
             }
             val disableBlendEffectsTitle = stringResource(R.string.disable_blend_effects)

@@ -211,8 +211,6 @@
     <string name="theme">Thème</string>
     <string name="reduce_animation">Réduire les animations</string>
     <string name="reduce_animation_subtitle">Fige le dégradé du lecteur principal au lieu de le faire dériver</string>
-    <string name="reduce_dynamic_blur">Réduire le flou dynamique</string>
-    <string name="reduce_dynamic_blur_subtitle">Remplace le verre dépoli par des couleurs unies dans toute l\'application</string>
     <string name="disable_blend_effects">Désactiver les effets de fusion</string>
     <string name="disable_blend_effects_subtitle">Affiche les icônes, le texte et les menus sombres du lecteur en blanc pur, sans les teinter avec la pochette</string>
     <string name="full_screen_cover_art">Pochette plein écran</string>
@@ -868,9 +866,7 @@
 
     <string name="player_theme_legacy_subtitle">Restaure les formes colorées animées de la v1.5</string>
 
-    <string name="liquid_glass">Verre liquide</string>
 
-    <string name="liquid_glass_subtitle">Effet de verre réfracté sur la barre flottante. Android 12+ uniquement.</string>
 
     <string name="liquid_glass_unavailable">Nécessite Android 12 ou plus récent</string>
 
@@ -1583,7 +1579,6 @@
     <string name="direct_source_stream_in_party">Désactivé pendant une fête Listen Together</string>
     <string name="direct_source_stream">Flux direct depuis la source</string>
     <string name="find_your_mood">Trouvez votre humeur</string>
-    <string name="progressive_blur">Flou progressif</string>
     <string name="remove_from_history">Retirer de l\'historique</string>
     <string name="remove_from_history_failed">Impossible de retirer de l\'historique</string>
     <string name="addon_blocked_title">Impossible de lire ce titre</string>

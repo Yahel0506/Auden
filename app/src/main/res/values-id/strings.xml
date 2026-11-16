@@ -205,8 +205,6 @@
     <string name="theme">Tema</string>
     <string name="reduce_animation">Kurangi animasi</string>
     <string name="reduce_animation_subtitle">Membekukan gradien pemutar utama alih-alih bergerak</string>
-    <string name="reduce_dynamic_blur">Kurangi blur dinamis</string>
-    <string name="reduce_dynamic_blur_subtitle">Mengganti kaca buram dengan warna solid di seluruh aplikasi</string>
     <string name="disable_blend_effects">Nonaktifkan efek campuran</string>
     <string name="disable_blend_effects_subtitle">Menampilkan ikon, teks, dan menu gelap pemutar dalam warna putih polos, tanpa diwarnai sampul</string>
     <string name="full_screen_cover_art">Sampul layar penuh</string>
@@ -846,9 +844,7 @@
 
     <string name="player_theme_legacy_subtitle">Kembalikan efek warna mengalir di belakang pemutar dari v1.5</string>
 
-    <string name="liquid_glass">Kaca Cair</string>
 
-    <string name="liquid_glass_subtitle">Efek kaca pada bilah navigasi. Khusus Android 12+.</string>
 
     <string name="liquid_glass_unavailable">Memerlukan Android 12 atau yang lebih baru</string>
 
@@ -1559,7 +1555,6 @@
     <string name="direct_source_stream_in_party">Nonaktif selama kamu dalam pesta Listen Together</string>
     <string name="direct_source_stream">Streaming langsung dari sumber</string>
     <string name="find_your_mood">Temukan Mood Anda</string>
-    <string name="progressive_blur">Blur progresif</string>
     <string name="remove_from_history">Hapus dari riwayat</string>
     <string name="remove_from_history_failed">Tidak dapat menghapus dari riwayat</string>
     <string name="addon_blocked_title">Tidak dapat memutar lagu ini</string>

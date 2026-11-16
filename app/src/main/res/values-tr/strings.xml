@@ -232,12 +232,8 @@
     <string name="theme">Tema</string>
     <string name="reduce_animation">Animasyonu azalt</string>
     <string name="reduce_animation_subtitle">Ana oynatıcının gradyanını kaymak yerine dondurur</string>
-    <string name="reduce_dynamic_blur">Dinamik bulanıklığı azalt</string>
-    <string name="reduce_dynamic_blur_subtitle">Uygulama genelinde buzlu camı düz dolgularla değiştirir</string>
     <string name="disable_blend_effects">Karışım efektlerini kapat</string>
     <string name="disable_blend_effects_subtitle">Oynatıcı simgelerini, metni ve koyu menüleri kapak rengiyle boyamak yerine düz beyaz gösterir</string>
-    <string name="liquid_glass">Liquid Glass</string>
-    <string name="liquid_glass_subtitle">Yüzen gezinme çubuğunda gerçek kırılan cam. Yalnızca Android 12+; daha fazla GPU kullanır.</string>
     <string name="liquid_glass_unavailable">Android 12 veya daha yenisini gerektirir</string>
     <string name="full_screen_cover_art">Tam ekran kapak resmi</string>
     <string name="animated_cover_art">Hareketli kapak resmi</string>
@@ -1539,7 +1535,6 @@
     <string name="direct_source_stream_in_party">Listen Together partisi sırasında kapalı</string>
     <string name="direct_source_stream">Doğrudan kaynak akışı</string>
     <string name="find_your_mood">Ruh Halini Bul</string>
-    <string name="progressive_blur">Kademeli bulanıklık</string>
     <string name="remove_from_history">Geçmişten kaldır</string>
     <string name="remove_from_history_failed">Geçmişten kaldırılamadı</string>
     <string name="addon_blocked_title">Bu şarkı çalınamıyor</string>

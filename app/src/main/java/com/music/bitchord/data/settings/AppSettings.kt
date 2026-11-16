@@ -526,22 +526,11 @@ object AppSettings {
      */
     val disableBlendEffects = MutableStateFlow(false)
 
-    /** Real backdrop-sampled glass (blur, lens refraction) on the floating nav bar, Android 12+ only. */
-    val liquidGlass = MutableStateFlow(false)
-
     /**
-     * How opaque the glass's film is, against the default (1 = the opacity it was designed at; the slider shows it out of 1.5, and starts at 0.75 of that, 1.125): a lower value lets more of the page
+     * How opaque the glass's film is, against the default (1 = the opacity it was designed at; the slider shows it out of 1.5, and starts at 0.6 of that, 0.9): a lower value lets more of the page
      * show through, a higher one makes the glass milkier.
      */
-    val glassOpacity = MutableStateFlow(1.125f)
-
-    /**
-     * Blurs what scrolls under the status bar and the top controls, easing out
-     * just below them, instead of fading it to the page colour. A Liquid Glass
-     * option, honoured only while [liquidGlass] is on. Off by default: it costs
-     * frames. Reduce dynamic blur overrides it.
-     */
-    val progressiveBlur = MutableStateFlow(false)
+    val glassOpacity = MutableStateFlow(0.9f)
 
     /** Blurs unfocused lyric lines, keeping the active line sharp. */
     val lyricsBlur = MutableStateFlow(true)
@@ -1133,9 +1122,7 @@ object AppSettings {
         smartVersionAlignment.value = prefs.getBoolean(KEY_SMART_VERSION_ALIGNMENT, true)
         reduceDynamicBlur.value = prefs.getBoolean(KEY_REDUCE_BLUR, false)
         disableBlendEffects.value = prefs.getBoolean(KEY_DISABLE_BLEND_EFFECTS, false)
-        liquidGlass.value = prefs.getBoolean(KEY_LIQUID_GLASS, false)
-        glassOpacity.value = prefs.getFloat(KEY_GLASS_OPACITY, 1.125f).coerceIn(0f, 1.5f)
-        progressiveBlur.value = prefs.getBoolean(KEY_PROGRESSIVE_BLUR, false)
+        glassOpacity.value = prefs.getFloat(KEY_GLASS_OPACITY, 0.9f).coerceIn(0f, 1.5f)
         showDjTab.value = prefs.getBoolean(KEY_SHOW_DJ_TAB, true)
         lyricsBlur.value = prefs.getBoolean(KEY_LYRICS_BLUR, true)
         lyricsBlurAmount.value = prefs.getInt(KEY_LYRICS_BLUR_AMOUNT, DEFAULT_LYRICS_BLUR_AMOUNT).coerceIn(0, 100)
@@ -1635,20 +1622,30 @@ object AppSettings {
         editor.apply()
     }
 
-    fun setLiquidGlass(value: Boolean) {
-        liquidGlass.value = value
-        prefs.edit().putBoolean(KEY_LIQUID_GLASS, value).apply()
+    /**
+     * Whether the what's-new welcome is to be shown on this launch: once, on the first launch after the update that
+     * brought it, and never on a fresh install (an app that has never been updated has nothing new to tell). Asking
+     * answers for good: the install case is marked seen on the spot, the update case when [markWelcomeSeen] is called.
+     */
+    fun shouldShowWelcome(context: Context): Boolean {
+        if (prefs.getString(KEY_WELCOME_SEEN, null) == WELCOME_ID) return false
+        val info = runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }.getOrNull()
+        val freshInstall = info != null && info.firstInstallTime == info.lastUpdateTime
+        if (freshInstall) {
+            markWelcomeSeen()
+            return false
+        }
+        return true
+    }
+
+    fun markWelcomeSeen() {
+        prefs.edit().putString(KEY_WELCOME_SEEN, WELCOME_ID).apply()
     }
 
     fun setGlassOpacity(value: Float) {
         val clamped = value.coerceIn(0f, 1.5f)
         glassOpacity.value = clamped
         prefs.edit().putFloat(KEY_GLASS_OPACITY, clamped).apply()
-    }
-
-    fun setProgressiveBlur(value: Boolean) {
-        progressiveBlur.value = value
-        prefs.edit().putBoolean(KEY_PROGRESSIVE_BLUR, value).apply()
     }
 
     fun setHighPerformanceMode(value: Boolean) {
@@ -2533,9 +2530,11 @@ object AppSettings {
     private const val KEY_SMART_VERSION_ALIGNMENT = "smart_version_alignment"
     private const val KEY_REDUCE_BLUR = "reduce_dynamic_blur"
     private const val KEY_DISABLE_BLEND_EFFECTS = "disable_blend_effects"
-    private const val KEY_LIQUID_GLASS = "liquid_glass"
     private const val KEY_GLASS_OPACITY = "glass_opacity"
-    private const val KEY_PROGRESSIVE_BLUR = "progressive_blur"
+    private const val KEY_WELCOME_SEEN = "welcome_seen"
+
+    /** Names the welcome in the saved setting: a new welcome for a later update is a new id. */
+    private const val WELCOME_ID = "rebrand-2"
     private const val KEY_LYRICS_BLUR = "lyrics_blur"
     private const val KEY_SHOW_DJ_TAB = "show_dj_tab"
     private const val KEY_LYRICS_BLUR_AMOUNT = "lyrics_blur_amount"

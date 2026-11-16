@@ -204,8 +204,6 @@
     <string name="theme">主題</string>
     <string name="reduce_animation">減少動畫</string>
     <string name="reduce_animation_subtitle">讓主播放器的漸變保持靜止，而不是流動</string>
-    <string name="reduce_dynamic_blur">減少動態模糊</string>
-    <string name="reduce_dynamic_blur_subtitle">在整個應用中用純色填充替代磨砂玻璃效果</string>
     <string name="disable_blend_effects">關閉混合效果</string>
     <string name="disable_blend_effects_subtitle">播放器圖示、文字和深色選單以純白顯示，不再混入封面顏色</string>
     <string name="full_screen_cover_art">全屏封面</string>
@@ -845,9 +843,7 @@
 
     <string name="player_theme_legacy_subtitle">恢復 v1.5 中播放器背後的流動色塊效果</string>
 
-    <string name="liquid_glass">液態玻璃 （Liquid Glass）</string>
 
-    <string name="liquid_glass_subtitle">浮動導航欄上的折射玻璃效果。僅限 Android 12+；會佔用更多 GPU。</string>
 
     <string name="liquid_glass_unavailable">需要 Android 12 或更高版本</string>
 
@@ -1487,7 +1483,6 @@
     <string name="korean">韓語</string>
     <string name="app_icon">應用程式圖示</string>
     <string name="app_icon_default">預設</string>
-    <string name="progressive_blur">漸進模糊</string>
     <string name="artist_signatures">演出者簽名</string>
     <string name="artist_signatures_subtitle">當 Apple Music 沒有標題標誌時顯示手寫簽名</string>
     <string name="artist_signatures_url">簽名 API URL</string>

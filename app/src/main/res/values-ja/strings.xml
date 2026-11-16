@@ -205,8 +205,6 @@
     <string name="theme">テーマ</string>
     <string name="reduce_animation">アニメーションを減らす</string>
     <string name="reduce_animation_subtitle">メインプレイヤーのグラデーションを動かさず固定します</string>
-    <string name="reduce_dynamic_blur">動的なぼかしを減らす</string>
-    <string name="reduce_dynamic_blur_subtitle">アプリ全体ですりガラス効果を単色の塗りつぶしに置き換えます</string>
     <string name="disable_blend_effects">ブレンド効果をオフ</string>
     <string name="disable_blend_effects_subtitle">プレーヤーのアイコン、テキスト、ダークメニューをアートワークの色に染めず、白で表示します</string>
     <string name="full_screen_cover_art">全画面カバーアート</string>
@@ -962,9 +960,7 @@
 
     <string name="player_theme_legacy_subtitle">v1.5 のプレーヤー背面の流れるカラー アニメーションを復元します</string>
 
-    <string name="liquid_glass">リキッド グラス</string>
 
-    <string name="liquid_glass_subtitle">フローティング ナビゲーション バーの屈折ガラス効果。Android 12 以降のみ。</string>
 
     <string name="liquid_glass_unavailable">Android 12 以降が必要です</string>
 
@@ -1560,7 +1556,6 @@
     <string name="direct_source_stream_in_party">Listen Together パーティー中はオフ</string>
     <string name="direct_source_stream">ソースから直接ストリーミング</string>
     <string name="find_your_mood">気分で探す</string>
-    <string name="progressive_blur">段階的なぼかし</string>
     <string name="remove_from_history">履歴から削除</string>
     <string name="remove_from_history_failed">履歴から削除できませんでした</string>
     <string name="addon_blocked_title">この曲は再生できません</string>

@@ -211,8 +211,6 @@
     <string name="theme">ערכת נושא</string>
     <string name="reduce_animation">הפחתת אנימציה</string>
     <string name="reduce_animation_subtitle">מקפיא את הגרדיאנט של הנגן הראשי במקום לתת לו לנוע</string>
-    <string name="reduce_dynamic_blur">הפחתת טשטוש דינמי</string>
-    <string name="reduce_dynamic_blur_subtitle">מחליף אפקט זכוכית מטושטשת במילוי אחיד בכל האפליקציה</string>
     <string name="disable_blend_effects">השבתת אפקטי מיזוג</string>
     <string name="disable_blend_effects_subtitle">מציג את סמלי הנגן, הטקסט והתפריטים הכהים בלבן רגיל במקום לצבוע אותם בצבעי העטיפה</string>
     <string name="full_screen_cover_art">עטיפת אלבום במסך מלא</string>
@@ -872,9 +870,7 @@
 
     <string name="player_theme_legacy_subtitle">מחזיר את כתמי הצבע הנעים מגרסה v1.5</string>
 
-    <string name="liquid_glass">זכוכית נוזלית</string>
 
-    <string name="liquid_glass_subtitle">אפקט זכוכית בסרגל הניווט. Android 12+ בלבד.</string>
 
     <string name="liquid_glass_unavailable">דורש Android 12 ומעלה</string>
 
@@ -1587,7 +1583,6 @@
     <string name="direct_source_stream_in_party">כבוי בזמן מסיבת Listen Together</string>
     <string name="direct_source_stream">הזרמה ישירה מהמקור</string>
     <string name="find_your_mood">מצא את מצב הרוח שלך</string>
-    <string name="progressive_blur">טשטוש הדרגתי</string>
     <string name="remove_from_history">הסרה מההיסטוריה</string>
     <string name="remove_from_history_failed">לא ניתן להסיר מההיסטוריה</string>
     <string name="addon_blocked_title">לא ניתן לנגן את השיר הזה</string>

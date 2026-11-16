@@ -205,8 +205,6 @@
     <string name="theme">主题</string>
     <string name="reduce_animation">减少动画</string>
     <string name="reduce_animation_subtitle">让主播放器的渐变保持静止，而不是流动</string>
-    <string name="reduce_dynamic_blur">减少动态模糊</string>
-    <string name="reduce_dynamic_blur_subtitle">在整个应用中用纯色填充替代磨砂玻璃效果</string>
     <string name="disable_blend_effects">关闭混合效果</string>
     <string name="disable_blend_effects_subtitle">播放器图标、文字和深色菜单以纯白显示，不再混入封面颜色</string>
     <string name="full_screen_cover_art">全屏封面</string>
@@ -846,9 +844,7 @@
 
     <string name="player_theme_legacy_subtitle">恢复 v1.5 中播放器背后的流动色块效果</string>
 
-    <string name="liquid_glass">液态玻璃 （Liquid Glass）</string>
 
-    <string name="liquid_glass_subtitle">浮动导航栏上的折射玻璃效果。仅限 Android 12+；会占用更多 GPU。</string>
 
     <string name="liquid_glass_unavailable">需要 Android 12 或更高版本</string>
 
@@ -1559,7 +1555,6 @@
     <string name="direct_source_stream_in_party">在 Listen Together 派对中时关闭</string>
     <string name="direct_source_stream">直接从来源串流</string>
     <string name="find_your_mood">寻找你的心情</string>
-    <string name="progressive_blur">渐进模糊</string>
     <string name="remove_from_history">从历史记录中移除</string>
     <string name="remove_from_history_failed">无法从历史记录中移除</string>
     <string name="addon_blocked_title">无法播放这首歌</string>

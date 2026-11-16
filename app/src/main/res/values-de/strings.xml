@@ -210,8 +210,6 @@
     <string name="theme">Design</string>
     <string name="reduce_animation">Animationen reduzieren</string>
     <string name="reduce_animation_subtitle">Friert den Farbverlauf des Hauptplayers ein, statt ihn treiben zu lassen</string>
-    <string name="reduce_dynamic_blur">Dynamische Unschärfe reduzieren</string>
-    <string name="reduce_dynamic_blur_subtitle">Ersetzt Milchglas-Effekte durch einfarbige Flächen in der ganzen App</string>
     <string name="disable_blend_effects">Mischeffekte deaktivieren</string>
     <string name="disable_blend_effects_subtitle">Zeigt Player-Symbole, Text und dunkle Menüs in reinem Weiß, statt sie mit dem Cover einzufärben</string>
     <string name="full_screen_cover_art">Vollbild-Cover</string>
@@ -867,9 +865,7 @@
 
     <string name="player_theme_legacy_subtitle">Bringt die sanft fließenden Farbflecken aus v1.5 zurück</string>
 
-    <string name="liquid_glass">Flüssiges Glas</string>
 
-    <string name="liquid_glass_subtitle">Echtes brechendes Glas auf der Navigationsleiste. Nur Android 12+.</string>
 
     <string name="liquid_glass_unavailable">Erfordert Android 12 oder neuer</string>
 
@@ -1582,7 +1578,6 @@
     <string name="direct_source_stream_in_party">Während einer Listen Together-Party deaktiviert</string>
     <string name="direct_source_stream">Direkter Quell-Stream</string>
     <string name="find_your_mood">Finde deine Stimmung</string>
-    <string name="progressive_blur">Progressive Unschärfe</string>
     <string name="remove_from_history">Aus dem Verlauf entfernen</string>
     <string name="remove_from_history_failed">Konnte nicht aus dem Verlauf entfernt werden</string>
     <string name="addon_blocked_title">Dieser Song kann nicht abgespielt werden</string>

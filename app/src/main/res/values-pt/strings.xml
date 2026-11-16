@@ -212,8 +212,6 @@
     <string name="theme">Tema</string>
     <string name="reduce_animation">Reduzir animação</string>
     <string name="reduce_animation_subtitle">Congela o gradiente do player principal em vez de mover</string>
-    <string name="reduce_dynamic_blur">Reduzir desfoque dinâmico</string>
-    <string name="reduce_dynamic_blur_subtitle">Troca o vidro fosco por preenchimentos sólidos em todo o app</string>
     <string name="disable_blend_effects">Desativar efeitos de mesclagem</string>
     <string name="disable_blend_effects_subtitle">Mostra ícones, texto e menus escuros do player em branco, sem tingi-los com a capa</string>
     <string name="full_screen_cover_art">Capa em tela cheia</string>
@@ -872,9 +870,7 @@
 
     <string name="player_theme_legacy_subtitle">Traz de volta os tons suaves em movimento da v1.5</string>
 
-    <string name="liquid_glass">Vidro Líquido</string>
 
-    <string name="liquid_glass_subtitle">Efeito de vidro na barra de navegação. Requer Android 12+.</string>
 
     <string name="liquid_glass_unavailable">Requer Android 12 ou superior</string>
 
@@ -1587,7 +1583,6 @@
     <string name="direct_source_stream_in_party">Desativado durante uma festa do Listen Together</string>
     <string name="direct_source_stream">Transmissão direta da fonte</string>
     <string name="find_your_mood">Encontre seu humor</string>
-    <string name="progressive_blur">Desfoque progressivo</string>
     <string name="remove_from_history">Remover do histórico</string>
     <string name="remove_from_history_failed">Não foi possível remover do histórico</string>
     <string name="addon_blocked_title">Não é possível tocar esta música</string>

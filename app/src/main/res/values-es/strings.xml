@@ -227,12 +227,8 @@
     <string name="backdrop_motion_animated_subtitle">Los colores se desplazan despacio mientras suena la música</string>
     <string name="backdrop_motion_reactive_subtitle">Los colores se mueven con los graves y la intensidad de la canción</string>
     <string name="reduce_animation_subtitle">Detiene el degradado del reproductor principal</string>
-    <string name="reduce_dynamic_blur">Reducir desenfoque dinámico</string>
-    <string name="reduce_dynamic_blur_subtitle">Cambia el cristal esmerilado por fondos sólidos</string>
     <string name="disable_blend_effects">Desactivar efectos de fusión</string>
     <string name="disable_blend_effects_subtitle">Muestra los iconos, el texto y los menús oscuros del reproductor en blanco, sin teñirlos con la portada</string>
-    <string name="liquid_glass">Liquid Glass</string>
-    <string name="liquid_glass_subtitle">Cristal refractante real en la barra de navegación flotante. Solo Android 12+; usa más GPU.</string>
     <string name="liquid_glass_unavailable">Requiere Android 12 o posterior</string>
     <string name="full_screen_cover_art">Portada a pantalla completa</string>
     <string name="animated_cover_art">Portada animada</string>
@@ -1593,7 +1589,6 @@
     <string name="direct_source_stream_in_party">Desactivado mientras estás en una fiesta de Listen Together</string>
     <string name="direct_source_stream">Transmisión directa desde la fuente</string>
     <string name="find_your_mood">Encuentra tu estado de ánimo</string>
-    <string name="progressive_blur">Desenfoque progresivo</string>
     <string name="remove_from_history">Quitar del historial</string>
     <string name="remove_from_history_failed">No se pudo quitar del historial</string>
     <string name="addon_blocked_title">No se puede reproducir esta canción</string>
@@ -2004,4 +1999,11 @@
     <string name="welcome_next">Continuar</string>
     <string name="welcome_start">Empezar a escuchar</string>
     <string name="glass_opacity">Opacidad del cristal</string>
+    <string name="glass_material">Material</string>
+    <string name="glass_material_subtitle">El cristal muestra y deforma lo que hay detrás; el sólido rellena cada superficie, y es más ligero para la GPU.</string>
+    <string name="glass_material_glass">Cristal</string>
+    <string name="glass_material_solid">Sólido</string>
+    <string name="update_screen_version">v%1$s</string>
+    <string name="update_screen_download">Descargar actualización</string>
+    <string name="update_screen_downloading">Descargando… %1$d%%</string>
 </resources>

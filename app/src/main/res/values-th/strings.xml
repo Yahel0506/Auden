@@ -226,12 +226,8 @@
     <string name="theme">ธีม</string>
     <string name="reduce_animation">ลดแอนิเมชัน</string>
     <string name="reduce_animation_subtitle">หยุดเกรเดียนต์ของเครื่องเล่นหลักแทนการเคลื่อนไหว</string>
-    <string name="reduce_dynamic_blur">ลดเบลอแบบไดนามิก</string>
-    <string name="reduce_dynamic_blur_subtitle">เปลี่ยนกระจกฝ้าเป็นพื้นทึบทั่วทั้งแอป</string>
     <string name="disable_blend_effects">ปิดเอฟเฟกต์ผสมสี</string>
     <string name="disable_blend_effects_subtitle">แสดงไอคอน ข้อความ และเมนูสีเข้มของเครื่องเล่นเป็นสีขาวล้วน แทนการย้อมด้วยสีจากปกอัลบั้ม</string>
-    <string name="liquid_glass">Liquid Glass</string>
-    <string name="liquid_glass_subtitle">กระจกหักเหแสงจริงบนแถบนำทางแบบลอย ใช้ได้เฉพาะ Android 12 ขึ้นไป และใช้ GPU มากขึ้น</string>
     <string name="liquid_glass_unavailable">ต้องใช้ Android 12 ขึ้นไป</string>
     <string name="full_screen_cover_art">ปกอัลบั้มเต็มจอ</string>
     <string name="animated_cover_art">ปกอัลบั้มเคลื่อนไหว</string>
@@ -1565,7 +1561,6 @@
     <string name="direct_source_stream_in_party">ปิดอยู่ขณะอยู่ในปาร์ตี้ Listen Together</string>
     <string name="direct_source_stream">สตรีมตรงจากแหล่งที่มา</string>
     <string name="find_your_mood">ค้นหาอารมณ์ของคุณ</string>
-    <string name="progressive_blur">เบลอแบบไล่ระดับ</string>
     <string name="remove_from_history">นำออกจากประวัติ</string>
     <string name="remove_from_history_failed">นำออกจากประวัติไม่ได้</string>
     <string name="addon_blocked_title">เล่นเพลงนี้ไม่ได้</string>

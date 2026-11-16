@@ -24,6 +24,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -318,7 +319,6 @@ import com.music.bitchord.ui.components.floatingtabbar.rememberFloatingTabBarScr
 import com.music.bitchord.ui.components.FrostedTopBar
 import com.music.bitchord.ui.components.LastfmLoginAlert
 import com.music.bitchord.ui.components.LocalAppBackdrop
-import com.music.bitchord.ui.components.LocalLiquidGlassEnabled
 import com.music.bitchord.ui.components.backdrop.backdrops.LayerBackdrop
 import com.music.bitchord.ui.components.backdrop.backdrops.layerBackdrop
 import com.music.bitchord.ui.components.backdrop.backdrops.rememberLayerBackdrop
@@ -349,7 +349,10 @@ import com.music.bitchord.ui.components.AppLanguageDialog
 import com.music.bitchord.ui.components.TranslationLanguageDialog
 import com.music.bitchord.ui.components.LyricsSourcesDialog
 import com.music.bitchord.ui.components.ServerEditorHost
-import com.music.bitchord.ui.components.UpdateAvailableDialog
+import com.music.bitchord.ui.screens.SettingsCategory
+import com.music.bitchord.ui.update.UpdateActions
+import com.music.bitchord.ui.update.UpdateScreen
+import com.music.bitchord.ui.icons.UpdateIcon
 import com.music.bitchord.ui.components.WebDavConflictAlert
 import com.music.bitchord.ui.components.FieldConfig
 import com.music.bitchord.ui.icons.BitChordIcons
@@ -474,7 +477,6 @@ class MainActivity : AppCompatActivity() {
             val theme by AppSettings.themeMode.collectAsStateWithLifecycle()
             val appFont by AppSettings.appFont.collectAsStateWithLifecycle()
             val highPerformance by AppSettings.highPerformanceMode.collectAsStateWithLifecycle()
-            val liquidGlassEnabled by AppSettings.liquidGlass.collectAsStateWithLifecycle()
             val iosOverscrollFactory = rememberIosOverscrollFactory()
             val performanceRefreshRate by AppSettings.performanceRefreshRate.collectAsStateWithLifecycle()
             val composeView = LocalView.current
@@ -506,7 +508,6 @@ class MainActivity : AppCompatActivity() {
                 val appBackdrop = rememberLayerBackdrop(onDraw = paintBackdrop)
                 CompositionLocalProvider(
                     LocalOverscrollFactory provides iosOverscrollFactory,
-                    LocalLiquidGlassEnabled provides liquidGlassEnabled,
                     LocalAppBackdrop provides appBackdrop,
                     com.music.bitchord.ui.components.LocalSignInBannerBackground provides { m, motion ->
                         com.music.bitchord.ui.components.SignInBannerBackground(m, motion)
@@ -529,8 +530,8 @@ class MainActivity : AppCompatActivity() {
                 // video for the device while it is still playing.
                 var splashing by rememberSaveable { mutableStateOf(true) }
                 var appStarted by rememberSaveable { mutableStateOf(false) }
-                // Shown on every launch for now, while the page is being iterated on.
-                var welcoming by rememberSaveable { mutableStateOf(true) }
+                // Once, on the first launch after the update that brought it; never on a fresh install.
+                var welcoming by rememberSaveable { mutableStateOf(AppSettings.shouldShowWelcome(this@MainActivity)) }
                 // The app's first composition holds the screen for a couple of seconds, so it is not done while the
                 // splash or the welcome is playing: it starts when the welcome is dismissed, and the welcome stays
                 // up until it is in, then fades away over a finished app.
@@ -556,7 +557,10 @@ class MainActivity : AppCompatActivity() {
                         enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(420)),
                         exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(300)),
                     ) {
-                        com.music.bitchord.ui.welcome.WelcomeScreen(playing = !splashing, onDone = { welcomeDone = true })
+                        com.music.bitchord.ui.welcome.WelcomeScreen(playing = !splashing, onDone = {
+                            AppSettings.markWelcomeSeen()
+                            welcomeDone = true
+                        })
                     }
                     if (splashing) {
                         com.music.bitchord.ui.splash.LaunchSplash(
@@ -641,7 +645,7 @@ private fun BitChordApp(
     val hazeState = remember { HazeState() }
     // Recording the backdrop layer costs a draw pass, so it only runs when a
     // liquid-glass surface (the nav bar or artwork-page back button) can sample it.
-    val glassActive = LocalLiquidGlassEnabled.current && isGlassSupported()
+    val glassActive = isGlassSupported()
     // "Reduce dynamic blur" keeps the glass bar's *shape* — the folding
     // now-playing-and-tabs component is a layout, not an effect, and dropping
     // back to the two stacked bars would be answering a question about material
@@ -649,7 +653,6 @@ private fun BitChordApp(
     // solid (see [Modifier.liquidGlass]) and the whole-page layer recording
     // below goes with them, which is the part that costs a draw pass.
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
-    val progressiveBlur by AppSettings.progressiveBlur.collectAsStateWithLifecycle()
     val glassSamplesBackdrop = glassActive && !reduceDynamicBlur
     // What folds [GlassNavBar] between its expanded and inline shapes. Held here
     // rather than inside the bar because the page's scroll is what drives it,
@@ -947,6 +950,9 @@ private fun BitChordApp(
     val onboardingShown = remember { MutableTransitionState(!onboardingComplete) }
     onboardingShown.targetState = !onboardingComplete
     val onboardingVisible = onboardingShown.currentState || onboardingShown.targetState
+    // The update page (from the top bar's icon, or once at launch) and "What's new" from Settings: both dark pages.
+    var showUpdateDialog by remember { mutableStateOf(false) }
+    var showWhatsNew by rememberSaveable { mutableStateOf(false) }
 
     // ---- Diwali (greeting once after the welcome, golden home wordmark) ----
     // Indian users only, by the device timezone alone, and only on Diwali
@@ -1015,7 +1021,7 @@ private fun BitChordApp(
     }
 
     SystemBarIcons(
-        dark = !darkTheme && !showNowPlaying && route != AppRoute.Replay && replayStory == null && !onboardingVisible && !showDiwali,
+        dark = !darkTheme && !showNowPlaying && route != AppRoute.Replay && replayStory == null && !onboardingVisible && !showDiwali && !showUpdateDialog && !showWhatsNew,
     )
 
     // The glass menu off the DJ's button in the player, and the button it hangs from.
@@ -1068,7 +1074,6 @@ private fun BitChordApp(
     // rides out configuration changes on rememberSaveable so a rotation
     // doesn't bring it back — only a fresh launch does.
     var updateDialogShown by rememberSaveable { mutableStateOf(false) }
-    var showUpdateDialog by remember { mutableStateOf(false) }
     val updateAvailable by viewModel.updateAvailable.collectAsStateWithLifecycle()
 
     /**
@@ -3230,7 +3235,9 @@ private fun BitChordApp(
         val replayDrawable = replay.summary?.isEmpty == false
         BackHandler(enabled = replayDrawable && replayStory != null && !showReplayShare) { replayStory = null }
         BackHandler(enabled = replayDrawable && showReplayShare) { showReplayShare = false }
-        BackHandler(enabled = showUpdateDialog) { showUpdateDialog = false }
+        BackHandler(enabled = showUpdateDialog || showWhatsNew) {
+            if (showWhatsNew) showWhatsNew = false else showUpdateDialog = false
+        }
         BackHandler(enabled = showListenBrainzLogin) { showListenBrainzLogin = false }
         BackHandler(enabled = showLastfmLogin) { showLastfmLogin = false }
         BackHandler(enabled = discordDialog != null) { discordDialog = null }
@@ -3537,7 +3544,10 @@ private fun BitChordApp(
                             // one screen, each showing its own share of the rows.
                             SettingsScreen(
                                 section = (pageRoute as? AppRoute.SettingsSection)?.category,
-                                onOpenSection = { navigator.push(AppRoute.SettingsSection(it)) },
+                                onOpenSection = {
+                                    // "What's new" is its own page, shared with the update screen.
+                                    if (it == SettingsCategory.WHATS_NEW) showWhatsNew = true else navigator.push(AppRoute.SettingsSection(it))
+                                },
                                 onOpenChoice = { navigator.push(AppRoute.SettingsChoice(it)) },
                                 windowWidth = windowWidth,
                                 signedIn = signedIn,
@@ -4247,7 +4257,7 @@ private fun BitChordApp(
                             (header * fadeRamp)).coerceIn(0f, 1f)
                     }
                 }
-                if (reduceDynamicBlur || !glassActive || !progressiveBlur) {
+                if (reduceDynamicBlur || !glassActive) {
                     BottomFadeScrim(
                         pageColor = chromePageColor,
                         modifier = Modifier
@@ -4427,12 +4437,9 @@ private fun BitChordApp(
                             updateNotice?.let { update ->
                                 IconButton(onClick = { showUpdateDialog = true }) {
                                     Icon(
-                                        // An arrow rising out of a bar, not the
-                                        // little phone-with-an-arrow: at 24dp the
-                                        // handset outline is mush, and the glyph
-                                        // has to read as "newer version" rather
-                                        // than as "something about your device".
-                                        Icons.Rounded.Upgrade,
+                                        // A solid disc with a fat arrow cut out of it: filled and round
+                                        // enough to sit with the bar's other controls.
+                                        UpdateIcon.Filled,
                                         contentDescription = stringResource(R.string.update_available, update.version),
                                         tint = MaterialTheme.colorScheme.primary,
                                     )
@@ -5357,33 +5364,6 @@ private fun BitChordApp(
                         // Where the app is holding the player, if it is — see
                         // [PlayerSheetMotion.contentOffsetPx]. Placement only.
                         .offset { IntOffset(0, playerSheetMotion.contentOffsetPx()) }
-                        // The dim behind the player, from the window's top to
-                        // its bottom whatever the player's offset, and as deep
-                        // as the player is open.
-                        .drawBehind {
-                            // Under a finger sliding the sheet, the dim follows the sheet itself; in the morph, the morph.
-                            val open = if (playerSheetMotion.holding) {
-                                playerDock.openFraction()
-                            } else {
-                                val travel = playerDock.sheetTravel
-                                val at = playerSheetMotion.position()
-                                if (travel > 0f && !at.isNaN()) (1f - at / travel).coerceIn(0f, 1f) else playerDock.openFraction()
-                            }
-                            // Not at all under a portrait player that is fully up:
-                            // its own background is opaque, and a full-screen
-                            // blend behind it is paid on every frame the window
-                            // draws for nothing anyone can see.
-                            if (!reducePlayerMotion && !playerSheetMotion.holding && open > 0f && !(open >= 1f && playerDock.attached)) {
-                                // Where the player's content stands: in the morph that is not the sheet's offset.
-                                val top = (playerSheetMotion.morphPlacement() ?: playerSheetMotion.position())
-                                    .takeUnless { it.isNaN() } ?: 0f
-                                drawRect(
-                                    color = Color.Black.copy(alpha = PLAYER_SCRIM_ALPHA * open),
-                                    topLeft = Offset(0f, -top.toInt().toFloat()),
-                                    size = Size(size.width, size.height),
-                                )
-                            }
-                        }
                         .onGloballyPositioned { playerSheetBox[0] = it }
                         // The morph's surface: the mini player's shape growing into the whole player and back,
                         // the player drawn only inside it. The artwork and the credits fly within it.
@@ -5406,7 +5386,16 @@ private fun BitChordApp(
                             } else {
                                 // Slid by a finger, the player is a sheet: its top corners round off as it leaves the top.
                                 val at = playerSheetMotion.position()
-                                val slid = if (!playerSheetMotion.holding && !at.isNaN()) at else 0f
+                                // Held by the app but not yet morphing (the frame a finger lets go, while the morph's fraction is
+                                // still 1): the player stands where the finger left it, and keeps the corners it had under it.
+                                // Without this it was drawn square for that one frame.
+                                val slid = if (playerSheetMotion.holding) {
+                                    playerSheetMotion.morphPlacement()?.takeUnless { it.isNaN() } ?: 0f
+                                } else if (!at.isNaN()) {
+                                    at
+                                } else {
+                                    0f
+                                }
                                 if (!reducePlayerMotion && slid > 0.5f) {
                                     val radius = PLAYER_SHEET_CORNER.toPx() * (slid / PLAYER_SHEET_CORNER_RAMP.toPx()).coerceIn(0f, 1f)
                                     val path = androidx.compose.ui.graphics.Path().apply {
@@ -6671,38 +6660,49 @@ private fun BitChordApp(
         }
 
         // ---- Update available (once per launch; held until the welcome and Diwali greeting are done) ----
-        if (showUpdateDialog && onboardingComplete && !showDiwali) {
+        // A page, not an alert: the download button stays at its foot, and the download itself runs on the process's
+        // own scope, so closing the page keeps it going and reopening it shows where it got to.
+        AnimatedVisibility(
+            visible = showUpdateDialog && onboardingComplete && !showDiwali && updateNotice != null,
+            enter = fadeIn(tween(260)) + slideInVertically(tween(320)) { it / 12 },
+            exit = fadeOut(tween(200)),
+        ) {
             updateNotice?.let { update ->
-                UpdateAvailableDialog(
+                UpdateScreen(
                     version = update.version,
                     notes = update.notes,
-                    hazeState = hazeState,
-                    // A download in progress keeps running behind the closed
-                    // sheet — only the sheet itself goes away. The top bar's
-                    // update icon reopens it onto whatever state it reached.
-                    onDismiss = { showUpdateDialog = false },
-                    onDownload = {
-                        if (update.apkUrl != null) {
-                            scope.launch { AppUpdateChecker.downloadApk(context) }
-                        } else {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.releaseUrl)))
-                            showUpdateDialog = false
-                        }
-                    },
-                    onCancelDownload = {
-                        AppUpdateChecker.cancelDownload()
-                    },
-                    onInstall = {
-                        val ready = AppUpdateChecker.download.value as? AppUpdateChecker.DownloadState.Ready
-                        ready?.let { AppUpdateChecker.installApk(context, it.file) }
-                    },
-                    onOpenReleasePage = {
-                        AppUpdateChecker.resetDownload()
-                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.releaseUrl)))
-                        showUpdateDialog = false
-                    },
+                    onBack = { showUpdateDialog = false },
+                    actions = UpdateActions(
+                        onDownload = {
+                            if (update.apkUrl != null) {
+                                AppUpdateChecker.resetDownload()
+                                AppUpdateChecker.startDownload(context)
+                            } else {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.releaseUrl)))
+                            }
+                        },
+                        onCancel = { AppUpdateChecker.cancelDownload() },
+                        onInstall = {
+                            val ready = AppUpdateChecker.download.value as? AppUpdateChecker.DownloadState.Ready
+                            ready?.let { AppUpdateChecker.installApk(context, it.file) }
+                        },
+                    ),
                 )
             }
+        }
+
+        // ---- What's new in this update (Settings) ----
+        AnimatedVisibility(
+            visible = showWhatsNew,
+            enter = fadeIn(tween(260)) + slideInVertically(tween(320)) { it / 12 },
+            exit = fadeOut(tween(200)),
+        ) {
+            val whatsNewContext = LocalContext.current
+            UpdateScreen(
+                version = BuildConfig.VERSION_NAME.substringBefore('-'),
+                notes = remember(whatsNewContext) { com.music.bitchord.data.ReleaseNotes.forInstalledVersion(whatsNewContext) },
+                onBack = { showWhatsNew = false },
+            )
         }
 
         // Dialogs and alerts, in a scope of their own: BitChordApp had outgrown the JVM's method limit.
@@ -7548,8 +7548,6 @@ private val DETAIL_TITLE_DROP = 320.dp
  */
 private val PLAYER_PULL_FLING_VELOCITY = 400.dp
 
-/** M3's own scrim strength, which the player's dim stands in for. */
-private const val PLAYER_SCRIM_ALPHA = 0.32f
 
 /**
  * [content] in a recompose scope of its own, so state read inside it

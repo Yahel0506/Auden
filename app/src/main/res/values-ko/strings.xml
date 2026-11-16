@@ -339,12 +339,8 @@
     <string name="theme">테마</string>
     <string name="reduce_animation">애니메이션 줄이기</string>
     <string name="reduce_animation_subtitle">메인 플레이어의 그라데이션 움직임을 멈춥니다</string>
-    <string name="reduce_dynamic_blur">동적 흐림 줄이기</string>
-    <string name="reduce_dynamic_blur_subtitle">앱 전체의 반투명 유리 효과를 단색으로 교체합니다</string>
     <string name="disable_blend_effects">블렌드 효과 끄기</string>
     <string name="disable_blend_effects_subtitle">플레이어 아이콘, 텍스트, 어두운 메뉴를 앨범 아트 색으로 물들이지 않고 흰색으로 표시합니다</string>
-    <string name="liquid_glass">Liquid Glass</string>
-    <string name="liquid_glass_subtitle">플로팅 탐색 막대에 사실적인 유리 질감을 적용합니다. Android 12 이상, GPU 사용량 증가.</string>
     <string name="liquid_glass_unavailable">Android 12 이상 필요</string>
     <string name="full_screen_cover_art">전체화면 커버 아트</string>
     <string name="player_theme">플레이어 테마</string>
@@ -1232,7 +1228,6 @@
     <string name="signed_by">%1$s 서명</string>
     <string name="direct_source_stream">소스에서 직접 스트리밍</string>
     <string name="direct_source_stream_in_party">함께 듣기 파티 중에는 꺼집니다</string>
-    <string name="progressive_blur">점진적 흐림</string>
     <string name="opened_file">열린 파일</string>
     <string name="sleep_timer_custom">사용자 지정</string>
     <string name="start_sleep_timer">타이머 시작</string>

@@ -208,8 +208,6 @@
     <string name="theme">Motyw</string>
     <string name="reduce_animation">Zmniejsz animację</string>
     <string name="reduce_animation_subtitle">Zatrzymuje gradient głównego odtwarzacza zamiast dryfowania</string>
-    <string name="reduce_dynamic_blur">Zmniejsz rozmycie dynamiczne</string>
-    <string name="reduce_dynamic_blur_subtitle">Zastępuje matowe szkło jednolitymi wypełnieniami w całej aplikacji</string>
     <string name="disable_blend_effects">Wyłącz efekty mieszania</string>
     <string name="disable_blend_effects_subtitle">Pokazuje ikony, tekst i ciemne menu odtwarzacza w czystej bieli zamiast barwić je kolorem okładki</string>
     <string name="full_screen_cover_art">Pełnoekranowa okładka</string>
@@ -905,9 +903,7 @@
 
     <string name="player_theme_legacy_subtitle">Przywraca płynne plamy kolorów z wersji v1.5</string>
 
-    <string name="liquid_glass">Płynne szkło</string>
 
-    <string name="liquid_glass_subtitle">Efekt szkła na pasku nawigacyjnym. Tylko Android 12+.</string>
 
     <string name="liquid_glass_unavailable">Wymaga systemu Android 12 lub nowszego</string>
 
@@ -1622,7 +1618,6 @@
     <string name="direct_source_stream_in_party">Wyłączone podczas imprezy Listen Together</string>
     <string name="direct_source_stream">Bezpośredni strumień ze źródła</string>
     <string name="find_your_mood">Znajdź swój nastrój</string>
-    <string name="progressive_blur">Stopniowe rozmycie</string>
     <string name="remove_from_history">Usuń z historii</string>
     <string name="remove_from_history_failed">Nie udało się usunąć z historii</string>
     <string name="addon_blocked_title">Nie można odtworzyć tego utworu</string>

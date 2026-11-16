@@ -220,8 +220,6 @@
     <string name="theme">Тема</string>
     <string name="reduce_animation">Уменьшить анимацию</string>
     <string name="reduce_animation_subtitle">Останавливает градиент главного плеера вместо плавного движения</string>
-    <string name="reduce_dynamic_blur">Уменьшить динамическое размытие</string>
-    <string name="reduce_dynamic_blur_subtitle">Заменяет матовое стекло сплошной заливкой во всём приложении</string>
     <string name="disable_blend_effects">Отключить эффекты смешивания</string>
     <string name="disable_blend_effects_subtitle">Показывает значки, текст и тёмные меню плеера чисто белыми, не окрашивая их в цвета обложки</string>
     <string name="full_screen_cover_art">Обложка на весь экран</string>
@@ -895,9 +893,7 @@
 
     <string name="player_theme_legacy_subtitle">Возвращает мягкие анимированные цветные пятна из v1.5</string>
 
-    <string name="liquid_glass">Жидкое стекло</string>
 
-    <string name="liquid_glass_subtitle">Эффект стекла на панели навигации. Только Android 12+.</string>
 
     <string name="liquid_glass_unavailable">Требуется Android 12 или новее</string>
 
@@ -1614,7 +1610,6 @@
     <string name="direct_source_stream_in_party">Отключено во время вечеринки Listen Together</string>
     <string name="direct_source_stream">Прямой поток из источника</string>
     <string name="find_your_mood">Найдите своё настроение</string>
-    <string name="progressive_blur">Плавное размытие</string>
     <string name="remove_from_history">Удалить из истории</string>
     <string name="remove_from_history_failed">Не удалось удалить из истории</string>
     <string name="addon_blocked_title">Не удаётся воспроизвести этот трек</string>

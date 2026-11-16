@@ -210,8 +210,6 @@
     <string name="theme">थीम</string>
     <string name="reduce_animation">एनिमेशन कम करें</string>
     <string name="reduce_animation_subtitle">मुख्य प्लेयर के ग्रेडिएंट को बहने के बजाय स्थिर रखता है</string>
-    <string name="reduce_dynamic_blur">डायनामिक ब्लर कम करें</string>
-    <string name="reduce_dynamic_blur_subtitle">पूरे ऐप में फ्रॉस्टेड ग्लास की जगह ठोस रंग लगाता है</string>
     <string name="disable_blend_effects">ब्लेंड इफ़ेक्ट बंद करें</string>
     <string name="disable_blend_effects_subtitle">प्लेयर आइकन, टेक्स्ट और डार्क मेनू को आर्टवर्क के रंग में रंगने के बजाय सादे सफ़ेद में दिखाता है</string>
     <string name="full_screen_cover_art">फ़ुल-स्क्रीन कवर आर्ट</string>
@@ -867,9 +865,7 @@
 
     <string name="player_theme_legacy_subtitle">v1.5 से प्लेयर के पीछे बहने वाले रंग लौटाएं</string>
 
-    <string name="liquid_glass">लिक्विड ग्लास</string>
 
-    <string name="liquid_glass_subtitle">नेविगेशन बार पर ग्लास प्रभाव। केवल Android 12+।</string>
 
     <string name="liquid_glass_unavailable">Android 12 या नए की आवश्यकता है</string>
 
@@ -1582,7 +1578,6 @@
     <string name="direct_source_stream_in_party">Listen Together पार्टी के दौरान बंद</string>
     <string name="direct_source_stream">स्रोत से सीधी स्ट्रीम</string>
     <string name="find_your_mood">अपना मूड खोजें</string>
-    <string name="progressive_blur">क्रमिक ब्लर</string>
     <string name="remove_from_history">इतिहास से हटाएँ</string>
     <string name="remove_from_history_failed">इतिहास से नहीं हटाया जा सका</string>
     <string name="addon_blocked_title">यह गाना नहीं चल सकता</string>
