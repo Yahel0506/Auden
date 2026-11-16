@@ -361,6 +361,7 @@ fun GlassNavBar(
                         )
                     },
                     onClick = onClick,
+                    indication = null,
                     title = {
                         Text(
                             text = tab.label,
@@ -398,6 +399,7 @@ fun GlassNavBar(
                     },
                     onClick = onClick,
                     action = tab.action,
+                    indication = null,
                 )
             }
         }

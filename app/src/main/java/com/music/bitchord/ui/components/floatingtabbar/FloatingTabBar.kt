@@ -466,14 +466,14 @@ interface FloatingTabBarScope {
      * @param title Composable content for the tab title
      * @param icon Composable content for the tab icon
      * @param onClick Callback invoked when the tab is clicked
-     * @param indication Optional indication provider for touch feedback, defaults to LocalIndication.current
+     * @param indication Optional indication provider for touch feedback, defaults to null (no tap highlight)
      */
     fun tab(
         key: Any,
         title: @Composable () -> Unit,
         icon: @Composable () -> Unit,
         onClick: () -> Unit,
-        indication: (@Composable () -> Indication)? = { LocalIndication.current },
+        indication: (@Composable () -> Indication)? = null,
         /** A button that does something rather than being somewhere: the selection never rests on it. */
         action: Boolean = false,
     )
@@ -486,13 +486,13 @@ interface FloatingTabBarScope {
      * @param key Unique identifier for the standalone tab
      * @param icon Composable content for the tab icon
      * @param onClick Callback invoked when the tab is clicked
-     * @param indication Optional indication provider for touch feedback, defaults to LocalIndication.current
+     * @param indication Optional indication provider for touch feedback, defaults to null (no tap highlight)
      */
     fun standaloneTab(
         key: Any,
         icon: @Composable () -> Unit,
         onClick: () -> Unit,
-        indication: (@Composable () -> Indication)? = { LocalIndication.current },
+        indication: (@Composable () -> Indication)? = null,
         /** Shown under the icon when the tab is a cell of the expanded pill. */
         title: @Composable () -> Unit = {},
     )
