@@ -255,6 +255,11 @@ class PlayerSheetMotion(
      */
     fun attachWindow(window: Window?) {
         this.window = window ?: return
+        // The player draws its own dim (or none): the window must not dim what is behind it as well. A system dim
+        // behind the sheet's window is applied to the whole page and re-animated whenever the window's attributes
+        // change, which showed as the page going darker for a frame or two as a released player started to close.
+        window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        window.setDimAmount(0f)
         windowAnimations = window.attributes.windowAnimations
         window.setWindowAnimations(0)
         windowRestore?.cancel()

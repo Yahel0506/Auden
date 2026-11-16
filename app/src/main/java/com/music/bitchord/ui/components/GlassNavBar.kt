@@ -1020,8 +1020,9 @@ fun PlayerMorphGlass(
     Box(
         modifier
             .fillMaxSize()
-            .onPlaced { origin[0] = it; screenHeight = it.size.height }
-            .drawBehind { drawRect(Color.Black.copy(alpha = MORPH_SCRIM_ALPHA * k)) },
+            // No dim behind the morph: the page keeps its own brightness throughout. (A full-window black layer
+            // here, of 35% alpha times the morph, was what the page went darker under as the player was let go.)
+            .onPlaced { origin[0] = it; screenHeight = it.size.height },
     ) {
         // The glass bar stretches its own pill (see [GlassNowPlaying]); this card is for the plain mini player.
         if (glass) return@Box
@@ -1116,4 +1117,3 @@ private const val MORPH_GLASS_SPAN = 0.42f
 
 private val MORPH_SHEET_CORNER = 40.dp
 private const val TRANSPORT_FADE_SPAN = 0.25f
-private const val MORPH_SCRIM_ALPHA = 0.35f
