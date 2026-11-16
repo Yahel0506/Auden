@@ -117,6 +117,7 @@ class DjWriter(
                 pick("intro_rediscover", "ago" to ago, "opener" to opener) ?: pick("intro_rediscover_plain", "opener" to opener)
             }
             DjTheme.Fresh -> pick("intro_fresh", "opener" to opener)
+            DjTheme.Mix -> pick("intro_mix", "opener" to opener)
             DjTheme.Discover -> {
                 val seed = block.tracks.firstNotNullOfOrNull { it.because }
                 pick("intro_discover", "seed" to seed, "opener" to opener) ?: pick("intro_discover_plain", "opener" to opener)

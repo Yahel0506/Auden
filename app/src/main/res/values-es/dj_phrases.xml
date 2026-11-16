@@ -128,6 +128,12 @@
         <item>A ver qué te parece esto. Empezamos con {opener}.</item>
         <item>Eso fue {prev}. Ahora vamos a probar algo que todavía no conoces: {opener}.</item>
     </string-array>
+    <string-array name="dj_intro_mix">
+        <item>Empezamos con un poco de todo. Va {opener}.</item>
+        <item>Esta vez sin tema, solo tu música. Empezamos con {opener}.</item>
+        <item>Un poco de esto y un poco de aquello. Primero, {opener}.</item>
+        <item>Eso fue {prev}. Ahora algo más de tu música: {opener}.</item>
+    </string-array>
     <string-array name="dj_intro_playlist">
         <item>Vamos a escuchar algo de tu playlist {playlist}. Empezamos con {opener}.</item>
         <item>Hace falta darle un rato a tu playlist {playlist}. Abrimos con {opener}.</item>

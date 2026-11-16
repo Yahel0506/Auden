@@ -43,6 +43,8 @@ class DjTest {
                         DjTheme.Fresh -> track.localUri != null
                         DjTheme.Discover -> track.discovery
                         is DjTheme.ByPlaylist -> track.playlists.isNotEmpty()
+                        // A mix has no theme to obey: every song in it is there by definition.
+                        DjTheme.Mix -> true
                         is DjTheme.ByRequest -> true
                     }
                     assertTrue("$track in ${block.theme}", ok)
@@ -72,9 +74,17 @@ class DjTest {
     }
 
     @Test
-    fun aPoolTooSmallToThemeGivesNoBlock() {
+    fun aPoolTooSmallToThemeStillPlaysAsAMix() {
         val few = (1..3).map { t("x$it", "Ana", genre = "Rock", year = 1999, plays = 9) }
-        assertNull(DjPlanner(few, now, 1).next())
+        val block = DjPlanner(few, now, 1).next()
+        assertNotNull(block)
+        assertTrue(block!!.theme is DjTheme.Mix)
+        assertEquals(3, block.tracks.size)
+    }
+
+    @Test
+    fun anEmptyPoolGivesNoBlock() {
+        assertNull(DjPlanner(emptyList(), now, 1).next())
     }
 
     @Test

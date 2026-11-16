@@ -5200,9 +5200,9 @@ private fun BitChordApp(
                 isAudioVersion = menuIsAudioVersion,
                 audioVersionMissing = song.videoId in missingVersions,
                 // Hidden outright when there's no real YouTube id behind
-                // this row to build a link from — SongActionsMenu already
-                // drops it for a local file via `isOffline`, this catches
-                // the rest.
+                // this row to build a link from. SongActionsMenu applies
+                // the same guard, so a finished download — which keeps its
+                // video id — shares its link, while a device-only file hides it.
                 onShare = share.takeIf { song.videoId.isNotBlank() },
                 onCopyLog = if (fromPlayer) {
                     {

@@ -1577,6 +1577,7 @@
     <string name="dj_voice_none">El DJ no tiene voz ahora (falta la clave o no hay voz para este idioma): leerás sus frases.</string>
     <string name="dj_voice_ready">Voz: %1$s</string>
     <string name="dj_theme_discover">Nuevo para ti</string>
+    <string name="dj_theme_mix">Un poco de todo</string>
     <string name="dj_now_playing_short">Ahora: %1$s</string>
     <string name="dj_speech_error">El DJ no pudo hablar: %1$s</string>
     <string name="no_audio_version">No audio version found for this video</string>
