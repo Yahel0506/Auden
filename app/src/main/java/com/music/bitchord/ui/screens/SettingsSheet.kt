@@ -544,44 +544,7 @@ fun SettingsScreen(
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 4.dp),
             )
 
-            // What's new, in a section of its own at the very top. While searching, its notes answer in the
-            // results like any other row's, so this entry is only for the page as it rests.
-            if (!searching) {
-                SettingsGroup {
-                    SettingsRow(
-                        icon = SettingsCategory.WHATS_NEW.icon,
-                        title = stringResource(SettingsCategory.WHATS_NEW.title),
-                        subtitle = version,
-                        onClick = { onOpenSection(SettingsCategory.WHATS_NEW) },
-                    )
-                }
-            }
-
             SearchableSettingsGroup(search) {
-                val accountTitle = stringResource(R.string.account_integrations)
-                // What the row opens is the scrobbling screen, so the services it
-                // signs into are worth typing at this field even though none of
-                // them is named on the row itself.
-                row(accountTitle, "scrobbling", "last.fm", "listenbrainz") {
-                    val avatarUrl = account?.thumbnailUrl?.takeIf { signedIn }
-                    SettingsRow(
-                        icon = SfIcons.Person,
-                        iconContent = avatarUrl?.let { url ->
-                            {
-                                AsyncImage(
-                                    model = url,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.size(ICON_SIZE).clip(CircleShape),
-                                )
-                            }
-                        },
-                        title = accountTitle,
-                        subtitle = account?.email?.takeIf { it.isNotBlank() }
-                            ?: stringResource(if (signedIn) R.string.signed_in else R.string.not_signed_in),
-                        onClick = onAccountScrobbling,
-                    )
-                }
                 // Where a heart goes once an account is signed in: the account and this device, or this device only.
                 if (signedIn) {
                     val likeSyncTitle = stringResource(R.string.likes_sync_title)
@@ -599,21 +562,6 @@ fun SettingsScreen(
                             modifier = Modifier.padding(start = TEXT_INSET, end = ROW_INSET, bottom = 14.dp),
                         )
                     }
-                }
-                // Sits with the account rather than with Playback: a party is up to
-                // five signed-in people, and being signed in is the whole of what
-                // the row needs before it will do anything.
-                val listenTogetherTitle = stringResource(R.string.listen_together)
-                row(listenTogetherTitle, "jam", "party", "sync", "friends") {
-                    SettingsRow(
-                        icon = SfIcons.Groups,
-                        title = listenTogetherTitle,
-                        subtitle = party.code?.let {
-                            stringResource(R.string.listen_together_in_party, it)
-                        } ?: stringResource(R.string.listen_together_subtitle),
-                        badge = party.members.size.takeIf { party.inParty && it > 1 }?.toString(),
-                        onClick = onListenTogether,
-                    )
                 }
             }
 
@@ -2245,15 +2193,6 @@ fun SettingsScreen(
             search,
             header = stringResource(R.string.settings_block_replay),
         ) {
-            val replayTitle = stringResource(R.string.replay)
-            row(replayTitle, "stats", "history", "wrapped") {
-                SettingsRow(
-                    icon = SfIcons.BarChart,
-                    title = replayTitle,
-                    subtitle = stringResource(R.string.replay_subtitle),
-                    onClick = onOpenReplay,
-                )
-            }
             val workOutGenresTitle = stringResource(R.string.work_out_genres)
             row(workOutGenresTitle, "genre", "replay") {
                 SettingsRow(

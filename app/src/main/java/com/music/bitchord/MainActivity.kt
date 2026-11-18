@@ -27,6 +27,8 @@ import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.core.animateFloatAsState
@@ -128,6 +130,7 @@ import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
@@ -181,7 +184,8 @@ import com.music.bitchord.data.settings.BitPerfectMode
 import com.music.bitchord.ui.AddonBlockedAlert
 import com.music.bitchord.data.settings.LibrarySort
 import com.music.bitchord.data.settings.ThemeMode
-import com.music.bitchord.ui.components.AccountProfileSelector
+import com.music.bitchord.ui.components.AccountSheet
+import com.music.bitchord.ui.components.ProfileSelectorAlert
 import com.music.bitchord.ui.components.DacVolumeHud
 import com.music.bitchord.ui.components.DacVolumeKeys
 import com.music.bitchord.ui.components.LocalPlayingBarsMotion
@@ -786,6 +790,11 @@ private fun BitChordApp(
     var showTranslationLanguage by remember { mutableStateOf(false) }
     var showAccentPicker by remember { mutableStateOf(false) }
     var showAccountSelector by remember { mutableStateOf(false) }
+    var showAccountSheet by remember { mutableStateOf(false) }
+    // The account sheet stands on the page that was up when it opened, and screens opened from it are stacked on that page.
+    var sheetOwnerKey by remember { mutableStateOf<Any?>(null) }
+    var sheetOwnerDepth by remember { mutableIntStateOf(0) }
+    val sheetProgress = remember { androidx.compose.animation.core.Animatable(0f) }
     var showListenBrainzLogin by remember { mutableStateOf(false) }
     var showLastfmLogin by remember { mutableStateOf(false) }
     var showWebDavEditor by remember { mutableStateOf(false) }
@@ -3253,6 +3262,110 @@ private fun BitChordApp(
         BackHandler(enabled = editingPartyServer) { editingPartyServer = false }
         BackHandler(enabled = editingSignatureApi) { editingSignatureApi = false }
 
+        // What is on top of the back stack — see [AppNavigator].
+        val destinationNow: AppDestination = when {
+            visibleEntry != null -> AppDestination.Route(visibleEntry)
+            detail != null -> AppDestination.Release(detail.browseId)
+            else -> AppDestination.Tab(selectedTab)
+        }
+        // Settings' pages, in the light theme, are drawn as the account sheet is: the grouped grey of the page, and the
+        // groups white on it. In the dark theme they are as they were.
+        val lightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
+        val groupedRoutes = route == AppRoute.Settings || route is AppRoute.SettingsSection ||
+            route == AppRoute.AccountScrobbling || route == AppRoute.Sources || route == AppRoute.ListenTogether ||
+            route == AppRoute.WearOs || route == AppRoute.Equalizer || route == AppRoute.EqualizerPresets ||
+            route == AppRoute.Discord
+        // The sheet stands over the bars: they are left as they are, and it rises over them. A screen opened from it is
+        // stacked on the page it stands on, and the sheet then goes under that page, inside it, until it is taken off.
+        val sheetPresent by remember { derivedStateOf { showAccountSheet || sheetProgress.value > 0.001f } }
+        val stackedOnSheet = showAccountSheet && sheetOwnerKey != null && (destinationNow.key != sheetOwnerKey || showWhatsNew)
+        // The bars are the stacked screen's: they come in with it, and go as it leaves, so they are never drawn over the
+        // sheet's page abruptly.
+        val chromeAlpha = remember { androidx.compose.animation.core.Animatable(1f) }
+        // True from the moment a screen is stacked until the sheet is back on top after it is taken off: read in the same
+        // composition that takes it off, so the sheet is not moved from under the leaving screen to over it and back.
+        var wasStacked by remember { mutableStateOf(false) }
+        // False until the fade-in has begun, so the bars are not drawn for the frame before it does.
+        var chromeStarted by remember { mutableStateOf(false) }
+        // The tab bar and the mini player are not on a screen opened from the sheet.
+        val hideNavbar = stackedOnSheet || wasStacked
+        LaunchedEffect(stackedOnSheet) {
+            if (stackedOnSheet) {
+                wasStacked = true
+                chromeAlpha.snapTo(0f)
+                chromeStarted = true
+                chromeAlpha.animateTo(1f, tween(260, delayMillis = 90))
+            } else if (wasStacked) {
+                chromeStarted = false
+                chromeAlpha.animateTo(0f, tween(150))
+                // The leaving screen's slide is done by now.
+                delay(230)
+                wasStacked = false
+                // Back in, gradually: it is under the sheet but for its top edge, and a jump there is seen.
+                chromeAlpha.animateTo(1f, tween(260))
+            }
+        }
+        val sheetInSlot = sheetPresent && (stackedOnSheet || wasStacked)
+        val sheetInOverlay = sheetPresent && !sheetInSlot && destinationNow.key == sheetOwnerKey
+        // Taken off the page it stood on — another tab chosen, the stack cleared — the sheet goes with it.
+        LaunchedEffect(destinationNow.key, navigator.entries.size) {
+            if (showAccountSheet && destinationNow.key != sheetOwnerKey && navigator.entries.size <= sheetOwnerDepth) {
+                showAccountSheet = false
+            }
+        }
+        val profileAlert: @Composable () -> Unit = {
+            BackHandler { showAccountSelector = false }
+            ProfileSelectorAlert(
+                accounts = googleAccounts,
+                activeAccountId = activeAccountId,
+                activeProfileId = activeProfileId,
+                hazeState = hazeState,
+                onSelect = { selected, profile -> viewModel.selectProfile(selected.accountId, profile.profileId) },
+                onAddAccount = {
+                    showAccountSelector = false
+                    showAccountSheet = false
+                    webSession = WebSessionMode.SIGN_IN
+                },
+                onRemoveAccount = { selected ->
+                    viewModel.removeAccount(selected.accountId)
+                    showAccountSelector = false
+                },
+                onDismiss = { showAccountSelector = false },
+            )
+        }
+        // Drawn inside the page it stands on, over it, so a screen opened from it slides in over the page and the sheet
+        // together, and taken off again leaves the sheet where it was.
+        val accountSheetHost: @Composable () -> Unit = {
+            val partyForSheet by com.music.bitchord.data.listentogether.ListenTogether.state.collectAsStateWithLifecycle()
+            AccountSheet(
+                open = showAccountSheet,
+                onDismiss = { showAccountSheet = false },
+                accountName = account?.name,
+                accountPhoto = account?.thumbnailUrl,
+                signedIn = signedIn,
+                activeProfileName = googleAccounts.firstOrNull { it.accountId == activeAccountId }
+                    ?.profiles?.firstOrNull { it.profileId == activeProfileId }?.name,
+                partyCode = partyForSheet.code,
+                onAccount = { navigator.push(AppRoute.AccountScrobbling) },
+                onProfiles = {
+                    viewModel.loadChannels()
+                    showAccountSelector = true
+                },
+                onStatistics = {
+                    replayLandingPage = ReplayStoryPage.INTRO
+                    navigator.push(AppRoute.Replay)
+                },
+                onListenTogether = { navigator.push(AppRoute.ListenTogether) },
+                onSettings = { navigator.push(AppRoute.Settings) },
+                version = "v" + BuildConfig.VERSION_NAME.substringBefore('-'),
+                onAbout = { showWhatsNew = true },
+                // Over the sheet, so the alert blurs the sheet.
+                overlay = { if (showAccountSelector) profileAlert() },
+                progress = sheetProgress,
+                backEnabled = !stackedOnSheet,
+            )
+        }
+
         // On a tablet the page and the player stand side by side rather than
         // one over the other: everything a phone stacks in a single column —
         // the feed, the frosted bars, the tab row — becomes the left half of
@@ -3269,12 +3382,7 @@ private fun BitChordApp(
         ) {
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 AnimatedContent(
-                    // Whatever is on top of the back stack — see [AppNavigator].
-                    targetState = when {
-                        visibleEntry != null -> AppDestination.Route(visibleEntry)
-                        detail != null -> AppDestination.Release(detail.browseId)
-                        else -> AppDestination.Tab(selectedTab)
-                    },
+                    targetState = destinationNow,
                     // A route's entry is copied when the release pages under it
                     // change, which is not a different page.
                     contentKey = { it.key },
@@ -3300,6 +3408,18 @@ private fun BitChordApp(
                     transitionSpec = {
                         val initial = initialState
                         val target = targetState
+                        val owner = sheetOwnerKey
+                        // A screen opened from the account sheet is stacked on the page the sheet stands on, as a screen
+                        // is in any app: it slides in from the right over it, and slides out again to leave it as it was.
+                        if (showAccountSheet && owner != null && initial.key == owner && target.key != owner) {
+                            // The platform's push: the new screen in from the right, the one under it carried a third of
+                            // the way off to the left at the same pace.
+                            (slideInHorizontally(StackPushSpec) { it } togetherWith slideOutHorizontally(StackPushSpec) { -it / 3 })
+                                .apply { targetContentZIndex = 1f }
+                        } else if (showAccountSheet && owner != null && target.key == owner && initial.key != owner) {
+                            (slideInHorizontally(StackPushSpec) { -it / 3 } togetherWith slideOutHorizontally(StackPushSpec) { it })
+                                .apply { targetContentZIndex = -1f }
+                        } else {
                         val tabSwap = initial is AppDestination.Tab && target is AppDestination.Tab
                         val libraryTab = AppDestination.Tab(TAB_LIBRARY)
                         fun AppDestination.isShowAll() =
@@ -3310,6 +3430,7 @@ private fun BitChordApp(
                             EnterTransition.None togetherWith ExitTransition.None
                         } else {
                             fadeIn(tween(180)) togetherWith fadeOut(tween(180))
+                        }
                         }
                     },
                     modifier = Modifier
@@ -4192,19 +4313,65 @@ private fun BitChordApp(
                     val nowPlayingList = remember(player.song?.playbackSourceId, player.isPlaying) {
                         com.music.bitchord.ui.components.NowPlayingList(player.song?.playbackSourceId, player.isPlaying)
                     }
-                    CompositionLocalProvider(
-                        LocalPlayingBarsMotion provides barsMotion,
-                        com.music.bitchord.ui.components.LocalNowPlayingList provides nowPlayingList,
-                    ) {
-                        if (destination is AppDestination.Tab) {
-                            pageContent()
+                    // A screen stacked on the account sheet's page is opaque: the sheet is under it.
+                    val slotStacked = showAccountSheet && sheetOwnerKey != null && key != sheetOwnerKey
+                    val slotGrouped = lightTheme && (pageRoute == AppRoute.Settings || pageRoute is AppRoute.SettingsSection ||
+                        pageRoute == AppRoute.AccountScrobbling || pageRoute == AppRoute.Sources ||
+                        pageRoute == AppRoute.ListenTogether || pageRoute == AppRoute.WearOs ||
+                        pageRoute == AppRoute.Equalizer || pageRoute == AppRoute.EqualizerPresets ||
+                        pageRoute == AppRoute.Discord)
+                    Box(
+                        if (slotStacked) {
+                            Modifier
+                                .fillMaxSize()
+                                // The shadow the leading edge of a stacked screen throws on what it covers.
+                                .drawWithContent {
+                                    val width = 28.dp.toPx()
+                                    drawRect(
+                                        brush = androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                            0f to Color.Transparent,
+                                            1f to Color.Black.copy(alpha = 0.22f),
+                                            startX = -width,
+                                            endX = 0f,
+                                        ),
+                                        topLeft = Offset(-width, 0f),
+                                        size = androidx.compose.ui.geometry.Size(width, size.height),
+                                    )
+                                    drawContent()
+                                }
+                                .background(if (slotGrouped) GroupedLightPage else MaterialTheme.colorScheme.background)
+                        } else if (slotGrouped) {
+                            Modifier.fillMaxSize().background(GroupedLightPage)
                         } else {
-                            pageKeysSeen += key
-                            pageStates.SaveableStateProvider(key, pageContent)
+                            Modifier
+                        },
+                    ) {
+                      MaterialTheme(
+                        colorScheme = if (slotGrouped) {
+                            MaterialTheme.colorScheme.copy(background = GroupedLightPage, surfaceVariant = Color.White)
+                        } else {
+                            MaterialTheme.colorScheme
+                        },
+                        typography = MaterialTheme.typography,
+                        shapes = MaterialTheme.shapes,
+                      ) {
+                        CompositionLocalProvider(
+                            LocalPlayingBarsMotion provides barsMotion,
+                            com.music.bitchord.ui.components.LocalNowPlayingList provides nowPlayingList,
+                        ) {
+                            if (destination is AppDestination.Tab) {
+                                pageContent()
+                            } else {
+                                pageKeysSeen += key
+                                pageStates.SaveableStateProvider(key, pageContent)
+                            }
                         }
+                        if (key == sheetOwnerKey && sheetInSlot) accountSheetHost()
+                      }
                     }
                 }
 
+                Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (stackedOnSheet && !chromeStarted) 0f else chromeAlpha.value }) {
                 // The top-bar footprint is transparent on every page so the
                 // shared app-level gradient is continuous; its controls float
                 // as separate circles in both the glass and blur materials.
@@ -4215,6 +4382,8 @@ private fun BitChordApp(
                     !isLocalDetail
                 val chromePageColor = if (isDetailVisible) {
                     detailPalette.background
+                } else if (lightTheme && groupedRoutes) {
+                    GroupedLightPage
                 } else {
                     MaterialTheme.colorScheme.background
                 }
@@ -4623,13 +4792,13 @@ private fun BitChordApp(
                             // Not on a release page, whose pill already carries
                             // three of its own controls — Apple Music leaves the
                             // profile off its album pages too.
-                            if (!isReleaseDetail) TopBarAccountButton(
+                            // Nor on a screen opened from the account sheet: it would open the sheet it came from.
+                            if (!isReleaseDetail && !stackedOnSheet && !wasStacked) TopBarAccountButton(
                                 account = account,
                                 onClick = {
-                                    if (signedIn) {
-                                        viewModel.loadChannels()
-                                        showAccountSelector = true
-                                    } else navigator.push(AppRoute.Settings)
+                                    sheetOwnerKey = destinationNow.key
+                                    sheetOwnerDepth = navigator.entries.size
+                                    showAccountSheet = true
                                 },
                                 onSwipeProfile = { forward -> viewModel.stepProfile(forward) },
                             )
@@ -4654,7 +4823,7 @@ private fun BitChordApp(
                 }
 
                 // Drawn before the bars so their own glass reads on top of it.
-                BottomFadeScrim(
+                if (!hideNavbar) BottomFadeScrim(
                     withMiniPlayer = player.song != null,
                     // Not the wash: by the foot of the screen the page has finished
                     // easing out of it and into this, so this is what is actually
@@ -4742,7 +4911,7 @@ private fun BitChordApp(
                     }
                 }
 
-                if (glassActive) Column(
+                if (!hideNavbar) if (glassActive) Column(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .widthIn(max = FLOATING_BAR_MAX_WIDTH)
@@ -4823,6 +4992,7 @@ private fun BitChordApp(
                         hazeState = hazeState,
                         onTabSelected = onNavTabSelected,
                     )
+                }
                 }
             }
 
@@ -6729,8 +6899,9 @@ private fun BitChordApp(
         // ---- What's new in this update (Settings) ----
         AnimatedVisibility(
             visible = showWhatsNew,
-            enter = fadeIn(tween(260)) + slideInVertically(tween(320)) { it / 12 },
-            exit = fadeOut(tween(200)),
+            // Stacked over what it was opened from — the account sheet — as a screen is: in from the right, out to it.
+            enter = slideInHorizontally(StackPushSpec) { it },
+            exit = slideOutHorizontally(StackPushSpec) { it },
         ) {
             val whatsNewContext = LocalContext.current
             UpdateScreen(
@@ -6831,29 +7002,10 @@ private fun BitChordApp(
                 )
             }
 
-            if (showAccountSelector) {
-                BackHandler { showAccountSelector = false }
-                AccountProfileSelector(
-                    accounts = googleAccounts,
-                    activeAccountId = activeAccountId,
-                    activeProfileId = activeProfileId,
-                    hazeState = hazeState,
-                    onSelect = { selected, profile -> viewModel.selectProfile(selected.accountId, profile.profileId) },
-                    onAddAccount = {
-                        showAccountSelector = false
-                        webSession = WebSessionMode.SIGN_IN
-                    },
-                    onRemoveAccount = { selected ->
-                        viewModel.removeAccount(selected.accountId)
-                        showAccountSelector = false
-                    },
-                    onOpenSettings = {
-                        showAccountSelector = false
-                        navigator.push(AppRoute.Settings)
-                    },
-                    onDismiss = { showAccountSelector = false },
-                )
-            }
+            // The account sheet, over the page and its bars; with a screen stacked on it, it is under that screen instead.
+            if (sheetInOverlay) accountSheetHost()
+            // The profile alert from Account and integrations, with no sheet up: over the page as any other.
+            if (showAccountSelector && !showAccountSheet) profileAlert()
 
             if (showAppLanguage) {
                 BackHandler { showAppLanguage = false }
@@ -7615,6 +7767,15 @@ private val PLAYER_PULL_FLING_VELOCITY = 400.dp
  * [content] in a recompose scope of its own, so state read inside it
  * recomposes it alone rather than everything it is written in.
  */
+/** The grouped grey a settings page stands on in the light theme, and the account sheet's. */
+private val GroupedLightPage = Color(0xFFF2F2F7)
+
+/** The pace of a screen stacked on another: it starts fast and settles, as the platform's own push does. */
+private val StackPushSpec = tween<androidx.compose.ui.unit.IntOffset>(
+    durationMillis = 340,
+    easing = androidx.compose.animation.core.CubicBezierEasing(0.2f, 0.0f, 0.0f, 1.0f),
+)
+
 @Composable
 private fun Isolated(content: @Composable () -> Unit) = content()
 

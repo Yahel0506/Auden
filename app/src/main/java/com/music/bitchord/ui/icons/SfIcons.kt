@@ -21,6 +21,7 @@ import com.composables.sfsymbols.monochrome.SFCableConnector
 import com.composables.sfsymbols.monochrome.SFCellularbars
 import com.composables.sfsymbols.monochrome.SFCharacterBubble
 import com.composables.sfsymbols.monochrome.SFChartBar
+import com.composables.sfsymbols.monochrome.SFPartyPopper
 import com.composables.sfsymbols.monochrome.SFChartLineUptrendXyaxis
 import com.composables.sfsymbols.monochrome.SFCheckmark
 import com.composables.sfsymbols.monochrome.SFCheckmarkCircle
@@ -185,6 +186,7 @@ object SfIcons {
     val RadioButtonChecked: ImageVector by lazy { bold(SfSymbols.Monochrome.SFRecordCircle) }
     val Settings: ImageVector by lazy { bold(SfSymbols.Monochrome.SFGearshape) }
     val Share: ImageVector by lazy { bold(SfSymbols.Monochrome.SFSquareAndArrowUp) }
+    val PartyPopper: ImageVector by lazy { bold(SfSymbols.Monochrome.SFPartyPopper) }
     val ShowChart: ImageVector by lazy { bold(SfSymbols.Monochrome.SFChartLineUptrendXyaxis) }
     val SignalCellularAlt: ImageVector by lazy { bold(SfSymbols.Monochrome.SFCellularbars) }
     val SmartButton: ImageVector by lazy { bold(SfSymbols.Monochrome.SFHandTap) }

@@ -1939,4 +1939,9 @@
     <string name="listen_together_as">As %1$s</string>
     <string name="listen_together_as_where">Change it in Account and integrations</string>
     <string name="other_functions">Other functions</string>
+    <string name="auden_account">Auden account</string>
+    <string name="account_sheet_account_sub">Account info, integrations and settings</string>
+    <string name="playback_statistics">Playback statistics</string>
+    <string name="auden_settings">Auden settings</string>
+    <string name="about_this_version">About this version</string>
 </resources>
