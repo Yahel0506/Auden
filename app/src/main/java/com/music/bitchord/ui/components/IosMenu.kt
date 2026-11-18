@@ -233,14 +233,6 @@ fun Modifier.menuBackdropFrost(backdrop: Backdrop, shape: Shape, fill: Color): M
         // blurred less than it used to be so its shapes still show as light and colour, and bent at the edges.
         colorControls(saturation = MENU_GLASS_SATURATION)
         blur(MENU_BLUR.toPx() * MENU_BACKDROP_SCALE)
-        if (shape is CornerBasedShape && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            lens(
-                refractionHeight = MENU_LENS_HEIGHT.toPx() * MENU_BACKDROP_SCALE,
-                refractionAmount = MENU_LENS_AMOUNT.toPx() * MENU_BACKDROP_SCALE,
-                depthEffect = true,
-                chromaticAberration = true,
-            )
-        }
     },
     // The rim catching light, as the nav bar's has it.
     highlight = { NAV_GLASS_RIM },
@@ -250,8 +242,8 @@ fun Modifier.menuBackdropFrost(backdrop: Backdrop, shape: Shape, fill: Color): M
     // Sampled small: the blur hides the upscale, and the effect then runs over
     // a fraction of the pixels.
     backdropScale = MENU_BACKDROP_SCALE,
-    // The page's colour along the rim too, thin, so the edge is the glass's and not a white line.
-    edgeTint = MENU_EDGE_TINT,
+    // No lens and no colour drawn along the rim: the edges are left as they are, undeformed.
+    edgeTint = 0f,
 )
 
 private val MENU_LENS_HEIGHT = 20.dp

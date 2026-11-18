@@ -1026,10 +1026,7 @@ internal fun AlertScaffold(
                     if (reduceDynamicBlur || !frosted) {
                         Modifier.background(MaterialTheme.colorScheme.surface)
                     } else {
-                        Modifier.optimizedHazeEffect(
-                            state = hazeState,
-                            style = navGlassHazeStyle(),
-                        )
+                        Modifier.alertGlass(shape)
                     },
                 )
                 .clickable(

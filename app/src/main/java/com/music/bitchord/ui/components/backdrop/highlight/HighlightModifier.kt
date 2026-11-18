@@ -82,6 +82,7 @@ internal class HighlightNode(
     override val shouldAutoInvalidate: Boolean = false
 
     private var highlightLayer: GraphicsLayer? = null
+    private var sidesLayer: GraphicsLayer? = null
 
     private val paint =
         Paint().apply {
@@ -101,7 +102,11 @@ internal class HighlightNode(
 
         drawContent()
 
-        val highlightLayer = highlightLayer
+        drawRim(highlight, highlightLayer, 1f)
+        highlight.sides?.takeIf { it.width.value > 0f }?.let { drawRim(it, sidesLayer, highlight.alpha) }
+    }
+
+    private fun ContentDrawScope.drawRim(highlight: Highlight, highlightLayer: GraphicsLayer?, parentAlpha: Float) {
         if (highlightLayer != null) {
             val size = size
             val density: Density = this
@@ -123,7 +128,7 @@ internal class HighlightNode(
 
             configurePaint(highlight)
 
-            highlightLayer.alpha = highlight.alpha
+            highlightLayer.alpha = highlight.alpha * parentAlpha
             highlightLayer.blendMode = highlight.style.blendMode
             highlightLayer.record(safeSize) {
                 translate(1f, 1f) {
@@ -144,6 +149,7 @@ internal class HighlightNode(
     override fun onAttach() {
         val graphicsContext = requireGraphicsContext()
         highlightLayer = graphicsContext.createGraphicsLayer()
+        sidesLayer = graphicsContext.createGraphicsLayer()
     }
 
     override fun onDetach() {
@@ -151,6 +157,10 @@ internal class HighlightNode(
         highlightLayer?.let { layer ->
             graphicsContext.releaseGraphicsLayer(layer)
             highlightLayer = null
+        }
+        sidesLayer?.let { layer ->
+            graphicsContext.releaseGraphicsLayer(layer)
+            sidesLayer = null
         }
         clipPath = null
         runtimeShaderCache.clear()

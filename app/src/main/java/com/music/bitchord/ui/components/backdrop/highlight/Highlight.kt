@@ -20,7 +20,9 @@ data class Highlight(
     val width: Dp = 0.5f.dp,
     val blurRadius: Dp = width / 2f,
     @param:FloatRange(from = 0.0, to = 1.0) val alpha: Float = 1f,
-    val style: HighlightStyle = HighlightStyle.Default
+    val style: HighlightStyle = HighlightStyle.Default,
+    /** A second rim drawn over this one, with this one's alpha: the dark line where the first does not reach. */
+    val sides: Highlight? = null,
 ) {
 
     companion object {

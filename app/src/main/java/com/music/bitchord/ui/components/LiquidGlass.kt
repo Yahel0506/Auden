@@ -195,6 +195,29 @@ val NAV_GLASS_RIM = Highlight(
         angle = 90f,
         falloff = 2.8f,
     ),
+    // And where that light does not reach, the round ends, a fine black line of the same strength and reach:
+    // the glass's edge against a bright page, where a white one is lost.
+    sides = Highlight(
+        width = 0.45.dp,
+        blurRadius = 0.2.dp,
+        style = com.music.bitchord.ui.components.backdrop.highlight.HighlightStyle.Default(
+            color = Color.Black.copy(alpha = 0.27f),
+            blendMode = androidx.compose.ui.graphics.BlendMode.SrcOver,
+            angle = 0f,
+            falloff = 1.7f,
+        ),
+    ),
+)
+
+/** The default rim, with the same black line where its light does not reach. */
+private val GLASS_RIM_DEFAULT = Highlight.Default.copy(
+    sides = Highlight(
+        style = com.music.bitchord.ui.components.backdrop.highlight.HighlightStyle.Default(
+            color = Color.Black.copy(alpha = 0.5f),
+            blendMode = androidx.compose.ui.graphics.BlendMode.SrcOver,
+            angle = 225f,
+        ),
+    ),
 )
 
 /** Its lens a little shallower than the app's other glass: the page bends round the ends, but only slightly. */
@@ -300,6 +323,10 @@ fun Modifier.liquidGlass(
     depth: Float = 1f,
     /** The blur's radius against the default, 1 as it is. */
     blur: Float = 1f,
+    /** False leaves the edges undeformed: no lens, and no page colour drawn along the rim. */
+    lens: Boolean = true,
+    /** True lays [surfaceTint] on evenly, the film neither thinner in the middle nor thicker at the edges. */
+    flatFilm: Boolean = false,
 ): Modifier {
     if (!isGlassSupported()) return this
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
@@ -330,7 +357,7 @@ fun Modifier.liquidGlass(
         effects = {
             colorControls(saturation = 1f + 0.5f * vibrancy * glassSaturationScale(glassOpacity))
             blur(blurPx)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (lens && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 lens(
                     refractionHeight = lensHeightPx,
                     refractionAmount = lensAmountPx,
@@ -339,27 +366,31 @@ fun Modifier.liquidGlass(
                 )
             }
         },
-        highlight = { rim ?: Highlight.Default },
+        highlight = { rim ?: GLASS_RIM_DEFAULT },
         shadow = { Shadow.Default },
         onDrawSurface = {
             // The film is never uniform, whatever the opacity: it is thickest along the top and bottom edges and thins
             // towards the horizontal line through the middle, which is always the most transparent part. Nothing is
             // added at the sides: the round ends are as clear as the middle.
-            val base = surfaceTintColor.alpha
-            val edge = surfaceTintColor.copy(alpha = (base + (1f - base) * edgeThickening * glassOpacity).coerceIn(0f, 0.97f))
-            // The more opaque the glass is set, the less the middle falls short of its edges.
-            val share = GLASS_MIDDLE_SHARE + GLASS_MIDDLE_SHARE_GAIN * (glassOpacity / 1.5f).coerceIn(0f, 1f)
-            val middle = surfaceTintColor.copy(alpha = edge.alpha * share)
-            drawRect(
-                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                    0f to edge, 0.36f to middle, 0.64f to middle, 1f to edge,
-                ),
-                size = size,
-            )
+            if (flatFilm) {
+                drawRect(color = surfaceTintColor, size = size)
+            } else {
+                val base = surfaceTintColor.alpha
+                val edge = surfaceTintColor.copy(alpha = (base + (1f - base) * edgeThickening * glassOpacity).coerceIn(0f, 0.97f))
+                // The more opaque the glass is set, the less the middle falls short of its edges.
+                val share = GLASS_MIDDLE_SHARE + GLASS_MIDDLE_SHARE_GAIN * (glassOpacity / 1.5f).coerceIn(0f, 1f)
+                val middle = surfaceTintColor.copy(alpha = edge.alpha * share)
+                drawRect(
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        0f to edge, 0.36f to middle, 0.64f to middle, 1f to edge,
+                    ),
+                    size = size,
+                )
+            }
         },
         exportedBackdrop = exportedBackdrop,
         backdropScale = resolutionScale,
-        edgeTint = EDGE_TINT,
+        edgeTint = if (lens) EDGE_TINT else 0f,
     )
 }
 
@@ -377,6 +408,22 @@ fun Modifier.navGlass(shape: CornerBasedShape): Modifier = liquidGlass(
     blur = NAV_GLASS_BLUR,
     vibrancy = NAV_GLASS_VIBRANCY,
     edgeThickening = NAV_GLASS_EDGE,
+)
+
+/**
+ * The nav bar's glass for a card that holds text (the alerts): the same vibrancy, rim and tint, at the tint's own
+ * strength all over, with no lens bending its edges and a softer blur than the bar's so what is behind it does not
+ * fight the words.
+ */
+@Composable
+fun Modifier.alertGlass(shape: CornerBasedShape): Modifier = liquidGlass(
+    shape = shape,
+    surfaceTint = navGlassTint(),
+    rim = NAV_GLASS_RIM,
+    blur = 0.7f,
+    vibrancy = NAV_GLASS_VIBRANCY,
+    lens = false,
+    flatFilm = true,
 )
 
 /**
