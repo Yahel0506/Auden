@@ -331,51 +331,40 @@ fun FloatingTabBar(
 /**
  * A [NestedScrollConnection] that handles scroll events to transition between inline and expanded states.
  *
- * The distance that counts as a swipe is [scrollThresholdPx], as it always was; what is dynamic is whether going that
- * far flips the bar. It does only when the finger is quick: a drag that is not fast — however far it goes — leaves
- * the bar as it is. Reaching the top of the page expands it, whatever else is going on.
+ * Scrolling toward the end of the page takes the bar through [progress], 0 to 1 over [scrollThresholdPx] of scrolling
+ * — the caller shrinks the expanded bar with it — and folds it when it gets to 1. Scrolling back before that gives
+ * the progress back. Nothing unfolds a folded bar but reaching the top of the page: scrolling back up leaves it as it is.
  *
  * @param initialIsInline Initial state of the tab bar (inline or expanded).
- * @param scrollThresholdPx The scroll distance in pixels a swipe has to cover.
- * @param flipSpeedPx Scroll speed, in px/s, a swipe has to reach for the bar to change state.
+ * @param scrollThresholdPx The scroll distance in pixels that folds the bar.
  * @param inlineBehavior Defines when the tab bar should transition to inline state.
  */
 class FloatingTabBarScrollConnection(
     initialIsInline: Boolean = false,
     private val scrollThresholdPx: Float,
     private val inlineBehavior: FloatingTabBarInlineBehavior = FloatingTabBarInlineBehavior.OnScrollDown,
-    private val flipSpeedPx: Float = 0f,
 ) : NestedScrollConnection {
     var isInline by mutableStateOf(initialIsInline)
         private set
 
-    private var accumulatedScroll = 0f
+    /** How far the expanded bar is on its way to folding: 0 untouched, 1 folded. Read in a draw or layer block. */
+    var progress by mutableFloatStateOf(0f)
+        private set
 
-    /** The drag's speed in px/s, smoothed, and when the last scroll event arrived. */
-    private var speed = 0f
-    private var lastEventNanos = 0L
+    /** How much of the shrinking the bar had when it folded by scrolling: 1, or 0 when it was folded outright. */
+    var foldedFrom by mutableFloatStateOf(0f)
+        private set
 
     fun expand() {
         isInline = false
-        accumulatedScroll = 0f
+        progress = 0f
+        foldedFrom = 0f
     }
 
     fun inline() {
         isInline = true
-        accumulatedScroll = 0f
-    }
-
-    private fun measureSpeed(delta: Float) {
-        val now = System.nanoTime()
-        val dt = (now - lastEventNanos) / 1e9f
-        lastEventNanos = now
-        // The first event of a gesture, or one after a pause, has no speed of its own to read.
-        if (dt <= 0f || dt > 0.12f) {
-            speed = 0f
-            return
-        }
-        val instant = kotlin.math.abs(delta) / dt.coerceAtLeast(0.004f)
-        speed += (instant - speed) * 0.35f
+        progress = 0f
+        foldedFrom = 0f
     }
 
     override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -385,30 +374,16 @@ class FloatingTabBarScrollConnection(
         }
 
         val scrollDelta = available.y
-        if (scrollDelta == 0f) return Offset.Zero
+        if (scrollDelta == 0f || isInline) return Offset.Zero
 
-        // Reset accumulated scroll if changing direction
-        if ((accumulatedScroll > 0 && scrollDelta < 0) || (accumulatedScroll < 0 && scrollDelta > 0)) {
-            accumulatedScroll = 0f
-            speed = 0f
-        }
-
-        // Accumulate scroll, and how fast it is going
-        accumulatedScroll += scrollDelta
-        measureSpeed(scrollDelta)
-        // A swipe that is not quick changes nothing; the distance keeps adding up, and it takes a quick moment
-        // to turn it into a change.
-        if (speed < flipSpeedPx) return Offset.Zero
-
-        // Toward inline is the content moving up (finger up, negative); back to expanded is the opposite.
+        // Toward inline is the content moving up (finger up, negative); the other way gives the progress back.
         val towardInline = if (inlineBehavior == FloatingTabBarInlineBehavior.OnScrollDown) -1f else 1f
-        val signed = accumulatedScroll * towardInline
-        if (signed >= scrollThresholdPx && !isInline) {
+        progress = (progress + scrollDelta * towardInline / scrollThresholdPx).coerceIn(0f, 1f)
+        if (progress >= 1f) {
+            // Folded from where the shrinking had got it: the progress is left at 1 for whoever draws the fold to start
+            // from, and is given back by [expand].
+            foldedFrom = 1f
             isInline = true
-            accumulatedScroll = 0f
-        } else if (-signed >= scrollThresholdPx && isInline) {
-            isInline = false
-            accumulatedScroll = 0f
         }
 
         return Offset.Zero // Don't consume the scroll, let it pass through
@@ -446,8 +421,6 @@ fun rememberFloatingTabBarScrollConnection(
             initialIsInline = initialIsInline,
             scrollThresholdPx = scrollThresholdPx,
             inlineBehavior = inlineBehavior,
-            // A quick swipe: about 1.4 screens a second on a phone, a flick rather than a drag.
-            flipSpeedPx = 1_100.dp.toPx(),
         )
     }
 }

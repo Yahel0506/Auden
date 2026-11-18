@@ -663,7 +663,7 @@ private fun BitChordApp(
     // rather than inside the bar because the page's scroll is what drives it,
     // and the page is a sibling of the bar rather than a child.
     // Apple Music folds its bar after only a little scrolling: 12dp rather than the library's 50.
-    val navBarScroll = rememberFloatingTabBarScrollConnection(scrollThreshold = 12.dp)
+    val navBarScroll = rememberFloatingTabBarScrollConnection(scrollThreshold = 90.dp)
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     // Explore loads the first time it's shown, not at launch beside Home.
     LaunchedEffect(selectedTab) {
@@ -3279,32 +3279,13 @@ private fun BitChordApp(
         // stacked on the page it stands on, and the sheet then goes under that page, inside it, until it is taken off.
         val sheetPresent by remember { derivedStateOf { showAccountSheet || sheetProgress.value > 0.001f } }
         val stackedOnSheet = showAccountSheet && sheetOwnerKey != null && (destinationNow.key != sheetOwnerKey || showWhatsNew)
-        // The bars are the stacked screen's: they come in with it, and go as it leaves, so they are never drawn over the
-        // sheet's page abruptly.
-        val chromeAlpha = remember { androidx.compose.animation.core.Animatable(1f) }
-        // True from the moment a screen is stacked until the sheet is back on top after it is taken off: read in the same
-        // composition that takes it off, so the sheet is not moved from under the leaving screen to over it and back.
-        var wasStacked by remember { mutableStateOf(false) }
-        // False until the fade-in has begun, so the bars are not drawn for the frame before it does.
-        var chromeStarted by remember { mutableStateOf(false) }
+        val navShrink = com.music.bitchord.ui.rememberNavBarShrink(navBarScroll)
+        val sheetStack = com.music.bitchord.ui.rememberAccountSheetStack(stackedOnSheet)
+        val chromeAlpha = sheetStack.chromeAlpha
+        val wasStacked = sheetStack.wasStacked
+        val chromeStarted = sheetStack.chromeStarted
         // The tab bar and the mini player are not on a screen opened from the sheet.
         val hideNavbar = stackedOnSheet || wasStacked
-        LaunchedEffect(stackedOnSheet) {
-            if (stackedOnSheet) {
-                wasStacked = true
-                chromeAlpha.snapTo(0f)
-                chromeStarted = true
-                chromeAlpha.animateTo(1f, tween(260, delayMillis = 90))
-            } else if (wasStacked) {
-                chromeStarted = false
-                chromeAlpha.animateTo(0f, tween(150))
-                // The leaving screen's slide is done by now.
-                delay(230)
-                wasStacked = false
-                // Back in, gradually: it is under the sheet but for its top edge, and a jump there is seen.
-                chromeAlpha.animateTo(1f, tween(260))
-            }
-        }
         val sheetInSlot = sheetPresent && (stackedOnSheet || wasStacked)
         val sheetInOverlay = sheetPresent && !sheetInSlot && destinationNow.key == sheetOwnerKey
         // Taken off the page it stood on — another tab chosen, the stack cleared — the sheet goes with it.
@@ -4916,6 +4897,14 @@ private fun BitChordApp(
                         .align(Alignment.BottomCenter)
                         .widthIn(max = FLOATING_BAR_MAX_WIDTH)
                         .fillMaxWidth()
+                        // Scrolling toward the end of the page takes the whole expanded bar down in size, about its foot,
+                        // so it keeps its distance from the screen's edge, until it folds; scrolling back gives it again.
+                        .graphicsLayer {
+                            val scale = 1f - NAV_SHRINK * navShrink()
+                            scaleX = scale
+                            scaleY = scale
+                            transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)
+                        }
                         .onSizeChanged { floatingBarsHeight.intValue = it.height },
                 ) {
                     QueueActionNoticeHost(queueNotice)
@@ -7767,6 +7756,9 @@ private val PLAYER_PULL_FLING_VELOCITY = 400.dp
  * [content] in a recompose scope of its own, so state read inside it
  * recomposes it alone rather than everything it is written in.
  */
+/** How much smaller the expanded bar is the moment before it folds. */
+private const val NAV_SHRINK = 0.06f
+
 /** The grouped grey a settings page stands on in the light theme, and the account sheet's. */
 private val GroupedLightPage = Color(0xFFF2F2F7)
 

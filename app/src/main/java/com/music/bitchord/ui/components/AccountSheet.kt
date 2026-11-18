@@ -138,7 +138,7 @@ fun AccountSheet(
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.42f * progress.value.coerceIn(0f, 1f)))
+                .background(Color.Black.copy(alpha = 0.42f * progress.value.coerceIn(0f, 1f) * (1f - (dragPx / heightPx.coerceAtLeast(1f)).coerceIn(0f, 1f))))
                 .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }, onClick = onDismiss),
         )
         Column(
@@ -162,8 +162,19 @@ fun AccountSheet(
                         state = rememberDraggableState { dragPx += it },
                         onDragStopped = { velocity ->
                             if (dragPx > 140f || velocity > 1400f) {
-                                onDismiss()
-                                scope.launch { dragPx = 0f }
+                                // Let go: on from where the finger left it, off the screen, at the speed it had; only
+                                // then is the sheet put away. Put away first, it went back to the top and closed from there.
+                                scope.launch {
+                                    val away = Animatable(dragPx)
+                                    away.animateTo(
+                                        targetValue = heightPx,
+                                        animationSpec = spring(dampingRatio = 1f, stiffness = 420f),
+                                        initialVelocity = velocity.coerceAtLeast(0f),
+                                    ) { dragPx = value }
+                                    progress.snapTo(0f)
+                                    dragPx = 0f
+                                    onDismiss()
+                                }
                             } else {
                                 scope.launch {
                                     val back = Animatable(dragPx)

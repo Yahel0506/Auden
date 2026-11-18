@@ -294,9 +294,9 @@ private fun LibraryLinkList(links: List<LibraryLink>, onClick: (ShelfItem) -> Un
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 52.dp)
+                    .heightIn(min = 49.dp)
                     .clickable { link.onClick?.invoke() ?: onClick(link.item) }
-                    .padding(horizontal = PAGE_GUTTER, vertical = 3.dp),
+                    .padding(horizontal = PAGE_GUTTER, vertical = 2.dp),
             ) {
                 if (link.logo != null) {
                     // A mark, not a glyph: white on dark, black on light, with
@@ -323,7 +323,7 @@ private fun LibraryLinkList(links: List<LibraryLink>, onClick: (ShelfItem) -> Un
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = link.item.title,
-                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp),
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
                         color = if (onAir) accentColor() else MaterialTheme.colorScheme.onBackground,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
