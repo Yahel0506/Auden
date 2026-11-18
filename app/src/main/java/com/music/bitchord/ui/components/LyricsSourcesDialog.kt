@@ -24,7 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material3.Icon
-import androidx.compose.material3.AlertDialog
+import com.music.bitchord.ui.components.GlassAlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -111,10 +111,7 @@ fun LyricsSourcesDialog(
                     if (reduceDynamicBlur) {
                         Modifier.background(MaterialTheme.colorScheme.surface)
                     } else {
-                        Modifier.optimizedHazeEffect(
-                            state = hazeState,
-                            style = navGlassHazeStyle(),
-                        )
+                        Modifier.alertGlass(shape)
                     },
                 )
                 // Swallows the tap before it reaches the scrim behind, so
@@ -123,7 +120,7 @@ fun LyricsSourcesDialog(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
                     onClick = {},
-                ),
+                ).padding(bottom = ALERT_ACTIONS_BOTTOM),
         ) {
             Column(
                 modifier = Modifier
@@ -177,7 +174,7 @@ fun LyricsSourcesDialog(
                 },
             )
 
-            AlertRule()
+            AlertGap()
             AlertAction(
                 label = stringResource(
                     if (paxSenixApiKey.isBlank()) R.string.paxsenix_api_key_missing
@@ -192,20 +189,20 @@ fun LyricsSourcesDialog(
                 onToggle = { AppSettings.setPrioritizeSyllableSync(!prioritizeSyllableSync) },
             )
 
-            AlertRule()
+            AlertGap()
             AlertAction(
                 label = stringResource(R.string.reset_to_default),
                 emphasised = false,
                 onClick = AppSettings::resetLyricsSourceSettings,
             )
-            AlertRule()
+            AlertGap()
             AlertAction(label = stringResource(R.string.done), emphasised = true, onClick = animatedExit(onDismiss))
         }
     }
 
     if (showPaxSenixKeyDialog) {
         var input by remember(paxSenixApiKey) { mutableStateOf(paxSenixApiKey) }
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { showPaxSenixKeyDialog = false },
             title = { Text(stringResource(R.string.paxsenix_api_key)) },
             text = {

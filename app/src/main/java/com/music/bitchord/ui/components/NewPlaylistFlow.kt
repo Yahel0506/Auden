@@ -6,6 +6,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +26,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.PhoneIphone
@@ -42,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -120,12 +124,13 @@ fun NewPlaylistFlow(
                 when (current) {
                     FlowStep.ROOT -> {
                         Header(stringResource(R.string.new_playlist), null)
-                        Column(Modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(Modifier.fillMaxWidth()) {
                             OptionCard(Icons.Rounded.Add, stringResource(R.string.flow_create_new), stringResource(R.string.flow_create_new_sub)) { step = FlowStep.NEW }
+                            OptionDivider()
                             OptionCard(Icons.Rounded.Download, stringResource(R.string.flow_import), stringResource(R.string.flow_import_sub)) { step = FlowStep.IMPORT_SOURCE }
                         }
                         Spacer(Modifier.height(12.dp))
-                        AlertRule()
+                        AlertGap()
                         AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
                     }
 
@@ -139,48 +144,48 @@ fun NewPlaylistFlow(
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                                 keyboardActions = KeyboardActions(onDone = {}),
                             )
-                            Spacer(Modifier.height(14.dp))
-                            DestinationPicker(signedIn, destination, privacy, { destination = it }, { privacy = it })
                         }
+                        Spacer(Modifier.height(14.dp))
+                        DestinationPicker(signedIn, destination, privacy, { destination = it }, { privacy = it })
                         Spacer(Modifier.height(12.dp))
-                        AlertRule()
+                        AlertGap()
                         AlertAction(
                             label = stringResource(R.string.create_playlist),
                             emphasised = true,
                             enabled = name.isNotBlank(),
                             onClick = animatedExit { onCreate(name.trim(), destination, privacy); onDismiss() },
                         )
-                        AlertRule()
+                        AlertGap()
                         AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
                     }
 
                     FlowStep.IMPORT_SOURCE -> {
                         Header(stringResource(R.string.flow_import_from), back)
-                        Column(Modifier.padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(Modifier.fillMaxWidth()) {
                             OptionCard(Icons.Rounded.Description, stringResource(R.string.flow_src_file), stringResource(R.string.flow_src_file_sub)) {
                                 source = ImportSource.FILE; step = FlowStep.IMPORT_DESTINATION
                             }
+                            OptionDivider()
                             OptionCard(
                                 icon = vectorResource(Res.drawable.ytmusic_mono),
                                 title = stringResource(R.string.flow_dest_yt),
                                 subtitle = stringResource(if (signedIn) R.string.flow_src_yt_link_sub else R.string.flow_src_yt_link_only_sub),
                             ) { source = ImportSource.YT_MUSIC; step = FlowStep.IMPORT_DESTINATION }
+                            OptionDivider()
                             OptionCard(vectorResource(Res.drawable.spotify_mono), stringResource(R.string.flow_src_spotify), stringResource(R.string.flow_src_spotify_sub)) {
                                 source = ImportSource.SPOTIFY; step = FlowStep.IMPORT_DESTINATION
                             }
                         }
                         Spacer(Modifier.height(12.dp))
-                        AlertRule()
+                        AlertGap()
                         AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
                     }
 
                     FlowStep.IMPORT_DESTINATION -> {
                         Header(stringResource(R.string.flow_import_to), back)
-                        Column(Modifier.padding(horizontal = 14.dp)) {
-                            DestinationPicker(signedIn, destination, privacy, { destination = it }, { privacy = it })
-                        }
+                        DestinationPicker(signedIn, destination, privacy, { destination = it }, { privacy = it })
                         Spacer(Modifier.height(12.dp))
-                        AlertRule()
+                        AlertGap()
                         AlertAction(
                             label = stringResource(R.string.flow_continue),
                             emphasised = true,
@@ -192,7 +197,7 @@ fun NewPlaylistFlow(
                                 }
                             },
                         )
-                        AlertRule()
+                        AlertGap()
                         AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
                     }
 
@@ -242,14 +247,14 @@ fun NewPlaylistFlow(
                             }
                         }
                         Spacer(Modifier.height(12.dp))
-                        AlertRule()
+                        AlertGap()
                         AlertAction(
                             label = stringResource(R.string.flow_import_link),
                             emphasised = true,
                             enabled = linked != null,
                             onClick = animatedExit { linked?.let { onImportYouTubeLink(it, destination, privacy) }; onDismiss() },
                         )
-                        AlertRule()
+                        AlertGap()
                         AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
                     }
                 }
@@ -291,7 +296,17 @@ private fun Header(title: String, onBack: (() -> Unit)?) {
     }
 }
 
-/** One choice: its icon in a tinted tile, what it is called and one line on what it does. */
+/** The hairline between two options, inset to where their words start, as a menu's rows have it. */
+@Composable
+private fun OptionDivider() {
+    AlertRule(Modifier.padding(start = 58.dp))
+}
+
+/**
+ * One choice, as a row of the card itself — iOS 26's way — and not a block set into it: its icon at the start, what it
+ * is called and one line on what it does, and at the end either a tick when it is the one chosen or a chevron when it
+ * leads on.
+ */
 @Composable
 private fun OptionCard(
     icon: ImageVector,
@@ -301,39 +316,26 @@ private fun OptionCard(
     selected: Boolean? = null,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(14.dp)
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
     Row(
         Modifier
             .fillMaxWidth()
             .alpha(if (enabled) 1f else 0.45f)
-            .clip(shape)
-            .background(
-                if (selected == true) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f),
-            )
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 11.dp),
+            // A wash over the whole row, as the alert's own answers have it, and no ripple.
+            .background(if (pressed) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.09f) else Color.Transparent)
+            .clickable(enabled = enabled, interactionSource = interactionSource, indication = null, onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 15.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Box(
-            Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
-        }
+        Icon(icon, null, tint = MaterialTheme.colorScheme.onSurface, modifier = Modifier.size(24.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
-            Text(subtitle, fontSize = 13.sp, lineHeight = 16.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(title, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface, maxLines = 1)
         }
-        if (selected != null) {
-            Box(
-                Modifier
-                    .size(22.dp)
-                    .clip(CircleShape)
-                    .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
-                    .then(if (selected) Modifier else Modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))),
-            )
-        } else if (enabled) {
+        if (selected == true) {
+            Icon(Icons.Rounded.Check, null, tint = accentColor(), modifier = Modifier.size(22.dp))
+        } else if (selected == null && enabled) {
             Icon(SfIcons.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(14.dp))
         }
     }
@@ -353,13 +355,14 @@ private fun DestinationPicker(
         fontSize = 12.sp,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+        modifier = Modifier.padding(start = 20.dp, bottom = 4.dp),
     )
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth()) {
         OptionCard(
             Icons.Rounded.PhoneIphone, stringResource(R.string.flow_dest_device), stringResource(R.string.flow_dest_device_sub),
             selected = destination == PlaylistDestination.DEVICE,
         ) { onDestination(PlaylistDestination.DEVICE) }
+        OptionDivider()
         OptionCard(
             Icons.Rounded.Public, stringResource(R.string.flow_dest_yt),
             stringResource(if (signedIn) R.string.flow_dest_yt_sub else R.string.flow_sign_in_needed),
@@ -373,21 +376,22 @@ private fun DestinationPicker(
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 4.dp, top = 14.dp, bottom = 6.dp),
+            modifier = Modifier.padding(start = 20.dp, top = 14.dp, bottom = 8.dp),
         )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PlaylistPrivacy.entries.filter { it != PlaylistPrivacy.DEVICE }.forEach { option ->
                 val on = option == privacy
+                val accent = accentColor()
                 Box(
                     Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(percent = 50))
-                        .background(if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.09f))
+                        .background(if (on) accent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.09f))
                         .clickable { onPrivacy(option) }
                         .padding(vertical = 8.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(option.label, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = if (on) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)
+                    Text(option.label, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = if (on) (if (accent.luminance() > 0.55f) Color.Black else Color.White) else MaterialTheme.colorScheme.onSurface)
                 }
             }
         }

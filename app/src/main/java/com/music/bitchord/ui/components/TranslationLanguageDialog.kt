@@ -119,17 +119,14 @@ fun TranslationLanguageDialog(
                     if (reduceDynamicBlur) {
                         Modifier.background(MaterialTheme.colorScheme.surface)
                     } else {
-                        Modifier.optimizedHazeEffect(
-                            state = hazeState,
-                            style = navGlassHazeStyle(),
-                        )
+                        Modifier.alertGlass(shape)
                     },
                 )
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
                     onClick = {},
-                ),
+                ).padding(bottom = ALERT_ACTIONS_BOTTOM),
         ) {
             Column(
                 modifier = Modifier
@@ -213,7 +210,7 @@ fun TranslationLanguageDialog(
 
             // Pinned under the list rather than scrolling away with it: on a
             // list this long the way out has to stay where it was put.
-            AlertRule()
+            AlertGap()
             AlertAction(
                 label = stringResource(R.string.done),
                 emphasised = true,

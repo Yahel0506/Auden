@@ -96,10 +96,7 @@ fun AccountProfileSelector(
                     if (reduceDynamicBlur) {
                         Modifier.background(MaterialTheme.colorScheme.surface)
                     } else {
-                        Modifier.optimizedHazeEffect(
-                            state = hazeState,
-                            style = style,
-                        )
+                        Modifier.alertGlass(shape)
                     },
                 )
                 .clickable(onClick = {}),

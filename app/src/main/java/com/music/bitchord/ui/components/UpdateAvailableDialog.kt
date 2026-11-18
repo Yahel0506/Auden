@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -44,7 +46,7 @@ import dev.chrisbanes.haze.materials.HazeMaterials
 
 /** UIAlertController's own metrics: fixed narrow width, 14pt corner, 44pt rows. */
 internal val ALERT_WIDTH = 270.dp
-internal val ALERT_CORNER = 22.dp
+internal val ALERT_CORNER = 34.dp
 internal val ACTION_HEIGHT = 44.dp
 
 /**
@@ -82,14 +84,29 @@ internal fun AlertAction(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
+    val scheme = MaterialTheme.colorScheme
+    // iOS 26's alert: each answer its own capsule. The one to press is filled in the accent (red for one that deletes),
+    // the others sit on a soft grey and carry the colour in their label.
+    val accent = accentColor()
+    val filled = emphasised
+    val fill = when {
+        filled -> color ?: if (destructive) scheme.error else accent
+        else -> scheme.onSurface.copy(alpha = 0.12f)
+    }
+    // The label on the fill is whichever of black and white holds against it: a white accent takes a black one.
+    val textColor = when {
+        filled -> if (fill.luminance() > 0.55f) Color.Black else Color.White
+        else -> color ?: if (destructive) scheme.error else scheme.onSurface
+    }
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(ACTION_HEIGHT)
-            // iOS washes the whole row instead of drawing a ripple inside it.
-            .background(
-                if (pressed) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.09f) else Color.Transparent,
-            )
+            .padding(horizontal = ALERT_ACTION_INSET, vertical = 3.dp)
+            .height(ACTION_HEIGHT + 2.dp)
+            .clip(androidx.compose.foundation.shape.CircleShape)
+            .background(fill.copy(alpha = fill.alpha * if (enabled) 1f else 0.4f))
+            // A press lightens or darkens the capsule instead of drawing a ripple in it.
+            .background(if (pressed) Color.Black.copy(alpha = 0.14f) else Color.Transparent)
             .clickable(
                 enabled = enabled,
                 indication = null,
@@ -102,12 +119,21 @@ internal fun AlertAction(
             text = label,
             style = MaterialTheme.typography.bodyLarge.copy(
                 fontSize = 17.sp,
-                fontWeight = if (emphasised) FontWeight.W600 else FontWeight.W400,
+                fontWeight = if (emphasised) FontWeight.W600 else FontWeight.W500,
             ),
-            color = (color ?: if (destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
-                .copy(alpha = if (enabled) 1f else 0.4f),
+            color = textColor.copy(alpha = if (enabled) 1f else 0.5f),
         )
     }
+}
+
+/** How far the capsules sit in from the card's sides, and the room left under the last one. */
+internal val ALERT_ACTION_INSET = 14.dp
+internal val ALERT_ACTIONS_BOTTOM = 11.dp
+
+/** What stood between two actions as a hairline: nothing, now that each is a capsule with its own room. */
+@Composable
+internal fun AlertGap() {
+    Spacer(Modifier.height(0.dp))
 }
 
 /** Hairline separator — [HorizontalDivider][androidx.compose.material3.HorizontalDivider]'s 1dp reads as a bar at this scale. */

@@ -179,6 +179,9 @@ fun navGlassTint(): Color {
     return base.copy(alpha = (base.alpha * opacity).coerceIn(0f, 0.97f))
 }
 
+/** How much denser the film of an alert or a menu is than the nav bar's. */
+private const val ALERT_FILM_GAIN = 1.28f
+
 /** How much more opaque the nav bar's glass grows from its centre out to its edges. */
 const val NAV_GLASS_EDGE = 0.3f
 
@@ -410,6 +413,10 @@ fun Modifier.navGlass(shape: CornerBasedShape): Modifier = liquidGlass(
     edgeThickening = NAV_GLASS_EDGE,
 )
 
+/** The film of an alert or a menu: the nav bar's tint, denser. */
+@Composable
+fun alertTint(): Color = navGlassTint().let { it.copy(alpha = (it.alpha * ALERT_FILM_GAIN).coerceAtMost(0.96f)) }
+
 /**
  * The nav bar's glass for a card that holds text (the alerts): the same vibrancy, rim and tint, at the tint's own
  * strength all over, with no lens bending its edges and a softer blur than the bar's so what is behind it does not
@@ -418,7 +425,8 @@ fun Modifier.navGlass(shape: CornerBasedShape): Modifier = liquidGlass(
 @Composable
 fun Modifier.alertGlass(shape: CornerBasedShape): Modifier = liquidGlass(
     shape = shape,
-    surfaceTint = navGlassTint(),
+    // A denser film than the bar's: these hold text, and the page behind should not fight it.
+    surfaceTint = alertTint(),
     rim = NAV_GLASS_RIM,
     blur = 0.7f,
     vibrancy = NAV_GLASS_VIBRANCY,

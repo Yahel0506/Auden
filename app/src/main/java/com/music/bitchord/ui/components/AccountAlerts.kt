@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -99,9 +100,9 @@ fun ListenBrainzTokenAlert(
                 keyboardActions = KeyboardActions(onDone = { onSave() }),
             )
         }
-        AlertRule()
+        AlertGap()
         AlertAction(label = stringResource(R.string.save), emphasised = true, onClick = onSave)
-        AlertRule()
+        AlertGap()
         AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
     }
 }
@@ -140,11 +141,11 @@ fun LikesMergeAlert(
                 textAlign = TextAlign.Center,
             )
         }
-        AlertRule()
+        AlertGap()
         AlertAction(label = stringResource(R.string.likes_merge_upload), emphasised = true, onClick = onUpload)
-        AlertRule()
+        AlertGap()
         AlertAction(label = stringResource(R.string.likes_merge_keep), emphasised = false, onClick = onKeepHere)
-        AlertRule()
+        AlertGap()
         AlertAction(label = stringResource(R.string.likes_merge_later), emphasised = false, onClick = animatedExit(onLater))
     }
 }
@@ -202,14 +203,14 @@ fun LastfmLoginAlert(
                 ),
             )
         }
-        AlertRule()
+        AlertGap()
         AlertAction(
             label = if (loading) stringResource(R.string.signing_in) else stringResource(R.string.sign_in),
             emphasised = true,
             onClick = onSignIn,
             enabled = !loading && usernameInput.isNotBlank() && passwordInput.isNotBlank(),
         )
-        AlertRule()
+        AlertGap()
         AlertAction(
             label = stringResource(R.string.cancel),
             emphasised = false,
@@ -268,14 +269,14 @@ fun DiscordTokenAlert(
                 keyboardActions = KeyboardActions(onDone = { if (tokenInput.isNotBlank()) onSave() }),
             )
         }
-        AlertRule()
+        AlertGap()
         AlertAction(
             label = if (loading) stringResource(R.string.checking) else stringResource(R.string.save),
             emphasised = true,
             onClick = onSave,
             enabled = !loading && tokenInput.isNotBlank(),
         )
-        AlertRule()
+        AlertGap()
         AlertAction(
             label = stringResource(R.string.cancel),
             emphasised = false,
@@ -335,7 +336,7 @@ fun TextValueAlert(
                 keyboardActions = KeyboardActions(onDone = { onSave() }),
             )
         }
-        AlertRule()
+        AlertGap()
         AlertAction(
             label = stringResource(R.string.save),
             emphasised = true,
@@ -343,10 +344,10 @@ fun TextValueAlert(
             enabled = saveEnabled,
         )
         if (onRemove != null) {
-            AlertRule()
+            AlertGap()
             AlertAction(label = stringResource(R.string.remove), emphasised = false, onClick = onRemove)
         }
-        AlertRule()
+        AlertGap()
         AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
     }
 }
@@ -433,7 +434,7 @@ fun ServerEditorAlert(
                 )
             }
         }
-        AlertRule()
+        AlertGap()
         // Above Save rather than beside it: an address is worth checking before
         // it is stored, and a row of three cramped buttons is what the Material
         // dialog did badly.
@@ -443,7 +444,7 @@ fun ServerEditorAlert(
             onClick = onTest,
             enabled = canSubmit && !testing,
         )
-        AlertRule()
+        AlertGap()
         AlertAction(
             label = stringResource(R.string.save),
             emphasised = true,
@@ -451,7 +452,7 @@ fun ServerEditorAlert(
             enabled = canSubmit && !testing,
         )
         if (onRemove != null && removeLabel != null) {
-            AlertRule()
+            AlertGap()
             AlertAction(
                 label = removeLabel,
                 emphasised = false,
@@ -460,7 +461,7 @@ fun ServerEditorAlert(
                 enabled = !testing,
             )
         }
-        AlertRule()
+        AlertGap()
         AlertAction(
             label = stringResource(R.string.cancel),
             emphasised = false,
@@ -671,19 +672,19 @@ fun WebDavConflictAlert(
                 textAlign = TextAlign.Center,
             )
         }
-        AlertRule()
+        AlertGap()
         AlertAction(
             label = stringResource(R.string.webdav_keep_both),
             emphasised = true,
             onClick = onKeepBoth,
         )
-        AlertRule()
+        AlertGap()
         AlertAction(
             label = stringResource(R.string.webdav_overwrite),
             emphasised = false,
             onClick = onOverwrite,
         )
-        AlertRule()
+        AlertGap()
         AlertAction(
             label = stringResource(R.string.webdav_skip),
             emphasised = false,
@@ -737,9 +738,9 @@ fun ConfirmationAlert(
                 textAlign = TextAlign.Center,
             )
         }
-        AlertRule()
+        AlertGap()
         AlertAction(label = confirmLabel, emphasised = true, onClick = animatedExit(onConfirm))
-        AlertRule()
+        AlertGap()
         AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
     }
 }
@@ -811,7 +812,7 @@ private fun InfoAlertFrame(
                 textAlign = TextAlign.Center,
             )
         }
-        AlertRule()
+        AlertGap()
         AlertAction(label = stringResource(android.R.string.ok), emphasised = true, onClick = animatedExit(onDismiss))
     }
 }
@@ -872,7 +873,7 @@ fun <T> ChoiceAlert(
                 onClick = { onSelect(option) },
             )
         }
-        AlertRule()
+        AlertGap()
         AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
     }
 }
@@ -970,9 +971,9 @@ fun ConfirmAlert(
                 textAlign = TextAlign.Center,
             )
         }
-        AlertRule()
+        AlertGap()
         AlertAction(label = confirmLabel, emphasised = true, destructive = destructive, onClick = animatedExit(onConfirm))
-        AlertRule()
+        AlertGap()
         AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
     }
 }
@@ -993,8 +994,44 @@ internal fun AlertScaffold(
     width: androidx.compose.ui.unit.Dp = ALERT_WIDTH,
     /** Softly blurs the screen behind as well as dimming it. */
     blurBackdrop: Boolean = false,
+    /** The player's own dark palette whatever the app's theme is, for an alert opened over the player. */
+    dark: Boolean = false,
+    /** Fills the screen's width less a margin, up to [width] — for a card whose content is wider than an alert's. */
+    fitScreen: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val scheme = MaterialTheme.colorScheme
+    MaterialTheme(
+        colorScheme = if (dark) {
+            scheme.copy(
+                surface = Color(0xFF1C1C1E),
+                background = Color(0xFF000000),
+                onSurface = Color.White,
+                onSurfaceVariant = Color.White.copy(alpha = 0.65f),
+                surfaceVariant = Color(0xFF2C2C2E),
+            )
+        } else {
+            scheme
+        },
+        typography = MaterialTheme.typography,
+        shapes = MaterialTheme.shapes,
+    ) {
+        AlertScaffoldBody(hazeState, onDismiss, frosted, width, blurBackdrop, fitScreen, content)
+    }
+}
+
+@OptIn(ExperimentalHazeMaterialsApi::class)
+@Composable
+private fun AlertScaffoldBody(
+    hazeState: HazeState,
+    onDismiss: () -> Unit,
+    frosted: Boolean,
+    width: androidx.compose.ui.unit.Dp,
+    blurBackdrop: Boolean,
+    fitScreen: Boolean,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val frost = com.music.bitchord.ui.player.LocalPlayerFrost.current
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val shape = RoundedCornerShape(ALERT_CORNER)
     val motion = rememberPopupMotion()
@@ -1019,21 +1056,24 @@ internal fun AlertScaffold(
         }
         Column(
             modifier = Modifier
-                .width(width)
+                .then(
+                    if (fitScreen) Modifier.padding(horizontal = 24.dp).widthIn(max = width).fillMaxWidth() else Modifier.width(width),
+                )
                 .popupCard(motion)
                 .clip(shape)
                 .then(
                     if (reduceDynamicBlur || !frosted) {
                         Modifier.background(MaterialTheme.colorScheme.surface)
                     } else {
-                        Modifier.alertGlass(shape)
+                        // Over the player the glass is the player's own, blurred from its still; elsewhere the page's.
+                        if (frost != null) with(frost) { Modifier.frostPanel(shape, alertTint()) } else Modifier.alertGlass(shape)
                     },
                 )
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
                     onClick = {},
-                ),
+                ).padding(bottom = ALERT_ACTIONS_BOTTOM),
             content = content,
         )
     }

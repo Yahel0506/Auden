@@ -53,7 +53,7 @@ fun FrostedExportPicker(
         FormatRow(PlaylistFormat.M3U8, R.string.export_format_m3u8, R.string.export_format_m3u8_detail, onPick)
         FormatRow(PlaylistFormat.XSPF, R.string.export_format_xspf, R.string.export_format_xspf_detail, onPick)
         FormatRow(PlaylistFormat.AUDEN, R.string.export_format_auden, R.string.export_format_auden_detail, onPick)
-        AlertRule()
+        AlertGap()
         AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
     }
 }

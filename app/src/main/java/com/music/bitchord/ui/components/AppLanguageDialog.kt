@@ -145,10 +145,7 @@ fun AppLanguageDialog(
                     if (reduceDynamicBlur) {
                         Modifier.background(MaterialTheme.colorScheme.surface)
                     } else {
-                        Modifier.optimizedHazeEffect(
-                            state = hazeState,
-                            style = navGlassHazeStyle(),
-                        )
+                        Modifier.alertGlass(shape)
                     },
                 )
                 // Swallows the tap before it reaches the scrim behind, so
@@ -157,7 +154,7 @@ fun AppLanguageDialog(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
                     onClick = {},
-                ),
+                ).padding(bottom = ALERT_ACTIONS_BOTTOM),
         ) {
             Column(
                 modifier = Modifier

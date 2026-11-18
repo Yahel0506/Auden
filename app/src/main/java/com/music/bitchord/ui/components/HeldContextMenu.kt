@@ -205,7 +205,7 @@ fun <T : Any> HeldContextMenu(
                         if (reduceDynamicBlur) {
                             Modifier.background(plate)
                         } else {
-                            Modifier.optimizedHazeEffect(state = hazeState, style = navGlassHazeStyle())
+                            Modifier.alertGlass(cardShape)
                         },
                     )
                     .border(0.5.dp, hairline, cardShape)
@@ -236,6 +236,7 @@ fun <T : Any> HeldContextMenu(
                     .iosMenuPanel(
                         translucent = true,
                         hazeState = hazeState,
+                        backdrop = LocalAppBackdrop.current,
                         fillOverride = if (reduceDynamicBlur) plate else null,
                         rimOverride = hairline,
                     )

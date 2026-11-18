@@ -259,10 +259,7 @@ fun DacVolumeHud(hazeState: HazeState) {
                         } else {
                             // A light frost, as iOS draws it: the page shows
                             // through, blurred and only slightly darkened.
-                            Modifier.optimizedHazeEffect(
-                                state = hazeState,
-                                style = navGlassHazeStyle(),
-                            )
+                            Modifier.alertGlass(RoundedCornerShape(percent = 50))
                         },
                     )
                     .border(0.5.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(percent = 50))

@@ -97,13 +97,13 @@ private fun Offer(items: List<MetadataRepair.Accepted>) {
             )
         }
     }
-    AlertRule()
+    AlertGap()
     AlertAction(
         label = stringResource(R.string.metadata_repair_action),
         emphasised = true,
         onClick = { MetadataRepair.startOffered(context) },
     )
-    AlertRule()
+    AlertGap()
     AlertAction(label = stringResource(R.string.metadata_repair_not_now), emphasised = false, onClick = animatedExit { MetadataRepair.dismiss() })
 }
 
@@ -136,7 +136,7 @@ private fun Running(s: MetadataRepair.Session) {
             s.results.takeLast(5).reversed().forEach { ResultLine(it) }
         }
     }
-    AlertRule()
+    AlertGap()
     AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = { MetadataRepair.cancel() })
 }
 
@@ -181,7 +181,7 @@ private fun Summary(s: MetadataRepair.Session) {
             }
         }
     }
-    AlertRule()
+    AlertGap()
     AlertAction(label = stringResource(android.R.string.ok), emphasised = true, onClick = animatedExit { MetadataRepair.dismiss() })
 }
 

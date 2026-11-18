@@ -293,7 +293,7 @@ fun SpotifyImportAlert(
                 onClick = ::start,
                 enabled = link.isNotBlank() && !working,
             )
-            AlertRule()
+            AlertGap()
             AlertAction(
                 label = stringResource(R.string.cancel),
                 emphasised = false,

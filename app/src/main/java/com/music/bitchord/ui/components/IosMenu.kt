@@ -249,7 +249,7 @@ fun Modifier.menuBackdropFrost(backdrop: Backdrop, shape: Shape, fill: Color): M
 private val MENU_LENS_HEIGHT = 20.dp
 private val MENU_LENS_AMOUNT = 24.dp
 private const val MENU_GLASS_SATURATION = 2.3f
-private const val MENU_FILM_SHARE = 0.72f
+private const val MENU_FILM_SHARE = 0.86f
 private const val MENU_EDGE_TINT = 0.4f
 
 private val MENU_BLUR = 18.dp

@@ -88,10 +88,7 @@ fun AccountChannelDialog(
                     if (reduceDynamicBlur) {
                         Modifier.background(MaterialTheme.colorScheme.surface)
                     } else {
-                        Modifier.hazeEffect(
-                            state = hazeState,
-                            style = navGlassHazeStyle(),
-                        )
+                        Modifier.alertGlass(shape)
                     },
                 )
                 // Swallows the tap before it reaches the scrim behind, so
@@ -100,7 +97,7 @@ fun AccountChannelDialog(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
                     onClick = {},
-                ),
+                ).padding(bottom = ALERT_ACTIONS_BOTTOM),
         ) {
             Column(
                 modifier = Modifier
@@ -157,7 +154,7 @@ fun AccountChannelDialog(
                 )
             }
 
-            AlertRule()
+            AlertGap()
             // The route that cannot be wrong about what exists. YouTube's own
             // Accounts list is the authority on which channels this login has,
             // and picking there means the session is read from a page already
@@ -167,7 +164,7 @@ fun AccountChannelDialog(
                 emphasised = channels.isEmpty(),
                 onClick = onChooseInYouTube,
             )
-            AlertRule()
+            AlertGap()
             AlertAction(label = "Close", emphasised = false, onClick = animatedExit(onDismiss))
         }
     }

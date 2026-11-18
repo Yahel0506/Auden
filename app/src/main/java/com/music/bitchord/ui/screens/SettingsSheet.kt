@@ -137,7 +137,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatDelegate
 import com.music.bitchord.data.lyrics.translationLanguageName
-import androidx.compose.material3.AlertDialog
+import com.music.bitchord.ui.components.GlassAlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -2442,7 +2442,7 @@ fun SettingsScreen(
 
     // Everything in the Cached songs folder goes with it, so say so first.
     if (confirmClearSongCache) {
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { confirmClearSongCache = false },
             title = { Text(stringResource(R.string.clear_song_cache_title)) },
             text = { Text(stringResource(R.string.clear_song_cache_warning)) },
@@ -2468,7 +2468,7 @@ fun SettingsScreen(
     // thing being confirmed is that this device's own history is about to be
     // thrown away, and that is true whichever file gets picked.
     if (confirmImport) {
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { confirmImport = false },
             title = { Text(stringResource(R.string.import_backup_title)) },
             text = {
@@ -2491,7 +2491,7 @@ fun SettingsScreen(
     }
 
     if (showPerformanceWarning) {
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { showPerformanceWarning = false },
             title = { Text(stringResource(R.string.high_performance_before_enabling)) },
             text = { Text(stringResource(R.string.high_performance_battery_warning)) },
@@ -2520,7 +2520,7 @@ fun SettingsScreen(
     }
 
     if (showPerformanceConfirmation) {
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { showPerformanceConfirmation = false },
             title = { Text(stringResource(R.string.enable_high_performance_title)) },
             text = { Text(stringResource(R.string.enable_high_performance_confirmation)) },
@@ -2544,7 +2544,7 @@ fun SettingsScreen(
 
     if (showListenBrainzTokenDialog) {
         var tokenInput by remember { mutableStateOf(listenBrainzToken) }
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { showListenBrainzTokenDialog = false },
             title = { Text(stringResource(R.string.listenbrainz_token)) },
             text = {
@@ -2577,7 +2577,7 @@ fun SettingsScreen(
         var passwordInput by remember { mutableStateOf("") }
         var lastfmError by remember { mutableStateOf<String?>(null) }
         var lastfmLoading by remember { mutableStateOf(false) }
-        AlertDialog(
+        GlassAlertDialog(
             onDismissRequest = { if (!lastfmLoading) showLastfmLoginDialog = false },
             title = { Text(stringResource(R.string.lastfm_login)) },
             text = {

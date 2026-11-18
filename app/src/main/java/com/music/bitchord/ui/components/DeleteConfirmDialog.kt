@@ -61,7 +61,7 @@ fun FrostedDeleteConfirm(
                 textAlign = TextAlign.Center,
             )
         }
-        AlertRule()
+        AlertGap()
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             AlertAction(
                 label = stringResource(R.string.cancel),
@@ -69,9 +69,6 @@ fun FrostedDeleteConfirm(
                 onClick = animatedExit(onDismiss),
                 modifier = Modifier.weight(1f),
             )
-            Column(
-                Modifier.width(0.5.dp).fillMaxHeight().background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)),
-            ) {}
             AlertAction(
                 label = stringResource(R.string.delete),
                 emphasised = true,
