@@ -9,6 +9,9 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.widget.Toast
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -275,6 +278,34 @@ class AndroidPlayerHost(context: Context) : PlayerHost {
             isPlaying = isPlaying,
         )
 
+    // The Automix mix view, as one of the app's alerts: the same card, glass and capsule to close it, in the player's
+    // dark palette and glass.
+    @Composable
+    override fun MixViewDialog(
+        hazeState: HazeState,
+        visible: Boolean,
+        onDismiss: () -> Unit,
+        content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+    ) {
+        // Composed only while open: the card plays its own entrance, and closes through its own exit.
+        if (!visible) return
+        com.music.bitchord.ui.components.AlertScaffold(
+            hazeState = hazeState,
+            onDismiss = onDismiss,
+            width = 360.dp,
+            dark = true,
+            fitScreen = true,
+        ) {
+            Column(Modifier.padding(top = 14.dp), content = content)
+            com.music.bitchord.ui.components.AlertGap()
+            com.music.bitchord.ui.components.AlertAction(
+                label = androidx.compose.ui.res.stringResource(com.music.bitchord.R.string.done),
+                emphasised = true,
+                onClick = com.music.bitchord.ui.components.animatedExit(onDismiss),
+            )
+        }
+    }
+
     // The ⋯ menu's own material: a still of the player, blurred under each
     // panel exactly as [menuBackdropFrost] blurs it under the menu. Below
     // Android 12 there is no RenderEffect to blur it with.
@@ -412,7 +443,7 @@ private class MusicStreamVolume(private val context: Context) : SystemVolume {
     }
 }
 
-private class BackdropPlayerFrost(private val backdrop: SnapshotBackdrop) : PlayerFrost {
+internal class BackdropPlayerFrost(private val backdrop: SnapshotBackdrop) : PlayerFrost {
     @Composable
     override fun Modifier.frostSource(): Modifier = snapshotBackdropSource(backdrop)
 

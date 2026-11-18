@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -152,19 +153,17 @@ private const val SilentAlpha = 0.32f
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 internal fun MixViewPopup(
-    view: MixTransitionView?,
     visible: Boolean,
-    /** False once the blend has finished: the popup stays up on its last frame, without a playhead. */
-    live: Boolean,
     hazeState: HazeState,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
-    val progress = PlayerSettings.smartMixProgress.collectAsStateWithLifecycle()
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(visible) { shown = visible }
     val scrimAlpha by animateFloatAsState(if (shown) 1f else 0f, tween(200), label = "mixViewScrim")
     val reduceDynamicBlur by PlayerSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+    val frost = LocalPlayerFrost.current
 
     Box(
         modifier = modifier
@@ -199,6 +198,9 @@ internal fun MixViewPopup(
                     .then(
                         if (reduceDynamicBlur) {
                             Modifier.background(PopupColor)
+                        } else if (frost != null) {
+                            // The player's own glass, as the menus and the output popups have it.
+                            with(frost) { Modifier.frostPanel(PopupShape, PopupColor.copy(alpha = 0.9f)) }
                         } else {
                             Modifier
                                 .optimizedHazeEffect(
@@ -217,7 +219,7 @@ internal fun MixViewPopup(
                     .padding(vertical = 14.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                MixViewContent(view ?: PlaceholderView, progress, live)
+                content()
             }
         }
     }
@@ -825,11 +827,13 @@ internal fun MixViewOverlay(hazeState: HazeState) {
     }
     PlayerBackHandler(enabled = open) { MixViewRequest.open = false }
     if (!open && held == null) return
-    MixViewPopup(
-        view = held,
-        visible = open,
-        live = currentBlend != null,
+    val progress = PlayerSettings.smartMixProgress.collectAsStateWithLifecycle()
+    // The frame is the platform's, so the mix view is one of its alerts; what is drawn in it is this file's.
+    PlayerPlatform.host.MixViewDialog(
         hazeState = hazeState,
+        visible = open,
         onDismiss = { MixViewRequest.open = false },
-    )
+    ) {
+        MixViewContent(held ?: PlaceholderView, progress, currentBlend != null)
+    }
 }

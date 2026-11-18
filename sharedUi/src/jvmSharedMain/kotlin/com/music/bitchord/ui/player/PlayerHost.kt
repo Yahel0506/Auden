@@ -1,5 +1,6 @@
 package com.music.bitchord.ui.player
 
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -143,6 +144,15 @@ interface PlayerHost {
 
     /** Make the watch the speaker. */
     fun selectWatchOutput() = Unit
+
+    /**
+     * The Automix mix view's frame: [content] is what is drawn in it, the frame — a scrim, a card, a way to close it —
+     * is the platform's, so the view reads as one of its alerts. [visible] opens and closes it; it is composed until
+     * the caller stops composing it, so it can play its exit.
+     */
+    @Composable
+    fun MixViewDialog(hazeState: HazeState, visible: Boolean, onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) =
+        MixViewPopup(visible = visible, hazeState = hazeState, onDismiss = onDismiss, content = content)
 
     /** The device picker the output drawer's Cast row opens, in the pipeline dialog's card. */
     @Composable

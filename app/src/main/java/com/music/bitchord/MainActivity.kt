@@ -96,6 +96,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Surface
 import androidx.compose.material3.AlertDialog
+import com.music.bitchord.ui.components.alertGlass
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -4829,6 +4830,18 @@ private fun BitChordApp(
 
         // The DJ can be asked for with nothing loaded: its player is up while it chooses.
         val playerRaised = showNowPlaying && (playerSong != null || djStarted.pending)
+        // Closing the player takes with it whatever was opened from it: the alerts and the menus it drew, and the
+        // song's information and the Automix view, which are held outside it and would otherwise be left up (or turn
+        // up over the page).
+        LaunchedEffect(playerRaised) {
+            if (!playerRaised) {
+                com.music.bitchord.ui.components.SongInfoRequest.close()
+                MixViewRequest.open = false
+                showLyricsSources = false
+                audioOutputMenu.open = false
+                djMenuUp = false
+            }
+        }
 
         // ---- The page's still, for a menu hung over it ----
         // Taken as a ⋮ or ⋯ menu opens over a page, let go once it has played
@@ -5437,8 +5450,9 @@ private fun BitChordApp(
                     // sheet's own window, as the menu has to be to sit above
                     // the player. Not under "reduce dynamic blur": the panel
                     // is opaque then.
+                    val songInfoUp = com.music.bitchord.ui.components.SongInfoRequest.pending != null
                     val playerMenuUp = (songActions != null && songMenuOrigin == null && menuFromPlayer) || djMenuUp ||
-                        audioOutputMenu.open
+                        audioOutputMenu.open || songInfoUp
                     // Taken as the output menu opens, like the ⋯'s (see onOpenMenu), for its glass to blur.
                     LaunchedEffect(audioOutputMenu.open) {
                         if (audioOutputMenu.open && !AppSettings.reduceDynamicBlur.value && !playerLiveCanvas) {
@@ -5490,6 +5504,19 @@ private fun BitChordApp(
                             onPipeline = { audioOutputMenu.request(AudioOutputAction.PIPELINE) },
                             onDismiss = { audioOutputMenu.open = false },
                         )
+                    }
+                    // The song's information, as an alert over the player: drawn in this window, the one above it, and
+                    // over the still of the player taken as it opens, as the menus above are.
+                    LaunchedEffect(songInfoUp) {
+                        if (songInfoUp && !AppSettings.reduceDynamicBlur.value && !playerLiveCanvas) playerBackdrop.capture()
+                    }
+                    val infoFrost = if (!playerLiveCanvas && !reduceDynamicBlur && isGlassSupported()) {
+                        remember(playerBackdrop) { com.music.bitchord.ui.player.BackdropPlayerFrost(playerBackdrop) }
+                    } else {
+                        null
+                    }
+                    CompositionLocalProvider(com.music.bitchord.ui.player.LocalPlayerFrost provides infoFrost) {
+                        com.music.bitchord.ui.components.SongInfoAlert(hazeState)
                     }
                     // The DJ's: the same glass, hung off the DJ's button.
                     IosMenuPopover(
@@ -5597,6 +5624,9 @@ private fun BitChordApp(
             ) { song ->
                 songMenuBody(song)
             }
+            // The song's information, from a page. Raised, the player is a sheet in a window of its own that nothing
+            // drawn here can be over, and the sheet draws it itself (above).
+            if (!playerRaised) com.music.bitchord.ui.components.SongInfoAlert(hazeState)
             // A closed menu forgets where it was held and what it hung off, so
             // whatever opens it next starts from nothing.
             LaunchedEffect(songActions == null) {
@@ -7425,7 +7455,8 @@ private fun FrostedMenuPanel(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
-    val shape = MaterialTheme.shapes.extraLarge
+    // iOS 26's menu corner, as the player's menus have it.
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(33.dp)
     val motion = rememberPopupMotion()
     PopupBox(
         motion = motion,
@@ -7446,10 +7477,7 @@ private fun FrostedMenuPanel(
                     if (reduceDynamicBlur) {
                         Modifier.background(MaterialTheme.colorScheme.surface)
                     } else {
-                        Modifier.optimizedHazeEffect(
-                            state = hazeState,
-                            style = com.music.bitchord.ui.components.navGlassHazeStyle(),
-                        )
+                        Modifier.alertGlass(shape as androidx.compose.foundation.shape.CornerBasedShape)
                     },
                 )
                 .clickable(onClick = {}),
@@ -7475,26 +7503,30 @@ private fun FrostedMenuRow(
             .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // iOS 26's menus carry the glyph, or the tick, at the leading side, in a column of its own that every row keeps.
+        Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+            if (checked) {
+                Icon(
+                    Icons.Rounded.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp),
+                )
+            } else if (icon != null) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+        Spacer(Modifier.width(14.dp))
         Text(
             label,
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f),
         )
-        if (checked) {
-            Icon(
-                Icons.Rounded.Check,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
-        } else if (icon != null) {
-            Spacer(Modifier.width(16.dp))
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp),
-            )
-        }
     }
 }
 

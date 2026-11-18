@@ -198,13 +198,11 @@ fun SongActionsMenu(
      */
     onSelect: (() -> Unit)? = null,
 ) {
-    var showingSongInfo by remember(song.videoId) { mutableStateOf(false) }
     var pickingSleepTimer by remember { mutableStateOf(false) }
     var otherOpen by remember(song.videoId) { mutableStateOf(false) }
     // Managing the song's downloaded files is a page of this menu, in whatever panel the menu is in.
     var managing by remember(song.videoId) { mutableStateOf(false) }
     // A menu has no pages to swap, so Song Info opens as a dialog.
-    if (showingSongInfo) SongInfoDialog(song, onDismiss = { showingSongInfo = false }, onOpenAlbum = onOpenAlbum, onOpenArtist = onOpenArtist)
     // Neutral rather than the sleeve's colours: the panel floats over the page
     // or the player, and an accent pitched against the artwork's tint is not
     // guaranteed to read against the panel.
@@ -256,8 +254,6 @@ fun SongActionsMenu(
                 shareAction?.let {
                     IosMenuQuickAction(icon = SfIcons.Share, label = stringResource(R.string.share), onClick = it)
                 }
-                // What is known of the song, with the way to its artist and its album.
-                IosMenuQuickAction(icon = SfIcons.Info, label = stringResource(R.string.song_info), onClick = { showingSongInfo = true })
             }
         }
 
@@ -388,6 +384,34 @@ fun SongActionsMenu(
                 label = stringResource(R.string.remove_from_history),
                 accent = palette.accent,
                 onClick = it,
+            )
+        }
+
+        // The way to the song's artist and its album, and what is known of it, in a group of their own, the
+        // information last.
+        run {
+            if (startsGroup()) IosMenuSeparator()
+            song.artistId?.let { id ->
+                ActionRow(
+                    icon = SfIcons.Artist,
+                    label = stringResource(R.string.open_artist),
+                    accent = palette.accent,
+                    onClick = { onOpenArtist(id) },
+                )
+            }
+            song.albumId?.let { id ->
+                ActionRow(
+                    icon = SfIcons.Album,
+                    label = stringResource(R.string.open_album),
+                    accent = palette.accent,
+                    onClick = { onOpenAlbum(id) },
+                )
+            }
+            ActionRow(
+                icon = SfIcons.Info,
+                label = stringResource(R.string.song_info),
+                accent = palette.accent,
+                onClick = { SongInfoRequest.show(song) },
             )
         }
 
