@@ -562,14 +562,15 @@ internal fun GlassSelectionPill(
                         // The surroundings carried in at the rim: the bar's edge, running just inside the drop,
                         // is bent inward from it instead of being folded away.
                         inward = false,
-                        chromaticStrength = 1.1f,
+                        chromaticStrength = 0.4f,
                     )
                 }
             },
             highlight = {
                 val alpha = motion.material * rimOf(motion.glassPresence)
-                // A dark edge, not a light one: laid over, not added to, what is under it.
-                if (alpha > 0f) DROP_RIM.copy(alpha = alpha * 0.6f) else null
+                // The bar's own rim, with the same strength and tint: light along the top and bottom, a fine black
+                // line at the ends, which fade away together as the drop lands.
+                if (alpha > 0f) com.music.bitchord.ui.components.NAV_GLASS_RIM.copy(alpha = alpha) else null
             },
             shadow = {
                 val alpha = motion.material * rimOf(motion.glassPresence)
@@ -585,13 +586,6 @@ private fun rimOf(presence: Float): Float = ((presence - 0.45f) / 0.55f).coerceI
 /** The drop's edge: a wider and stronger bend than the bar's, the clear centre left as it is. */
 /** How far the bar's edge, as the drop sees it, is pressed in from where it really is. */
 private val BAR_EDGE_DENT = 8.dp
-
-private val DROP_RIM = Highlight(
-    style = com.music.bitchord.ui.components.backdrop.highlight.HighlightStyle.Default(
-        color = Color.Black,
-        blendMode = androidx.compose.ui.graphics.BlendMode.SrcOver,
-    ),
-)
 
 private val LENS_HEIGHT = 22.dp
 private val LENS_AMOUNT = 14.dp
@@ -677,9 +671,14 @@ private class SelectionPillBackdrop(
         val barSize = Size(glass.size.width.toFloat() - 2f * dent, glass.size.height.toFloat() - 2f * dent)
         val radius = androidx.compose.ui.geometry.CornerRadius(barSize.height / 2f)
         val stroke = { width: Float -> androidx.compose.ui.graphics.drawscope.Stroke(width) }
-        // The rim as the bar has it: a fine bright line, with the faint light just inside it.
-        drawRoundRect(Color.White.copy(alpha = 0.04f * lift()), topLeft, barSize, radius, style = stroke(7.dp.toPx()))
-        drawRoundRect(Color.White.copy(alpha = 0.15f * lift()), topLeft, barSize, radius, style = stroke(1.8.dp.toPx()))
+        // The rim as the bar has it: a fine bright line, the light fading out smoothly from it. Many hairline strokes,
+        // each a little narrower than the last and each a little light, add up to a ramp; two broad strokes of their
+        // own showed as separate bands.
+        val steps = 10
+        for (i in 0 until steps) {
+            val width = (1.2f + 0.7f * i).dp.toPx()
+            drawRoundRect(Color.White.copy(alpha = 0.017f * lift()), topLeft, barSize, radius, style = stroke(width))
+        }
     }
 
     /** The bar's rounded outline, in the drop's own coordinates; null until both are placed. */

@@ -13,6 +13,7 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -790,12 +791,23 @@ private fun GlassNowPlaying(
  * The selected tab's accent: what is drawn is kept as a mask and filled with one flat blue — Apple Music's
  * place for its red, in Auden's colour.
  */
-internal fun Modifier.navAccent(color: Color): Modifier = this
-    .graphicsLayer(compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen)
-    .drawWithContent {
-        drawContent()
-        drawRect(color = color, blendMode = androidx.compose.ui.graphics.BlendMode.SrcIn)
-    }
+internal fun Modifier.navAccent(color: Color): Modifier = composed {
+    // While the drop is out of the bar it carries the accent itself (it refracts every tab in it), so the open
+    // tab's own goes back to the plain colour; it returns as the drop lands.
+    val whitening = LocalNavAccentWhitening.current
+    Modifier
+        .graphicsLayer(compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen)
+        .drawWithContent {
+            drawContent()
+            val share = 1f - whitening().coerceIn(0f, 1f)
+            if (share > 0f) {
+                drawRect(color = color.copy(alpha = color.alpha * share), blendMode = androidx.compose.ui.graphics.BlendMode.SrcAtop)
+            }
+        }
+}
+
+/** How far the glass drop has lifted out of the tab bar, 0 to 1: the open tab's accent gives way to it. */
+internal val LocalNavAccentWhitening = androidx.compose.runtime.compositionLocalOf<() -> Float> { { 0f } }
 
 /**
  * How far the first and last tabs sit from the bar's ends: more than the tabs' own spacing, which closes them up

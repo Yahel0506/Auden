@@ -60,6 +60,10 @@ import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerEventPass
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -79,6 +83,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.CompositionLocalProvider
@@ -102,6 +108,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.animation.BoundsTransform
@@ -868,6 +876,22 @@ private fun SharedTransitionScope.ExpandedTabs(
     val barGlass = rememberLayerBackdrop()
     val tabRow = rememberLayerBackdrop()
 
+    // A plain tap: the oval the selection leaves behind lights up on the tapped tab and fades, while the drop
+    // makes its way there.
+    var tapGlowIndex by remember { mutableIntStateOf(-1) }
+    val tapGlow = remember { androidx.compose.animation.core.Animatable(0f) }
+
+    // And a still press: the oval stays lit on the tab under the finger for as long as it is held, and fades on
+    // letting go.
+    var pressedTab by remember { mutableIntStateOf(-1) }
+    val pressGlow by animateFloatAsState(
+        targetValue = if (pressedTab >= 0 && !reduceAnimation) 1f else 0f,
+        animationSpec = tween(if (pressedTab >= 0) 260 else 480),
+        label = "tabPressGlow",
+    )
+    var pressedShown by remember { mutableIntStateOf(-1) }
+    if (pressedTab >= 0) pressedShown = pressedTab
+
     var rowSize by remember { mutableStateOf(IntSize.Zero) }
     var lastHapticTab by remember { mutableIntStateOf(selectedTabIndex) }
     var lastSelectedTabIndex by remember { mutableIntStateOf(selectedTabIndex) }
@@ -1032,12 +1056,77 @@ private fun SharedTransitionScope.ExpandedTabs(
                     )
                 }
 
+                val glowIndex = if (pressGlow > tapGlow.value || tapGlowIndex < 0) pressedShown else tapGlowIndex
+                val glowAmount = maxOf(pressGlow, if (tapGlowIndex >= 0) tapGlow.value else 0f)
+                if (glowIndex >= 0 && glowIndex != selectedTabIndex && glowAmount > 0.01f && tabWidthPx > 0f) {
+                    // A glow, not a shape: a soft white that is brightest in the middle and has faded out before the oval's
+                    // edge, so it has no edge of its own to see.
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            .pillPlacement(
+                                center = { pillCenterInRow(glowIndex.toFloat()) },
+                                size = { restSize },
+                            )
+                            .drawBehind {
+                                val a = 0.34f * glowAmount
+                                // Wider than the oval itself, and its colour held out nearly to the edge, so it reads as
+                                // a light and not a smudge.
+                                val r = size.width * 0.66f
+                                scale(scaleX = 1f, scaleY = size.height / size.width * 1.15f) {
+                                    drawCircle(
+                                        brush = Brush.radialGradient(
+                                            0f to Color.White.copy(alpha = a),
+                                            0.5f to Color.White.copy(alpha = a * 0.75f),
+                                            0.8f to Color.White.copy(alpha = a * 0.3f),
+                                            1f to Color.Transparent,
+                                            center = center,
+                                            radius = r,
+                                        ),
+                                        radius = r,
+                                    )
+                                }
+                            },
+                    )
+                }
+
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(sizes.tabSpacing),
                     modifier = Modifier
                         .fillMaxWidth()
                         .onSizeChanged { rowSize = it }
                         .layerBackdrop(tabRow)
+                        .pointerInput(Unit) {
+                            // Watches only: nothing here is consumed, so taps and drags go on as they were.
+                            awaitEachGesture {
+                                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                                val step = currentTabStepPx
+                                if (step <= 0f) return@awaitEachGesture
+                                val raw = (down.position.x / step).toInt()
+                                val at = (if (currentIsRtl) cells.lastIndex - raw else raw).coerceIn(0, cells.lastIndex)
+                                val held = withTimeoutOrNull(170L) {
+                                    while (true) {
+                                        val e = awaitPointerEvent(PointerEventPass.Initial)
+                                        val c = e.changes.firstOrNull { it.id == down.id } ?: return@withTimeoutOrNull false
+                                        if (!c.pressed) return@withTimeoutOrNull false
+                                        if ((c.position - down.position).getDistance() > viewConfiguration.touchSlop) return@withTimeoutOrNull false
+                                    }
+                                }
+                                // Null: the timeout ran out with the finger still down and still.
+                                if (held != null) return@awaitEachGesture
+                                pressedTab = at
+                                try {
+                                    while (true) {
+                                        val e = awaitPointerEvent(PointerEventPass.Initial)
+                                        val c = e.changes.firstOrNull { it.id == down.id } ?: break
+                                        if (!c.pressed) break
+                                        if ((c.position - down.position).getDistance() > viewConfiguration.touchSlop * 2f) break
+                                    }
+                                } finally {
+                                    pressedTab = -1
+                                }
+                            }
+                        }
                         .pointerInput(Unit) {
                             var totalDrag = 0f
                             var dragStartIndex = currentSelectedTabIndex
@@ -1098,6 +1187,9 @@ private fun SharedTransitionScope.ExpandedTabs(
                             )
                         }
                 ) {
+                  CompositionLocalProvider(
+                      com.music.bitchord.ui.components.LocalNavAccentWhitening provides { if (glassPill) pill.material else 0f },
+                  ) {
                     cells.forEach { tab ->
                         val isSelected = tab.key == selectedTabKey
                         val isExtra = tab.key == extraTab?.key
@@ -1155,13 +1247,26 @@ private fun SharedTransitionScope.ExpandedTabs(
                                 .skipToLookaheadSize()
                                 .clip(shapes.tabShape)
                                 .clickable(
-                                    onClick = tab.onClick,
+                                    onClick = {
+                                        val at = cells.indexOf(tab)
+                                        if (at >= 0 && at != selectedTabIndex && !reduceAnimation) {
+                                            coroutineScope.launch {
+                                                tapGlowIndex = at
+                                                tapGlow.snapTo(0f)
+                                                tapGlow.animateTo(1f, tween(220))
+                                                tapGlow.animateTo(0f, tween(520))
+                                                tapGlowIndex = -1
+                                            }
+                                        }
+                                        tab.onClick()
+                                    },
                                     indication = tab.indication?.invoke(),
                                     interactionSource = remember { MutableInteractionSource() }
                                 )
                                 .padding(sizes.tabExpandedContentPadding)
                         )
                     }
+                  }
                 }
             }
         }
