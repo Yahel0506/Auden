@@ -362,17 +362,22 @@ private fun ArtworkPageBackButton(
         MaterialTheme.colorScheme.onSurface
     }
 
-    IconButton(
-        onClick = onClick,
-        modifier = modifier
-            .size(TOP_CONTROL_SIZE)
-            .then(artworkPageSurface(shape = shape, hazeState = hazeState)),
-    ) {
-        Icon(
-            SfIcons.ArrowBack,
-            contentDescription = stringResource(R.string.back),
-            tint = contentColor,
-        )
+    // Its touch target held to the circle's own size, as the actions' pill holds theirs: IconButton otherwise lays
+    // its content out at Material's 48dp minimum inside the 44dp glass, a second, larger circle round the glass's own,
+    // and the glass's rim then reads as a frame drawn inside the button.
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides TOP_CONTROL_SIZE) {
+        IconButton(
+            onClick = onClick,
+            modifier = modifier
+                .size(TOP_CONTROL_SIZE)
+                .then(artworkPageSurface(shape = shape, hazeState = hazeState)),
+        ) {
+            Icon(
+                SfIcons.ArrowBack,
+                contentDescription = stringResource(R.string.back),
+                tint = contentColor,
+            )
+        }
     }
 }
 
