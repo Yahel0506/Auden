@@ -2050,8 +2050,6 @@
     <string name="likes_device_link">Me gusta en este dispositivo</string>
     <string name="likes_uploaded">Se añadieron %1$d me gusta a tu cuenta</string>
     <string name="my_favorites">Mis favoritas</string>
-    <string name="account_name_header">Tu nombre</string>
-    <string name="account_name_footer">El nombre con el que te ven en las fiestas y en Connect. Déjalo vacío para usar el nombre de tu cuenta.</string>
     <string name="listen_together_as">Como %1$s</string>
     <string name="listen_together_as_where">Cámbialo en Cuenta e integraciones</string>
     <string name="other_functions">Otras funciones</string>
@@ -2064,4 +2062,12 @@
     <string name="show_library_stats_subtitle">Tu resumen de Replay arriba de la Biblioteca</string>
     <string name="edit_pinned">Editar anclados</string>
     <string name="edit_sections">Editar secciones</string>
+    <string name="profile_default_name">Yo</string>
+    <string name="profile_header">Tu perfil</string>
+    <string name="profile_name_footer">El nombre con el que te ven en las fiestas y en Connect. Es tu perfil de Auden: iniciar sesión en otros servicios no lo cambia.</string>
+    <string name="profile_name_footer_room">El nombre con el que te ven en las fiestas y en Connect. Cambiarlo también mueve la sala en la que tus dispositivos se encuentran en la misma red.</string>
+    <string name="profile_photo">Foto</string>
+    <string name="profile_photo_none">Elige una de tu galería. Se queda en este dispositivo.</string>
+    <string name="profile_photo_change">Cambiar la foto</string>
+    <string name="profile_photo_remove">Quitar la foto</string>
 </resources>

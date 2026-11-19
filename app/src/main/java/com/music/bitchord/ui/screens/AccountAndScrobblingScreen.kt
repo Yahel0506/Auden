@@ -105,25 +105,8 @@ fun AccountAndScrobblingScreen(
             }
         }
 
-        // The name this device goes by in a party and in Connect: set once, here, rather than every time a party is made.
-        SettingsGroup(
-            header = stringResource(R.string.account_name_header),
-            footer = stringResource(R.string.account_name_footer),
-        ) {
-            var name by remember { mutableStateOf(com.music.bitchord.data.listentogether.ListenTogether.nickname()) }
-            Box(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                com.music.bitchord.ui.components.PillTextField(
-                    value = name,
-                    onValueChange = {
-                        name = it.take(80)
-                        com.music.bitchord.data.listentogether.ListenTogether.setNickname(name)
-                    },
-                    placeholder = com.music.bitchord.data.listentogether.ListenTogether.myName(),
-                    container = MaterialTheme.colorScheme.surfaceVariant,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
-                )
-            }
-        }
+        // Who you are in Auden: the profile's name and photo. The party and Connect read them.
+        ProfileEditGroup()
 
         SettingsGroup(
             header = stringResource(R.string.spotify),
@@ -350,6 +333,6 @@ fun AccountAndScrobblingScreen(
 
 /** A hairline across the whole card, for setting a destructive row apart from the rows above it. */
 @Composable
-private fun FullWidthDivider() {
+internal fun FullWidthDivider() {
     HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
 }

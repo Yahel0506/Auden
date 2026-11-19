@@ -45,7 +45,8 @@
 - **Smaller rows.** The Library's text rows are a touch smaller and closer.
 - **Likes without an account.** Favorite and like songs without signing into any account, stored locally on your device — with a choice, once signed in, of keeping them on the account or on the device only.
 - **"Favorites" playlist.** An automatic favorites collection with its own cover, in My playlists.
-- **Account nickname.** Set your display nickname in Account settings for your profile and Listen Together parties.
+- **Your Auden profile.** Auden has its own profile now — a name and, if you want, a photo kept on your device — and it is you, whatever services you sign into. Edit it in Account settings; Listen Together and Connect use it. Devices that were already signed in keep the same party identity and Connect room, so nothing disconnects.
+- **A fuller backup.** The backup now carries your on-device likes and playlists, your name and your profile, so a new device that restores it is you straight away.
 - **"Playlist" everywhere.** Spanish says "playlist" instead of "lista de reproducción".
 
 ## Auden DJ

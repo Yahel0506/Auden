@@ -1934,8 +1934,6 @@
     <string name="likes_device_link">Liked on this device</string>
     <string name="likes_uploaded">Added %1$d likes to your account</string>
     <string name="my_favorites">My favorites</string>
-    <string name="account_name_header">Your name</string>
-    <string name="account_name_footer">The name people see for you in parties and in Connect. Leave it empty to use your account’s name.</string>
     <string name="listen_together_as">As %1$s</string>
     <string name="listen_together_as_where">Change it in Account and integrations</string>
     <string name="other_functions">Other functions</string>
@@ -1948,4 +1946,13 @@
     <string name="show_library_stats_subtitle">Your Replay headline at the top of the Library</string>
     <string name="edit_pinned">Edit pinned</string>
     <string name="edit_sections">Edit sections</string>
+    <!-- The Auden profile's name until the listener picks one. -->
+    <string name="profile_default_name">Me</string>
+    <string name="profile_header">Your profile</string>
+    <string name="profile_name_footer">The name people see for you in parties and in Connect. It is your Auden profile: signing into other services does not change it.</string>
+    <string name="profile_name_footer_room">The name people see for you in parties and in Connect. Changing it also moves the room your devices find each other in on the same network.</string>
+    <string name="profile_photo">Photo</string>
+    <string name="profile_photo_none">Pick one from your gallery. It stays on this device.</string>
+    <string name="profile_photo_change">Change the photo</string>
+    <string name="profile_photo_remove">Remove photo</string>
 </resources>

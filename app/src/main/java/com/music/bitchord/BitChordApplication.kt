@@ -179,6 +179,9 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // and the clock offset are not restored — both are re-established on
         // the next connect, which is the only way to be sure they are current.
         ListenTogether.init(this)
+        // The Auden profile, frozen from today's accounts on the first launch that has it. After the
+        // session, AppSettings and ListenTogether: it reads all three.
+        dev.auden.profile.ProfileStore.init(this)
         SearchHistory.init(this)
         LastPlayed.init(this)
         BoundedContextPersistence.init(this)

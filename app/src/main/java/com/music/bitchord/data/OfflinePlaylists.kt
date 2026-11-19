@@ -199,6 +199,43 @@ object OfflinePlaylists {
         mutate { list -> list.filterNot { it.id == id } }
     }
 
+    /**
+     * The whole store, for a backup: the playlists (Liked first, the likes in it) and the hidden account likes.
+     * Taken from memory, not off the disk, so a like made a moment ago is in it even if its write is pending.
+     */
+    fun exportPrefs(): Map<String, Any?> {
+        if (!this::prefs.isInitialized) return emptyMap()
+        return synchronized(lock) {
+            prefs.all + mapOf(KEY_PLAYLISTS to encode(_playlists.value), KEY_HIDDEN to _hidden.value)
+        }
+    }
+
+    /**
+     * Replaces the store with what a backup carried, on disk and in memory. A replace, as the settings
+     * are: keys the backup does not have are cleared.
+     */
+    fun importPrefs(values: Map<String, Any?>) {
+        if (!this::prefs.isInitialized) return
+        synchronized(lock) {
+            prefs.edit().apply {
+                clear()
+                values.forEach { (key, value) ->
+                    when (value) {
+                        is Boolean -> putBoolean(key, value)
+                        is Int -> putInt(key, value)
+                        is Long -> putLong(key, value)
+                        is Float -> putFloat(key, value)
+                        is String -> putString(key, value)
+                        is Set<*> -> putStringSet(key, value.filterIsInstance<String>().toSet())
+                        else -> Unit
+                    }
+                }
+            }.commit()
+            _hidden.value = prefs.getStringSet(KEY_HIDDEN, emptySet()).orEmpty().toSet()
+            publish(load())
+        }
+    }
+
     private inline fun mutate(change: (List<OfflinePlaylist>) -> List<OfflinePlaylist>) {
         synchronized(lock) { publish(change(_playlists.value)) }
     }
@@ -253,19 +290,23 @@ object OfflinePlaylists {
 
     private fun persist(list: List<OfflinePlaylist>) {
         runCatching {
-            val array = JSONArray()
-            list.forEach { playlist ->
-                val songs = JSONArray()
-                playlist.songs.forEach { songs.put(it.toJson()) }
-                array.put(
-                    JSONObject()
-                        .put("id", playlist.id)
-                        .put("title", playlist.title)
-                        .put("songs", songs),
-                )
-            }
-            prefs.edit().putString(KEY_PLAYLISTS, array.toString()).apply()
+            prefs.edit().putString(KEY_PLAYLISTS, encode(list)).apply()
         }.onFailure { DebugLog.w("BitChord", "Offline playlists not saved: ${it.message}") }
+    }
+
+    private fun encode(list: List<OfflinePlaylist>): String {
+        val array = JSONArray()
+        list.forEach { playlist ->
+            val songs = JSONArray()
+            playlist.songs.forEach { songs.put(it.toJson()) }
+            array.put(
+                JSONObject()
+                    .put("id", playlist.id)
+                    .put("title", playlist.title)
+                    .put("songs", songs),
+            )
+        }
+        return array.toString()
     }
 
     private fun Song.toJson(): JSONObject = JSONObject().apply {

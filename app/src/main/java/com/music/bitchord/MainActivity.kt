@@ -3323,11 +3323,12 @@ private fun BitChordApp(
         // together, and taken off again leaves the sheet where it was.
         val accountSheetHost: @Composable () -> Unit = {
             val partyForSheet by com.music.bitchord.data.listentogether.ListenTogether.state.collectAsStateWithLifecycle()
+            val auden = dev.auden.profile.rememberProfileDisplay()
             AccountSheet(
                 open = showAccountSheet,
                 onDismiss = { showAccountSheet = false },
-                accountName = account?.name,
-                accountPhoto = account?.thumbnailUrl,
+                accountName = auden.name,
+                accountPhoto = auden.photo,
                 signedIn = signedIn,
                 activeProfileName = googleAccounts.firstOrNull { it.accountId == activeAccountId }
                     ?.profiles?.firstOrNull { it.profileId == activeProfileId }?.name,

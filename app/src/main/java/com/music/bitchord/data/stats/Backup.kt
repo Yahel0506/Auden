@@ -3,6 +3,8 @@ package com.music.bitchord.data.stats
 import android.content.Context
 import android.net.Uri
 import com.music.bitchord.BuildConfig
+import com.music.bitchord.data.OfflinePlaylists
+import com.music.bitchord.data.listentogether.ListenTogether
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.SearchHistory
 import dev.auden.library.LocalPlaylists
@@ -13,6 +15,7 @@ import dev.auden.library.db.PlaylistEntryEntity
 import dev.auden.library.db.SongLyricsPrefEntity
 import dev.auden.library.db.SpotifyMatchEntity
 import dev.auden.library.db.TrackEntity
+import dev.auden.profile.ProfileStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -35,7 +38,10 @@ import java.time.format.DateTimeFormatter
  * month of listening, and the local library: the songs it knows (with how they
  * were identified and matched), the playlists and their order, the lyrics kept
  * for each song with the chosen provider and timing, and the remembered Spotify
- * matches. Not the audio cache, the downloaded files or the artwork: those are
+ * matches. Also the likes and playlists kept on the device (`OfflinePlaylists`),
+ * the Listen Together nickname and, inside the settings, the Auden profile —
+ * so a restore on a second device makes it the same listener to a party and to
+ * Connect. Not the audio cache, the downloaded files or the artwork: those are
  * megabytes that re-fetch themselves, and a backup that is mostly cache is one
  * nobody keeps. Rows that point at a file keep their pointer; the library
  * indexer drops those that no longer resolve on the device it is restored to.
@@ -95,6 +101,10 @@ object Backup {
                 }.toMap(),
                 listening = buckets,
                 library = library,
+                offlinePlaylists = OfflinePlaylists.exportPrefs().mapNotNull { (key, value) ->
+                    PrefValue.of(value)?.let { key to it }
+                }.toMap(),
+                listenTogether = ListenTogetherData(nickname = ListenTogether.nickname()),
             )
             val text = json.encodeToString(BackupFile.serializer(), file)
             context.contentResolver.openOutputStream(target, "wt")
@@ -132,10 +142,22 @@ object Backup {
                 LocalPlaylists.reload()
             }
             ListeningStats.importAll(file.listening)
+            // Read before the settings are replaced: a file that carries no profile (an older one, or one the
+            // web made) must leave this device's in place rather than reset who it is.
+            val profileBefore = ProfileStore.current()
             AppSettings.importPrefs(file.settings.mapValues { it.value.decoded() })
             // Shares AppSettings' preference file, so it has already been
             // overwritten by the line above — it just doesn't know yet.
             SearchHistory.reload()
+            // Null in a file from before they were carried: those are then left as they are.
+            file.offlinePlaylists?.let { prefs -> OfflinePlaylists.importPrefs(prefs.mapValues { it.value.decoded() }) }
+            file.listenTogether?.let { ListenTogether.restoreNickname(it.nickname) }
+            // Also in AppSettings' file. The profile the backup carried is adopted as it is, with its party id
+            // and Connect room: that is how a second device becomes the same listener.
+            ProfileStore.reloadAfterRestore(
+                restored = file.settings[ProfileStore.KEY]?.decoded() as? String,
+                previous = profileBefore,
+            )
             Summary(
                 months = file.listening.size,
                 settings = file.settings.size,
@@ -180,6 +202,20 @@ object Backup {
         val listening: List<StoredBucket> = emptyList(),
         /** Null in a file from before the local library existed; the import then leaves the library alone. */
         val library: LibraryData? = null,
+        /**
+         * The on-device likes and playlists (`bitchord_offline_playlists`: Liked and its songs, the other
+         * playlists, the hidden account likes), as typed preferences. Null in an older file, or one the web
+         * wrote: the import then leaves them alone. Older builds ignore it.
+         */
+        val offlinePlaylists: Map<String, PrefValue>? = null,
+        /** The Listen Together nickname, which lives outside the settings file. Null: left alone. */
+        val listenTogether: ListenTogetherData? = null,
+    )
+
+    @Serializable
+    data class ListenTogetherData(
+        /** Blank when none was chosen; restored as it is, since a no-account Connect room is its hash. */
+        val nickname: String = "",
     )
 
     /** Auden's own database, row for row. Track ids are kept so playlist entries still point at their songs. */

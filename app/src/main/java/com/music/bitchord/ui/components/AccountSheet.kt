@@ -78,8 +78,10 @@ import kotlin.math.roundToInt
 fun AccountSheet(
     open: Boolean,
     onDismiss: () -> Unit,
+    /** The Auden profile's name and photo (a saved file's path or an https URL), not the YouTube Music account's. */
     accountName: String?,
     accountPhoto: String?,
+    /** Whether a YouTube Music account is connected: only then is its profile row offered. */
     signedIn: Boolean,
     /** The profile in use, shown at the end of its row. */
     activeProfileName: String?,
@@ -221,9 +223,10 @@ fun AccountSheet(
                         Modifier.sheetRow(onSurface, onAccount).padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        if (accountPhoto != null && signedIn) {
+                        val photoModel = dev.auden.profile.ProfilePhoto.model(accountPhoto)
+                        if (photoModel != null) {
                             AsyncImage(
-                                model = accountPhoto,
+                                model = photoModel,
                                 contentDescription = null,
                                 modifier = Modifier.size(58.dp).clip(CircleShape),
                             )
@@ -236,7 +239,7 @@ fun AccountSheet(
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
-                                accountName?.takeIf { signedIn && it.isNotBlank() } ?: stringResource(R.string.not_signed_in),
+                                accountName?.takeIf { it.isNotBlank() } ?: stringResource(R.string.profile_default_name),
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = onSurface,

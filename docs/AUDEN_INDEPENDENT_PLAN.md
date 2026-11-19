@@ -9,7 +9,7 @@ Rama de trabajo: `claude/auden-independent-f19575` (sale de `v2.0.0`, 2.0.0 sin 
 Este documento lo mantiene la sesión que ejecuta el plan; al final de cada fase se marca el
 estado y se anota qué se decidió o se desvió.
 
-**Estado:** plan revisado por el senior (PRE_FLIGHT = ADJUST, ajustes incorporados abajo, marcados «[senior]»). Fase 1 por empezar.
+**Estado:** plan revisado por el senior (PRE_FLIGHT = ADJUST, ajustes incorporados abajo, marcados «[senior]»). Fase 1 hecha; fase 2 por empezar.
 
 ---
 
@@ -239,7 +239,7 @@ worktree. Nada de push ni merge. Checkpoint del senior tras las fases 1, 3 y 5.
 | Fase | Estado | Commit | Notas |
 |---|---|---|---|
 | 0 Base y plan | **hecho** (plan aprobado con ajustes) | — | worktree en `v2.0.0` (`21536f4d`); PRE_FLIGHT del senior: ADJUST incorporado |
-| 1 Perfil e identidad | pendiente | — | |
+| 1 Perfil e identidad | **hecha** | ver `git log` | Núcleo por el senior (TAKEOVER): `dev/auden/profile/*`, congelado de `partyUserId`/`connectRoom`, copia de seguridad ampliada (likes, playlists en prefs, nickname, perfil). UI: cabecera de `AccountSheet` y `ProfileEditGroup` (nombre + foto local). Añadido `nameIsDefault` para que la fiesta siga viendo «Guest». Probado: compila, `ProfileMigrationTest` (16), `ConnectRoomIdTest` sin cambios, Backup. No probado en dispositivo. |
 | 2 Cortar escrituras | pendiente | — | |
 | 3 Orígenes y motor | pendiente | — | |
 | 4 Transfiere tu música | pendiente | — | |

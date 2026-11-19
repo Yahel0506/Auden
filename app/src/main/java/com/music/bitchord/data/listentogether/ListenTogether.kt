@@ -770,7 +770,24 @@ object ListenTogether {
     /** The name this device goes by in a party and in Connect: the one chosen in Account, or what the account is called. */
     fun myName(): String = identity()?.name ?: GUEST_NAME
 
+    /**
+     * The nickname is the Auden profile's name: setting one renames the profile too
+     * ([dev.auden.profile.ProfileStore.setName] comes through here). Kept in its own key as well because
+     * the Connect room of a device with no account is the hash of exactly this string. A blank nickname
+     * leaves the profile's name as it was.
+     */
     fun setNickname(value: String) {
+        val name = value.trim().take(80)
+        prefs.edit().putString(KEY_NICKNAME, name).apply()
+        dev.auden.profile.ProfileStore.onNicknameChanged(name)
+    }
+
+    /**
+     * Puts back the nickname a backup carried, as it was (blank included), without renaming the profile:
+     * the restore brings the profile back on its own.
+     */
+    internal fun restoreNickname(value: String) {
+        if (!this::prefs.isInitialized) return
         prefs.edit().putString(KEY_NICKNAME, value.trim().take(80)).apply()
     }
 
@@ -1475,20 +1492,32 @@ object ListenTogether {
      * real account identifiers would be holding something it has no use for.
      */
     private fun identity(nickname: String = nickname()): Identity? {
-        val store = BitChordApplication.authStore
-        val account = store.activeSession?.takeIf { store.isSignedIn }
+        // The Auden profile is who this device is: its user id was frozen from what the code below computed
+        // the day it was made, so signing in or out of an account no longer changes it.
+        val profile = dev.auden.profile.ProfileStore.current() ?: return accountIdentity(nickname)
+        return Identity(
+            userId = profile.partyUserId?.takeIf { it.isNotBlank() }
+                ?: accountIdentity(nickname)?.userId
+                ?: guestUserIdFor(deviceId()),
+            deviceId = deviceId(),
+            name = nickname.trim().takeIf { it.isNotBlank() } ?: profile.partyName ?: GUEST_NAME,
+            avatar = profile.sharablePhoto?.let(::fitAvatarUrl),
+        )
+    }
+
+    /** The identity read straight off the accounts, as before profiles: used until the profile is loaded. */
+    private fun accountIdentity(nickname: String): Identity? {
+        val (account, profile) = signedInGoogle()
             // No account, no problem: a party only needs someone to be, and the server never checks who. A guest
             // is this device's own random id and the nickname they chose.
             ?: return guestIdentity(nickname)
-        val profile = account.profiles.firstOrNull { it.profileId == account.activeProfileId }
-            ?: account.profiles.firstOrNull()
         val name = nickname.trim().takeIf { it.isNotBlank() }
             ?: profile?.name?.takeIf { it.isNotBlank() }
             ?: account.name.takeIf { it.isNotBlank() }
             ?: account.email.substringBefore('@').takeIf { it.isNotBlank() }
             ?: return null
         return Identity(
-            userId = sha256("${account.accountId}:${profile?.profileId.orEmpty()}").take(32),
+            userId = accountUserIdFor(account.accountId, profile?.profileId),
             deviceId = deviceId(),
             name = name,
             avatar = profile?.avatar?.takeIf { it.startsWith("http") }?.let(::fitAvatarUrl),
@@ -1500,11 +1529,51 @@ object ListenTogether {
      * recognises it coming back — and not tied to anyone; there is no picture, so the party shows the initial.
      */
     private fun guestIdentity(nickname: String): Identity = Identity(
-        userId = sha256("guest:${deviceId()}").take(32),
+        userId = guestUserIdFor(deviceId()),
         deviceId = deviceId(),
         name = nickname.trim().takeIf { it.isNotBlank() } ?: GUEST_NAME,
         avatar = null,
     )
+
+    /** The signed-in Google login and the YouTube profile it acts as (the active one, else the first). */
+    private fun signedInGoogle(): Pair<com.music.bitchord.auth.GoogleAccountSession, com.music.bitchord.auth.YouTubeProfile?>? {
+        val store = BitChordApplication.authStore
+        val account = store.activeSession?.takeIf { store.isSignedIn } ?: return null
+        val profile = account.profiles.firstOrNull { it.profileId == account.activeProfileId }
+            ?: account.profiles.firstOrNull()
+        return account to profile
+    }
+
+    /** A signed-in party user id: a hash of the account and profile ids, not either of them. */
+    fun accountUserIdFor(accountId: String, profileId: String?): String =
+        sha256("$accountId:${profileId.orEmpty()}").take(32)
+
+    /** A party user id with no account: a hash of this install's device id. */
+    fun guestUserIdFor(deviceId: String): String = sha256("guest:$deviceId").take(32)
+
+    /**
+     * Everything [dev.auden.profile.ProfileMigration.freeze] reads, from the same places the identity above
+     * has always been read from. Needs [init] to have run (the nickname and the device id live in its prefs).
+     */
+    fun identitySnapshot(): dev.auden.profile.IdentitySnapshot {
+        val google = signedInGoogle()?.let { (account, profile) ->
+            dev.auden.profile.GoogleIdentity(
+                accountId = account.accountId,
+                accountName = account.name,
+                email = account.email,
+                profileId = profile?.profileId,
+                profileName = profile?.name,
+                handle = profile?.handle.orEmpty(),
+                avatar = profile?.avatar,
+            )
+        }
+        return dev.auden.profile.IdentitySnapshot(
+            nickname = nickname(),
+            deviceId = deviceId(),
+            google = google,
+            spotifySignedIn = AppSettings.spotifySpdcToken.value.isNotBlank(),
+        )
+    }
 
     /**
      * The profile picture's URL as a party server will take it. Servers cap it — an older one at 100 characters —

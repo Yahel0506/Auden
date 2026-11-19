@@ -170,15 +170,17 @@ class ConnectSync(
     }
 
     /**
-     * The rooms this device belongs in, as one string (see [MultiRoomTransport]): its Google account's alone; else its
+     * The rooms this device belongs in, as one string (see [MultiRoomTransport]): its profile's Connect room (or its
+     * Google account's, adopted into the profile) alone; else its
      * Spotify account's and the one for the name it uses in parties, which the server scopes to this network, both
      * at once; with no account at all, just the latter. A Spotify session
      * whose id has not been read yet holds the room back for that moment (and for good after one failed read), so a
      * device does not join the local room only to jump out of it.
      */
     private fun currentRoom(): String? {
-        // A Google account's own room, and only it: the others would just open it to the network.
-        ListenTogether.accountRoomId()?.let { return it }
+        // The profile's room (frozen from a Google account, see ProfileStore.accountRoom), and only it: the others
+        // would just open it to the network.
+        dev.auden.profile.ProfileStore.accountRoom()?.let { return it }
         // Without one, the Spotify account's room (when there is one) and the one for this network, both at once.
         val rooms = mutableListOf<String>()
         if (AppSettings.spotifySpdcToken.value.isNotBlank()) {
