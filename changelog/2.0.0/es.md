@@ -3,32 +3,57 @@
 - **Un logo nuevo.** El nuevo logo de Auden en todas partes — la app, la de TV y Wear OS, la web y la extensión del navegador — y trece iconos de lanzador a elegir: Liquid Glass claro y oscuro, negro, blanco y nueve colores.
 - **Una animación de inicio.** La animación de cristal líquido del logo sustituye al splash estático, en claro y oscuro.
 - **Una bienvenida a la nueva imagen.** Se muestra una sola vez, la primera vez que abres la app tras actualizar: cuatro páginas en negro con el bucle de gotas del logo detrás.
-- **Tu color, en todas partes.** Elige un acento en Ajustes y tiñe la pestaña abierta, los interruptores, los banners y la malla de estadísticas.
+- **Tu color, en todas partes.** Elige un acento en Ajustes y tiñe la pestaña abierta, los interruptores, los banners, la acción principal de cada alerta y la malla de estadísticas.
 - **Auden en Inicio.** El nombre queda junto al logo en la parte superior de Inicio.
 
 ## Cristal y menús
 
-- **Barra de navegación renovada.** La película es más clara por la línea central y más gruesa en los bordes de arriba y abajo, con un borde fino, color más saturado y una lente más suave. La gota que arrastras por la barra es más pequeña y de borde oscuro, y cada pestaña dentro de ella toma el color de acento.
-- **Tap limpio en la barra de navegación.** Al tocar una pestaña de la barra ya no aparece ningún oscurecimiento ni ripple por defecto sobre el icono, permitiendo que la gota líquida se desplace limpiamente.
-- **Menús de cristal.** Los menús contextuales en toda la app adoptan el material de cristal líquido con esquinas redondeadas más pulidas.
-- **Menú de canción reestructurado.** El menú ⋯ de canciones se reorganiza en categorías claras con navegación hacia atrás en submenús como listas y detalles.
+- **Barra de navegación renovada.** La película es más clara por la línea central y más gruesa en los bordes de arriba y abajo, con un borde fino, color más saturado y una lente más suave. La gota que arrastras por la barra es más pequeña y de borde oscuro, cada pestaña dentro de ella toma el color de acento, y la pestaña abierta pasa a blanco mientras la gota está fuera.
+- **Una barra que sigue tu scroll.** Al hacer scroll hacia abajo la barra expandida completa se encoge un poco, sobre su borde inferior, antes de plegarse, y al volver hacia arriba recupera su tamaño. Se pliega desde el tamaño al que llegó, a cualquier velocidad, y solo llegar al tope de la página la despliega.
+- **Brillo al presionar.** Al presionar una pestaña se enciende un brillo suave sobre ella mientras la gota viaja hasta allí, o mientras la mantengas.
+- **Un borde más fino.** El cristal líquido tiene una línea negra fina en sus extremos, donde no llega la luz, en la barra, el mini reproductor, los menús y la gota.
+- **Menús de cristal.** Los menús de toda la app usan el material de cristal líquido, algo más denso para leerse mejor y sin una lente que deforme sus bordes.
+- **Menú de canción reestructurado.** El menú ⋯ de canciones se reorganiza en categorías claras con navegación suave hacia atrás — y el botón de atrás del sistema ahora retrocede por sus páginas. Artista, álbum e información de la canción tienen un grupo propio, y el temporizador, el resumen de Automix, el desfase de letras y el registro quedan en "Otras funciones".
 - **Control de opacidad.** Ajustes tiene un control de Opacidad del cristal de 0 a 100 % (75 % por defecto): cuanto más transparente, más desenfoque y colores más apagados.
 - **Cristal o Sólido.** Un selector en Apariencia sustituye al interruptor de Liquid Glass, al Desenfoque progresivo y a "Reducir desenfoque dinámico": Cristal es lo predeterminado y Sólido rellena cada superficie en lugar de mostrar lo que hay detrás. El modo de rendimiento del cristal desaparece.
 - **Icono de Biblioteca.** El logo de Auden está recortado en el icono de Biblioteca, como en Apple Music.
-- **Cierre del reproductor más limpio.** Al soltar el reproductor tras arrastrarlo hacia abajo ya no se oscurece la página por un cuadro.
+- **Cierre del reproductor más limpio.** Al soltar el reproductor tras arrastrarlo hacia abajo ya no se oscurece la página por un cuadro, y lo que abriste desde él se cierra con él.
+
+## Alertas y diálogos
+
+- **Alertas de iOS 26.** Todas las alertas y diálogos se redibujan como las de iOS 26: más redondeadas, en el cristal de la app, con cada respuesta en su propia cápsula — la principal rellena con tu acento, las demás sobre un gris suave — y sin líneas entre ellas.
+- **Un mismo estilo para todas.** Los diálogos que usaban el estilo del sistema y las tarjetas emergentes siguen el mismo diseño, con líneas que empiezan y terminan dentro de sus tarjetas.
+- **La alerta de perfiles, rehecha.** Cambiar de cuenta o de perfil es una alerta nueva con el estilo nuevo, en lugar de la antigua tarjeta flotante.
+- **Crear playlists, en filas.** Crear o importar una playlist muestra sus opciones como filas de una misma tarjeta, no como bloques dentro de ella.
+- **Información de la canción y Automix, rehechos.** Ambos son alertas nuevas que se abren sobre el reproductor, con la vista de Automix en el cristal propio del reproductor.
+
+## Cuenta
+
+- **Una sheet de cuenta.** El botón de perfil abre una sheet al estilo de Apple Music: tu cuenta y el perfil en uso, estadísticas de reproducción, Escuchar juntos, la versión en que estás y los ajustes de Auden. Arrástrala hacia abajo para guardarla.
+- **Las pantallas se apilan sobre ella.** Lo que abres desde la sheet — Ajustes, Cuenta e integraciones, estadísticas, Escuchar juntos, novedades — entra deslizándose desde la derecha sobre ella, como una pantalla en cualquier app, y sale igual, de vuelta a la sheet.
+- **Ajustes agrupados.** En el tema claro, las páginas de Ajustes y las pantallas que se abren desde ellas se apoyan en el mismo gris, con grupos blancos, como la sheet. Todas se abren y se cierran con el mismo push.
+- **Ajustes más limpio.** Cuenta, Escuchar juntos, estadísticas y novedades pasaron a la sheet.
+
+## Biblioteca
+
+- **Una burbuja para tu foto.** En la Biblioteca, tu foto tiene una burbuja propia junto a la que lleva el botón de nueva playlist y un ⋯.
+- **Editar anclados y secciones.** El ⋯ ofrece editar las listas ancladas — tiemblan y un menos saca una — o las secciones: cada carpeta y estante se despliega en su sitio, con una marca para mostrarlo u ocultarlo y un asa para arrastrarlo donde quieras. La página se queda quieta mientras editas.
+- **Todo como filas.** "Otros" desaparece: Playlists, Artistas, Álbumes, Podcasts y Suscripciones son filas de la Biblioteca como las carpetas, con los iconos de Apple Music.
+- **Un banner de estadísticas, si quieres.** El banner de Replay arriba de la Biblioteca es una opción en Ajustes, desactivada por defecto.
+- **Portadas que viajan.** Al abrir una playlist, álbum o artista, su portada crece desde su tarjeta hasta la cabecera de su página, y vuelve a su tarjeta al salir.
+- **Pushes.** Las páginas de la Biblioteca — un estante completo, Descargas, Historial — se abren con el mismo push que Ajustes.
+- **Filas más pequeñas.** Las filas de texto de la Biblioteca son un poco más pequeñas y más juntas.
+- **Me gusta sin cuenta.** Marca canciones como favoritas sin necesidad de iniciar sesión en ninguna cuenta, guardadas localmente en tu dispositivo — y, con sesión, puedes elegir guardarlas en la cuenta o solo en el dispositivo.
+- **Lista de "Mis favoritas".** Colección automática de favoritas con una portada propia, en Mis playlists.
+- **Apodo en Cuenta.** Configura tu apodo visible desde los ajustes de Cuenta para tu perfil y para las sesiones de Escuchar juntos.
+- **"Playlist" en todas partes.** El español dice "playlist" en lugar de "lista de reproducción".
 
 ## Auden DJ
 
-- **Estados de ánimo y estantes.** Explora y descubre sesiones del DJ mediante estantes temáticos y categorías de ánimo directamente en la pantalla de DJ.
+- **Estados de ánimo y estantes.** Explora y descubre sesiones del DJ mediante estantes temáticos y categorías de ánimo directamente en la pantalla de DJ, con muchas más opciones en cada uno, incluido "Hecho para ti".
 - **Guardar sesiones como playlists.** Guarda cualquier sesión del DJ directamente como una playlist en tu biblioteca para volver a escucharla cuando quieras.
 - **Pronunciación natural.** Motor de pronunciación integrado para que el DJ pronuncie nombres de artistas, títulos y palabras en otros idiomas de forma natural.
-- **Lector de peticiones más inteligente.** Analizador de peticiones más robusto capaz de comprender expresiones naturales y variadas al pedirle música al DJ.
-
-## Biblioteca y Cuenta
-
-- **Me gusta sin cuenta.** Marca canciones como favoritas sin necesidad de iniciar sesión en ninguna cuenta, guardadas localmente en tu dispositivo.
-- **Lista de "Mis favoritas".** Colección automática de favoritas con una portada propia dedicada.
-- **Apodo en Cuenta.** Configura tu apodo visible desde los ajustes de Cuenta para tu perfil y para las sesiones de Escuchar juntos.
+- **Lector de peticiones más inteligente.** Analizador más robusto que comprende expresiones naturales y variadas — un artista, varios, o un nombre suelto — y que busca cuando no sabe qué poner en vez de caer siempre en la misma canción.
 
 ## Connect
 
@@ -37,5 +62,5 @@
 
 ## Actualizaciones
 
-- **Una página de actualización.** Una actualización abre una página con el bucle del logo, la versión y todo el changelog, con el botón de descarga y su progreso siempre a la vista. La descarga continúa en segundo plano al cerrar la página. La misma página muestra "Novedades de esta actualización" en Ajustes.
+- **Una página de actualización.** Una actualización abre una página con el bucle del logo, la versión y todo el changelog, con el botón de descarga y su progreso siempre a la vista. La descarga continúa en segundo plano al cerrar la página. La misma página muestra "Acerca de esta versión" desde la sheet de cuenta.
 - **Un icono más lleno.** El icono de actualización en Inicio es un disco sólido con una flecha gruesa.
