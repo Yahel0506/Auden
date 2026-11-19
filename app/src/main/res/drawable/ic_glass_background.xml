@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- The body of the light glass tile, flat: what the launcher's mask shows round the tile's own edge, so no black backing does. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <gradient android:angle="270" android:startColor="#FAFAFC" android:endColor="#D6D6DB" />
+    <solid android:color="#FFDFE1E5" />
 </shape>
