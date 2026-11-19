@@ -499,6 +499,9 @@ dependencies {
     // the OkHttp version already on the runtime classpath.
     testImplementation("com.squareup.okhttp3:mockwebserver:5.3.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.10.2")
+    // SQLite for the host JVM (the sqlite-android driver Room uses on the phone is not on it), so the
+    // Room migration and DAO tests open the real generated database instead of a fake of it.
+    testImplementation("androidx.sqlite:sqlite-bundled-jvm:2.6.2")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
 }

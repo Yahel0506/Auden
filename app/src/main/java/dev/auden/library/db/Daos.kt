@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 data class LocalRef(
@@ -108,7 +109,11 @@ interface TrackDao {
 
 @Dao
 interface PlaylistDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    /**
+     * Insert or update in place. Not `@Insert(REPLACE)`: SQLite replaces by deleting the row first, and that
+     * delete cascades to the playlist's [PlaylistOriginEntity] (and its entries).
+     */
+    @Upsert
     suspend fun upsert(playlist: PlaylistEntity)
 
     @Insert
@@ -187,6 +192,31 @@ interface SpotifyMatchDao {
     suspend fun delete(id: String)
 }
 
+/** Where imported playlists came from, and the artists followed in Auden. */
+@Dao
+interface OriginDao {
+    @Query("SELECT * FROM playlist_origin WHERE playlistId = :playlistId")
+    suspend fun origin(playlistId: String): PlaylistOriginEntity?
+
+    /** Only for a playlist row that exists: the foreign key refuses any other. */
+    @Upsert
+    suspend fun putOrigin(origin: PlaylistOriginEntity)
+
+
+    @Query("SELECT * FROM followed_artist ORDER BY addedAt DESC")
+    fun observeArtists(): Flow<List<FollowedArtistEntity>>
+
+    @Query("SELECT * FROM followed_artist ORDER BY addedAt DESC")
+    suspend fun artists(): List<FollowedArtistEntity>
+
+    /** Adds the artists not already followed; one already there keeps its row (and when it was added). */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun followAll(artists: List<FollowedArtistEntity>): List<Long>
+
+    @Query("DELETE FROM followed_artist WHERE id = :id")
+    suspend fun unfollow(id: String)
+}
+
 /**
  * Everything a backup carries, read whole and written back whole. Restoring is a replace, in one
  * transaction: a library half from the file and half from the device would be worse than either.
@@ -199,12 +229,16 @@ interface BackupDao {
     @Query("SELECT * FROM lyrics_variant") suspend fun lyricsVariants(): List<LyricsVariantEntity>
     @Query("SELECT * FROM song_lyrics_pref") suspend fun lyricsPrefs(): List<SongLyricsPrefEntity>
     @Query("SELECT * FROM spotify_match") suspend fun spotifyMatches(): List<SpotifyMatchEntity>
+    @Query("SELECT * FROM playlist_origin") suspend fun playlistOrigins(): List<PlaylistOriginEntity>
+    @Query("SELECT * FROM followed_artist ORDER BY addedAt") suspend fun followedArtists(): List<FollowedArtistEntity>
 
     @Query("DELETE FROM playlist_entry") suspend fun clearEntries()
+    @Query("DELETE FROM playlist_origin") suspend fun clearPlaylistOrigins()
     @Query("DELETE FROM playlist") suspend fun clearPlaylists()
     @Query("DELETE FROM lyrics_variant") suspend fun clearLyricsVariants()
     @Query("DELETE FROM song_lyrics_pref") suspend fun clearLyricsPrefs()
     @Query("DELETE FROM spotify_match") suspend fun clearSpotifyMatches()
+    @Query("DELETE FROM followed_artist") suspend fun clearFollowedArtists()
     @Query("DELETE FROM track") suspend fun clearTracks()
 
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putTracks(rows: List<TrackEntity>)
@@ -213,7 +247,13 @@ interface BackupDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putLyricsVariants(rows: List<LyricsVariantEntity>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putLyricsPrefs(rows: List<SongLyricsPrefEntity>)
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putSpotifyMatches(rows: List<SpotifyMatchEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putPlaylistOrigins(rows: List<PlaylistOriginEntity>)
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun putFollowedArtists(rows: List<FollowedArtistEntity>)
 
+    /**
+     * [playlistOrigins] and [followedArtists] are null in a file from before they existed: the device's own are
+     * then kept (an origin only where its playlist came back too), so restoring an older backup loses neither.
+     */
     @Transaction
     suspend fun replaceAll(
         tracks: List<TrackEntity>,
@@ -222,9 +262,18 @@ interface BackupDao {
         lyricsVariants: List<LyricsVariantEntity>,
         lyricsPrefs: List<SongLyricsPrefEntity>,
         spotifyMatches: List<SpotifyMatchEntity>,
+        playlistOrigins: List<PlaylistOriginEntity>? = null,
+        followedArtists: List<FollowedArtistEntity>? = null,
     ) {
-        clearEntries(); clearPlaylists(); clearLyricsVariants(); clearLyricsPrefs(); clearSpotifyMatches(); clearTracks()
+        val origins = playlistOrigins ?: playlistOrigins()
+        val artists = followedArtists ?: followedArtists()
+        clearEntries(); clearPlaylistOrigins(); clearPlaylists(); clearLyricsVariants(); clearLyricsPrefs()
+        clearSpotifyMatches(); clearFollowedArtists(); clearTracks()
         putTracks(tracks); putPlaylists(playlists); putEntries(entries)
         putLyricsVariants(lyricsVariants); putLyricsPrefs(lyricsPrefs); putSpotifyMatches(spotifyMatches)
+        // The foreign key refuses an origin whose playlist is not in the file.
+        val restored = playlists.mapTo(HashSet()) { it.id }
+        putPlaylistOrigins(origins.filter { it.playlistId in restored })
+        putFollowedArtists(artists)
     }
 }

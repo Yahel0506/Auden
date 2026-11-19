@@ -1083,6 +1083,30 @@ object YtMusicRepository {
         InnertubeParser.parseLibraryItems(Innertube.browse(LIBRARY_PLAYLISTS))
     }
 
+    /**
+     * The library's own and saved playlists as cards, every page — what a transfer lists to choose from.
+     * Liked Music is among them; the caller decides whether it belongs (an import takes it as likes).
+     */
+    suspend fun libraryPlaylistCards(): Result<List<ShelfItem>> = call("library:playlistCards") {
+        libraryItemsPaged(LIBRARY_PLAYLISTS)
+    }
+
+    /** The albums saved to the library, every page. */
+    suspend fun libraryAlbums(): Result<List<ShelfItem>> = call("library:albums") {
+        libraryItemsPaged(LIBRARY_ALBUMS)
+    }
+
+    /**
+     * The artists the account subscribes to, every page — not the artists of songs in the library, which is a
+     * different feed ([LIBRARY_FEEDS]' "Artists").
+     */
+    suspend fun librarySubscriptions(): Result<List<ShelfItem>> = call("library:subscriptions") {
+        libraryItemsPaged(LIBRARY_SUBSCRIPTIONS)
+    }
+
+    private const val LIBRARY_ALBUMS = "FEmusic_liked_albums"
+    private const val LIBRARY_SUBSCRIPTIONS = "FEmusic_library_corpus_artists"
+
     /** Creates a playlist, optionally seeded with [videoIds]; returns its id. */
     suspend fun createPlaylist(
         title: String,

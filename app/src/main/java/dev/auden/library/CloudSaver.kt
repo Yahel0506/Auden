@@ -86,11 +86,14 @@ object CloudSaver {
         var unmatched = 0
         // Spotify: every track id the playlist holds right now, so the copy can drop what was taken out.
         var spotifyIds: Set<String>? = null
+        // The source's listing in its own order, kept with a new copy so a later refresh can tell what changed.
+        var listing: List<String> = emptyList()
         var cover: String? = thumbnailUrl
         val songs: List<Song> = if (browseId.startsWith(SPOTIFY_PAGE_PREFIX)) {
             val playlistId = browseId.removePrefix(SPOTIFY_PAGE_PREFIX)
             val tracks = SpotifyLibrary.tracks(playlistId) { }
             spotifyIds = tracks.mapTo(HashSet()) { it.id }
+            listing = tracks.map { it.id }
             // The playlist's own image, not a song's. The sync that runs by itself is given none, so ask.
             if (cover.isNullOrBlank()) cover = runCatching { SpotifyLibrary.cover(playlistId) }.getOrNull()
             val gate = Semaphore(MATCH_PARALLELISM)
@@ -115,11 +118,12 @@ object CloudSaver {
                     albumName = song.albumName ?: title.takeIf { isAlbum },
                     thumbnailUrl = song.thumbnailUrl ?: thumbnailUrl,
                 )
-            }
+            }.also { read -> listing = read.map { it.videoId } }
         }
         require(songs.isNotEmpty()) { "nothing to save" }
         notifier?.storing(songs.size)
-        val saved = LocalPlaylists.saveFromSource(source, title, songs, cover, spotifyIds)
+        val origin = ImportedOrigin(snapshot = listing, syncedAt = System.currentTimeMillis(), originTitle = title)
+        val saved = LocalPlaylists.saveFromSource(source, title, songs, cover, spotifyIds, origin)
         return Result.Saved(saved.playlist.title, saved.added, saved.created, unmatched, saved.removed)
     }
 

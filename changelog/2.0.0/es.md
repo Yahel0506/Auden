@@ -48,6 +48,8 @@
 - **Tu perfil de Auden.** Auden tiene ahora su propio perfil —un nombre y, si quieres, una foto que se queda en tu dispositivo— y eres tú, uses los servicios que uses. Edítalo en los ajustes de Cuenta; Escuchar juntos y Connect lo usan. Los dispositivos que ya tenían sesión conservan la misma identidad y la misma sala de Connect, así que nada se desconecta.
 - **Una copia de seguridad más completa.** La copia incluye ahora tus Me gusta y playlists del dispositivo, tu nombre y tu perfil, así que un dispositivo nuevo que la restaure ya eres tú.
 - **Nada sale por su cuenta.** Los Me gusta y las playlists que creas en Auden se quedan en tu dispositivo: un Me gusta ya no se envía a YouTube Music, una playlist nueva ya no se crea allí y tus reproducciones ya no se registran en tu historial de YouTube. El ajuste «Adónde van los Me gusta» desaparece, y también el pulgar hacia abajo, que solo guiaba las recomendaciones de tu cuenta.
+- **Tus Me gusta de YouTube Music, traídos una vez.** Si tenías sesión iniciada, las canciones que te gustaban en YouTube Music se copian a tus Me gusta de Auden la primera vez que abres esta versión, así que no se pierde ningún corazón. Solo lee: no se envía nada de vuelta.
+- **De dónde viene una playlist.** Las playlists que importas recuerdan su origen —YouTube Music o Spotify— y una instantánea de lo que tenían, listas para actualizarse desde él a mano.
 - **"Playlist" en todas partes.** El español dice "playlist" en lugar de "lista de reproducción".
 
 ## Auden DJ

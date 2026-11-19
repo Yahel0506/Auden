@@ -48,6 +48,8 @@
 - **Your Auden profile.** Auden has its own profile now — a name and, if you want, a photo kept on your device — and it is you, whatever services you sign into. Edit it in Account settings; Listen Together and Connect use it. Devices that were already signed in keep the same party identity and Connect room, so nothing disconnects.
 - **A fuller backup.** The backup now carries your on-device likes and playlists, your name and your profile, so a new device that restores it is you straight away.
 - **Nothing leaves on its own.** Hearts and the playlists you create in Auden stay on your device: a heart is no longer sent to YouTube Music, a new playlist is no longer made there, and your plays are no longer registered in your YouTube history. The "Where hearts go" setting is gone, and so is the thumb-down, which only steered your account's recommendations.
+- **Your YouTube Music likes, brought in once.** If you were signed in, the songs you had liked on YouTube Music are copied into your Auden likes the first time you open this version, so no heart is lost. It only reads: nothing is sent back.
+- **Where a playlist came from.** Playlists you import remember their origin — YouTube Music or Spotify — and a snapshot of what it held, ready to be updated from it by hand.
 - **"Playlist" everywhere.** Spanish says "playlist" instead of "lista de reproducción".
 
 ## Auden DJ

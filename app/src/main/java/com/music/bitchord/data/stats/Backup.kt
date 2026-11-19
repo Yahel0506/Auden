@@ -9,9 +9,11 @@ import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.SearchHistory
 import dev.auden.library.LocalPlaylists
 import dev.auden.library.db.AudenDb
+import dev.auden.library.db.FollowedArtistEntity
 import dev.auden.library.db.LyricsVariantEntity
 import dev.auden.library.db.PlaylistEntity
 import dev.auden.library.db.PlaylistEntryEntity
+import dev.auden.library.db.PlaylistOriginEntity
 import dev.auden.library.db.SongLyricsPrefEntity
 import dev.auden.library.db.SpotifyMatchEntity
 import dev.auden.library.db.TrackEntity
@@ -92,6 +94,8 @@ object Backup {
                 lyricsVariants = db.lyricsVariants(),
                 lyricsPrefs = db.lyricsPrefs(),
                 spotifyMatches = db.spotifyMatches(),
+                playlistOrigins = db.playlistOrigins(),
+                followedArtists = db.followedArtists(),
             )
             val file = BackupFile(
                 versionName = BuildConfig.VERSION_NAME,
@@ -138,6 +142,7 @@ object Backup {
             file.library?.let { lib ->
                 AudenDb.get(context).backup().replaceAll(
                     lib.tracks, lib.playlists, lib.entries, lib.lyricsVariants, lib.lyricsPrefs, lib.spotifyMatches,
+                    lib.playlistOrigins, lib.followedArtists,
                 )
                 LocalPlaylists.reload()
             }
@@ -227,6 +232,13 @@ object Backup {
         val lyricsVariants: List<LyricsVariantEntity> = emptyList(),
         val lyricsPrefs: List<SongLyricsPrefEntity> = emptyList(),
         val spotifyMatches: List<SpotifyMatchEntity> = emptyList(),
+        /**
+         * Where imported playlists came from (the source's last listing, when it was read). Null in a file from
+         * before they were carried: the restore then keeps the device's own, for the playlists that came back.
+         */
+        val playlistOrigins: List<PlaylistOriginEntity>? = null,
+        /** The artists followed in Auden. Null in an older file: the device's own are kept. */
+        val followedArtists: List<FollowedArtistEntity>? = null,
     )
 
     /** One preference, with the type it has to be restored as. */

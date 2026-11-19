@@ -140,6 +140,62 @@ object OfflinePlaylists {
         return nowLiked
     }
 
+    /**
+     * Adds [songs] to Liked after every like already there, in the order given — an imported list keeps its own
+     * order, under the likes made here — leaving out any already liked (by key, or by video id: a downloaded file
+     * liked here is the same song as its stream) and repeats.
+     * One state change for the whole batch, so one write of the store rather than one per song. Returns how many
+     * went in.
+     */
+    fun appendLikes(songs: List<Song>): Int {
+        var added = 0
+        mutate { list ->
+            val liked = list.firstOrNull { it.isLiked } ?: OfflinePlaylist(LIKED_ID, likedTitle, emptyList())
+            val known = HashSet<String>()
+            liked.songs.forEach { known.add(likeKey(it)); if (it.videoId.isNotBlank()) known.add(it.videoId) }
+            val fresh = songs.filter { song ->
+                val key = likeKey(song)
+                if (song.videoId.isBlank() || key in known || song.videoId in known) return@filter false
+                known.add(key)
+                known.add(song.videoId)
+                true
+            }.map { it.stored() }
+            added = fresh.size
+            if (fresh.isEmpty()) list
+            else listOf(liked.copy(songs = liked.songs + fresh)) + list.filterNot { it.isLiked }
+        }
+        return added
+    }
+
+    private const val KEY_ACCOUNT_LIKES_IMPORTED = "account_likes_imported"
+
+    /** Whether the account's Liked Music has been brought into Liked, whole (see `AccountLikesMigration`). */
+    fun accountLikesImported(): Boolean =
+        this::prefs.isInitialized && prefs.getBoolean(KEY_ACCOUNT_LIKES_IMPORTED, false)
+
+    /**
+     * Writes the store to disk now, and waits for it — with the account likes marked imported in the same write,
+     * when [markAccountLikesImported]. One file, one commit: the mark can never be on disk without the likes it
+     * stands for. Returns whether the write went through.
+     */
+    fun flush(markAccountLikesImported: Boolean = false): Boolean {
+        if (!this::prefs.isInitialized) return false
+        while (true) {
+            // Encoded outside the lock, so a heart tapped meanwhile is not kept waiting; written only if still current.
+            val list = _playlists.value
+            val text = encode(list)
+            synchronized(lock) {
+                if (list === _playlists.value) {
+                    return runCatching {
+                        val editor = prefs.edit().putString(KEY_PLAYLISTS, text)
+                        if (markAccountLikesImported) editor.putBoolean(KEY_ACCOUNT_LIKES_IMPORTED, true)
+                        editor.commit()
+                    }.getOrDefault(false)
+                }
+            }
+        }
+    }
+
     /** A new, empty playlist — or one holding [songs], when it was made to take them. */
     fun create(title: String, songs: List<Song> = emptyList()): OfflinePlaylist {
         val playlist = OfflinePlaylist(
@@ -289,8 +345,15 @@ object OfflinePlaylists {
     }
 
     private fun persist(list: List<OfflinePlaylist>) {
+        // Only while [list] is still the newest, checked again under the lock as it is handed to the preferences:
+        // a write of an older state can then never land after a [flush] of a newer one. A newer state is on its
+        // way to this collector anyway. Encoded outside the lock, which a heart on the main thread also takes.
+        if (list !== _playlists.value) return
         runCatching {
-            prefs.edit().putString(KEY_PLAYLISTS, encode(list)).apply()
+            val text = encode(list)
+            synchronized(lock) {
+                if (list === _playlists.value) prefs.edit().putString(KEY_PLAYLISTS, text).apply()
+            }
         }.onFailure { DebugLog.w("BitChord", "Offline playlists not saved: ${it.message}") }
     }
 

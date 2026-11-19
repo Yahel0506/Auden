@@ -77,8 +77,11 @@ fun SpotifyImportAlert(
      * [PlaylistPrivacy.DEVICE] to keep it here, or who can see it on YouTube Music. Null asks here, as it used to.
      */
     fixedPrivacy: PlaylistPrivacy? = null,
-    /** Called once the songs are matched; [privacy] is meaningful only when signed in. */
-    onImported: (title: String, privacy: PlaylistPrivacy, songs: List<Song>) -> Unit,
+    /**
+     * Called once the songs are matched; [privacy] is meaningful only when signed in. [sourceId] is the playlist's
+     * key as a library copy (`spotify:playlist:<id>`), so a copy kept here records where it came from.
+     */
+    onImported: (title: String, privacy: PlaylistPrivacy, songs: List<Song>, sourceId: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -114,7 +117,7 @@ fun SpotifyImportAlert(
                     status = context.getString(R.string.spotify_import_matching, done, total)
                 }
                 if (songs.isEmpty()) error(context.getString(R.string.spotify_import_none))
-                onImported(name, privacy, songs)
+                onImported(name, privacy, songs, dev.auden.library.PlaylistOrigin.SPOTIFY_PLAYLIST + id)
                 if (missed.isEmpty()) onDismiss() else unmatched = missed
             } catch (e: CancellationException) {
                 throw e

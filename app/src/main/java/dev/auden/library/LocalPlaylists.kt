@@ -7,6 +7,7 @@ import androidx.room.withTransaction
 import dev.auden.library.db.AudenDb
 import dev.auden.library.db.PlaylistEntity
 import dev.auden.library.db.PlaylistEntryEntity
+import dev.auden.library.db.PlaylistOriginEntity
 import dev.auden.library.db.TrackEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +38,11 @@ object LocalPlaylists {
 
     @Volatile private var db: AudenDb? = null
 
+    private val firstLoad = kotlinx.coroutines.CompletableDeferred<Unit>()
+
+    /** Returns once the playlists have been read from the database the first time (see [init]). */
+    suspend fun awaitLoaded() = firstLoad.await()
+
     /**
      * Told, with the playlist's id, whenever songs are added to one that already existed: by hand, or
      * by a sync of its Spotify or YouTube Music original. The download side listens, so a playlist
@@ -57,6 +63,7 @@ object LocalPlaylists {
         if (database == null) return
         val rows = database.playlistWrites().all()
         _playlists.value = rows.map { LocalPlaylist(it.id, it.title, database.playlists().tracksOf(it.id).map(TrackEntity::toSong), it.sourceId, it.coverUrl) }
+        firstLoad.complete(Unit)
     }
 
     fun get(id: String): LocalPlaylist? {
@@ -64,15 +71,34 @@ object LocalPlaylists {
         return _playlists.value.firstOrNull { it.id == clean }
     }
 
-    fun create(title: String, songs: List<Song> = emptyList(), sourceId: String? = null, coverUrl: String? = null): LocalPlaylist {
+    /**
+     * [origin], for a copy of a remote list ([sourceId] set): what to record about the source with it, written
+     * together with the playlist's own row.
+     */
+    fun create(
+        title: String,
+        songs: List<Song> = emptyList(),
+        sourceId: String? = null,
+        coverUrl: String? = null,
+        origin: ImportedOrigin? = null,
+    ): LocalPlaylist {
         val playlist = LocalPlaylist(ID_PREFIX + System.currentTimeMillis(), title, songs.distinctBy { it.videoId }, sourceId, coverUrl)
         _playlists.value = listOf(playlist) + _playlists.value
-        persist(playlist, insert = true)
+        persist(playlist, insert = true, origin = origin?.takeIf { sourceId != null })
         return playlist
     }
 
     /** The device copy of the cloud page [sourceId], if one was saved. */
     fun bySource(sourceId: String): LocalPlaylist? = _playlists.value.firstOrNull { it.sourceId == sourceId }
+
+    /** What was recorded about where [id] came from; null for a playlist made here or one copied before origins were kept. */
+    suspend fun originOf(id: String): PlaylistOriginEntity? = db?.origins()?.origin(id.removePrefix("local:playlist:"))
+
+    /**
+     * Copies of a service's own liked songs (YouTube Music's `LM`, Spotify's Liked Songs) saved as playlists
+     * before likes were Auden's. Never deleted on their own: they are offered to be turned into likes.
+     */
+    fun likesListCopies(): List<LocalPlaylist> = _playlists.value.filter { PlaylistOrigin.of(it.sourceId)?.isLikesList == true }
 
     /**
      * Saves a cloud playlist or album to the device library.
@@ -94,9 +120,15 @@ object LocalPlaylists {
         songs: List<Song>,
         coverUrl: String? = null,
         sourceSpotifyIds: Set<String>? = null,
+        origin: ImportedOrigin? = null,
     ): SaveResult {
         val existing = bySource(sourceId)
-        if (existing == null) return SaveResult(create(title, songs, sourceId, coverUrl), added = songs.distinctBy { it.videoId }.size, created = true)
+        // [origin] is recorded with a new copy only. A sync of an existing one leaves its snapshot as it was: a
+        // YouTube Music sync only adds, so moving the snapshot on would forget what the source has since removed —
+        // the base a refresh from the source compares against. Moving it is that refresh's job.
+        if (existing == null) {
+            return SaveResult(create(title, songs, sourceId, coverUrl, origin), added = songs.distinctBy { it.videoId }.size, created = true)
+        }
         val kept = if (sourceSpotifyIds == null) existing.songs
         else existing.songs.filter { it.spotifyId == null || it.spotifyId in sourceSpotifyIds }
         val removed = existing.songs.size - kept.size
@@ -212,13 +244,22 @@ object LocalPlaylists {
         }
     }
 
-    private fun persist(playlist: LocalPlaylist, insert: Boolean) {
+    private fun persist(playlist: LocalPlaylist, insert: Boolean, origin: ImportedOrigin? = null) {
         val database = db ?: return
         scope.launch {
             writeLock.withLock {
                 val now = System.currentTimeMillis()
                 if (insert) database.playlists().upsert(PlaylistEntity(playlist.id, playlist.title, now, now, sourceId = playlist.sourceId, coverUrl = playlist.coverUrl))
                 else database.playlists().byId(playlist.id)?.let { database.playlists().upsert(it.copy(updatedAt = now, coverUrl = playlist.coverUrl)) }
+                // Right after its playlist's row, which the foreign key needs to be there first. Never worth failing
+                // the songs' write over.
+                if (origin != null) {
+                    runCatching {
+                        database.origins().putOrigin(
+                            PlaylistOriginEntity(playlist.id, origin.snapshot?.let(PlaylistSnapshot::encode), origin.syncedAt, origin.originTitle),
+                        )
+                    }
+                }
                 database.withTransaction {
                     database.playlistWrites().clearEntries(playlist.id)
                     database.playlists().insertEntries(

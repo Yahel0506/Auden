@@ -1,6 +1,7 @@
 package dev.auden.library.db
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -22,9 +23,14 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SongLyricsPrefEntity::class,
         SpotifyMatchEntity::class,
         PlayEventEntity::class,
+        PlaylistOriginEntity::class,
+        FollowedArtistEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
+    // 8 -> 9 only adds two tables (where imported playlists came from, followed artists); Room writes and
+    // checks it against the exported schemas.
+    autoMigrations = [AutoMigration(from = 8, to = 9)],
 )
 abstract class AudenDb : RoomDatabase() {
     abstract fun tracks(): TrackDao
@@ -33,16 +39,20 @@ abstract class AudenDb : RoomDatabase() {
     abstract fun lyrics(): LyricsDao
     abstract fun spotifyMatches(): SpotifyMatchDao
     abstract fun backup(): BackupDao
+    abstract fun origins(): OriginDao
 
     companion object {
         @Volatile private var instance: AudenDb? = null
 
         fun get(context: Context): AudenDb = instance ?: synchronized(this) {
-            instance ?: Room.databaseBuilder(context.applicationContext, AudenDb::class.java, "auden.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+            instance ?: configure(Room.databaseBuilder(context.applicationContext, AudenDb::class.java, "auden.db"))
                 .build()
                 .also { instance = it }
         }
+
+        /** Every hand-written migration (8 -> 9 and on are automatic); shared with the migration test. */
+        internal fun configure(builder: Builder<AudenDb>): Builder<AudenDb> =
+            builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
 
         /** Adds the file-level columns the library indexer fills. */
         val MIGRATION_1_2 = object : Migration(1, 2) {

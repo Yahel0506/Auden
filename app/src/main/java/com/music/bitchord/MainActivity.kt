@@ -6357,12 +6357,13 @@ private fun BitChordApp(
                 hazeState = hazeState,
                 signedIn = signedIn,
                 fixedPrivacy = spotifyImportPrivacy,
-                onImported = { title, privacy, songs ->
+                onImported = { title, privacy, songs, sourceId ->
                     viewModel.createPlaylistWithVideoIds(
                         title,
                         privacy,
                         songs.map { it.videoId },
                         songs,
+                        sourceId,
                     ) { browseId, pTitle, savedLocally ->
                         showQueueNotice(
                             context.getString(

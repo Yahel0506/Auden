@@ -105,6 +105,57 @@ data class PlaylistEntity(
 )
 
 /**
+ * What Auden remembers about the remote list a [PlaylistEntity] was imported from, beyond its
+ * [PlaylistEntity.sourceId]: the service and kind are read off that id (see
+ * `dev.auden.transfer.PlaylistOrigin.of`), so nothing here repeats them.
+ *
+ * A row of its own rather than columns on `playlist` so the [snapshot] — every remote id, possibly
+ * thousands — never rides along on the reads that draw the library.
+ *
+ * Deleted with its playlist (CASCADE). That is also why the playlist row must never be written with
+ * `REPLACE`: SQLite carries a replace out as a delete and an insert, and the delete takes this row
+ * with it. [PlaylistDao.upsert] is an `@Upsert` for that reason.
+ */
+@Entity(
+    tableName = "playlist_origin",
+    foreignKeys = [
+        ForeignKey(PlaylistEntity::class, parentColumns = ["id"], childColumns = ["playlistId"], onDelete = ForeignKey.CASCADE),
+    ],
+)
+@Serializable
+data class PlaylistOriginEntity(
+    @PrimaryKey val playlistId: String,
+    /**
+     * The remote ids the source listed at the last import or refresh, in its order, as a JSON array of
+     * strings (YouTube Music video ids, Spotify track ids). Null when unknown — a copy made before
+     * origins were recorded, or a source that names no ids — which a refresh treats as "only add".
+     */
+    val snapshot: String? = null,
+    /** When the source was last read into this copy, in ms; null when unknown. */
+    val syncedAt: Long? = null,
+    /** What the source called itself then; the copy's own title may have been renamed since. */
+    val originTitle: String? = null,
+)
+
+/**
+ * An artist followed in Auden. Brought in from a service's follows or subscriptions, or followed here
+ * ([originService] null). [id] is the key Auden opens the artist by: a YouTube Music channel id when
+ * one is known, else `"<service>:<originId>"`.
+ */
+@Entity(tableName = "followed_artist")
+@Serializable
+data class FollowedArtistEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    val thumb: String? = null,
+    /** `dev.auden.transfer.Service` name, or null for an artist followed in Auden itself. */
+    val originService: String? = null,
+    /** The artist's id on [originService]. */
+    val originId: String? = null,
+    val addedAt: Long = System.currentTimeMillis(),
+)
+
+/**
  * A track's place in a playlist. [entryId] is its own identity, so the same
  * song twice is two entries; [position] is dense and zero-based.
  */

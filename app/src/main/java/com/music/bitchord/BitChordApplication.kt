@@ -182,6 +182,13 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // The Auden profile, frozen from today's accounts on the first launch that has it. After the
         // session, AppSettings and ListenTogether: it reads all three.
         dev.auden.profile.ProfileStore.init(this)
+        // Once, in the background: the YouTube Music account's likes become Auden's own, and playlists downloaded
+        // from it get library copies. Read-only against the account; see TransferMigrations.
+        dev.auden.transfer.TransferMigrations.start(
+            this,
+            signedIn = { authStore.isSignedIn },
+            session = { "${authStore.activeAccountId}/${authStore.activeProfileId}" },
+        )
         SearchHistory.init(this)
         LastPlayed.init(this)
         BoundedContextPersistence.init(this)
