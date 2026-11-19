@@ -7,6 +7,7 @@ import com.music.bitchord.sharedui.resources.ytmusic_mono
 import com.music.bitchord.ui.components.trackArtSize
 import android.os.Build
 import com.music.bitchord.R
+import com.music.bitchord.ui.components.coverSharedElement
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
@@ -1000,6 +1001,7 @@ private fun ReleaseHeader(
         if (bleed) {
             Box(
                 Modifier
+                    .coverSharedElement(page.browseId)
                     .fillMaxWidth()
                     // Laid out shorter than it draws, so the title rides up into
                     // the dissolve rather than starting under a band of page
@@ -1056,6 +1058,7 @@ private fun ReleaseHeader(
             }
         } else Box(
             Modifier
+                .coverSharedElement(page.browseId)
                 .size(sleeveSize)
                 .shadow(SLEEVE_SHADOW, SLEEVE_SHAPE)
                 .background(palette.elevated)
@@ -1621,6 +1624,7 @@ private fun PageBackground(
             // no Compose mask, so it dissolves itself.
             Box(
                 Modifier
+                    .coverSharedElement(page.browseId)
                     .matchParentSize()
                     .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
                     .drawWithContent {

@@ -469,6 +469,7 @@ internal fun LibraryGridShelf(
             leadingCard?.let { card -> item(key = "leading") { card() } }
             items(visibleItems) { item ->
                 ShelfCard(
+                    coverSection = shelf.title,
                     item = item,
                     onClick = { onItemClick(item) },
                     onLongPress = { onItemLongPress(item) },
@@ -515,6 +516,7 @@ fun LibraryGridPage(
         ) {
             items(sortedShelf.items, key = { it.browseId ?: it.title }) { item ->
                 ShelfCard(
+                    coverSection = "grid",
                     item = item,
                     onClick = { onItemClick(item) },
                     onLongPress = { onItemLongPress(item) },
@@ -603,6 +605,7 @@ private fun PinnedGrid(
                         }
                         Box(Modifier.width(cardWidth).graphicsLayer { rotationZ = shake }) {
                             ShelfCard(
+                                coverSection = "pinned",
                                 item = item,
                                 onClick = { onItemClick(item) },
                                 onLongPress = { onItemLongPress(item) },
@@ -651,6 +654,7 @@ private fun MyListsGrid(
                 Row(horizontalArrangement = Arrangement.spacedBy(LIBRARY_GRID_SPACING)) {
                     rowItems.forEach { item ->
                         ShelfCard(
+                            coverSection = "my-lists",
                             item = item,
                             onClick = { onItemClick(item) },
                             onLongPress = { onItemLongPress(item) },

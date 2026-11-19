@@ -61,7 +61,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.Composable
+import com.music.bitchord.ui.components.cardCoverSharedElement
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -824,6 +829,7 @@ internal fun Shelf(
                 } else {
                     ShelfCard(
                         item = item,
+                        coverSection = "home",
                         onClick = { onItemClick(item) },
                         onLongPress = onItemLongPress?.let { { it(item) } },
                         isCurrent = isCurrentItem(item),
@@ -1013,24 +1019,45 @@ internal fun ShelfCard(
     showSubtitle: Boolean = true,
     /** A smaller name, for a card that sits in a tight grid. */
     compactTitle: Boolean = false,
+    /** Where on the page the card stands: what tells it from another card of the same list. */
+    coverSection: String = "",
 ) {
     val nowPlaying = LocalNowPlayingList.current
     // The list the player is on, marked where cards ask for it (the Library): its name in the accent, bars beside it.
     val onAir = LocalMarkNowPlaying.current && nowPlaying.matches(item.browseId)
+    val coverToken = com.music.bitchord.ui.components.rememberCoverToken()
     Column(
         modifier = modifier
-            .longPressMenuClickable(onClick = onClick, onLongClick = onLongPress)
+            // The finger going down marks this card as the one a page may open from, a moment before the tap
+            // completes, so its cover is already shared when the page starts to open.
+            .pointerInput(coverToken) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    item.browseId?.let { com.music.bitchord.ui.components.CoverTransitionTarget.key = com.music.bitchord.ui.components.cardCoverKey(it, coverSection) }
+                }
+            }
+            .longPressMenuClickable(
+                onClick = {
+                    // This card's cover is the one that travels to the page.
+                    item.browseId?.let { com.music.bitchord.ui.components.CoverTransitionTarget.key = com.music.bitchord.ui.components.cardCoverKey(it, coverSection) }
+                    onClick()
+                },
+                onLongClick = onLongPress,
+            )
             .contextClick(onLongPress),
     ) {
         when (item.browseId) {
             // A device folder's own cover — see [FolderCover].
             "local:downloads", "local:all", "local:cache", "local:webdav", "local:smb" -> FolderCover(
                 browseId = item.browseId,
-                modifier = Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)),
+                modifier = Modifier
+                    .cardCoverSharedElement(item.browseId, coverSection, coverToken)
+                    .fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)),
             )
             else -> {
                 Box(
                     modifier = Modifier
+                        .cardCoverSharedElement(item.browseId, coverSection, coverToken)
                         .fillMaxWidth()
                         .aspectRatio(1f)
                         .clip(RoundedCornerShape(12.dp))

@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.animation.ExperimentalSharedTransitionApi::class)
+
 package com.music.bitchord
 
 import android.Manifest
@@ -3364,6 +3366,16 @@ private fun BitChordApp(
                 .snapshotBackdropSource(pageBackdrop, floor = MaterialTheme.colorScheme.background),
         ) {
             Box(Modifier.weight(1f).fillMaxHeight()) {
+                // The cover of a list travels from the card it is opened from to the head of its page.
+                // What the glass over the page samples is recorded here, around the cover in flight and not only the pages:
+                // the cover is drawn in this layout's overlay, and recorded below it the bars would not see it.
+                androidx.compose.animation.SharedTransitionLayout(
+                    Modifier
+                        .hazeSource(hazeState)
+                        .then(
+                            if (glassActive && glassSamplesBackdrop) Modifier.layerBackdrop(appBackdrop) else Modifier,
+                        ),
+                ) {
                 AnimatedContent(
                     targetState = destinationNow,
                     // A route's entry is copied when the release pages under it
@@ -3425,30 +3437,13 @@ private fun BitChordApp(
                         }
                         }
                     },
-                    modifier = Modifier
-                        .hazeSource(hazeState)
-                        .then(
-                            if (glassActive) {
-                                Modifier
-                                    // Not under "reduce dynamic blur": nothing
-                                    // samples the layer then, and recording a
-                                    // whole page into one for no reader is the
-                                    // cost that setting exists to remove.
-                                    .then(
-                                        if (glassSamplesBackdrop) {
-                                            Modifier.layerBackdrop(appBackdrop)
-                                        } else {
-                                            Modifier
-                                        },
-                                    )
-                                    // Every page's scroll passes through here, so
-                                    // the glass bar collapses on all of them
-                                    // without each one having to know about it.
-                                    .nestedScroll(navBarScroll)
-                            } else {
-                                Modifier
-                            },
-                        ),
+                    modifier = if (glassActive) {
+                        // Every page's scroll passes through here, so the glass bar collapses on all of them without
+                        // each one having to know about it.
+                        Modifier.nestedScroll(navBarScroll)
+                    } else {
+                        Modifier
+                    },
                     label = "content",
                 ) { destination ->
                     // Every branch below reads `destination` rather than the
@@ -4310,7 +4305,7 @@ private fun BitChordApp(
                     }
                     // A screen stacked on the account sheet's page is opaque: the sheet is under it.
                     val slotStacked = showAccountSheet && sheetOwnerKey != null && key != sheetOwnerKey
-                    val slotSettings = pageRoute.isSettingsRoute()
+                    val slotSettings = destination.isSettingsPage()
                     val slotGrouped = lightTheme && (pageRoute == AppRoute.Settings || pageRoute is AppRoute.SettingsSection ||
                         pageRoute == AppRoute.AccountScrobbling || pageRoute == AppRoute.Sources ||
                         pageRoute == AppRoute.ListenTogether || pageRoute == AppRoute.WearOs ||
@@ -4357,6 +4352,10 @@ private fun BitChordApp(
                         CompositionLocalProvider(
                             LocalPlayingBarsMotion provides barsMotion,
                             com.music.bitchord.ui.components.LocalNowPlayingList provides nowPlayingList,
+                            com.music.bitchord.ui.components.LocalCoverTransition provides
+                                com.music.bitchord.ui.components.CoverTransitionScopes(this@SharedTransitionLayout, this@AnimatedContent),
+                            com.music.bitchord.ui.components.LocalCoverClaims provides
+                                remember { com.music.bitchord.ui.components.CoverClaims() },
                         ) {
                             if (destination is AppDestination.Tab) {
                                 pageContent()
@@ -4368,6 +4367,7 @@ private fun BitChordApp(
                         if (key == sheetOwnerKey && sheetInSlot) accountSheetHost()
                       }
                     }
+                }
                 }
 
                 Box(Modifier.fillMaxSize().graphicsLayer { alpha = if (stackedOnSheet && !chromeStarted) 0f else chromeAlpha.value }) {
@@ -7832,10 +7832,23 @@ private fun AppRoute?.isSettingsRoute(): Boolean =
         this == AppRoute.Sources || this == AppRoute.ListenTogether || this == AppRoute.WearOs ||
         this == AppRoute.Equalizer || this == AppRoute.EqualizerPresets || this == AppRoute.Discord
 
-private fun AppDestination.isSettingsPage(): Boolean = (this as? AppDestination.Route)?.entry?.route.isSettingsRoute()
+/** The pages of the Library's sections — a shelf in full, the downloads, the history — and the device's folders. */
+private fun AppRoute?.isLibrarySectionRoute(): Boolean =
+    this is AppRoute.LibraryShowAll || this is AppRoute.LibraryOther || this == AppRoute.Downloads ||
+        this == AppRoute.History || this == AppRoute.Spotify
+
+/** Pages that are stacked on the one they were opened from: the settings, and the Library's sections. */
+private fun AppDestination.isSettingsPage(): Boolean {
+    val route = (this as? AppDestination.Route)?.entry?.route
+    return route.isSettingsRoute() || route.isLibrarySectionRoute()
+}
 
 /** Where a destination stands in the back stack: a tab or a release is under every route, which stand in the order opened. */
-private fun AppDestination.stackOrder(): Long = (this as? AppDestination.Route)?.entry?.id ?: -1L
+private fun AppDestination.stackOrder(): Long = when (this) {
+    is AppDestination.Route -> entry.id
+    is AppDestination.Release -> -1L
+    else -> -2L
+}
 
 /** The grouped grey a settings page stands on in the light theme, and the account sheet's. */
 private val GroupedLightPage = Color(0xFFF2F2F7)
