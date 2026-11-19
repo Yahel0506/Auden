@@ -205,10 +205,9 @@ fun BrowseActionsMenu(
         onDuplicate?.let { ActionRow(Icons.Rounded.ContentCopy, stringResource(R.string.duplicate_playlist), onClick = it) }
         onExport?.let { ActionRow(Icons.Rounded.FileUpload, stringResource(R.string.export_playlist), onClick = it) }
         onSyncYtMusic?.let { sync -> YtSyncRow(ytSync, sync) }
-        onTogglePin?.let { ActionRow(SfIcons.Pin, stringResource(if (isPinned) R.string.unpin else R.string.pin), onClick = it) }
         onShare?.let { ActionRow(SfIcons.Share, stringResource(R.string.share), onClick = it) }
     }
-    val manageCount = listOf(onReorder, onDuplicate, onExport, onSyncYtMusic, onTogglePin, onShare).count { it != null }
+    val manageCount = listOf(onReorder, onDuplicate, onExport, onSyncYtMusic, onShare).count { it != null }
     val filing = onToggleDevice != null || onDownloadAll != null || onDeleteDownload != null
 
     CompositionLocalProvider(LocalActionRowStyle provides ActionRowStyle.Menu) {
@@ -244,8 +243,10 @@ fun BrowseActionsMenu(
                             ActionRow(SfIcons.Trash, stringResource(R.string.delete_download), tint = MaterialTheme.colorScheme.error, onClick = onDeleteDownload)
                         }
                         // Everything else sits behind a few named doors, each with only its own options.
-                        if (onEditPlaylist != null || tagsCount + manageCount > 0) IosMenuSeparator()
+                        if (onEditPlaylist != null || onTogglePin != null || tagsCount + manageCount > 0) IosMenuSeparator()
                         onEditPlaylist?.let { ActionRow(SfIcons.Pencil, stringResource(R.string.edit_playlist), onClick = it) }
+                        // Pinning is a row of the menu, not something inside "Manage".
+                        onTogglePin?.let { ActionRow(SfIcons.Pin, stringResource(if (isPinned) R.string.unpin else R.string.pin), onClick = it) }
                         if (tagsCount > 1) {
                             ActionRow(BitChordIcons.Lyrics, stringResource(R.string.browse_group_tags), chevron = true) { page = MenuPage.TAGS }
                         } else {

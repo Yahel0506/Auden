@@ -1021,6 +1021,8 @@ internal fun ShelfCard(
     compactTitle: Boolean = false,
     /** Where on the page the card stands: what tells it from another card of the same list. */
     coverSection: String = "",
+    /** The name centred under the cover, as the pinned lists have it. */
+    centerTitle: Boolean = false,
 ) {
     val nowPlaying = LocalNowPlayingList.current
     // The list the player is on, marked where cards ask for it (the Library): its name in the accent, bars beside it.
@@ -1078,6 +1080,7 @@ internal fun ShelfCard(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = if (centerTitle) Arrangement.Center else Arrangement.Start,
         ) {
             if (isPinned) {
                 Icon(
@@ -1098,6 +1101,7 @@ internal fun ShelfCard(
                 color = if (onAir) accentColor() else MaterialTheme.colorScheme.onBackground,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                textAlign = if (centerTitle) androidx.compose.ui.text.style.TextAlign.Center else null,
                 modifier = Modifier.weight(1f, fill = false),
             )
             if (onAir) {

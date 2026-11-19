@@ -606,6 +606,7 @@ private fun PinnedGrid(
                         Box(Modifier.width(cardWidth).graphicsLayer { rotationZ = shake }) {
                             ShelfCard(
                                 coverSection = "pinned",
+                                centerTitle = true,
                                 item = item,
                                 onClick = { onItemClick(item) },
                                 onLongPress = { onItemLongPress(item) },

@@ -5038,6 +5038,10 @@ private fun BitChordApp(
         // Closing the player takes with it whatever was opened from it: the alerts and the menus it drew, and the
         // song's information and the Automix view, which are held outside it and would otherwise be left up (or turn
         // up over the page).
+        // The song's information stands alone: the menu it was opened from goes.
+        LaunchedEffect(com.music.bitchord.ui.components.SongInfoRequest.pending != null) {
+            if (com.music.bitchord.ui.components.SongInfoRequest.pending != null) songActions = null
+        }
         LaunchedEffect(playerRaised) {
             if (!playerRaised) {
                 com.music.bitchord.ui.components.SongInfoRequest.close()
