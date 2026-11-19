@@ -992,21 +992,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (likeStatusOf(song.videoId) == LikeStatus.LIKE) LikeStatus.INDIFFERENT else LikeStatus.LIKE,
     )
 
-    /** As [toggleLike], for the thumb-down. */
-    fun toggleDislike(song: Song): LikeStatus? {
-        if (!requireSignIn()) return null
-        val previous = likeStatusOf(song.videoId)
-        setLike(
-            song,
-            if (previous == LikeStatus.DISLIKE) {
-                LikeStatus.INDIFFERENT
-            } else {
-                LikeStatus.DISLIKE
-            },
-        )
-        return previous
-    }
-
     /**
      * Saves the album or playlist [browseId] to the library, or takes it out.
      *

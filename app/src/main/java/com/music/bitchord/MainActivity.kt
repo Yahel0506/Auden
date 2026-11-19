@@ -466,13 +466,6 @@ private const val TOP_FADE_RAMP = 0.3f
 
 private const val INITIAL_RADIO_TRACKS = 24
 
-internal fun shouldSkipAfterDislike(
-    previousStatus: LikeStatus,
-    targetVideoId: String,
-    currentVideoId: String?,
-): Boolean = previousStatus != LikeStatus.DISLIKE && targetVideoId == currentVideoId
-
-
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -5298,19 +5291,6 @@ private fun BitChordApp(
                 // The sheet stays up for a rating: it shows the new state
                 // in place, and people often thumb a song and then queue it.
                 onToggleLike = { toggleLikeOf(song) },
-                onToggleDislike = {
-                    val previousStatus = viewModel.toggleDislike(song)
-                    if (
-                        previousStatus != null &&
-                        shouldSkipAfterDislike(
-                            previousStatus = previousStatus,
-                            targetVideoId = song.videoId,
-                            currentVideoId = player.song?.videoId,
-                        )
-                    ) {
-                        controller?.seekToNextMediaItem()
-                    }
-                },
                 onAddToPlaylist = {
                     songActions = null
                     if (song.localUri != null && (song.videoId.startsWith("content://") || song.videoId.startsWith("file://"))) {
@@ -6313,11 +6293,12 @@ private fun BitChordApp(
                 signedIn = signedIn,
                 accountPlaylists = playlists,
                 onCreate = { name, destination, privacy ->
-                    viewModel.createPlaylist(
-                        name,
-                        if (destination == PlaylistDestination.DEVICE) PlaylistPrivacy.DEVICE else privacy,
-                        emptyList<Song>(),
-                    )
+                    // Picking YouTube Music here is the listener's own request to make it there.
+                    if (destination == PlaylistDestination.DEVICE) {
+                        viewModel.createPlaylist(name, PlaylistPrivacy.DEVICE, emptyList<Song>())
+                    } else {
+                        viewModel.createPlaylistWithVideoIds(name, privacy, emptyList())
+                    }
                 },
                 onImportFile = { destination, _ ->
                     pendingImportDestination = destination

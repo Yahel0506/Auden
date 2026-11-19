@@ -125,7 +125,6 @@ fun SongActionsMenu(
      */
     onUploadToWebDav: (() -> Unit)? = null,
     onToggleLike: () -> Unit,
-    onToggleDislike: () -> Unit,
     onAddToPlaylist: () -> Unit,
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
@@ -208,7 +207,6 @@ fun SongActionsMenu(
     // guaranteed to read against the panel.
     val palette = neutralMenuPalette()
     val liked = likeStatus == LikeStatus.LIKE
-    val disliked = likeStatus == LikeStatus.DISLIKE
     // A local file or a finished download is played off the device, with no account
     // behind it to rate, save, queue into a playlist or fetch again. A download
     // still keeps the YouTube id it came from, so it can share its link; only a
@@ -239,16 +237,6 @@ fun SongActionsMenu(
                         label = stringResource(R.string.like),
                         tint = if (liked) palette.accent else null,
                         onClick = onToggleLike,
-                    )
-                }
-                // No dislike for a device file: there is no recommendation
-                // feed on the device for one to steer.
-                if (signedIn && !isOffline) {
-                    IosMenuQuickAction(
-                        icon = if (disliked) BrokenHeart.Fill else BrokenHeart.Outline,
-                        label = stringResource(R.string.dislike),
-                        tint = if (disliked) palette.accent else null,
-                        onClick = onToggleDislike,
                     )
                 }
                 shareAction?.let {
