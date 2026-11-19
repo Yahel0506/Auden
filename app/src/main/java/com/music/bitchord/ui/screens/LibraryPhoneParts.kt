@@ -44,6 +44,8 @@ import com.music.bitchord.ui.replay.ReplayStoryPage
 fun libraryLinks(
     /** The account's shelves, as the Library has them: the playlists, and the artists, albums and the rest. */
     shelves: List<com.music.bitchord.data.model.HomeShelf>,
+    /** What is kept on this device as lists of its own, for the Playlists section to hold with the others. */
+    deviceItems: List<ShelfItem>,
     onOpenShelf: (com.music.bitchord.data.model.HomeShelf) -> Unit,
 ): List<LibraryLink> {
     val webdavConfigured by AppSettings.webdavUrl.collectAsStateWithLifecycle()
@@ -60,10 +62,20 @@ fun libraryLinks(
         onClick = onClick,
     )
     // What the "Other" page held, each as a row: the account's playlists, then every shelf it had.
+    val spotifyItems = rememberSpotifyShelf()
     fun shelfRow(id: String, shelfTitle: String, title: String, icon: ImageVector, always: Boolean = false): LibraryLink? {
-        val shelf = shelves.firstOrNull { it.title == shelfTitle && it.items.isNotEmpty() }
-            ?: if (always && shelves.isNotEmpty()) com.music.bitchord.data.model.HomeShelf(shelfTitle, emptyList()) else null
-        return shelf?.let { action(id, title, icon) { onOpenShelf(it) } }
+        val base = shelves.firstOrNull { it.title == shelfTitle }
+        // One section, every source: the account's own, Spotify's and what is kept on this device, each marked with where it
+        // comes from (the device's by having no service).
+        val items = base?.items.orEmpty().map { it.copy(platform = ShelfItem.PLATFORM_YT_MUSIC) } +
+            if (shelfTitle == com.music.bitchord.data.YtMusicRepository.PLAYLISTS_SHELF) {
+                spotifyItems.map { it.copy(platform = ShelfItem.PLATFORM_SPOTIFY) } + deviceItems
+            } else {
+                emptyList()
+            }
+        if (items.isEmpty() && !(always && shelves.isNotEmpty())) return null
+        val merged = com.music.bitchord.data.model.HomeShelf(title, items)
+        return action(id, title, icon) { onOpenShelf(merged) }
     }
     val playlistsTitle = stringResource(R.string.playlists)
     val artistsTitle = stringResource(R.string.artists)

@@ -549,6 +549,9 @@ object AppSettings {
     /** The Statistics banner at the top of the Library: off until asked for. */
     val showLibraryStats = MutableStateFlow(false)
 
+    /** What was played lately, by where it was played from — a playlist, an album, an artist — newest first. */
+    val recentSources = MutableStateFlow<List<RecentSource>>(emptyList())
+
     /** The Library's folder rows in the order they were left in, by id; ones not named stand after them. */
     val libraryLinkOrder = MutableStateFlow<List<String>>(emptyList())
 
@@ -1143,6 +1146,14 @@ object AppSettings {
         likeSync.value = LikeSync.entries.firstOrNull { it.name == prefs.getString(KEY_LIKE_SYNC, null) } ?: LikeSync.ASK
         showDjTab.value = prefs.getBoolean(KEY_SHOW_DJ_TAB, true)
         showLibraryStats.value = prefs.getBoolean(KEY_SHOW_LIBRARY_STATS, false)
+        recentSources.value = runCatching {
+            val array = org.json.JSONArray(prefs.getString(KEY_RECENT_SOURCES, "[]"))
+            (0 until array.length()).mapNotNull { i ->
+                val o = array.getJSONObject(i)
+                val id = o.optString("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                RecentSource(id, o.optString("title"), o.optString("thumb").takeIf { it.isNotBlank() })
+            }
+        }.getOrDefault(emptyList())
         libraryLinkOrder.value = prefs.getString(KEY_LIBRARY_LINK_ORDER, null)?.split(",")?.filter { it.isNotBlank() }.orEmpty()
         libraryHiddenLinks.value = prefs.getString(KEY_LIBRARY_HIDDEN_LINKS, null)?.split(",")?.filter { it.isNotBlank() }?.toSet().orEmpty()
         lyricsBlur.value = prefs.getBoolean(KEY_LYRICS_BLUR, true)
@@ -1692,6 +1703,18 @@ object AppSettings {
         val normalized = normalizePerformanceRefreshRate(value)
         performanceRefreshRate.value = normalized
         prefs.edit().putInt(KEY_PERFORMANCE_REFRESH_RATE, normalized).apply()
+    }
+
+    /** Puts [source] first among what was played lately, once. */
+    fun recordRecentSource(source: RecentSource) {
+        if (recentSources.value.firstOrNull()?.id == source.id && recentSources.value.first().thumbnailUrl != null) return
+        val updated = (listOf(source) + recentSources.value.filter { it.id != source.id }).take(MAX_RECENT_SOURCES)
+        recentSources.value = updated
+        val array = org.json.JSONArray()
+        updated.forEach { r ->
+            array.put(org.json.JSONObject().put("id", r.id).put("title", r.title).put("thumb", r.thumbnailUrl.orEmpty()))
+        }
+        prefs.edit().putString(KEY_RECENT_SOURCES, array.toString()).apply()
     }
 
     fun setLibraryLinkOrder(ids: List<String>) {
@@ -2581,6 +2604,8 @@ object AppSettings {
     private const val KEY_LYRICS_BLUR = "lyrics_blur"
     private const val KEY_SHOW_DJ_TAB = "show_dj_tab"
     private const val KEY_SHOW_LIBRARY_STATS = "show_library_stats"
+    private const val KEY_RECENT_SOURCES = "recent_sources"
+    private const val MAX_RECENT_SOURCES = 12
     private const val KEY_LIBRARY_LINK_ORDER = "library_link_order"
     private const val KEY_LIBRARY_HIDDEN_LINKS = "library_hidden_links"
     private const val KEY_LYRICS_BLUR_AMOUNT = "lyrics_blur_amount"
@@ -2676,3 +2701,6 @@ object AppSettings {
 
 
 
+
+/** Somewhere music was played from: its page's id, its name, and the cover of the track that was playing. */
+data class RecentSource(val id: String, val title: String, val thumbnailUrl: String?)

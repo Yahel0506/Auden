@@ -417,6 +417,7 @@ import com.music.bitchord.data.settings.LibraryViewType
 import com.music.bitchord.data.settings.LocalMusicSort
 import com.music.bitchord.ui.screens.HomeScreen
 import com.music.bitchord.ui.screens.LibraryGridPage
+import com.music.bitchord.ui.screens.LibraryListPage
 import com.music.bitchord.ui.screens.LibraryOtherPage
 import com.music.bitchord.ui.screens.OTHER_SHELVES
 import com.music.bitchord.ui.screens.LibraryEditing
@@ -3499,13 +3500,11 @@ private fun BitChordApp(
                             )
                         } else if (pageRoute is AppRoute.LibraryShowAll) {
                             pageRoute.shelf.let { shelf ->
-                                LibraryGridPage(
+                                LibraryListPage(
                                     shelf = shelf,
-                                    gridState = libraryShowAllGridState,
                                     onItemClick = onLibraryItemClick,
                                     onItemLongPress = onBrowseLongPress,
-                                    // Only the Playlists shelf can grow one — see
-                                    // [PlaylistShelf].
+                                    // Clear of the top bar's buttons and the blur under them: a pushed page's title starts below them.
                                     contentPadding = listPadding,
                                 )
                             }
@@ -4235,7 +4234,18 @@ private fun BitChordApp(
                                     )
                                 },
                             )
-                            else -> LibraryScreen(
+                            else -> {
+                                val deviceItemsNow = libraryDeviceItems(
+                                    downloadedReleases.filterNot { release ->
+                                        localPlaylists.any {
+                                            // Downloaded from the page it was copied from, or from the copy itself.
+                                            it.sourceId == release.id.removePrefix("VL") ||
+                                                it.browseId == release.id ||
+                                                it.id == release.id
+                                        }
+                                    },
+                                ) + offlinePlaylistItems + localPlaylistItems
+                                LibraryScreen(
                                 signedIn = signedIn,
                                 state = libraryState,
                                 listState = libraryListState,
@@ -4271,24 +4281,20 @@ private fun BitChordApp(
                                 },
                                 links = libraryLinks(
                                     shelves = (libraryState as? UiState.Success)?.data?.shelves.orEmpty(),
+                                    deviceItems = deviceItemsNow,
                                     onOpenShelf = { shelf -> navigator.push(AppRoute.LibraryShowAll(shelf)) },
                                 ),
+                                recents = AppSettings.recentSources.collectAsStateWithLifecycle().value.map { r ->
+                                    ShelfItem(title = r.title, subtitle = "", thumbnailUrl = r.thumbnailUrl, videoId = null, browseId = r.id)
+                                },
                                 spotifyTitle = stringResource(R.string.from_spotify),
                                 spotifyPlaylists = rememberSpotifyShelf(),
                                 onOpenSpotify = { navigator.push(AppRoute.Spotify) },
                                 // An album kept on the device and then downloaded is one album: its copy in
                                 // the library is the card, not the download's record beside it.
-                                deviceItems = libraryDeviceItems(
-                                    downloadedReleases.filterNot { release ->
-                                        localPlaylists.any {
-                                            // Downloaded from the page it was copied from, or from the copy itself.
-                                            it.sourceId == release.id.removePrefix("VL") ||
-                                                it.browseId == release.id ||
-                                                it.id == release.id
-                                        }
-                                    },
-                                ) + offlinePlaylistItems + localPlaylistItems,
+                                deviceItems = deviceItemsNow,
                             )
+                            }
                         }
                     }
                     // A pushed page keeps its saved state — a scroll position,
@@ -5038,6 +5044,8 @@ private fun BitChordApp(
         // Closing the player takes with it whatever was opened from it: the alerts and the menus it drew, and the
         // song's information and the Automix view, which are held outside it and would otherwise be left up (or turn
         // up over the page).
+        // What is played is remembered by where it was played from, for the Library's recents.
+        com.music.bitchord.data.TrackRecentSources(player.song, player.isPlaying)
         // The song's information stands alone: the menu it was opened from goes.
         LaunchedEffect(com.music.bitchord.ui.components.SongInfoRequest.pending != null) {
             if (com.music.bitchord.ui.components.SongInfoRequest.pending != null) songActions = null

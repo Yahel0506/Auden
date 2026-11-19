@@ -61,8 +61,8 @@ import com.music.bitchord.data.model.ROW_ART_PX
 import com.music.bitchord.data.model.UserPlaylist
 import com.music.bitchord.data.model.artworkAt
 import com.music.bitchord.sharedui.resources.Res
-import com.music.bitchord.sharedui.resources.spotify_mono
-import com.music.bitchord.sharedui.resources.ytmusic_mono
+import com.music.bitchord.sharedui.resources.spotify_logo
+import com.music.bitchord.sharedui.resources.ytmusic_logo
 import com.music.bitchord.ui.icons.SfIcons
 import dev.chrisbanes.haze.HazeState
 import org.jetbrains.compose.resources.vectorResource
@@ -167,12 +167,12 @@ fun NewPlaylistFlow(
                             }
                             OptionDivider()
                             OptionCard(
-                                icon = vectorResource(Res.drawable.ytmusic_mono),
+                                icon = vectorResource(Res.drawable.ytmusic_logo),
                                 title = stringResource(R.string.flow_dest_yt),
                                 subtitle = stringResource(if (signedIn) R.string.flow_src_yt_link_sub else R.string.flow_src_yt_link_only_sub),
                             ) { source = ImportSource.YT_MUSIC; step = FlowStep.IMPORT_DESTINATION }
                             OptionDivider()
-                            OptionCard(vectorResource(Res.drawable.spotify_mono), stringResource(R.string.flow_src_spotify), stringResource(R.string.flow_src_spotify_sub)) {
+                            OptionCard(vectorResource(Res.drawable.spotify_logo), stringResource(R.string.flow_src_spotify), stringResource(R.string.flow_src_spotify_sub)) {
                                 source = ImportSource.SPOTIFY; step = FlowStep.IMPORT_DESTINATION
                             }
                         }

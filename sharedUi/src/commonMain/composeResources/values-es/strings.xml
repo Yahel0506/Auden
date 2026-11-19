@@ -228,4 +228,6 @@
     <string name="library_yt_music">YT Music</string>
     <string name="library_other_empty">Inicia sesión para ver aquí tus artistas, álbumes y podcasts.</string>
     <string name="library_my_lists">Mis playlists</string>
+    <string name="library_recents">Recientes</string>
+    <string name="library_search">Buscar</string>
 </resources>

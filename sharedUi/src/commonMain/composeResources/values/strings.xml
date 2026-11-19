@@ -308,4 +308,6 @@
     <string name="library_yt_music">YT Music</string>
     <string name="library_other_empty">Sign in to see your artists, albums and podcasts here.</string>
     <string name="library_my_lists">My lists</string>
+    <string name="library_recents">Recents</string>
+    <string name="library_search">Search</string>
 </resources>

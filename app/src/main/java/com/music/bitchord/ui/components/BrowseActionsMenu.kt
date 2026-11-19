@@ -1,7 +1,7 @@
 package com.music.bitchord.ui.components
 
 import org.jetbrains.compose.resources.vectorResource
-import com.music.bitchord.sharedui.resources.ytmusic_mono
+import com.music.bitchord.sharedui.resources.ytmusic_logo
 import com.music.bitchord.sharedui.resources.Res
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Icon
@@ -343,7 +343,7 @@ private fun YtSyncRow(state: YtSyncRowState, onClick: () -> Unit) {
     // The YouTube Music mark until the playlist is linked, then the sync arrows; the label
     // stays the same, so a linked playlist does not read as one that failed.
     ActionRow(
-        icon = if (state.associated) Icons.Rounded.Sync else vectorResource(Res.drawable.ytmusic_mono),
+        icon = if (state.associated) Icons.Rounded.Sync else vectorResource(Res.drawable.ytmusic_logo),
         label = if (running) stringResource(R.string.yt_sync_running) else stringResource(R.string.yt_sync),
         value = state.percent?.let { "$it%" },
         description = description,

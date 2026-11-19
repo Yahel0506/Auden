@@ -2,8 +2,8 @@ package com.music.bitchord.ui.screens
 
 import androidx.compose.foundation.text.appendInlineContent
 import com.music.bitchord.sharedui.resources.Res
-import com.music.bitchord.sharedui.resources.spotify_mono
-import com.music.bitchord.sharedui.resources.ytmusic_mono
+import com.music.bitchord.sharedui.resources.spotify_logo
+import com.music.bitchord.sharedui.resources.ytmusic_logo
 import com.music.bitchord.ui.components.trackArtSize
 import android.os.Build
 import com.music.bitchord.R
@@ -1132,7 +1132,7 @@ private fun ReleaseHeader(
                     null -> null
                     else -> if (dev.auden.library.LocalPlaylists.get(page.browseId)?.sourceId
                             ?.startsWith(com.music.bitchord.data.spotify.SPOTIFY_PAGE_PREFIX) == true
-                    ) Res.drawable.spotify_mono else Res.drawable.ytmusic_mono
+                    ) Res.drawable.spotify_logo else Res.drawable.ytmusic_logo
                 }
             } else {
                 null

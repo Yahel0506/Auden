@@ -9,6 +9,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloat
+import com.music.bitchord.ui.components.cardCoverSharedElement
+import com.music.bitchord.sharedui.resources.spotify_logo
+import com.music.bitchord.sharedui.resources.ytmusic_logo
+import com.music.bitchord.sharedui.resources.library_search
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerEventPass
+import com.music.bitchord.ui.components.longPressMenuClickable
+import com.music.bitchord.ui.components.thumbnailBorder
+import coil3.compose.AsyncImage
+import com.music.bitchord.data.model.artworkAt
+import com.music.bitchord.data.model.CARD_ART_PX
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.music.bitchord.ui.components.contextClick
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -122,6 +136,8 @@ fun LibraryScreen(
     onReorderLinks: (List<String>) -> Unit = {},
     /** Takes a list out of the pinned ones. */
     onUnpin: (String) -> Unit = {},
+    /** What was played lately, by where it was played from, newest first. */
+    recents: List<ShelfItem> = emptyList(),
     onSignIn: () -> Unit,
     onRetry: () -> Unit,
     refreshing: Boolean,
@@ -229,33 +245,20 @@ fun LibraryScreen(
                     }
                 }
             }
-            if (deviceItems.isNotEmpty()) {
-                item(key = "my-lists") {
+            // What was played lately, as the cards of the lists they were played from — their own cover and name where the
+            // Library knows them — in two columns.
+            val recentCards = recents.map { r -> everyList.firstOrNull { it.browseId == r.browseId } ?: r }
+            if (recentCards.isNotEmpty() && editing == LibraryEditMode.NONE) {
+                item(key = "recents") {
                     MyListsGrid(
-                        title = stringResource(Res.string.library_my_lists),
-                        items = deviceItems,
+                        title = stringResource(Res.string.library_recents),
+                        items = recentCards,
                         onItemClick = onShelfItemClick,
                         onItemLongPress = onShelfItemLongPress,
                     )
                 }
             }
-            val spotifyRow: LazyListScope.() -> Unit = {
-                if (spotifyPlaylists.isNotEmpty()) {
-                    item(key = "shelf:spotify") {
-                        LibraryGridShelf(
-                            shelf = HomeShelf(title = spotifyTitle, items = spotifyPlaylists),
-                            onItemClick = onShelfItemClick,
-                            onItemLongPress = onShelfItemLongPress,
-                            onShowAll = {},
-                            // Every playlist, as a normal row; the title is the way in to the Spotify page.
-                            maxItems = Int.MAX_VALUE,
-                            onTitleClick = onOpenSpotify,
-                        )
-                    }
-                }
-            }
             if (!signedIn) {
-                spotifyRow()
                 item {
                     MessageState(
                         message = stringResource(Res.string.library_sign_in_description),
@@ -275,40 +278,16 @@ fun LibraryScreen(
                     // is exactly the account most in need of the button that
                     // makes one — so the row is drawn either way, empty but
                     // for the tile that creates the first playlist.
-                    if (shelves.none { it.title == PLAYLISTS }) {
-                        item(key = "shelf:$PLAYLISTS") {
-                            val emptyPlaylists = HomeShelf(PLAYLISTS, emptyList())
-                            PlaylistShelf(
-                                shelf = emptyPlaylists.copy(title = ytMusicTitle),
+                    // The playlists have a row of their own among the sections, and Spotify's too; the page is recents.
+                    shelves.filter { it.title !in OTHER_SHELVES && it.title != PLAYLISTS }.forEach { shelf ->
+                        item(key = "shelf:${shelf.title}") {
+                            LibraryGridShelf(
+                                shelf = shelf,
                                 onItemClick = onShelfItemClick,
                                 onItemLongPress = onShelfItemLongPress,
-                                onShowAll = { onShowAll(emptyPlaylists) },
+                                onShowAll = { onShowAll(shelf) },
                             )
                         }
-                    }
-                    if (shelves.none { it.title == PLAYLISTS }) spotifyRow()
-                    shelves.filter { it.title !in OTHER_SHELVES }.forEach { shelf ->
-                        item(key = "shelf:${shelf.title}") {
-                            if (shelf.title == PLAYLISTS) {
-                                val pinnedFirst = shelf.pinnedFirst(pinnedPlaylists)
-                                PlaylistShelf(
-                                    shelf = pinnedFirst.copy(title = ytMusicTitle),
-                                    onItemClick = onShelfItemClick,
-                                    onItemLongPress = onShelfItemLongPress,
-                                    onShowAll = { onShowAll(pinnedFirst) },
-                                    pinnedPlaylists = pinnedPlaylists,
-                                )
-                            } else {
-                                LibraryGridShelf(
-                                    shelf = shelf,
-                                    onItemClick = onShelfItemClick,
-                                    onItemLongPress = onShelfItemLongPress,
-                                    onShowAll = { onShowAll(shelf) },
-                                )
-                            }
-                        }
-                        // The Spotify account's playlists follow the account's own.
-                        if (shelf.title == PLAYLISTS) spotifyRow()
                     }
                 }
             }
@@ -529,6 +508,171 @@ fun LibraryGridPage(
 }
 
 /**
+ * A Library section as a list — the cover at the start, the name with the mark of where it comes from, a chevron — under
+ * its heading and a search field, the lists of every source together. A star marks the pinned ones.
+ */
+@Composable
+fun LibraryListPage(
+    shelf: HomeShelf,
+    onItemClick: (ShelfItem) -> Unit,
+    onItemLongPress: (ShelfItem) -> Unit,
+    contentPadding: PaddingValues,
+    modifier: Modifier = Modifier,
+) {
+    val pinnedPlaylists by AppUi.host.pinnedPlaylists.collectAsStateWithLifecycle()
+    val librarySort by AppUi.host.librarySort.collectAsStateWithLifecycle()
+    var query by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
+    val sorted = shelf.pinnedFirst(pinnedPlaylists).sortedForLibrary(librarySort)
+    val shown = sorted.items.filter { query.isBlank() || it.title.contains(query.trim(), ignoreCase = true) }
+    CompositionLocalProvider(LocalMarkNowPlaying provides true) {
+        LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = contentPadding) {
+            item(key = "title") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = TAB_TITLE_GAP)
+                        .height(TAB_TITLE_ROW_HEIGHT)
+                        .padding(start = PAGE_GUTTER, end = TAB_TITLE_END_RESERVE),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Text(
+                        text = shelf.title,
+                        style = MaterialTheme.typography.displayLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            item(key = "search") {
+                com.music.bitchord.ui.components.SearchField(
+                    query = query,
+                    onQueryChange = { query = it },
+                    onSubmit = {},
+                    placeholder = stringResource(Res.string.library_search),
+                    modifier = Modifier.padding(horizontal = PAGE_GUTTER, vertical = 6.dp),
+                )
+            }
+            items(shown, key = { it.browseId ?: it.title }) { item ->
+                LibraryListRow(
+                    item = item,
+                    pinned = item.browseId != null && item.browseId in pinnedPlaylists,
+                    onClick = { onItemClick(item) },
+                    onLongPress = { onItemLongPress(item) },
+                )
+            }
+        }
+    }
+}
+
+/** One row of a section: the cover, the name and the mark of its source, a chevron, and a line under it. */
+@Composable
+private fun LibraryListRow(
+    item: ShelfItem,
+    pinned: Boolean,
+    onClick: () -> Unit,
+    onLongPress: () -> Unit,
+) {
+    val coverToken = com.music.bitchord.ui.components.rememberCoverToken()
+    val nowPlaying = LocalNowPlayingList.current
+    val onAir = LocalMarkNowPlaying.current && nowPlaying.matches(item.browseId)
+    val shape = RoundedCornerShape(8.dp)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .pointerInput(coverToken) {
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    item.browseId?.let { com.music.bitchord.ui.components.CoverTransitionTarget.key = com.music.bitchord.ui.components.cardCoverKey(it, "list") }
+                }
+            }
+            .longPressMenuClickable(
+                onClick = {
+                    item.browseId?.let { com.music.bitchord.ui.components.CoverTransitionTarget.key = com.music.bitchord.ui.components.cardCoverKey(it, "list") }
+                    onClick()
+                },
+                onLongClick = onLongPress,
+            )
+            .contextClick(onLongPress),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // The pinned ones carry a star in the margin.
+            Box(Modifier.width(PAGE_GUTTER), contentAlignment = Alignment.Center) {
+                if (pinned) {
+                    Text("★", color = accentColor(), fontSize = 11.sp)
+                }
+            }
+            Box(
+                Modifier
+                    .cardCoverSharedElement(item.browseId, "list", coverToken)
+                    .size(LIST_COVER_SIZE)
+                    .clip(shape)
+                    .thumbnailBorder(shape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+            ) {
+                AsyncImage(
+                    model = item.thumbnailUrl.artworkAt(CARD_ART_PX),
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            Spacer(Modifier.width(LIST_COVER_GAP))
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp),
+                    color = if (onAir) accentColor() else MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (onAir) {
+                    Spacer(Modifier.width(8.dp))
+                    NowPlayingBars(playing = nowPlaying.playing, color = accentColor())
+                }
+                Spacer(Modifier.width(8.dp))
+                SourceMark(item.platform)
+            }
+            Icon(
+                imageVector = BitChordIcons.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .6f),
+                modifier = Modifier.padding(horizontal = PAGE_GUTTER).size(20.dp),
+            )
+        }
+        HorizontalDivider(
+            modifier = Modifier.padding(start = PAGE_GUTTER + LIST_COVER_SIZE + LIST_COVER_GAP, end = PAGE_GUTTER),
+            thickness = 0.5.dp,
+            color = MaterialTheme.colorScheme.outline,
+        )
+    }
+}
+
+/** Where a list comes from, as a small mark: Spotify's, YouTube Music's, or — for what has no service — a phone. */
+@Composable
+private fun SourceMark(platform: String?) {
+    when (platform) {
+        ShelfItem.PLATFORM_SPOTIFY -> Icon(painterResource(Res.drawable.spotify_logo), null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        ShelfItem.PLATFORM_YT_MUSIC -> Icon(painterResource(Res.drawable.ytmusic_logo), null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        else -> {
+            // This device: a phone, drawn.
+            Box(
+                Modifier
+                    .size(width = 10.dp, height = 15.dp)
+                    .border(1.5.dp, MaterialTheme.colorScheme.onSurfaceVariant, RoundedCornerShape(3.dp)),
+            )
+        }
+    }
+}
+
+private val LIST_COVER_SIZE = 64.dp
+private val LIST_COVER_GAP = 14.dp
+
+/**
  * Moves whichever of this shelf's cards are in [pinned] to the front, in the
  * order they were pinned, leaving everything else in its existing order behind
  * them.
@@ -655,7 +799,7 @@ private fun MyListsGrid(
                 Row(horizontalArrangement = Arrangement.spacedBy(LIBRARY_GRID_SPACING)) {
                     rowItems.forEach { item ->
                         ShelfCard(
-                            coverSection = "my-lists",
+                            coverSection = "recents",
                             item = item,
                             onClick = { onItemClick(item) },
                             onLongPress = { onItemLongPress(item) },

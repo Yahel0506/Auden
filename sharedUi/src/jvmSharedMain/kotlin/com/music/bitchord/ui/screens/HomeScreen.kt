@@ -1130,9 +1130,10 @@ internal fun ShelfCard(
                     "platform" to InlineTextContent(
                         Placeholder(size, size, PlaceholderVerticalAlign.TextCenter),
                     ) {
-                        Image(
+                        Icon(
                             painter = painterResource(logo),
                             contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.fillMaxSize().padding(end = 2.dp),
                         )
                     },
