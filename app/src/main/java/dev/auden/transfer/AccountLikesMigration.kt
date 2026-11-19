@@ -37,14 +37,24 @@ class AccountLikesMigration(
 
         data class Completed(val report: ImportReport) : Outcome
 
+        /**
+         * The read finished and delivered nothing. That is not proof the account has no likes — a stale sign-in can
+         * answer an empty success — so it is not marked done here; the caller decides when enough empty reads are enough.
+         */
+        data object Empty : Outcome
+
         /** Stopped before the end; [report] says what was stored before it did. */
         data class Incomplete(val report: ImportReport) : Outcome
     }
+
+    /** Marks it done after repeated empty reads, once the caller is satisfied the account really has no likes. */
+    fun acceptEmpty(): Boolean = state.markDone()
 
     suspend fun run(onProgress: (ImportProgress) -> Unit = {}): Outcome {
         if (state.done()) return Outcome.AlreadyDone
         val report = engine.importLikes(SessionBound(source, sameSession), onProgress)
         if (!report.complete) return Outcome.Incomplete(report)
+        if (report.likes == Tally()) return Outcome.Empty
         return if (state.markDone()) Outcome.Completed(report) else Outcome.Incomplete(report)
     }
 

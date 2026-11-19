@@ -110,10 +110,14 @@ class AccountLikesMigrationTest {
     }
 
     @Test
-    fun anEmptyAccountIsDoneStraightAway() = runBlocking {
-        val outcome = migration(FakeSource(Service.YT_MUSIC)).run()
-        assertTrue(outcome is AccountLikesMigration.Outcome.Completed)
-        assertTrue(mark.done)
+    fun anEmptyReadIsNotMarkedDoneOnItsOwn() = runBlocking {
+        // A stale sign-in can answer an empty success, so nothing read is not proof of nothing liked.
+        val m = migration(FakeSource(Service.YT_MUSIC))
+        assertTrue(m.run() is AccountLikesMigration.Outcome.Empty)
+        assertFalse(mark.done)
         assertTrue(library.likes.isEmpty())
+        // ...until the caller has seen enough empty reads to accept it.
+        assertTrue(m.acceptEmpty())
+        assertTrue(mark.done)
     }
 }

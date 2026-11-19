@@ -28,6 +28,10 @@ object TransferMigrations {
     private const val PREFS = "auden_transfer"
     private const val KEY_LIKES_ATTEMPTS = "account_likes_attempts"
     private const val KEY_COPY_ATTEMPTS = "copy_attempts:"
+    private const val KEY_LIKES_EMPTY = "account_likes_empty_reads"
+
+    /** An account's likes are taken as really none after this many launches that read nothing: a stale sign-in can look the same. */
+    private const val EMPTY_READS_ENOUGH = 3
 
     /** Past this many unfinished runs the likes are left to "Transfer your music" rather than tried every launch. */
     private const val MAX_LIKES_ATTEMPTS = 20
@@ -104,6 +108,11 @@ object TransferMigrations {
             is AccountLikesMigration.Outcome.Completed -> {
                 Log.d(TAG, "account likes imported: ${outcome.report.likes}")
                 _accountLikes.value = LikesState.Done
+            }
+            AccountLikesMigration.Outcome.Empty -> {
+                val empty = prefs.getInt(KEY_LIKES_EMPTY, 0) + 1
+                prefs.edit().putInt(KEY_LIKES_EMPTY, empty).apply()
+                _accountLikes.value = if (empty >= EMPTY_READS_ENOUGH && migration.acceptEmpty()) LikesState.Done else LikesState.Idle
             }
             is AccountLikesMigration.Outcome.Incomplete -> {
                 prefs.edit().putInt(KEY_LIKES_ATTEMPTS, attempts + 1).apply()

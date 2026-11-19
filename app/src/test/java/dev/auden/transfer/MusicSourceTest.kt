@@ -106,6 +106,32 @@ class MusicSourceTest {
     }
 
     @Test
+    fun aPageThatParsedToNothingDoesNotEndTheRead() = runBlocking {
+        // An old Liked Music can hold a page of items the parser drops: its continuation is still followed.
+        val source = ytSource(
+            first = Result.success(page("a", "b", next = "t1")),
+            pages = mapOf(
+                "t1" to Result.success(page(next = "t2")),
+                "t2" to Result.success(page("c", "d")),
+            ),
+        )
+        val read = mutableListOf<String>()
+        source.likedSongs { read += it.map { t -> t.remoteId } }
+        assertEquals(listOf("a", "b", "c", "d"), read)
+    }
+
+    @Test
+    fun aPageOfSongsAllSeenIsALoopAndEndsTheRead() = runBlocking {
+        val source = ytSource(
+            first = Result.success(page("a", "b", next = "t1")),
+            pages = mapOf("t1" to Result.success(page("a", "b", next = "t2")), "t2" to Result.success(page("z"))),
+        )
+        val read = mutableListOf<String>()
+        source.likedSongs { read += it.map { t -> t.remoteId } }
+        assertEquals(listOf("a", "b"), read)
+    }
+
+    @Test
     fun albumMatchIsStrictAboutTitleAndArtist() {
         fun album(id: String, title: String, subtitle: String, type: BrowseType = BrowseType.ALBUM) = BrowseItem(id, title, subtitle, null, type)
         val candidates = listOf(

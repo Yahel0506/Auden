@@ -56,8 +56,8 @@ class YtMusicSource(
 
     /**
      * Every page of [browseId], each song once, in order. Unbounded on purpose — a long Liked Music is exactly
-     * what has to be read to its end — but it stops at a token it has seen, or a page with nothing new (a feed
-     * that has looped back on itself, as PlaylistSync found). A failed page throws.
+     * what has to be read to its end — but it stops at a token it has seen, or a page whose songs were all seen
+     * already (a feed that has looped back on itself, as PlaylistSync found). A failed page throws.
      */
     internal suspend fun walk(browseId: String, onPage: suspend (List<Song>) -> Unit) {
         val opening = firstPage(browseId).getOrElse { throw IncompleteReadException("$browseId: first page failed", it) }
@@ -69,8 +69,10 @@ class YtMusicSource(
         while (next != null && tokens.add(next)) {
             val page = nextPage(next).getOrElse { throw IncompleteReadException("$browseId: a page failed", it) }
             val songs = fresh(page.songs)
-            if (songs.isEmpty()) break
-            onPage(songs)
+            // A page of songs all seen before is a feed that looped back; a page that parsed to nothing is not the end
+            // (an old Liked Music can hold pages of items the parser drops): its token, if it has one, is followed.
+            if (page.songs.isNotEmpty() && songs.isEmpty()) break
+            if (songs.isNotEmpty()) onPage(songs)
             next = page.continuation
         }
     }
