@@ -46,7 +46,6 @@ import com.music.bitchord.AppIcon
 import com.music.bitchord.R
 import kotlinx.coroutines.launch
 
-private val Ink = Color(0xFF000000)
 private val Spectrum = listOf(
     Color(0xFF0A84FF), Color(0xFF30D158), Color(0xFFBFE04A), Color(0xFFFFD60A),
     Color(0xFFFF9F0A), Color(0xFFFF453A), Color(0xFFFF6482), Color(0xFFE040C8), Color(0xFFA070FF),
@@ -58,13 +57,16 @@ private val Spectrum = listOf(
  */
 @Composable
 fun WelcomeScreen(playing: Boolean, onDone: () -> Unit) {
+    val p = com.music.bitchord.ui.welcome.welcomePalette()
+    // Dark icons on the light page, light ones on the dark.
+    com.music.bitchord.ui.theme.SystemBarIcons(dark = p.light)
     val pager = rememberPagerState { 4 }
     val scope = rememberCoroutineScope()
     val last = pager.currentPage == 3
     Box(
         Modifier
             .fillMaxSize()
-            .background(Ink)
+            .background(p.bg)
             .pointerInput(Unit) { detectTapGestures { } },
     ) {
         // Page one plays the intro and then the logo's loop; the others share the loop of drops alone. The two
@@ -72,11 +74,11 @@ fun WelcomeScreen(playing: Boolean, onDone: () -> Unit) {
         val position = pager.currentPage + pager.currentPageOffsetFraction
         Box(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 24.dp).align(Alignment.TopCenter)) {
             WelcomeVideo(
-                intro = R.raw.welcome_intro, loop = R.raw.welcome_logo_loop, play = playing,
+                intro = p.intro, loop = p.logoLoop, play = playing,
                 modifier = Modifier.graphicsLayer { alpha = (1f - position).coerceIn(0f, 1f) },
             )
             WelcomeVideo(
-                intro = null, loop = R.raw.welcome_drops_loop, play = playing,
+                intro = null, loop = p.dropsLoop, play = playing,
                 modifier = Modifier.graphicsLayer { alpha = position.coerceIn(0f, 1f) },
             )
         }
@@ -96,7 +98,7 @@ fun WelcomeScreen(playing: Boolean, onDone: () -> Unit) {
                         Modifier
                             .size(if (i == pager.currentPage) 22.dp else 7.dp, 7.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = if (i == pager.currentPage) 0.95f else 0.3f)),
+                            .background(p.fg.copy(alpha = if (i == pager.currentPage) 0.95f else 0.3f)),
                     )
                 }
             }
@@ -111,6 +113,7 @@ fun WelcomeScreen(playing: Boolean, onDone: () -> Unit) {
 
 @Composable
 private fun Page(index: Int) {
+    val p = com.music.bitchord.ui.welcome.welcomePalette()
     val title = stringResource(
         when (index) {
             0 -> R.string.welcome_title_1
@@ -143,9 +146,9 @@ private fun Page(index: Int) {
                 else -> AccentRow()
             }
         }
-        Text(title, color = Color.White, fontSize = 44.sp, lineHeight = 46.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.2).sp)
+        Text(title, color = p.fg, fontSize = 44.sp, lineHeight = 46.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.2).sp)
         Spacer(Modifier.height(12.dp))
-        Text(body, color = Color.White.copy(alpha = 0.62f), fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium)
+        Text(body, color = p.fg.copy(alpha = 0.62f), fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -198,6 +201,7 @@ private fun WelcomeIcon(option: AppIcon, size: androidx.compose.ui.unit.Dp) {
  */
 @Composable
 private fun AccentRow() {
+    val p = com.music.bitchord.ui.welcome.welcomePalette()
     var picked by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Int?>(null) }
     var auto by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
     androidx.compose.runtime.LaunchedEffect(picked) {
@@ -215,8 +219,8 @@ private fun AccentRow() {
             Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(36.dp))
-                .background(Color.White.copy(alpha = 0.09f))
-                .border(0.6.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(36.dp))
+                .background(p.fg.copy(alpha = 0.09f))
+                .border(0.6.dp, p.fg.copy(alpha = 0.22f), RoundedCornerShape(36.dp))
                 .padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -232,13 +236,13 @@ private fun AccentRow() {
                         .weight(1f)
                         .height(60.dp)
                         .clip(RoundedCornerShape(30.dp))
-                        .background(if (i == 0) Color.White.copy(alpha = 0.1f) else Color.Transparent),
+                        .background(if (i == 0) p.fg.copy(alpha = 0.1f) else Color.Transparent),
                     contentAlignment = Alignment.Center,
                 ) {
                     androidx.compose.material3.Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        tint = if (i == 0) accent else Color.White.copy(alpha = 0.55f),
+                        tint = if (i == 0) accent else p.fg.copy(alpha = 0.55f),
                         modifier = Modifier.size(28.dp),
                     )
                 }
@@ -257,7 +261,7 @@ private fun AccentRow() {
                             .graphicsLayer { scaleX = if (on) 1.18f else 1f; scaleY = if (on) 1.18f else 1f }
                             .clip(CircleShape)
                             .background(c)
-                            .border(if (on) 2.dp else 0.6.dp, Color.White.copy(alpha = if (on) 0.95f else 0.35f), CircleShape)
+                            .border(if (on) 2.dp else 0.6.dp, p.fg.copy(alpha = if (on) 0.95f else 0.35f), CircleShape)
                             .clickable { picked = i },
                     )
                 }
@@ -268,15 +272,16 @@ private fun AccentRow() {
 
 @Composable
 internal fun GlassPill(text: String, onClick: () -> Unit, enabled: Boolean = true) {
+    val p = com.music.bitchord.ui.welcome.welcomePalette()
     Box(
         Modifier
             .fillMaxWidth()
             .height(58.dp)
             .clip(RoundedCornerShape(29.dp))
-            .background(Color.White.copy(alpha = if (enabled) 1f else 0.55f))
+            .background(p.fg.copy(alpha = if (enabled) 1f else 0.55f))
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+        Text(text, color = p.bg, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
     }
 }

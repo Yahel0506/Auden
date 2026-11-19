@@ -22,9 +22,10 @@ import com.music.bitchord.ui.welcome.WelcomeVideo
 @Composable
 fun SignInBannerBackground(modifier: Modifier, motion: Boolean) {
     val shape = RoundedCornerShape(26.dp)
-    BoxWithConstraints(modifier.clip(shape).background(Color.Black), contentAlignment = Alignment.Center) {
+    val p = com.music.bitchord.ui.welcome.welcomePalette()
+    BoxWithConstraints(modifier.clip(shape).background(p.bg), contentAlignment = Alignment.Center) {
         WelcomeVideo(
-            intro = null, loop = R.raw.welcome_drops_loop, play = motion,
+            intro = null, loop = p.dropsLoop, play = motion,
             modifier = Modifier.requiredSize(maxWidth), square = false,
         )
         Box(Modifier.matchParentSize().liquidGlassRim(shape).border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, shape))

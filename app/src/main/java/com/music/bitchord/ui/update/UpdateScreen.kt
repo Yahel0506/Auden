@@ -44,6 +44,7 @@ import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.material3.RichText
 import com.music.bitchord.R
+import com.music.bitchord.ui.components.lightweightLiquidGlass
 import com.music.bitchord.data.AppUpdateChecker
 import com.music.bitchord.ui.icons.SfIcons
 import com.music.bitchord.ui.welcome.GlassPill
@@ -70,10 +71,12 @@ fun UpdateScreen(
     modifier: Modifier = Modifier,
     actions: UpdateActions? = null,
 ) {
+    val p = com.music.bitchord.ui.welcome.welcomePalette()
+    com.music.bitchord.ui.theme.SystemBarIcons(dark = p.light)
     Box(
         modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(p.bg)
             .pointerInput(Unit) { detectTapGestures { } },
     ) {
         Column(Modifier.fillMaxSize()) {
@@ -85,13 +88,13 @@ fun UpdateScreen(
                 // The video is square; a band of its middle is what shows.
                 BoxWithConstraints(Modifier.fillMaxWidth().statusBarsPadding().height(250.dp).clip(RoundedCornerShape(0.dp)), contentAlignment = Alignment.Center) {
                     WelcomeVideo(
-                        intro = R.raw.welcome_intro, loop = R.raw.welcome_logo_loop, play = true,
+                        intro = p.intro, loop = p.logoLoop, play = true,
                         modifier = Modifier.requiredSize(maxWidth * 0.82f), square = false,
                     )
                 }
                 Text(
                     text = stringResource(R.string.update_screen_version, version),
-                    color = Color.White,
+                    color = p.fg,
                     fontSize = 34.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = (-1).sp,
@@ -112,37 +115,34 @@ fun UpdateScreen(
                 .padding(start = 16.dp, top = 8.dp)
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.14f))
-                .border(0.6.dp, Color.White.copy(alpha = 0.28f), CircleShape)
+                .background(p.fg.copy(alpha = 0.14f))
+                .border(0.6.dp, p.fg.copy(alpha = 0.28f), CircleShape)
                 .clickable(onClick = onBack),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(SfIcons.ArrowBack, contentDescription = stringResource(R.string.back), tint = Color.White)
+            Icon(SfIcons.ArrowBack, contentDescription = stringResource(R.string.back), tint = p.fg)
         }
     }
 }
 
-/** The changelog's container: a faint film with a hairline rim, as the glass has, drawn flat. */
+/** The changelog's container, in the app's glass without its blur and refraction. */
 @Composable
 private fun ChangelogCard(notes: String?) {
+    val p = com.music.bitchord.ui.welcome.welcomePalette()
     val shape = RoundedCornerShape(34.dp)
     Column(
         Modifier
             .padding(horizontal = 20.dp)
             .fillMaxWidth()
-            .clip(shape)
-            .background(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.15f), Color.White.copy(alpha = 0.06f))))
-            .border(
-                1.dp,
-                Brush.linearGradient(listOf(Color.White.copy(alpha = 0.55f), Color.White.copy(alpha = 0.06f), Color.White.copy(alpha = 0.3f))),
-                shape,
-            )
+            // The glass every liquid-glass surface is made of — its film, its rim lit from above and the black line at its
+            // ends — without the blur and the lens, which have nothing here to sample.
+            .lightweightLiquidGlass(shape, fallbackColor = p.fg.copy(alpha = 0.08f))
             .padding(20.dp),
     ) {
         if (notes.isNullOrBlank()) {
-            Text(stringResource(R.string.whats_new_none), color = Color.White.copy(alpha = 0.6f), fontSize = 16.sp)
+            Text(stringResource(R.string.whats_new_none), color = p.fg.copy(alpha = 0.6f), fontSize = 16.sp)
         } else {
-            CompositionLocalProvider(LocalContentColor provides Color.White) {
+            CompositionLocalProvider(LocalContentColor provides p.fg) {
                 RichText(style = RichTextStyle.Default) { Markdown(notes) }
             }
         }
@@ -152,11 +152,12 @@ private fun ChangelogCard(notes: String?) {
 /** Always at the foot: the progress bar once a download is on, and the button that starts, finishes or retries it. */
 @Composable
 private fun DownloadFoot(actions: UpdateActions) {
+    val p = com.music.bitchord.ui.welcome.welcomePalette()
     val state by AppUpdateChecker.download.collectAsStateWithLifecycle()
     Column(
         Modifier
             .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.92f), Color.Black)))
+            .background(Brush.verticalGradient(listOf(Color.Transparent, p.bg.copy(alpha = 0.92f), p.bg)))
             .navigationBarsPadding()
             .padding(horizontal = 24.dp)
             .padding(top = 16.dp, bottom = 20.dp),
@@ -168,7 +169,7 @@ private fun DownloadFoot(actions: UpdateActions) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(
                         stringResource(R.string.update_screen_downloading, (s.fraction * 100).toInt()),
-                        color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp,
+                        color = p.fg.copy(alpha = 0.7f), fontSize = 14.sp,
                     )
                     Text(
                         stringResource(R.string.cancel),
@@ -194,19 +195,20 @@ private fun DownloadFoot(actions: UpdateActions) {
 
 @Composable
 private fun ProgressBar(fraction: Float) {
+    val p = com.music.bitchord.ui.welcome.welcomePalette()
     Box(
         Modifier
             .fillMaxWidth()
             .height(6.dp)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.18f)),
+            .background(p.fg.copy(alpha = 0.18f)),
     ) {
         Box(
             Modifier
                 .fillMaxWidth(fraction.coerceIn(0f, 1f))
                 .height(6.dp)
                 .clip(CircleShape)
-                .background(Color.White),
+                .background(p.fg),
         )
     }
 }
