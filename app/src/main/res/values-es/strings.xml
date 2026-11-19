@@ -32,8 +32,8 @@
     <string name="local_music">Música local</string>
     <string name="audio_files_on_device">Archivos de audio del dispositivo</string>
     <string name="on_device">En el dispositivo</string>
-    <string name="playlists">Listas de reproducción</string>
-    <string name="new_playlist">Nueva lista</string>
+    <string name="playlists">Playlists</string>
+    <string name="new_playlist">Nueva playlist</string>
     <string name="saved_to_youtube_music">Guardada en YouTube Music</string>
     <string name="sign_in">Iniciar sesión</string>
     <string name="sign_out">Cerrar sesión</string>
@@ -42,7 +42,7 @@
     <string name="retry">Reintentar</string>
     <string name="shuffle">Aleatorio</string>
     <string name="more">Más</string>
-    <string name="add_to_playlist">Añadir a la lista</string>
+    <string name="add_to_playlist">Añadir a la playlist</string>
     <string name="add_to_library">Añadir a la biblioteca</string>
     <string name="remove_from_library">Quitar de la biblioteca</string>
     <string name="download_all">Descargar todo</string>
@@ -260,8 +260,8 @@
     <string name="light">Claro</string>
     <string name="dark">Oscuro</string>
     <string name="full_screen_cover_art_subtitle">Lleva la portada a los bordes del reproductor en lugar de mostrarla cuadrada</string>
-    <string name="full_screen_detail_cover">Portada de álbum/lista a pantalla completa</string>
-    <string name="full_screen_detail_cover_subtitle">Lleva las portadas de álbumes y listas a los bordes de la página en lugar de enmarcarlas</string>
+    <string name="full_screen_detail_cover">Portada de álbum/playlist a pantalla completa</string>
+    <string name="full_screen_detail_cover_subtitle">Lleva las portadas de álbumes y playlists a los bordes de la página en lugar de enmarcarlas</string>
     <string name="animated_cover_art_subtitle">Reproduce el video en bucle que incluyen algunos lanzamientos</string>
     <string name="dont_repeat_songs_subtitle">La reproducción automática no sugerirá una canción ya reproducida o sugerida en esta sesión</string>
     <string name="download_quality_subtitle">%1$s por pista, sin importar la conexión</string>
@@ -898,7 +898,7 @@
 
     <string name="shelf_energy_boosters">Para activarse</string>
 
-    <string name="shelf_featured_playlists_for_you">Listas destacadas para ti</string>
+    <string name="shelf_featured_playlists_for_you">Playlists destacadas para ti</string>
 
     <string name="shelf_feel_good">Buen rollo</string>
 
@@ -952,7 +952,7 @@
 
     <string name="shelf_trending">Tendencias</string>
 
-    <string name="shelf_trending_community_playlists">Listas populares de la comunidad</string>
+    <string name="shelf_trending_community_playlists">Playlists populares de la comunidad</string>
 
     <string name="shelf_workout">Entrenamiento</string>
 
@@ -1009,7 +1009,7 @@
 
     <string name="unsubscribe">Cancelar suscripción</string>
 
-    <string name="playlist_action">Lista de reproducción</string>
+    <string name="playlist_action">Playlist</string>
 
 
     <string name="lyrics_offset">Lyrics offset</string>
@@ -1336,7 +1336,7 @@
     <string name="onboarding_name_footer">Tus amigos lo ven cuando usas Escuchar juntos. Puedes cambiarlo más tarde en Ajustes.</string>
     <string name="onboarding_next">Siguiente</string>
     <string name="onboarding_connect_title">Conecta tu cuenta de YouTube</string>
-    <string name="onboarding_connect_body">Trae contigo tu biblioteca, listas y mixes, y empieza una sesión de Escuchar juntos con tus amigos.</string>
+    <string name="onboarding_connect_body">Trae contigo tu biblioteca, playlists y mixes, y empieza una sesión de Escuchar juntos con tus amigos.</string>
     <string name="onboarding_sign_in_google">Iniciar sesión con Google</string>
     <string name="onboarding_skip_sign_in">Omitir inicio de sesión</string>
     <string name="onboarding_back">Atrás</string>
@@ -1585,7 +1585,7 @@
     <string name="version_switch_in_party">Everyone in Listen Together hears the same version</string>
     <string name="opened_file">Archivo abierto</string>
     <string name="no_local_folders">No hay carpetas con música</string>
-    <string name="offline_playlist_empty">Esta lista aún está vacía. Añade canciones desde su menú.</string>
+    <string name="offline_playlist_empty">Esta playlist aún está vacía. Añade canciones desde su menú.</string>
     <string name="offline_liked_empty">Las canciones que te gusten en este dispositivo aparecerán aquí</string>
     <string name="direct_source_stream_in_party">Desactivado mientras estás en una fiesta de Listen Together</string>
     <string name="direct_source_stream">Transmisión directa desde la fuente</string>
@@ -1873,18 +1873,18 @@
     <string name="cover_stickers_future">Futurista</string>
     <string name="cover_stickers_y2k">Y2K</string>
     <string name="cover_stickers_graphic">Gráfico</string>
-    <string name="edit_playlist">Editar lista</string>
+    <string name="edit_playlist">Editar playlist</string>
     <string name="browse_group_storage">Guardar y descargar</string>
     <string name="browse_group_tags">Letras y etiquetas</string>
-    <string name="browse_group_more">Gestionar lista</string>
+    <string name="browse_group_more">Gestionar playlist</string>
     <string name="cover">Portada</string>
     <string name="cover_choose_photo">Elegir una foto</string>
     <string name="playlist_description">Descripción</string>
     <string name="playlist_description_hint">Para qué es, para quién es…</string>
-    <string name="about_playlist">Acerca de esta lista</string>
-    <string name="flow_create_new">Crear una lista nueva</string>
-    <string name="flow_create_new_sub">Empieza con una lista vacía</string>
-    <string name="flow_import">Importar una lista</string>
+    <string name="about_playlist">Acerca de esta playlist</string>
+    <string name="flow_create_new">Crear una playlist nueva</string>
+    <string name="flow_create_new_sub">Empieza con una playlist vacía</string>
+    <string name="flow_import">Importar una playlist</string>
     <string name="flow_import_sub">Tráela desde un archivo, YouTube Music o Spotify</string>
     <string name="flow_save_to">Guardar en</string>
     <string name="flow_dest_device">Este dispositivo</string>
@@ -1893,15 +1893,15 @@
     <string name="flow_dest_yt_sub">Se guarda en tu cuenta</string>
     <string name="flow_sign_in_needed">Inicia sesión en YouTube Music para usarlo</string>
     <string name="flow_import_from">Importar desde</string>
-    <string name="flow_src_file">Archivo de lista</string>
-    <string name="flow_src_file_sub">Una lista guardada por otra app</string>
-    <string name="flow_src_yt_sub">Una de las listas de tu cuenta</string>
+    <string name="flow_src_file">Archivo de playlist</string>
+    <string name="flow_src_file_sub">Una playlist guardada por otra app</string>
+    <string name="flow_src_yt_sub">Una de las playlists de tu cuenta</string>
     <string name="flow_src_spotify">Spotify</string>
-    <string name="flow_src_spotify_sub">Con el enlace de la lista</string>
+    <string name="flow_src_spotify_sub">Con el enlace de la playlist</string>
     <string name="flow_import_to">Guardar la importación en</string>
     <string name="flow_continue">Continuar</string>
-    <string name="flow_pick_playlist">Elige una lista</string>
-    <string name="flow_no_playlists">Tu cuenta aún no tiene listas</string>
+    <string name="flow_pick_playlist">Elige una playlist</string>
+    <string name="flow_no_playlists">Tu cuenta aún no tiene playlists</string>
     <!-- Settings blocks and category summaries (phase 2) -->
     <string name="settings_block_output">Salida de audio</string>
     <string name="settings_block_sound">Sonido</string>
@@ -1915,7 +1915,7 @@
     <string name="settings_block_dl_quality">Calidad y red</string>
     <string name="settings_block_dl_files">Dónde y cómo se guardan</string>
     <string name="settings_block_dl_lyrics">Guardado con la canción</string>
-    <string name="settings_block_dl_playlists">Listas descargadas</string>
+    <string name="settings_block_dl_playlists">Playlists descargadas</string>
     <string name="settings_block_local_folders">Carpetas</string>
     <string name="settings_block_local_filters">Filtros</string>
     <string name="settings_block_home_sections">Secciones visibles</string>
@@ -1940,7 +1940,7 @@
     <string name="settings_group_more">Más</string>
     <string name="settings_cat_playback_sub">Salida, sonido, transiciones y cola</string>
     <string name="settings_cat_dj_sub">Voz, comentarios y sets</string>
-    <string name="settings_cat_downloads_sub">Calidad, carpetas, letras y listas sincronizadas</string>
+    <string name="settings_cat_downloads_sub">Calidad, carpetas, letras y playlists sincronizadas</string>
     <string name="settings_cat_local_sub">Carpetas y filtros</string>
     <string name="settings_cat_home_sub">Qué muestra el inicio</string>
     <string name="settings_cat_appearance_sub">Tema, cristal, reproductor, portadas y letras</string>
@@ -1959,10 +1959,10 @@
     <string name="home_because_you_listened">Porque escuchaste %1$s</string>
     <string name="home_more_like_artist">Más como %1$s</string>
     <string name="home_best_of_artist">Lo mejor de %1$s</string>
-    <string name="flow_src_yt_link_sub">Desde un enlace o una de tus listas</string>
+    <string name="flow_src_yt_link_sub">Desde un enlace o una de tus playlists</string>
     <string name="flow_src_yt_link_only_sub">Desde un enlace</string>
     <string name="flow_paste_link">Pega un enlace de YouTube Music</string>
-    <string name="flow_or_yours">O una de tus listas</string>
+    <string name="flow_or_yours">O una de tus playlists</string>
     <string name="flow_import_link">Importar</string>
     <string name="accent_color">Color de acento</string>
     <string name="accent_color_subtitle">El color de la barra, los iconos y las marcas</string>

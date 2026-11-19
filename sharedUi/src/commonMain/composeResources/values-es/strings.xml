@@ -143,14 +143,14 @@
     <string name="explore">Explorar</string>
     <string name="library">Biblioteca</string>
     <string name="library_sign_in_description">Inicia sesión en tu cuenta de Google para ver tus canciones favoritas, playlists e historial de YouTube Music.</string>
-    <string name="new_playlist">Nueva lista</string>
+    <string name="new_playlist">Nueva playlist</string>
     <string name="on_device">En el dispositivo</string>
     <string name="personalized_recommendations">Recibe recomendaciones personalizadas</string>
     <string name="pinned">Fijado</string>
     <string name="play_next">Reproducir después</string>
     <string name="playlist">playlist</string>
-    <string name="playlist_action">Lista de reproducción</string>
-    <string name="playlists">Listas de reproducción</string>
+    <string name="playlist_action">Playlist</string>
+    <string name="playlists">Playlists</string>
     <string name="recent_search_edit">Editar “%1$s”</string>
     <string name="recent_search_remove">Quitar “%1$s” de las búsquedas recientes</string>
     <string name="recent_searches">Búsquedas recientes</string>
@@ -166,7 +166,7 @@
     <string name="shelf_chart">Lista de éxitos</string>
     <string name="shelf_charts">Listas de éxitos</string>
     <string name="shelf_concerts">Conciertos</string>
-    <string name="shelf_featured_playlists_for_you">Listas destacadas para ti</string>
+    <string name="shelf_featured_playlists_for_you">Playlists destacadas para ti</string>
     <string name="shelf_for_you">Para ti</string>
     <string name="shelf_forgotten_favorites">Favoritos olvidados</string>
     <string name="shelf_from_the_community">De la comunidad</string>
@@ -185,7 +185,7 @@
     <string name="shelf_top_music_videos">Vídeos musicales principales</string>
     <string name="shelf_top_tunes_right_now">Temas del momento</string>
     <string name="shelf_trending">Tendencias</string>
-    <string name="shelf_trending_community_playlists">Listas populares de la comunidad</string>
+    <string name="shelf_trending_community_playlists">Playlists populares de la comunidad</string>
     <string name="shelf_youtube_charts">Listas de YouTube</string>
     <string name="show_all">Ver todo</string>
     <string name="sign_in">Iniciar sesión</string>
@@ -227,5 +227,5 @@
     <string name="library_podcasts">Podcasts</string>
     <string name="library_yt_music">YT Music</string>
     <string name="library_other_empty">Inicia sesión para ver aquí tus artistas, álbumes y podcasts.</string>
-    <string name="library_my_lists">Mis listas</string>
+    <string name="library_my_lists">Mis playlists</string>
 </resources>
