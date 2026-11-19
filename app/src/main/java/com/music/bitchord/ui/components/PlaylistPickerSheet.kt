@@ -184,12 +184,8 @@ fun PlaylistPickerSheet(
                     onClose = { closeAfter {} },
                     onCreate = { name, privacy -> closeAfter { onCreate(name, privacy) } },
                     offline = offline,
-                    options = when {
-                        offline -> listOf(PlaylistPrivacy.DEVICE)
-                        !privacyOptions.isNullOrEmpty() -> privacyOptions
-                        signedIn -> PlaylistPrivacy.entries
-                        else -> listOf(PlaylistPrivacy.DEVICE)
-                    },
+                    // A new playlist is Auden's own, kept on this device; YouTube Music is an export.
+                    options = listOf(PlaylistPrivacy.DEVICE),
                 )
             } else {
                 SheetTopBar(

@@ -10,7 +10,6 @@ import android.net.NetworkCapabilities
 import androidx.media3.common.Player
 import com.music.bitchord.BuildConfig
 import com.music.bitchord.auth.AuthStore
-import com.music.bitchord.data.LikeSync
 import com.music.bitchord.data.canvas.SpotifyToken
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.sources.SourceKind
@@ -532,13 +531,6 @@ object AppSettings {
      * show through, a higher one makes the glass milkier.
      */
     val glassOpacity = MutableStateFlow(0.9f)
-
-    /**
-     * Where a heart goes when an account is signed in: [LikeSync.ACCOUNT] to the account as well as the device,
-     * [LikeSync.LOCAL] to the device only, and [LikeSync.ASK] until the listener has chosen — which behaves as the
-     * account does, as hearts always have for a signed-in listener, but offers the likes kept on the device first.
-     */
-    val likeSync = MutableStateFlow(LikeSync.ASK)
 
     /** Blurs unfocused lyric lines, keeping the active line sharp. */
     val lyricsBlur = MutableStateFlow(true)
@@ -1143,7 +1135,6 @@ object AppSettings {
         reduceDynamicBlur.value = prefs.getBoolean(KEY_REDUCE_BLUR, false)
         disableBlendEffects.value = prefs.getBoolean(KEY_DISABLE_BLEND_EFFECTS, false)
         glassOpacity.value = prefs.getFloat(KEY_GLASS_OPACITY, 0.9f).coerceIn(0f, 1.5f)
-        likeSync.value = LikeSync.entries.firstOrNull { it.name == prefs.getString(KEY_LIKE_SYNC, null) } ?: LikeSync.ASK
         showDjTab.value = prefs.getBoolean(KEY_SHOW_DJ_TAB, true)
         showLibraryStats.value = prefs.getBoolean(KEY_SHOW_LIBRARY_STATS, false)
         recentSources.value = runCatching {
@@ -1672,11 +1663,6 @@ object AppSettings {
 
     fun markWelcomeSeen() {
         prefs.edit().putString(KEY_WELCOME_SEEN, WELCOME_ID).apply()
-    }
-
-    fun setLikeSync(mode: LikeSync) {
-        likeSync.value = mode
-        prefs.edit().putString(KEY_LIKE_SYNC, mode.name).apply()
     }
 
     fun setGlassOpacity(value: Float) {
@@ -2596,7 +2582,6 @@ object AppSettings {
     private const val KEY_REDUCE_BLUR = "reduce_dynamic_blur"
     private const val KEY_DISABLE_BLEND_EFFECTS = "disable_blend_effects"
     private const val KEY_GLASS_OPACITY = "glass_opacity"
-    private const val KEY_LIKE_SYNC = "like_sync"
     private const val KEY_WELCOME_SEEN = "welcome_seen"
 
     /** Names the welcome in the saved setting: a new welcome for a later update is a new id. */

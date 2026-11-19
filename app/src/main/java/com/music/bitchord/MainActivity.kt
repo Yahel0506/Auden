@@ -1205,10 +1205,7 @@ private fun BitChordApp(
     // rating: the file has no identity there to rate. One rule for every
     // surface that draws a heart — the player and the track menu alike.
     val offlineLiked by OfflinePlaylists.liked.collectAsStateWithLifecycle()
-    // The likes kept on this device, asked about once when an account is signed in: add them to it, or keep them here.
-    val likeSyncMode by AppSettings.likeSync.collectAsStateWithLifecycle()
     val accountLikedIds by viewModel.accountLikedIds.collectAsStateWithLifecycle()
-    var likesPromptLater by rememberSaveable { mutableStateOf(false) }
     val offlinePlaylists by OfflinePlaylists.playlists.collectAsStateWithLifecycle()
     val offlinePlaylistGroups = remember(offlinePlaylists) { offlinePlaylists.map { it.toGroup() } }
     val likeStatusOf: (Song) -> LikeStatus = { song ->
@@ -6976,31 +6973,6 @@ private fun BitChordApp(
                 notes = remember(whatsNewContext) { com.music.bitchord.data.ReleaseNotes.forInstalledVersion(whatsNewContext) },
                 onBack = { showWhatsNew = false },
             )
-        }
-
-        // ---- Likes kept on this device, with an account signed in ----
-        run {
-            val account = accountLikedIds
-            val pending = remember(offlineLiked, account) {
-                if (account == null) emptyList() else OfflinePlaylists.likedStreams().filter { it.videoId !in account }
-            }
-            if (signedIn && likeSyncMode == com.music.bitchord.data.LikeSync.ASK && !likesPromptLater && pending.isNotEmpty() &&
-                onboardingComplete && !showDiwali && !showUpdateDialog
-            ) {
-                com.music.bitchord.ui.components.LikesMergeAlert(
-                    hazeState = hazeState,
-                    count = pending.size,
-                    onUpload = {
-                        AppSettings.setLikeSync(com.music.bitchord.data.LikeSync.ACCOUNT)
-                        scope.launch {
-                            val added = viewModel.uploadDeviceLikes(pending)
-                            if (added > 0) Toast.makeText(context, context.getString(R.string.likes_uploaded, added), Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    onKeepHere = { AppSettings.setLikeSync(com.music.bitchord.data.LikeSync.LOCAL) },
-                    onLater = { likesPromptLater = true },
-                )
-            }
         }
 
         // Dialogs and alerts, in a scope of their own: BitChordApp had outgrown the JVM's method limit.

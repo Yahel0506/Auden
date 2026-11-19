@@ -2034,21 +2034,7 @@
     <string name="dj_top_decade_reason">La década que más escuchas</string>
     <string name="dj_session_to_playlist">Guardar como playlist</string>
     <string name="dj_session_playlist_saved">Guardada como la playlist «%1$s»</string>
-    <string name="likes_merge_title">¿Añadir tus me gusta a tu cuenta?</string>
-    <plurals name="likes_merge_body">
-        <item quantity="one">Tienes %1$d canción con me gusta en este dispositivo. Añádela a tu cuenta de YouTube Music o déjala solo aquí.</item>
-        <item quantity="many">Tienes %1$d canciones con me gusta en este dispositivo. Añádelas a tu cuenta de YouTube Music o déjalas solo aquí.</item>
-        <item quantity="other">Tienes %1$d canciones con me gusta en este dispositivo. Añádelas a tu cuenta de YouTube Music o déjalas solo aquí.</item>
-    </plurals>
-    <string name="likes_merge_upload">Añadir a mi cuenta</string>
-    <string name="likes_merge_keep">Dejar solo aquí</string>
-    <string name="likes_merge_later">Decidir luego</string>
-    <string name="likes_sync_title">A dónde van los me gusta</string>
-    <string name="likes_sync_subtitle">Con una cuenta iniciada, un me gusta va a la cuenta y a este dispositivo, o solo a este dispositivo.</string>
-    <string name="likes_sync_account">Cuenta</string>
-    <string name="likes_sync_device">Solo aquí</string>
     <string name="likes_device_link">Me gusta en este dispositivo</string>
-    <string name="likes_uploaded">Se añadieron %1$d me gusta a tu cuenta</string>
     <string name="my_favorites">Mis favoritas</string>
     <string name="listen_together_as">Como %1$s</string>
     <string name="listen_together_as_where">Cámbialo en Cuenta e integraciones</string>

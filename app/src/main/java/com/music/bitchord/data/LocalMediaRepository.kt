@@ -215,7 +215,7 @@ object LocalMediaRepository {
         // offers here, that download is indistinguishable from a file the
         // user copied on by hand. Reversing [Downloads.saved] hands a
         // downloaded track its real YouTube id back, which is what lets
-        // PlaybackTracker recognise it as a video worth registering a play
+        // the old tracker recognise it as a video worth registering a play
         // for — a content URI fails its id check on purpose, since most rows
         // here really are just local files with nothing to sync.
         val videoIdByUri = Downloads.saved.value.entries.associate { (id, uri) -> uri to id }

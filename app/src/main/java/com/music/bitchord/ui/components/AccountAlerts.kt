@@ -107,49 +107,6 @@ fun ListenBrainzTokenAlert(
     }
 }
 
-/**
- * Asked once, the first time an account is signed in while likes are kept on the device: what to do with them.
- * Nothing is sent to the account without this answer.
- */
-@OptIn(ExperimentalHazeMaterialsApi::class)
-@Composable
-fun LikesMergeAlert(
-    hazeState: HazeState,
-    count: Int,
-    onUpload: () -> Unit,
-    onKeepHere: () -> Unit,
-    onLater: () -> Unit,
-) {
-    AlertScaffold(hazeState = hazeState, onDismiss = onLater) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 19.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = stringResource(R.string.likes_merge_title),
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, fontWeight = FontWeight.W600),
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                text = androidx.compose.ui.res.pluralStringResource(R.plurals.likes_merge_body, count, count),
-                modifier = Modifier.padding(top = 4.dp),
-                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 17.sp),
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = TextAlign.Center,
-            )
-        }
-        AlertGap()
-        AlertAction(label = stringResource(R.string.likes_merge_upload), emphasised = true, onClick = onUpload)
-        AlertGap()
-        AlertAction(label = stringResource(R.string.likes_merge_keep), emphasised = false, onClick = onKeepHere)
-        AlertGap()
-        AlertAction(label = stringResource(R.string.likes_merge_later), emphasised = false, onClick = animatedExit(onLater))
-    }
-}
-
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun LastfmLoginAlert(

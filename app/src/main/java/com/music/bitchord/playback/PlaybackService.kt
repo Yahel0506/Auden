@@ -127,7 +127,6 @@ import com.music.bitchord.data.NerdStats
 import com.music.bitchord.data.TrackLog
 import com.music.bitchord.data.discord.DiscordRPC
 import com.music.bitchord.data.discord.discordAudioQualityLine
-import com.music.bitchord.data.innertube.PlaybackTracker
 import com.music.bitchord.data.stats.ListeningRecorder
 import com.music.bitchord.data.innertube.PlayerClient
 import com.music.bitchord.data.innertube.StreamResolver
@@ -907,7 +906,6 @@ class PlaybackService : MediaLibraryService() {
                 audibleMediaId = exoPlayer.currentMediaItem?.mediaId
                 consecutiveErrorSkips = 0
             }
-            if (isPlaying) registerCurrentPlay()
             // Nothing to read ahead for while paused, and a pause is often
             // the last thing that happens before the process goes idle.
             if (isPlaying) prefetchAround(exoPlayer) else cancelPrefetch()
@@ -1092,12 +1090,6 @@ class PlaybackService : MediaLibraryService() {
             val exoPlayer = player ?: return
             if (state == Player.STATE_ENDED) {
                 SleepTimer.cancel()
-                // The queue ran dry, so no transition will ever close the last
-                // track out. Without this its history entry keeps whatever
-                // watchtime the 30-second sampler happened to have reported and
-                // is never marked finished — so the one play most likely to be
-                // a full, deliberate listen is the one recorded as abandoned.
-                PlaybackTracker.onPlaybackFinished(lastPositionSeconds)
                 lastPositionSeconds = 0
                 // The last track finished with nothing after it, so no
                 // transition will ever close it out. Scrobble it now.
@@ -2737,7 +2729,6 @@ class PlaybackService : MediaLibraryService() {
         // The new item has a different id, so the transition callback must be
         // told to treat it as the same listen, not a new track to record.
         swappingMediaId = targetVideoId
-        PlaybackTracker.onVersionSwapped(song.videoId, targetVideoId)
 
         // Create the target song with the appropriate flags
         val targetSong = song.copy(
@@ -3512,21 +3503,10 @@ class PlaybackService : MediaLibraryService() {
         // the song here too.
         if ((target == LikeStatus.LIKE) != OfflinePlaylists.isLiked(song)) OfflinePlaylists.toggleLike(song)
         if (target == LikeStatus.LIKE) OfflinePlaylists.showAccountLike(videoId)
-        val toAccount = SignedIn.state(this).value && AppSettings.likeSync.value != com.music.bitchord.data.LikeSync.LOCAL
-        // Match the player UI: update both surfaces immediately, then reconcile
-        // the optimistic state with YouTube in the background.
+        else if (previous == LikeStatus.LIKE) OfflinePlaylists.hideAccountLike(videoId)
+        // The heart is Auden's own: nothing is sent to an account.
         LikeState.set(videoId, target)
         refreshCustomLayouts()
-        if (!toAccount) return
-        favoriteActionJob = scope.launch {
-            YtMusicRepository.rate(videoId, target)
-                .onFailure {
-                    LikeState.set(videoId, previous)
-                    if ((previous == LikeStatus.LIKE) != OfflinePlaylists.isLiked(song)) OfflinePlaylists.toggleLike(song)
-                    refreshCustomLayouts()
-                    TrackLog.w("BitChord", "notification favorite failed: ${it.message}", about = videoId)
-                }
-        }
     }
 
     /**
@@ -3691,10 +3671,6 @@ class PlaybackService : MediaLibraryService() {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
 
-    private fun registerCurrentPlay() {
-        player?.currentMediaItem?.mediaId?.let(PlaybackTracker::onPlaying)
-    }
-
     /**
      * Everything that has to happen when a different song becomes the one
      * playing: history, scrobbles, ListenBrainz, the sleep timer, read-ahead
@@ -3842,9 +3818,6 @@ class PlaybackService : MediaLibraryService() {
             about = mediaItem?.mediaId,
         )
 
-        // currentPosition already belongs to the new item by now, so
-        // the outgoing track is closed out on the last sampled value.
-        PlaybackTracker.onTrackChanged(lastPositionSeconds)
         lastPositionSeconds = 0
 
         // Scrobbling: stop old song, start new song
@@ -3897,7 +3870,6 @@ class PlaybackService : MediaLibraryService() {
             exoPlayer.pause()
             SleepTimer.cancel()
         }
-        if (exoPlayer.isPlaying) registerCurrentPlay()
         savePlaybackState(exoPlayer)
         convertVideosAround(exoPlayer)
         prefetchAround(exoPlayer)
@@ -6765,10 +6737,8 @@ class PlaybackService : MediaLibraryService() {
     }
 
     /**
-     * Feeds played-seconds to [PlaybackTracker]. The tracker can't read the
-     * player itself — ExoPlayer is confined to this thread — and a history
-     * entry with no watchtime behind it barely registers as a listen, so the
-     * sampling has to come from here.
+     * Samples the player while it plays, for the device's own listening record and the saved playback state: ExoPlayer
+     * is confined to this thread, so the sampling has to come from here. Nothing is reported to any account.
      */
     private fun reportProgress() {
         scope.launch {
@@ -6780,9 +6750,6 @@ class PlaybackService : MediaLibraryService() {
                 val player = this@PlaybackService.player
                 if (player != null && player.isPlaying && !mirrorGate.blocks(Effect.LISTEN_BOOKKEEPING)) {
                     lastPositionSeconds = player.currentPosition / 1000
-                    player.currentMediaItem?.mediaId?.let {
-                        PlaybackTracker.onProgress(it, lastPositionSeconds)
-                    }
                     // The device's own listening record — see [ListeningRecorder],
                     // which counts wall-clock time between ticks rather than
                     // reading the position. This loop is the only place in the app
@@ -7958,13 +7925,6 @@ class PlaybackService : MediaLibraryService() {
         cancelPrefetch()
         trackAnalyzer.release()
         loudnessRetryJob?.cancel()
-        // The YouTube Music history entry for whatever was playing, closed out
-        // on the same terms as the ListenBrainz submit below: a swipe-away never
-        // fires STATE_ENDED, and the tracker's own scope outlives this service,
-        // so the ping still goes out after the service scope is cancelled.
-        PlaybackTracker.onPlaybackFinished(
-            player?.currentPosition?.div(1000) ?: lastPositionSeconds,
-        )
         // Also the last chance to close out the track that was playing — a
         // swipe-away or stop never fires STATE_ENDED, so the session would
         // otherwise end with an un-scrobbled song. This must not ride on the

@@ -43,7 +43,6 @@ import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.ui.navigation.AppNavigator
 import com.music.bitchord.data.innertube.Innertube
-import com.music.bitchord.data.innertube.PlaybackTracker
 import com.music.bitchord.data.innertube.StreamResolver
 import com.music.bitchord.auth.CapturedSession
 import com.music.bitchord.auth.WebSessionMode
@@ -55,7 +54,6 @@ import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.withoutRepeatsOf
 import com.music.bitchord.data.model.LibraryPage
 import com.music.bitchord.data.model.LibraryState
-import com.music.bitchord.data.LikeSync
 import com.music.bitchord.data.model.LikeStatus
 import com.music.bitchord.data.model.MoodGenre
 import com.music.bitchord.data.model.MoodGenreSection
@@ -904,44 +902,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _library.map { state -> (state as? UiState.Success)?.data?.likedSongs?.mapTo(HashSet()) { it.videoId } }
             .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
-    /**
-     * Adds the likes kept on this device to the account, one request each (a rating is a request of its own), and
-     * returns how many went through. The device keeps its copies either way.
-     */
-    suspend fun uploadDeviceLikes(songs: List<Song>): Int {
-        var added = 0
-        for (song in songs) {
-            if (YtMusicRepository.rate(song.videoId, LikeStatus.LIKE).isSuccess) {
-                LikeState.set(song.videoId, LikeStatus.LIKE)
-                added++
-            }
-            kotlinx.coroutines.delay(150)
-        }
-        if (added > 0) libraryStale = true
-        return added
-    }
-
     fun likeStatusOf(videoId: String): LikeStatus =
         likeStatuses.value[videoId] ?: LikeStatus.INDIFFERENT
 
     /**
-     * Sets (or clears) the thumbs rating on [videoId].
-     *
-     * Written to the screen first and rolled back if YouTube refuses. A rating
-     * is a one-tap, low-stakes action taken while a song is playing; waiting
-     * on a round trip before the heart fills reads as the tap not having
-     * registered, and people tap again.
+     * Sets (or clears) the heart on [videoId]. A heart is Auden's own: it is kept on this device and never sent to an
+     * account — what is on YouTube Music or Spotify is brought in when the listener transfers it, and not before.
      */
     fun setLike(song: Song, status: LikeStatus) {
         val videoId = song.videoId
-        val signedIn = authStore.isSignedIn
-        val toAccount = signedIn && AppSettings.likeSync.value != LikeSync.LOCAL
-        // A dislike steers the account's recommendations and nothing on the device: it needs the account.
-        if (status == LikeStatus.DISLIKE && !(signedIn && toAccount) && !requireSignIn()) return
         val previous = likeStatusOf(videoId)
         if (previous == status) return
-        // The heart is the device's own first: it works without an account, and with one it keeps the song here
-        // too, so signing out loses nothing.
         val onDevice = videoId in OfflinePlaylists.liked.value
         when (status) {
             LikeStatus.LIKE -> {
@@ -950,36 +921,13 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
             LikeStatus.INDIFFERENT -> {
                 if (onDevice) OfflinePlaylists.toggleLike(song)
-                // Kept on the device only, an un-like of something the account likes is a hiding of it, not a rating.
-                if (!toAccount && previous == LikeStatus.LIKE) OfflinePlaylists.hideAccountLike(videoId)
+                // An un-like of something an account still likes is a hiding of it here, not a rating.
+                if (previous == LikeStatus.LIKE) OfflinePlaylists.hideAccountLike(videoId)
             }
+            // A dislike steers an account's recommendations, and Auden keeps none: it only takes the heart off.
             LikeStatus.DISLIKE -> if (onDevice) OfflinePlaylists.toggleLike(song)
         }
-        if (!toAccount) {
-            if (status != LikeStatus.DISLIKE) LikeState.set(videoId, status)
-            return
-        }
-        LikeState.set(videoId, status)
-        viewModelScope.launch {
-            YtMusicRepository.rate(videoId, status).fold(
-                onSuccess = {
-                    // Liked Music is now out of date either way.
-                    libraryStale = true
-                    if (status != LikeStatus.LIKE) dropFromLikedLists(videoId)
-                    // Clearing the heart means forgetting the song, not
-                    // demoting it — see [forgetFromLibrary].
-                    val unliked = previous == LikeStatus.LIKE &&
-                        status == LikeStatus.INDIFFERENT
-                    if (unliked) forgetFromLibrary(videoId)
-                },
-                onFailure = {
-                    LikeState.set(videoId, previous)
-                    // The device's copy follows the account's refusal, so the two never disagree about a heart.
-                    val nowOnDevice = videoId in OfflinePlaylists.liked.value
-                    if ((previous == LikeStatus.LIKE) != nowOnDevice) OfflinePlaylists.toggleLike(song)
-                },
-            )
-        }
+        if (status != LikeStatus.DISLIKE) LikeState.set(videoId, status)
     }
 
     /**
@@ -1553,68 +1501,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** The same, seeded with every song of a selection. */
     fun createPlaylist(title: String, privacy: PlaylistPrivacy, songs: List<Song>) {
+        // A playlist made in Auden is Auden's: it is kept on this device. Putting one on YouTube Music is an
+        // export, which the listener asks for from the playlist itself.
         val name = title.trim().ifBlank { text(R.string.new_playlist) }
-        if (privacy == PlaylistPrivacy.DEVICE || !requireSignIn()) {
-            dev.auden.library.LocalPlaylists.create(name, songs)
-            return
-        }
-        // A file on this device has nothing to send to the account: it is attached to the new
-        // playlist here instead, as "Add local files" would.
-        val (files, streamed) = songs.distinctBy { it.videoId }.partition { it.isDeviceFile }
-        val song = streamed.firstOrNull()
-        viewModelScope.launch {
-            YtMusicRepository.createPlaylist(
-                title = name,
-                privacy = privacy,
-                videoIds = streamed.take(PLAYLIST_EDIT_BATCH).map { it.videoId },
-            ).fold(
-                onSuccess = { playlistId ->
-                    streamed.drop(PLAYLIST_EDIT_BATCH).chunked(PLAYLIST_EDIT_BATCH).forEach { batch ->
-                        YtMusicRepository.addToPlaylist(playlistId, batch.map { it.videoId })
-                    }
-                    if (files.isNotEmpty()) com.music.bitchord.data.PlaylistLocalFiles.add("VL$playlistId", files)
-                    // Nothing to look up for a playlist this account has just
-                    // made: it is the owner by construction, so its card is
-                    // editable the moment it appears rather than one request
-                    // after someone holds it.
-                    setPlaylistOwned("VL$playlistId", true)
-                    libraryStale = true
-                    val created = UserPlaylist(
-                        playlistId = playlistId,
-                        title = name,
-                        // Only what this request itself establishes. Both
-                        // surfaces that draw it leave a blank one out, so an
-                        // unseeded playlist gets a card of just its name rather
-                        // than a guess at what the feed will call it.
-                        subtitle = when (streamed.size) {
-                            0 -> ""
-                            1 -> "1 song"
-                            else -> "${streamed.size} songs"
-                        },
-                        thumbnailUrl = song?.thumbnailUrl,
-                    )
-                    // Drawn from what was just sent rather than waited for: the
-                    // library feed does not have this playlist yet, and the
-                    // fetch that used to run here answered without it — see
-                    // [editPlaylistShelf]. Leads the shelf because it is the
-                    // newest, which is the order the feed itself comes in.
-                    _playlists.value = listOf(created) +
-                        _playlists.value.filterNot { it.playlistId == created.playlistId }
-                    editPlaylistShelf { items ->
-                        listOf(
-                            ShelfItem(
-                                title = created.title,
-                                subtitle = created.subtitle,
-                                thumbnailUrl = created.thumbnailUrl,
-                                videoId = null,
-                                browseId = created.browseId,
-                            ),
-                        ) + items.filterNot { it.browseId == created.browseId }
-                    }
-                },
-                onFailure = {},
-            )
-        }
+        dev.auden.library.LocalPlaylists.create(name, songs)
     }
 
     fun createPlaylistWithVideoIds(
@@ -2049,10 +1939,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             loadLibrary()
             loadAccount()
             loadPlaylists()
-        }
-        viewModelScope.launch {
-            // drop(1): the current value is just the count so far, not a play.
-            PlaybackTracker.registeredPlays.drop(1).collect { homeStale = true }
         }
         viewModelScope.launch {
             BoundedContextRequests.snapshot.collect { snapshot ->
