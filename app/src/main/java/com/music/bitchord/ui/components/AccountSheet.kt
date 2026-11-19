@@ -342,7 +342,7 @@ private fun SheetCard(color: Color, content: @Composable () -> Unit) {
 
 @Composable
 private fun Rule(color: Color, start: Dp) {
-    Box(Modifier.fillMaxWidth().padding(start = start).height(0.5.dp).background(color))
+    Box(Modifier.fillMaxWidth().padding(start = start, end = 16.dp).height(0.5.dp).background(color))
 }
 
 @Composable

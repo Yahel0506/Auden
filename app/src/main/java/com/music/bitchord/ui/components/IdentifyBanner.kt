@@ -198,7 +198,7 @@ fun IdentifyBanner(modifier: Modifier = Modifier) {
                             TrackIdentifier.accept(context, track.id)
                         }
                     }
-                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(start = 22.dp))
+                    HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(start = 22.dp, end = 16.dp))
                 }
             }
             Spacer(Modifier.height(24.dp))

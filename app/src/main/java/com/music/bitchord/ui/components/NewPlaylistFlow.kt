@@ -299,7 +299,7 @@ private fun Header(title: String, onBack: (() -> Unit)?) {
 /** The hairline between two options, inset to where their words start, as a menu's rows have it. */
 @Composable
 private fun OptionDivider() {
-    AlertRule(Modifier.padding(start = 58.dp))
+    AlertRule(start = 58.dp)
 }
 
 /**

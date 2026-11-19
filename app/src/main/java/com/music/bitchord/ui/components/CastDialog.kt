@@ -98,7 +98,7 @@ fun CastDialog(
                             }
                         },
                     )
-                    PipelineRule(Modifier.padding(start = 56.dp))
+                    PipelineRule(Modifier.padding(start = 56.dp, end = 16.dp))
                 }
             }
             if (cast.casting) {

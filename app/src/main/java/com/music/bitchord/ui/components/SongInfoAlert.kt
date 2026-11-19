@@ -123,7 +123,7 @@ fun SongInfoAlert(hazeState: HazeState) {
                 R.string.song_info_comments to info?.comments,
             )
             rows.forEach { (label, value) ->
-                AlertRule(Modifier.padding(start = 20.dp))
+                AlertRule()
                 InfoRow(
                     label = stringResource(label),
                     value = value ?: unavailable.takeIf { info != null },

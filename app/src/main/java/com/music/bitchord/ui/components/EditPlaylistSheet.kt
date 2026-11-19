@@ -173,7 +173,7 @@ private fun CardRow(icon: androidx.compose.ui.graphics.vector.ImageVector, label
 }
 
 @Composable
-private fun CardDivider() = HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(start = 46.dp))
+private fun CardDivider() = HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline, modifier = Modifier.padding(start = 46.dp, end = 16.dp))
 
 @Composable
 private fun Field(value: String, onChange: (String) -> Unit, singleLine: Boolean, placeholder: String = "") {

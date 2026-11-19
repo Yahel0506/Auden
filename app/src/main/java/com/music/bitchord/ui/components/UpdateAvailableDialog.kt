@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -138,10 +139,12 @@ internal fun AlertGap() {
 
 /** Hairline separator — [HorizontalDivider][androidx.compose.material3.HorizontalDivider]'s 1dp reads as a bar at this scale. */
 @Composable
-internal fun AlertRule(modifier: Modifier = Modifier) {
+internal fun AlertRule(modifier: Modifier = Modifier, start: Dp = 20.dp, end: Dp = 20.dp) {
+    // Starts and ends inside the card, as far from its sides on one as on the other, so it never reaches its rounded edge.
     Box(
         modifier
             .fillMaxWidth()
+            .padding(start = start, end = end)
             .height(0.5.dp)
             .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)),
     )
