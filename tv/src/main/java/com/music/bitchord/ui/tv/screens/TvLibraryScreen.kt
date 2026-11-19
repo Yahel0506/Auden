@@ -77,6 +77,8 @@ fun TvLibraryScreen(
     val signedIn by viewModel.signedIn.collectAsState()
     val libraryState by viewModel.library.collectAsState()
     val library = (libraryState as? UiState.Success)?.data
+    // The phone no longer reads the account's library at launch; the TV still shows it, so it asks here.
+    LaunchedEffect(signedIn) { if (signedIn && libraryState is UiState.Loading) viewModel.loadLibrary() }
     val scope = rememberCoroutineScope()
     var menuSong by remember { mutableStateOf<Song?>(null) }
 

@@ -89,6 +89,8 @@ fun AccountSheet(
     partyCode: String?,
     onAccount: () -> Unit,
     onProfiles: () -> Unit,
+    /** "Transfer your music": the way in for the other services' libraries. */
+    onTransfer: () -> Unit,
     onStatistics: () -> Unit,
     onListenTogether: () -> Unit,
     onSettings: () -> Unit,
@@ -277,6 +279,8 @@ fun AccountSheet(
                 }
 
                 SheetCard(cardColor) {
+                    SheetTextRow(SfIcons.Download, stringResource(R.string.transfer_title), null, onSurface, secondary, onTransfer)
+                    Rule(rule, start = 56.dp)
                     SheetTextRow(SfIcons.ShowChart, stringResource(R.string.playback_statistics), null, onSurface, secondary, onStatistics)
                     Rule(rule, start = 56.dp)
                     SheetTextRow(SfIcons.PartyPopper, stringResource(R.string.listen_together), partyCode, onSurface, secondary, onListenTogether)

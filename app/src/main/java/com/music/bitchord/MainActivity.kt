@@ -212,6 +212,7 @@ import com.music.bitchord.ui.components.SpotifyImportAlert
 import com.music.bitchord.ui.components.SpotifyMatchSheet
 import com.music.bitchord.ui.screens.WearOsScreen
 import com.music.bitchord.ui.screens.AccountAndScrobblingScreen
+import com.music.bitchord.ui.screens.TransferPage
 import com.music.bitchord.ui.screens.DiscordDialog
 import com.music.bitchord.ui.screens.DiscordDialogHost
 import com.music.bitchord.ui.screens.DiscordScreen
@@ -465,6 +466,9 @@ private const val TOP_FADE_START = 0.55f
 private const val TOP_FADE_RAMP = 0.3f
 
 private const val INITIAL_RADIO_TRACKS = 24
+
+/** The Library page's content: Auden's own, with no shelf read from an account. */
+private val LOCAL_LIBRARY = UiState.Success(com.music.bitchord.data.model.LibraryPage(emptyList(), emptyList(), emptyList()))
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -3269,7 +3273,7 @@ private fun BitChordApp(
         val groupedRoutes = route == AppRoute.Settings || route is AppRoute.SettingsSection ||
             route == AppRoute.AccountScrobbling || route == AppRoute.Sources || route == AppRoute.ListenTogether ||
             route == AppRoute.WearOs || route == AppRoute.Equalizer || route == AppRoute.EqualizerPresets ||
-            route == AppRoute.Discord
+            route == AppRoute.Discord || route == AppRoute.Transfer
         // The sheet stands over the bars: they are left as they are, and it rises over them. A screen opened from it is
         // stacked on the page it stands on, and the sheet then goes under that page, inside it, until it is taken off.
         val sheetPresent by remember { derivedStateOf { showAccountSheet || sheetProgress.value > 0.001f } }
@@ -3324,6 +3328,7 @@ private fun BitChordApp(
                     ?.profiles?.firstOrNull { it.profileId == activeProfileId }?.name,
                 partyCode = partyForSheet.code,
                 onAccount = { navigator.push(AppRoute.AccountScrobbling) },
+                onTransfer = { navigator.push(AppRoute.Transfer) },
                 onProfiles = {
                     viewModel.loadChannels()
                     showAccountSelector = true
@@ -3591,6 +3596,17 @@ private fun BitChordApp(
                                 onOpenLastfmLogin = { showLastfmLogin = true },
                                 onOpenDiscord = { navigator.push(AppRoute.Discord) },
                                 onOpenSpotify = { navigator.push(AppRoute.Spotify) },
+                                contentPadding = listPadding,
+                            )
+                        } else if (pageRoute == AppRoute.Transfer) {
+                            TransferPage(
+                                ytConnected = signedIn,
+                                onConnectYt = {
+                                    navigator.clear()
+                                    webSession = WebSessionMode.SIGN_IN
+                                },
+                                onConnectSpotify = { showSpotifyLogin = true },
+                                onOpenImportFlow = { showNewPlaylistTypes = true },
                                 contentPadding = listPadding,
                             )
                         } else if (pageRoute == AppRoute.Sources) {
@@ -4237,8 +4253,10 @@ private fun BitChordApp(
                                     },
                                 ) + offlinePlaylistItems + localPlaylistItems
                                 LibraryScreen(
-                                signedIn = signedIn,
-                                state = libraryState,
+                                // Auden's library is its own: what YouTube Music and Spotify hold comes in from
+                                // "Transfer your music", never read live into this page.
+                                signedIn = true,
+                                state = LOCAL_LIBRARY,
                                 listState = libraryListState,
                                 onShelfItemClick = onLibraryItemClick,
                                 // Every shelf here has a menu behind it now — the account's
@@ -4250,7 +4268,7 @@ private fun BitChordApp(
                                 onSignIn = { webSession = WebSessionMode.SIGN_IN },
                                 onRetry = viewModel::loadLibrary,
                                 refreshing = MainViewModel.Feed.LIBRARY in refreshing,
-                                onRefresh = { viewModel.refresh(MainViewModel.Feed.LIBRARY) },
+                                onRefresh = {},
                                 pullState = libraryPull,
                                 contentPadding = titledListPadding,
                                 showReplay = AppSettings.showLibraryStats.collectAsStateWithLifecycle().value,
@@ -4262,7 +4280,7 @@ private fun BitChordApp(
                                     LibraryReplayEntry(
                                         cards = replayCards,
                                         loading = replay.loading,
-                                        holder = account?.name.orEmpty(),
+                                        holder = dev.auden.profile.rememberProfileDisplay().name,
                                         memberSince = replay.memberSince,
                                         onOpenReplay = { page ->
                                             replayLandingPage = page
@@ -4271,7 +4289,7 @@ private fun BitChordApp(
                                     )
                                 },
                                 links = libraryLinks(
-                                    shelves = (libraryState as? UiState.Success)?.data?.shelves.orEmpty(),
+                                    shelves = emptyList(),
                                     deviceItems = deviceItemsNow,
                                     onOpenShelf = { shelf -> navigator.push(AppRoute.LibraryShowAll(shelf)) },
                                 ),
@@ -4279,7 +4297,7 @@ private fun BitChordApp(
                                     ShelfItem(title = r.title, subtitle = "", thumbnailUrl = r.thumbnailUrl, videoId = null, browseId = r.id)
                                 },
                                 spotifyTitle = stringResource(R.string.from_spotify),
-                                spotifyPlaylists = rememberSpotifyShelf(),
+                                spotifyPlaylists = emptyList(),
                                 onOpenSpotify = { navigator.push(AppRoute.Spotify) },
                                 // An album kept on the device and then downloaded is one album: its copy in
                                 // the library is the card, not the download's record beside it.
@@ -4307,7 +4325,7 @@ private fun BitChordApp(
                         pageRoute == AppRoute.AccountScrobbling || pageRoute == AppRoute.Sources ||
                         pageRoute == AppRoute.ListenTogether || pageRoute == AppRoute.WearOs ||
                         pageRoute == AppRoute.Equalizer || pageRoute == AppRoute.EqualizerPresets ||
-                        pageRoute == AppRoute.Discord)
+                        pageRoute == AppRoute.Discord || pageRoute == AppRoute.Transfer)
                     Box(
                         if (slotStacked) {
                             Modifier
@@ -4458,6 +4476,7 @@ private fun BitChordApp(
                         is AppRoute.ArtistShelf -> route.shelf.title
                         AppRoute.Moods -> stringResource(R.string.find_your_mood)
                         AppRoute.AccountScrobbling -> stringResource(R.string.account_scrobbling)
+                        AppRoute.Transfer -> stringResource(R.string.transfer_title)
                         AppRoute.Sources -> stringResource(R.string.sources)
                         AppRoute.ListenTogether -> stringResource(R.string.listen_together)
                         AppRoute.WearOs -> stringResource(R.string.wear_os_page_title)
@@ -6959,6 +6978,12 @@ private fun BitChordApp(
 
         // Dialogs and alerts, in a scope of their own: BitChordApp had outgrown the JVM's method limit.
         Isolated {
+            com.music.bitchord.ui.components.TransferNoticeHost(
+                signedIn = signedIn,
+                enabled = onboardingComplete && !showDiwali && !showUpdateDialog,
+                hazeState = hazeState,
+                onOpenTransfer = { navigator.push(AppRoute.Transfer) },
+            )
             if (showLyricsSources) {
                 BackHandler { showLyricsSources = false }
                 LyricsSourcesDialog(
@@ -7797,7 +7822,7 @@ private const val NAV_SHRINK = 0.06f
 private fun AppRoute?.isSettingsRoute(): Boolean =
     this == AppRoute.Settings || this is AppRoute.SettingsSection || this == AppRoute.AccountScrobbling ||
         this == AppRoute.Sources || this == AppRoute.ListenTogether || this == AppRoute.WearOs ||
-        this == AppRoute.Equalizer || this == AppRoute.EqualizerPresets || this == AppRoute.Discord
+        this == AppRoute.Equalizer || this == AppRoute.EqualizerPresets || this == AppRoute.Discord || this == AppRoute.Transfer
 
 /** The pages of the Library's sections — a shelf in full, the downloads, the history — and the device's folders. */
 private fun AppRoute?.isLibrarySectionRoute(): Boolean =

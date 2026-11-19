@@ -50,6 +50,8 @@
 - **Nothing leaves on its own.** Hearts and the playlists you create in Auden stay on your device: a heart is no longer sent to YouTube Music, a new playlist is no longer made there, and your plays are no longer registered in your YouTube history. The "Where hearts go" setting is gone, and so is the thumb-down, which only steered your account's recommendations.
 - **Your YouTube Music likes, brought in once.** If you were signed in, the songs you had liked on YouTube Music are copied into your Auden likes the first time you open this version, so no heart is lost. It only reads: nothing is sent back.
 - **Where a playlist came from.** Playlists you import remember their origin — YouTube Music or Spotify — and a snapshot of what it held, ready to be updated from it by hand.
+- **Transfer your music.** A new button in the account sheet opens one place for every other service: connect YouTube Music or Spotify, pick your likes, playlists, albums and artists, and Auden copies them. It only reads from the service and keeps its own copy; nothing is sent back.
+- **A library of your own.** The Library no longer reads your YouTube Music or Spotify account live: it shows what is in Auden — your playlists, likes, downloads and what you have brought over. If you were signed in, a note tells you once where your library went.
 - **"Playlist" everywhere.** Spanish says "playlist" instead of "lista de reproducción".
 
 ## Auden DJ

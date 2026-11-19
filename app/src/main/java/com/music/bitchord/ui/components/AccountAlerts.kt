@@ -107,6 +107,71 @@ fun ListenBrainzTokenAlert(
     }
 }
 
+/**
+ * Asked once, to a listener who was signed in to YouTube Music: the Library no longer reads their account live;
+ * what it held comes in from "Transfer your music". Their likes were already copied.
+ */
+@OptIn(ExperimentalHazeMaterialsApi::class)
+@Composable
+fun TransferNoticeAlert(
+    hazeState: HazeState,
+    onTransfer: () -> Unit,
+    onLater: () -> Unit,
+) {
+    AlertScaffold(hazeState = hazeState, onDismiss = onLater) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 19.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = stringResource(R.string.transfer_notice_title),
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 17.sp, fontWeight = FontWeight.W600),
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = stringResource(R.string.transfer_notice_body),
+                modifier = Modifier.padding(top = 4.dp),
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp, lineHeight = 17.sp),
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center,
+            )
+        }
+        AlertGap()
+        AlertAction(label = stringResource(R.string.transfer_title), emphasised = true, onClick = onTransfer)
+        AlertGap()
+        AlertAction(label = stringResource(R.string.transfer_notice_later), emphasised = false, onClick = animatedExit(onLater))
+    }
+}
+
+/** [TransferNoticeAlert] once per install, for a signed-in listener, with its own state so the host adds a line only. */
+@Composable
+fun TransferNoticeHost(
+    signedIn: Boolean,
+    enabled: Boolean,
+    hazeState: HazeState,
+    onOpenTransfer: () -> Unit,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var shown by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(true) }
+    if (shown && signedIn && enabled && dev.auden.transfer.TransferNotice.pending(context)) {
+        TransferNoticeAlert(
+            hazeState = hazeState,
+            onTransfer = {
+                dev.auden.transfer.TransferNotice.markSeen(context)
+                shown = false
+                onOpenTransfer()
+            },
+            onLater = {
+                dev.auden.transfer.TransferNotice.markSeen(context)
+                shown = false
+            },
+        )
+    }
+}
+
 @OptIn(ExperimentalHazeMaterialsApi::class)
 @Composable
 fun LastfmLoginAlert(

@@ -1923,7 +1923,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         // and the dozen-odd artwork browses after it went out at launch with
         // Home's own requests, to the same host, for a page not yet opened.
         if (_signedIn.value) {
-            loadLibrary()
+            // The account's library is no longer read at launch: Auden's library is its own, and what a service holds
+            // comes in by hand from "Transfer your music". (The TV still opens it, see TvLibraryScreen.)
             loadAccount()
             loadPlaylists()
         }

@@ -18,6 +18,9 @@ import com.music.bitchord.ui.screens.SettingsChoiceKind
 sealed interface AppRoute {
     data object Settings : AppRoute
     data object AccountScrobbling : AppRoute
+
+    /** "Transfer your music": bringing what other services hold into Auden. Opened from the account sheet. */
+    data object Transfer : AppRoute
     data object Sources : AppRoute
     data object ListenTogether : AppRoute
     data object WearOs : AppRoute
