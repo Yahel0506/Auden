@@ -16,6 +16,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -53,48 +54,58 @@ object CloudSaver {
     }
 
     /**
-     * Brings every library copy of a Spotify playlist up to date, one after another so a long list of them does
-     * not hit Spotify all at once. Returns how many were synced.
+     * Refreshes every library copy of a Spotify playlist from Spotify (a merge; see
+     * [dev.auden.transfer.PlaylistRefresher]), one after another so a long list of them does not hit Spotify all
+     * at once. Only when asked. Returns how many were refreshed.
      */
     suspend fun syncSpotifyCopies(context: Context): Int {
-        val copies = LocalPlaylists.playlists.value.filter { it.sourceId?.startsWith(SPOTIFY_PAGE_PREFIX) == true }
-        var done = 0
-        for (copy in copies) {
-            if (saveNow(context.applicationContext, copy.sourceId!!, copy.title, null) is Result.Saved) done++
+        val isSpotify = { p: com.music.bitchord.data.spotify.LocalPlaylist -> p.sourceId?.startsWith(SPOTIFY_PAGE_PREFIX) == true }
+        val sources = LocalPlaylists.playlists.value.filter(isSpotify).mapNotNull { it.sourceId }.toSet()
+        _saving.update { it + sources }
+        return try {
+            dev.auden.transfer.PlaylistRefresher.get(context).refreshAll(filter = isSpotify).count { it.result.isSuccess }
+        } finally {
+            _saving.update { it - sources }
         }
-        return done
     }
 
-    /** [quiet]: no notification — for the background sync, which reports once at the end instead. */
-    internal suspend fun saveNow(app: Context, browseId: String, title: String, thumbnailUrl: String?, quiet: Boolean = false): Result {
+    /**
+     * A page saved for the first time becomes a library copy that records its source. A page that already has one
+     * is refreshed from its source instead (a merge, the same as "Refresh from source"), never copied twice.
+     */
+    internal suspend fun saveNow(app: Context, browseId: String, title: String, thumbnailUrl: String?): Result {
         val source = sourceId(browseId)
         if (source in _saving.value) return Result.Failed
-        _saving.value = _saving.value + source
-        val notifier = if (quiet) null else Notifier(app, source, title)
-        notifier?.reading()
-        val result = runCatching { run(app, browseId, source, title, thumbnailUrl, notifier) }
-            .getOrElse { Result.Failed }
+        _saving.update { it + source }
+        val notifier = Notifier(app, source, title)
+        notifier.reading()
+        val result = runCatching {
+            val copy = LocalPlaylists.bySource(source)
+            if (copy != null) refresh(app, copy) else run(app, browseId, source, title, thumbnailUrl, notifier)
+        }.getOrElse { Result.Failed }
         when (result) {
-            is Result.Saved -> notifier?.done(result)
-            Result.Failed -> notifier?.failed()
+            is Result.Saved -> notifier.done(result)
+            Result.Failed -> notifier.failed()
         }
-        _saving.value = _saving.value - source
+        _saving.update { it - source }
         return result
+    }
+
+    private suspend fun refresh(app: Context, copy: com.music.bitchord.data.spotify.LocalPlaylist): Result {
+        val outcome = dev.auden.transfer.PlaylistRefresher.get(app).refresh(copy.id).getOrNull() ?: return Result.Failed
+        val name = LocalPlaylists.get(copy.id)?.title ?: copy.title
+        return Result.Saved(name, outcome.counts.added, created = false, unmatched = outcome.counts.unmatched, removed = outcome.counts.removed)
     }
 
     private suspend fun run(context: Context, browseId: String, source: String, title: String, thumbnailUrl: String?, notifier: Notifier?): Result {
         var unmatched = 0
-        // Spotify: every track id the playlist holds right now, so the copy can drop what was taken out.
-        var spotifyIds: Set<String>? = null
-        // The source's listing in its own order, kept with a new copy so a later refresh can tell what changed.
+        // What the copy takes in from the source, in the source's order: the snapshot a later refresh compares with.
         var listing: List<String> = emptyList()
         var cover: String? = thumbnailUrl
         val songs: List<Song> = if (browseId.startsWith(SPOTIFY_PAGE_PREFIX)) {
             val playlistId = browseId.removePrefix(SPOTIFY_PAGE_PREFIX)
             val tracks = SpotifyLibrary.tracks(playlistId) { }
-            spotifyIds = tracks.mapTo(HashSet()) { it.id }
-            listing = tracks.map { it.id }
-            // The playlist's own image, not a song's. The sync that runs by itself is given none, so ask.
+            // The playlist's own image, not a song's, when the page gave none.
             if (cover.isNullOrBlank()) cover = runCatching { SpotifyLibrary.cover(playlistId) }.getOrNull()
             val gate = Semaphore(MATCH_PARALLELISM)
             val done = AtomicInteger()
@@ -110,6 +121,8 @@ object CloudSaver {
                 }.awaitAll()
             }
             unmatched = matched.count { it == null }
+            // Only the tracks that found a match: one that did not is added by a later refresh once it does.
+            listing = tracks.filterIndexed { i, _ -> matched[i] != null }.map { it.id }
             matched.filterNotNull()
         } else {
             val isAlbum = browseId.startsWith("MPREb") || browseId.startsWith("OLAK")
@@ -123,7 +136,7 @@ object CloudSaver {
         require(songs.isNotEmpty()) { "nothing to save" }
         notifier?.storing(songs.size)
         val origin = ImportedOrigin(snapshot = listing, syncedAt = System.currentTimeMillis(), originTitle = title)
-        val saved = LocalPlaylists.saveFromSource(source, title, songs, cover, spotifyIds, origin)
+        val saved = LocalPlaylists.saveFromSource(source, title, songs, cover, origin)
         return Result.Saved(saved.playlist.title, saved.added, saved.created, unmatched, saved.removed)
     }
 

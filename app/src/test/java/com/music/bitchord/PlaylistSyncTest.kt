@@ -1,15 +1,12 @@
 package com.music.bitchord
 
-import com.music.bitchord.data.YtMusicRepository.SongPage
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.download.Downloads
 import com.music.bitchord.download.PlaylistSync
 import com.music.bitchord.download.SavedCollection
-import kotlinx.coroutines.test.runTest
+import dev.auden.library.LocalPlaylists
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -23,67 +20,34 @@ class PlaylistSyncTest {
 
     private fun songs(vararg ids: String) = ids.map(::song)
 
-    private fun page(vararg ids: String, next: String? = null, suggested: List<Song> = emptyList()) =
-        Result.success(SongPage(songs(*ids), next, suggested))
-
     private fun record(id: String = "VLPL1", vararg ids: String, playlist: Boolean = true) =
         SavedCollection(id = id, title = id, playlist = playlist, videoIds = ids.toList())
 
     private fun ids(list: List<Song>) = list.map { it.videoId }
 
+    // The worker no longer reads YouTube Music (phase 5): a YouTube Music playlist downloaded under its own id is
+    // followed through its library copy, which only the listener refreshes from the source.
+
     @Test
-    fun `a listing follows every page to the end`() = runTest {
-        val pages = mapOf("t2" to page("c", "d", next = "t3"), "t3" to page("e"))
-        val listing = PlaylistSync.readWholePlaylist(
-            first = { page("a", "b", next = "t2") },
-            more = { pages.getValue(it) },
-        )
-        assertEquals(listOf("a", "b", "c", "d", "e"), ids(listing.songs))
-        assertTrue(listing.complete)
+    fun `a YouTube playlist downloaded under its own id is followed through its library copy`() {
+        val source = "PLsynctest" + System.nanoTime()
+        val copy = LocalPlaylists.saveFromSource(source, "Road", songs("a", "b")).playlist
+        try {
+            assertEquals(copy.id, PlaylistSync.devicePlaylistOf(record("VL$source", "a"))?.id)
+            assertEquals(copy.id, PlaylistSync.devicePlaylistOf(record(source, "a"))?.id)
+            // What the copy gained is what the record has not named yet; nothing is asked of YouTube for it.
+            LocalPlaylists.add(copy.id, songs("c"))
+            val device = PlaylistSync.devicePlaylistOf(record("VL$source", "a", "b"))!!
+            assertEquals(listOf("c"), ids(PlaylistSync.newTracks(PlaylistSync.downloadable(device.songs), record("VL$source", "a", "b"))))
+        } finally {
+            LocalPlaylists.delete(copy.id)
+        }
     }
 
     @Test
-    fun `a page that fails keeps what came before and says it is incomplete`() = runTest {
-        val listing = PlaylistSync.readWholePlaylist(
-            first = { page("a", next = "t2") },
-            more = { Result.failure(IllegalStateException("offline")) },
-        )
-        assertEquals(listOf("a"), ids(listing.songs))
-        assertFalse(listing.complete)
-    }
-
-    @Test
-    fun `a failed first page is incomplete, not an empty playlist`() = runTest {
-        val listing = PlaylistSync.readWholePlaylist(
-            first = { Result.failure(IllegalStateException("offline")) },
-            more = { error("nothing to continue") },
-        )
-        assertTrue(listing.songs.isEmpty())
-        assertFalse(listing.complete)
-    }
-
-    @Test
-    fun `a feed that loops back on itself ends instead of running forever`() = runTest {
-        var requests = 0
-        val listing = PlaylistSync.readWholePlaylist(
-            first = { page("a", next = "t") },
-            more = {
-                requests++
-                page("a", next = "t")
-            },
-        )
-        assertEquals(1, requests)
-        assertEquals(listOf("a"), ids(listing.songs))
-        assertTrue(listing.complete)
-    }
-
-    @Test
-    fun `suggested tracks are not part of the playlist`() = runTest {
-        val listing = PlaylistSync.readWholePlaylist(
-            first = { page("a", next = "t2", suggested = songs("x")) },
-            more = { page("b", suggested = songs("y")) },
-        )
-        assertEquals(listOf("a", "b"), ids(listing.songs))
+    fun `a downloaded album or Liked Music has no copy to follow`() {
+        assertNull(PlaylistSync.devicePlaylistOf(record("MPREb_1", playlist = false)))
+        assertNull(PlaylistSync.devicePlaylistOf(record("VLLM")))
     }
 
     @Test

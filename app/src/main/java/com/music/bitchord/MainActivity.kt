@@ -6522,10 +6522,21 @@ private fun BitChordApp(
                 // Every playlist and folder has it: the files among its songs are
                 // checked, and a song that only streams is left alone.
                 onRepairMetadata = act { songs -> MetadataRepair.start(context, songs) },
+                onRefreshFromOrigin = syncLocalId?.takeIf {
+                    dev.auden.transfer.PlaylistRefresher.canRefresh(dev.auden.library.LocalPlaylists.get(it)?.sourceId)
+                }?.let { id ->
+                    {
+                        browseActions = null
+                        com.music.bitchord.ui.components.TransferDialogs.refresh.value =
+                            com.music.bitchord.ui.components.TransferDialogs.Refresh(id, target.title)
+                    }
+                },
                 onSyncYtMusic = if (syncable) {
                     {
                         if (signedIn) {
-                            com.music.bitchord.data.YtPlaylistSync.start(context, target.browseId.orEmpty())
+                            // Sending a playlist to YouTube Music is asked about first: what it will do there is shown.
+                            com.music.bitchord.ui.components.TransferDialogs.export.value =
+                                com.music.bitchord.ui.components.TransferDialogs.Export(target.browseId.orEmpty(), target.title)
                         } else {
                             Toast.makeText(context, R.string.yt_sync_sign_in, Toast.LENGTH_SHORT).show()
                         }
@@ -6978,6 +6989,7 @@ private fun BitChordApp(
 
         // Dialogs and alerts, in a scope of their own: BitChordApp had outgrown the JVM's method limit.
         Isolated {
+            com.music.bitchord.ui.components.TransferDialogsHost(hazeState)
             com.music.bitchord.ui.components.TransferNoticeHost(
                 signedIn = signedIn,
                 enabled = onboardingComplete && !showDiwali && !showUpdateDialog,

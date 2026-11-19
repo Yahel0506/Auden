@@ -119,7 +119,9 @@ class ImportEngineTest {
     }
 
     @Test
-    fun spotifyPlaylistSnapshotHoldsEveryTrackMatchedOrNot() = runBlocking {
+    fun spotifyPlaylistSnapshotHoldsOnlyWhatTheCopyTookIn() = runBlocking {
+        // Phase 5: an unmatched track is left out of the snapshot, so a refresh adds it once a match is found
+        // rather than taking it for a song the listener removed (PlaylistMerge).
         val id = "spotify:playlist:abc"
         val source = FakeSource(Service.SPOTIFY, tracks = mapOf(id to sp("s1", "s2", "s3")))
 
@@ -127,7 +129,7 @@ class ImportEngineTest {
 
         val copy = library.copies.values.single()
         assertEquals(listOf("yt-s1", "yt-s3"), copy.songs.map { it.videoId })
-        assertEquals(listOf("s1", "s2", "s3"), copy.origin.snapshot)
+        assertEquals(listOf("s1", "s3"), copy.origin.snapshot)
         assertEquals(listOf(UnmatchedTrack("s-s2", "sa", "Gym")), report.unmatched)
     }
 

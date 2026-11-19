@@ -126,8 +126,9 @@ data class PlaylistEntity(
 data class PlaylistOriginEntity(
     @PrimaryKey val playlistId: String,
     /**
-     * The remote ids the source listed at the last import or refresh, in its order, as a JSON array of
-     * strings (YouTube Music video ids, Spotify track ids). Null when unknown — a copy made before
+     * The remote ids the source listed at the last import or refresh and the copy took in (a Spotify
+     * track with no match is left out), in its order, as a JSON array of strings (YouTube Music video
+     * ids, Spotify track ids); the base of `dev.auden.library.PlaylistMerge`. Null when unknown — a copy made before
      * origins were recorded, or a source that names no ids — which a refresh treats as "only add".
      */
     val snapshot: String? = null,

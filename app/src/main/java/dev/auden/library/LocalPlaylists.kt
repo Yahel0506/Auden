@@ -11,10 +11,12 @@ import dev.auden.library.db.PlaylistOriginEntity
 import dev.auden.library.db.TrackEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -101,49 +103,69 @@ object LocalPlaylists {
     fun likesListCopies(): List<LocalPlaylist> = _playlists.value.filter { PlaylistOrigin.of(it.sourceId)?.isLikesList == true }
 
     /**
-     * Saves a cloud playlist or album to the device library.
+     * Keeps a list brought in from elsewhere (a pasted link, a cloud page) as a library copy of [sourceId].
      *
-     * Saving the same page twice does not make a second copy: the first one is
-     * brought up to date with whatever the page has gained, so this doubles as
-     * "sync". The listener's own additions stay.
-     *
-     * [sourceSpotifyIds], given for a Spotify page, is every track the page holds (matched or not). A copy
-     * then also loses the songs that came from Spotify and are no longer there: those with a Spotify id
-     * outside this set. Songs without one were added by the listener and are never taken out. Without it
-     * (YouTube Music pages, which mark nothing) a sync only adds, and songs the listener removed come back.
-     *
-     * [coverUrl] is the page's own cover; a copy takes the newest one it is given.
+     * Saving the same source twice does not make a second copy. The one there is topped up with the songs it does
+     * not have yet — only added, never taken out, in the order given, after its own — and its cover follows
+     * [coverUrl] unless the listener chose one. This is for callers that hold songs but no listing of the source
+     * to compare against (a link names no ids); bringing a copy up to date from its source, removals included, is
+     * [dev.auden.transfer.PlaylistRefresher]'s job, which is why [origin] is recorded with a new copy only: moving
+     * the snapshot here would forget what the source has since removed.
      */
     fun saveFromSource(
         sourceId: String,
         title: String,
         songs: List<Song>,
         coverUrl: String? = null,
-        sourceSpotifyIds: Set<String>? = null,
         origin: ImportedOrigin? = null,
     ): SaveResult {
         val existing = bySource(sourceId)
-        // [origin] is recorded with a new copy only. A sync of an existing one leaves its snapshot as it was: a
-        // YouTube Music sync only adds, so moving the snapshot on would forget what the source has since removed —
-        // the base a refresh from the source compares against. Moving it is that refresh's job.
         if (existing == null) {
             return SaveResult(create(title, songs, sourceId, coverUrl, origin), added = songs.distinctBy { it.videoId }.size, created = true)
         }
-        val kept = if (sourceSpotifyIds == null) existing.songs
-        else existing.songs.filter { it.spotifyId == null || it.spotifyId in sourceSpotifyIds }
-        val removed = existing.songs.size - kept.size
-        val have = kept.mapTo(HashSet()) { it.videoId }
+        val have = existing.songs.mapTo(HashSet()) { it.videoId }
         val fresh = songs.filter { have.add(it.videoId) }
-        // A cover the listener chose outlives every sync; only the page's own cover follows the page.
+        // A cover the listener chose outlives every save; only the page's own cover follows the page.
         val newCover = if (CustomPlaylistCovers.isCustom(existing.coverUrl)) existing.coverUrl
         else coverUrl?.takeIf { it.isNotBlank() } ?: existing.coverUrl
-        if (removed > 0 || fresh.isNotEmpty() || newCover != existing.coverUrl) {
-            replace(existing.copy(songs = kept + fresh, coverUrl = newCover))
+        if (fresh.isNotEmpty() || newCover != existing.coverUrl) {
+            replace(existing.copy(songs = existing.songs + fresh, coverUrl = newCover))
         }
-        return SaveResult(get(existing.id) ?: existing, added = fresh.size, created = false, removed = removed)
+        return SaveResult(get(existing.id) ?: existing, added = fresh.size, created = false)
     }
 
     data class SaveResult(val playlist: LocalPlaylist, val added: Int, val created: Boolean, val removed: Int = 0)
+
+    /**
+     * A refresh from the playlist's source, written as one: [update] is handed the playlist as it is at this
+     * moment (not as it was when the source was read, so an edit made meanwhile is merged rather than lost) and
+     * returns its new songs and what to record about the source; both are stored together, in one transaction.
+     * Returns the playlist as written, once it is on disk; null when there is no such playlist (or [update] gave
+     * nothing back). The songs are only rewritten when they changed; the origin always is.
+     */
+    suspend fun applyFromOrigin(id: String, update: (LocalPlaylist) -> Pair<List<Song>, ImportedOrigin>?): LocalPlaylist? {
+        val clean = id.removePrefix("local:playlist:").removePrefix("VL")
+        var before: LocalPlaylist? = null
+        var written: LocalPlaylist? = null
+        var origin: ImportedOrigin? = null
+        _playlists.update { list ->
+            before = null
+            written = null
+            val current = list.firstOrNull { it.id == clean } ?: return@update list
+            val (songs, recorded) = update(current) ?: return@update list
+            val next = current.copy(songs = songs)
+            before = current
+            written = next
+            origin = recorded
+            if (songs == current.songs) list else list.map { if (it.id == clean) next else it }
+        }
+        val result = written ?: return null
+        val previous = before ?: return null
+        persist(result, insert = false, origin = origin, entries = result.songs != previous.songs)?.join()
+        val had = previous.songs.mapTo(HashSet()) { it.videoId }
+        if (result.songs.any { it.videoId !in had }) onSongsAdded?.invoke(result.id)
+        return result
+    }
 
     /** Adds [songs] that are not already there; returns how many went in. */
     fun add(id: String, songs: List<Song>): Int {
@@ -244,23 +266,24 @@ object LocalPlaylists {
         }
     }
 
-    private fun persist(playlist: LocalPlaylist, insert: Boolean, origin: ImportedOrigin? = null) {
-        val database = db ?: return
-        scope.launch {
+    /** [entries] false: the songs are as stored already, only the row (and [origin]) is written. */
+    private fun persist(playlist: LocalPlaylist, insert: Boolean, origin: ImportedOrigin? = null, entries: Boolean = true): Job? {
+        val database = db ?: return null
+        return scope.launch {
             writeLock.withLock {
                 val now = System.currentTimeMillis()
                 if (insert) database.playlists().upsert(PlaylistEntity(playlist.id, playlist.title, now, now, sourceId = playlist.sourceId, coverUrl = playlist.coverUrl))
                 else database.playlists().byId(playlist.id)?.let { database.playlists().upsert(it.copy(updatedAt = now, coverUrl = playlist.coverUrl)) }
-                // Right after its playlist's row, which the foreign key needs to be there first. Never worth failing
-                // the songs' write over.
-                if (origin != null) {
-                    runCatching {
-                        database.origins().putOrigin(
-                            PlaylistOriginEntity(playlist.id, origin.snapshot?.let(PlaylistSnapshot::encode), origin.syncedAt, origin.originTitle),
-                        )
-                    }
+                val originRow = origin?.let {
+                    PlaylistOriginEntity(playlist.id, it.snapshot?.let(PlaylistSnapshot::encode), it.syncedAt, it.originTitle)
                 }
+                // A new copy's: right after its playlist's row, which the foreign key needs to be there first. Never
+                // worth failing the songs' write over, so outside their transaction.
+                if (originRow != null && insert) runCatching { database.origins().putOrigin(originRow) }
                 database.withTransaction {
+                    // A refresh's: with the songs it describes, so the snapshot and the songs never disagree.
+                    if (originRow != null && !insert) database.origins().putOrigin(originRow)
+                    if (!entries) return@withTransaction
                     database.playlistWrites().clearEntries(playlist.id)
                     database.playlists().insertEntries(
                         playlist.songs.mapIndexed { index, song ->

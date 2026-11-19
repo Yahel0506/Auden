@@ -1059,8 +1059,8 @@
     <string name="miscellaneous_footer">When enabled, closing the app from the recent apps screen will also stop music playback.</string>
 
     <string name="export_compatible_downloads">Export compatible downloads</string>
-    <string name="sync_downloaded_playlists">Keep playlists updated</string>
-    <string name="sync_downloaded_playlists_subtitle">Checks twice a day and downloads songs newly added to your downloaded playlists</string>
+    <string name="sync_downloaded_playlists">Download new songs in downloaded playlists</string>
+    <string name="sync_downloaded_playlists_subtitle">When a playlist you downloaded gets new songs in your library, they download too</string>
     <string name="playlist_sync_ask_title">New songs in %1$s: %2$d</string>
     <string name="playlist_sync_ask_text">Tap to download</string>
     <string name="playlist_sync_done_title">Added to %1$s: %2$d</string>
@@ -1269,14 +1269,14 @@
     <string name="offline_liked_empty">Songs you like on this device show up here</string>
     <string name="local_playlist_synced">%1$d songs · %2$s</string>
     <string name="synced_with">Synced with %1$s</string>
-    <string name="yt_sync">Sync with YouTube Music</string>
-    <string name="yt_sync_running">Syncing with YouTube Music</string>
-    <string name="yt_sync_retry">Retry sync</string>
-    <string name="yt_sync_linked">Synced with a YouTube Music playlist</string>
+    <string name="yt_sync">Export to YouTube Music</string>
+    <string name="yt_sync_running">Exporting to YouTube Music</string>
+    <string name="yt_sync_retry">Retry export</string>
+    <string name="yt_sync_linked">Exported to a YouTube Music playlist</string>
     <string name="yt_sync_skipped">%1$d songs without a YouTube Music version were left out</string>
-    <string name="yt_sync_failed">The sync failed. Tap to retry.</string>
+    <string name="yt_sync_failed">The export failed. Tap to retry.</string>
     <string name="yt_sync_nothing">None of these songs exist on YouTube Music.</string>
-    <string name="yt_sync_sign_in">Sign in to YouTube Music to sync</string>
+    <string name="yt_sync_sign_in">Sign in to YouTube Music to export</string>
     <string name="saved_on_this_device">Saved on this device</string>
     <string name="spotify_import_empty_playlist">No songs in this playlist</string>
     <string name="spotify_import_language_preference" translatable="false">Language preference</string>
@@ -1462,11 +1462,6 @@
     <string name="spotify_open_missing">Couldn’t find it on YouTube Music</string>
     <string name="spotify_empty_albums">No saved albums</string>
     <string name="spotify_empty_artists">No followed artists</string>
-    <string name="autosync_title">Playlists updated</string>
-    <string name="autosync_done">%1$d new songs added to your saved playlists</string>
-    <string name="autosync_setting">Keep saved playlists up to date</string>
-    <string name="autosync_setting_subtitle">Adds new songs from Spotify and YouTube Music to your copies. Nothing is ever changed on those services.</string>
-    <string name="autosync_mobile">Also on mobile data</string>
     <string name="home_shelf_loop">On repeat</string>
     <string name="home_shelf_loop_subtitle">What you have played most this month</string>
     <string name="home_shelf_rediscover">Rediscover</string>
@@ -1980,4 +1975,28 @@
     <string name="transfer_notice_title">Your library is Auden’s now</string>
     <string name="transfer_notice_body">Auden no longer shows your YouTube Music library live, and your likes were copied. To bring over playlists, albums and artists, use Transfer your music.</string>
     <string name="transfer_notice_later">Not now</string>
+    <string name="refresh_from_origin">Update from its source</string>
+    <string name="refresh_reading">Reading the source…</string>
+    <string name="refresh_error_gone">This playlist no longer exists.</string>
+    <string name="refresh_error_no_origin">This playlist was made in Auden: it has no source to update from.</string>
+    <string name="refresh_error_likes_list">This is a copy of your liked songs. Bring them over as likes from Transfer your music.</string>
+    <string name="refresh_error_no_listing">Spotify does not give an album’s songs, so this album cannot be updated.</string>
+    <string name="refresh_error_not_connected">Connect %1$s in Transfer your music to update this playlist.</string>
+    <string name="refresh_error_expired">The %1$s session expired. Connect it again in Transfer your music.</string>
+    <string name="refresh_error_empty">%1$s returned no songs for this playlist, so nothing was changed. It may be private or deleted.</string>
+    <string name="refresh_error_failed">Could not read the source%1$s. Try again later.</string>
+    <string name="refresh_updated">Updated %1$s</string>
+    <string name="refresh_never_updated">Not updated since it was brought over</string>
+    <string name="refresh_first">First update: songs are added, none are removed.</string>
+    <string name="refresh_nothing_new">Nothing new at the source.</string>
+    <string name="refresh_unmatched">%1$d songs have no match on YouTube Music yet.</string>
+    <string name="refresh_merge">Combine (+%1$d / −%2$d)</string>
+    <string name="refresh_replace">Replace with the source (+%1$d / −%2$d)</string>
+    <string name="refresh_done">%1$s updated</string>
+    <string name="export_yt_title">Export “%1$s” to YouTube Music?</string>
+    <string name="export_yt_create">A new playlist with %1$d songs will be created on YouTube Music.</string>
+    <string name="export_yt_update">The YouTube Music playlist will be updated: %1$d added, %2$d removed.</string>
+    <string name="export_yt_removes">These will be removed there:</string>
+    <string name="export_yt_confirm">Export</string>
+    <string name="export_yt_failed">Could not prepare the export.</string>
 </resources>

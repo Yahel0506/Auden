@@ -169,6 +169,90 @@ object YtPlaylistSync {
         renameIfChanged(app, localId, ytId, playlist.title)
     }
 
+    /**
+     * What an export would do to YouTube Music, for a confirmation, worked out by [plan] like the export itself.
+     *
+     * @property create no linked YouTube Music playlist (or it is gone from the account): a new private one is made.
+     * @property add songs that would be added on YouTube Music.
+     * @property remove entries that would be **removed from the YouTube Music playlist** (not on the device any more).
+     * @property reorder songs would be moved so YouTube Music has the device's order.
+     * @property skipped songs of the device playlist with no YouTube Music version, left out.
+     * @property total songs the YouTube Music playlist holds afterwards.
+     */
+    data class ExportSummary(
+        val create: Boolean,
+        val add: Int,
+        val remove: Int,
+        val reorder: Boolean,
+        val skipped: Int,
+        val total: Int,
+    )
+
+    /** [summary] plus what a confirmation can name: the songs that would go, and whether the title would be sent. */
+    data class ExportPreview(
+        val summary: ExportSummary,
+        val ytPlaylistId: String?,
+        val removed: List<com.music.bitchord.data.model.Song>,
+        val rename: Boolean,
+    )
+
+    /** [existing] null: there is no YouTube Music playlist to update, one is created. */
+    internal fun summarize(existing: List<Pair<String, String>>?, target: List<String>, skipped: Int): ExportSummary {
+        if (existing == null) return ExportSummary(create = true, add = target.size, remove = 0, reorder = false, skipped = skipped, total = target.size)
+        val plan = plan(existing, target)
+        val dropped = plan.remove.mapTo(HashSet()) { it.first }
+        // YouTube Music puts what is added at the end; anything else is a reorder.
+        val landed = existing.filter { it.first !in dropped }.map { it.second } + plan.add
+        return ExportSummary(
+            create = false,
+            add = plan.add.size,
+            remove = plan.remove.size,
+            reorder = landed != target,
+            skipped = skipped,
+            total = target.size,
+        )
+    }
+
+    /**
+     * What [start] would do for [browseId], without changing anything: reads the linked YouTube Music playlist (if
+     * there is one) and compares. Fails the way the export would (nothing to send, a link that cannot be read).
+     */
+    suspend fun preview(context: Context, browseId: String): Result<ExportPreview> = runCatching {
+        val app = context.applicationContext
+        init(app)
+        val localId = browseId.removePrefix("local:playlist:")
+        val playlist = LocalPlaylists.get(localId) ?: error(app.getString(R.string.yt_sync_failed))
+        val ids = playlist.songs.map { it.videoId }.filter { YOUTUBE_ID.matches(it) }
+        if (ids.isEmpty()) error(app.getString(R.string.yt_sync_nothing))
+        val skipped = playlist.songs.size - ids.size
+        var ytId = _links.value[localId]
+        var entries: List<com.music.bitchord.data.model.Song> = emptyList()
+        if (ytId != null) {
+            val read = YtMusicRepository.playlistEntries("VL$ytId").getOrNull()
+            if (read != null) {
+                entries = read
+            } else {
+                // As the export decides it: only a library that answers and no longer lists it counts as gone.
+                val library = YtMusicRepository.libraryPlaylists().getOrNull()
+                    ?: error(app.getString(R.string.yt_sync_failed))
+                if (library.any { it.browseId?.removePrefix("VL") == ytId }) error(app.getString(R.string.yt_sync_failed))
+                ytId = null
+            }
+        }
+        val existing = entries.mapNotNull { s -> s.setVideoId?.let { it to s.videoId } }
+        val summary = summarize(existing.takeIf { ytId != null }, ids, skipped)
+        val removed = if (ytId == null) emptyList() else {
+            val going = plan(existing, ids).remove.mapTo(HashSet()) { it.first }
+            entries.filter { it.setVideoId in going }
+        }
+        ExportPreview(
+            summary = summary,
+            ytPlaylistId = ytId,
+            removed = removed,
+            rename = ytId != null && titlePrefs(app).getString(localId, null) != playlist.title,
+        )
+    }.onFailure { if (it is kotlinx.coroutines.CancellationException) throw it }
+
     /** What has to change in a YouTube Music playlist to become [target]. */
     internal class Plan(
         /** Entries to drop, as (setVideoId, videoId). */

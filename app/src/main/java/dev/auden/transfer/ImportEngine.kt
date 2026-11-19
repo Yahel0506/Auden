@@ -183,7 +183,7 @@ class ImportEngine(
                 return@attempt
             }
             val tracks = reader.playlistTracks(target.sourceId)
-            val (songs, missed) = playable(tracks, collection.title) { done ->
+            val (songs, missed, taken) = playable(tracks, collection.title) { done ->
                 onProgress(ImportProgress(step, ImportStage.MATCHING, collection.title, done, tracks.size))
             }
             unmatched = missed
@@ -198,7 +198,9 @@ class ImportEngine(
                 target.title,
                 filled,
                 target.thumbnailUrl,
-                ImportedOrigin(snapshot = tracks.map { it.remoteId }, syncedAt = now(), originTitle = target.title),
+                // What the copy took in, not every id listed: a track that found no match is not "removed by the
+                // listener" to a later refresh (see PlaylistMerge), so it is added once a match is found.
+                ImportedOrigin(snapshot = taken, syncedAt = now(), originTitle = target.title),
             )
             result = tally(Tally(added = 1)).copy(created = listOf(id))
         }
@@ -249,16 +251,19 @@ class ImportEngine(
         return ImportReport(likes = Tally(added = added, skipped = songs.size - added))
     }
 
+    /** [songs] what [taken] (remote ids, in order) became; [missed] what found no match. */
+    private data class Playable(val songs: List<Song>, val missed: List<UnmatchedTrack>, val taken: List<String>)
+
     /**
      * [tracks] as songs, in their order: YouTube Music's as they are, Spotify's matched (a few at a time, which is
-     * what the search tolerates). The second list is what found no match.
+     * what the search tolerates).
      */
     private suspend fun playable(
         tracks: List<RemoteTrack>,
         from: String?,
         onMatched: (Int) -> Unit,
-    ): Pair<List<Song>, List<UnmatchedTrack>> {
-        if (tracks.none { it.song == null }) return tracks.mapNotNull { it.song } to emptyList()
+    ): Playable {
+        if (tracks.none { it.song == null }) return Playable(tracks.mapNotNull { it.song }, emptyList(), tracks.map { it.remoteId })
         val gate = Semaphore(matchParallelism.coerceAtLeast(1))
         val done = AtomicInteger()
         val found = coroutineScope {
@@ -275,12 +280,17 @@ class ImportEngine(
         }
         val songs = mutableListOf<Song>()
         val missed = mutableListOf<UnmatchedTrack>()
+        val taken = mutableListOf<String>()
         tracks.forEachIndexed { index, track ->
             val song = found[index]
-            if (song != null) songs += song
-            else missed += UnmatchedTrack(track.spotify?.title ?: track.remoteId, track.spotify?.artist.orEmpty(), from)
+            if (song != null) {
+                songs += song
+                taken += track.remoteId
+            } else {
+                missed += UnmatchedTrack(track.spotify?.title ?: track.remoteId, track.spotify?.artist.orEmpty(), from)
+            }
         }
-        return songs to missed
+        return Playable(songs, missed, taken)
     }
 
     /** Runs [block]; a failure comes back as its message (never null), cancellation goes on up. */

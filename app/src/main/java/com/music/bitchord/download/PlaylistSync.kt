@@ -27,9 +27,11 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.music.bitchord.R
 import com.music.bitchord.data.DebugLog as Log
-import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.settings.AppSettings
+import com.music.bitchord.data.spotify.LocalPlaylist
+import dev.auden.library.LocalPlaylists
+import dev.auden.transfer.DownloadedCopies
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -39,19 +41,29 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.TimeUnit
 
 /**
- * Keeps the playlists downloaded whole in step with their online copies, while
+ * Downloads what the playlists downloaded whole gain in the library, while
  * [AppSettings.syncDownloadedPlaylists] is on.
+ *
+ * Only the library is looked at — never YouTube Music or Spotify. A playlist
+ * gains songs when the listener adds them or asks for a refresh from its source
+ * ([dev.auden.transfer.PlaylistRefresher]); [LocalPlaylists.onSongsAdded] says so
+ * straight away, and the periodic check catches up on what could not be fetched
+ * then (no Wi-Fi, a batch waiting for approval, a failed download). A YouTube
+ * Music playlist downloaded before it had a library copy is followed through
+ * that copy ([dev.auden.transfer.DownloadedCopies]); until it has one, it is
+ * left as it is.
  *
  * What is new is worked out fresh on every check and nothing about it is stored
  * until it has been dealt with. That is what makes a check safe to lose at any
- * point: Android stopping the job, the process dying or a page failing all leave
- * the remaining tracks new, and the next check simply finds them again.
+ * point: Android stopping the job or the process dying leave the remaining
+ * tracks new, and the next check simply finds them again.
  *
  * Only ever adds. A track the listener deleted is still named by its playlist's
- * record, so it does not come back; a track removed online keeps its file.
+ * record, so it does not come back; a track removed from the playlist keeps its file.
  */
 object PlaylistSync {
 
@@ -73,8 +85,8 @@ object PlaylistSync {
     /** The most one playlist may fetch without being asked; about 1.7 GB of lossless. */
     internal const val ASK_ABOVE = 50
 
-    /** Between requests for pages and for playlists: none of this is in a hurry. */
-    private const val PAUSE_MILLIS = 400L
+    /** How long a check waits for the library to be read before giving up until the next one. */
+    private const val LIBRARY_LOAD_MILLIS = 30_000L
 
     /** One check at a time, however many of the triggers fire together. */
     private val running = Mutex()
@@ -91,9 +103,9 @@ object PlaylistSync {
      * that reason: a switch that defaults to off should cost a launch nothing.
      */
     fun init(app: Application) {
-        // A device playlist gaining songs (added by hand, or by a sync of its Spotify or
-        // YouTube Music original) is looked at straight away rather than at the next check.
-        dev.auden.library.LocalPlaylists.onSongsAdded = { id -> localPlaylistChanged(app, id) }
+        // A device playlist gaining songs (added by hand, or by a refresh from its source
+        // the listener asked for) is looked at straight away rather than at the next check.
+        LocalPlaylists.onSongsAdded = { id -> localPlaylistChanged(app, id) }
         CoroutineScope(SupervisorJob() + Dispatchers.Default).launch {
             var wasOn: Boolean? = null
             AppSettings.syncDownloadedPlaylists
@@ -166,10 +178,8 @@ object PlaylistSync {
     // ---- A check ------------------------------------------------------------
 
     /**
-     * Goes through every eligible playlist in turn.
-     *
-     * Only a check that read every playlist to its end is stamped as done, so
-     * one that failed partway is due again the next time the app is opened.
+     * Goes through every downloaded playlist in turn, against the library only:
+     * no request is made, so a check always runs to its end and is stamped.
      */
     internal suspend fun check(context: Context, approved: Boolean) {
         // An approval waits its turn. Anything else would only repeat the check
@@ -177,26 +187,16 @@ object PlaylistSync {
         if (approved) running.lock() else if (!running.tryLock()) return
         try {
             if (!storageWritable(context)) return
-            var whole = true
+            // A check woken with the process must not take a library still loading for an empty one.
+            withTimeoutOrNull(LIBRARY_LOAD_MILLIS) { LocalPlaylists.awaitLoaded() } ?: return
             Downloads.collections.value.keys.forEach { id ->
                 if (!AppSettings.syncDownloadedPlaylists.value || !AppSettings.downloadsAllowedNow) return
                 val record = Downloads.collections.value[id] ?: return@forEach
-                val device = devicePlaylistOf(record)
-                if (device != null) {
-                    // Nothing to ask anyone: the playlist is already here, and so is its listing.
-                    update(context, record, Listing(downloadable(device.songs), complete = true), approved)
-                    return@forEach
-                }
-                val browseId = syncableBrowseId(record) ?: return@forEach
-                val listing = readWholePlaylist(
-                    first = { YtMusicRepository.browseSongs(browseId) },
-                    more = { YtMusicRepository.moreSongs(it) },
-                )
-                if (!listing.complete) whole = false
-                update(context, record, listing, approved)
-                delay(PAUSE_MILLIS)
+                // Nothing to ask anyone: the playlist is here, and so is its listing.
+                val device = devicePlaylistOf(record) ?: return@forEach
+                update(context, record, Listing(downloadable(device.songs)), approved)
             }
-            if (whole) prefs(context).edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
+            prefs(context).edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply()
         } finally {
             running.unlock()
         }
@@ -205,31 +205,49 @@ object PlaylistSync {
     /**
      * A playlist on this device just gained songs. If it was downloaded whole, the new ones are
      * downloaded too; otherwise this does nothing. Only that playlist is looked at, with no
-     * request to YouTube.
+     * request to anyone.
      */
     internal fun localPlaylistChanged(context: Context, playlistId: String) {
         if (!AppSettings.syncDownloadedPlaylists.value) return
         val app = context.applicationContext
-        val recordId = Downloads.pageIdFor(playlistId.removePrefix(Downloads.PLAYLIST_PREFIX))
-        if (Downloads.collections.value[recordId] == null) return
+        val recordIds = recordsOf(playlistId)
+        if (recordIds.isEmpty()) return
         scope.launch {
             delay(LOCAL_SETTLE_MILLIS)
             running.withLock {
                 if (!AppSettings.syncDownloadedPlaylists.value || !AppSettings.downloadsAllowedNow) return@withLock
                 if (!storageWritable(app)) return@withLock
-                val record = Downloads.collections.value[recordId] ?: return@withLock
-                val device = devicePlaylistOf(record) ?: return@withLock
-                update(app, record, Listing(downloadable(device.songs), complete = true), approved = false)
+                for (recordId in recordIds) {
+                    val record = Downloads.collections.value[recordId] ?: continue
+                    val device = devicePlaylistOf(record) ?: continue
+                    update(app, record, Listing(downloadable(device.songs)), approved = false)
+                }
             }
         }
     }
 
-    /** The device playlist a downloaded record stands for: a Spotify or YouTube Music copy, or one made here. */
-    internal fun devicePlaylistOf(record: SavedCollection): com.music.bitchord.data.spotify.LocalPlaylist? =
-        if (record.playlist && record.id.startsWith(Downloads.PLAYLIST_PREFIX + dev.auden.library.LocalPlaylists.ID_PREFIX)) {
-            dev.auden.library.LocalPlaylists.get(record.id)
+    /**
+     * The download records behind library playlist [playlistId]: its own, and that of the
+     * YouTube Music playlist it is the copy of, if that was downloaded before it had a copy.
+     */
+    internal fun recordsOf(playlistId: String): List<String> {
+        val id = playlistId.removePrefix(Downloads.PLAYLIST_PREFIX)
+        val own = Downloads.pageIdFor(id)
+        val source = LocalPlaylists.get(id)?.sourceId
+        return Downloads.collections.value.values
+            .filter { record -> record.id == own || source != null && DownloadedCopies.copySourceId(record) == source }
+            .map { it.id }
+    }
+
+    /**
+     * The library playlist a downloaded record stands for: one made here or a copy, by its own id; and for a
+     * YouTube Music playlist downloaded under its YouTube id, its library copy (none until it has one).
+     */
+    internal fun devicePlaylistOf(record: SavedCollection): LocalPlaylist? =
+        if (record.playlist && record.id.startsWith(Downloads.PLAYLIST_PREFIX + LocalPlaylists.ID_PREFIX)) {
+            LocalPlaylists.get(record.id)
         } else {
-            null
+            DownloadedCopies.copySourceId(record)?.let(LocalPlaylists::bySource)
         }
 
     /** Files already on the device have nothing to download, and nothing to be named by. */
@@ -284,54 +302,19 @@ object PlaylistSync {
             ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
             PackageManager.PERMISSION_GRANTED
 
-    // ---- Reading a playlist -------------------------------------------------
+    // ---- A playlist's listing -----------------------------------------------
+
+    /** A playlist's songs as the library has them, in order. [cover] fills in a song with no artwork. */
+    internal class Listing(val songs: List<Song>, val cover: String? = null)
 
     /**
-     * @property complete whether this reached the end of the playlist. False
-     *   when a request failed; [songs] is then whatever came before it, which is
-     *   still worth acting on since a check only ever adds.
-     */
-    internal class Listing(val songs: List<Song>, val complete: Boolean, val cover: String? = null)
-
-    /**
-     * Every track in a playlist, however many pages it runs to.
+     * The YouTube Music playlist a record was downloaded from, under the id YouTube
+     * answers to: a playlist is filed under whichever id it was downloaded from,
+     * with or without its `VL`. Its library copy is found by it
+     * ([DownloadedCopies.copySourceId]); it is never read from YouTube here.
      *
-     * Its own walk rather than [YtMusicRepository.allSongs], which stops at a
-     * page limit and turns a failed page into a shorter list without saying so.
-     * Every page is read every time: a new track can be anywhere in a playlist,
-     * and one added and one removed leave its count unchanged.
-     *
-     * Only the rows a page lists as its own, so the suggestions YouTube offers
-     * to round a playlist out are never taken for part of it.
-     */
-    internal suspend fun readWholePlaylist(
-        first: suspend () -> Result<YtMusicRepository.SongPage>,
-        more: suspend (String) -> Result<YtMusicRepository.SongPage>,
-    ): Listing {
-        val opening = first().getOrNull() ?: return Listing(emptyList(), complete = false)
-        val cover = opening.header?.thumbnailUrl
-        val songs = LinkedHashMap<String, Song>()
-        opening.songs.forEach { songs.putIfAbsent(it.videoId, it) }
-        var next = opening.continuation
-        while (next != null) {
-            delay(PAUSE_MILLIS)
-            val page = more(next).getOrNull() ?: return Listing(songs.values.toList(), complete = false, cover)
-            val before = songs.size
-            page.songs.forEach { songs.putIfAbsent(it.videoId, it) }
-            // A page with nothing new is a feed that has looped back on itself
-            // with a token still attached, not one with more to give.
-            if (songs.size == before) break
-            next = page.continuation
-        }
-        return Listing(songs.values.toList(), complete = true, cover)
-    }
-
-    /**
-     * What a check looks at, under the id YouTube answers to: a playlist is
-     * filed under whichever id it was downloaded from, with or without its `VL`.
-     *
-     * Null for an album, and for the two kinds of playlist with no YouTube copy
-     * to compare against: Spotify's own and those imported to this device.
+     * Null for an album, and for the two kinds of playlist with no YouTube copy:
+     * Spotify's own and those kept on this device.
      */
     internal fun syncableBrowseId(record: SavedCollection): String? {
         val id = record.id
@@ -413,9 +396,9 @@ class PlaylistSyncWorker(context: Context, params: WorkerParameters) : Coroutine
             return Result.success()
         }
         PlaylistSync.check(applicationContext, inputData.getBoolean(PlaylistSync.KEY_APPROVED, false))
-        // Never a retry: an incomplete check is due again when the app next
-        // opens, and a playlist that has been deleted online would otherwise
-        // have WorkManager retrying it for as long as the setting stays on.
+        // Never a retry: a check that could not run is due again when the app
+        // next opens, and a download that keeps failing would otherwise have
+        // WorkManager retrying it for as long as the setting stays on.
         return Result.success()
     }
 }

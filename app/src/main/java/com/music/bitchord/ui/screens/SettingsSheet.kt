@@ -351,8 +351,6 @@ fun SettingsScreen(
     val downloadTemplate by AppSettings.downloadTemplate.collectAsStateWithLifecycle()
     val downloadConcurrency by AppSettings.downloadConcurrency.collectAsStateWithLifecycle()
     val lyricsExtras by AppSettings.lyricsDownloadExtras.collectAsStateWithLifecycle()
-    val autoSync by AppSettings.autoSyncPlaylists.collectAsStateWithLifecycle()
-    val autoSyncMobile by AppSettings.autoSyncOnMobileData.collectAsStateWithLifecycle()
     val wifiOnlyDownloads by AppSettings.wifiOnlyDownloads.collectAsStateWithLifecycle()
     val exportDownloads by AppSettings.exportDownloads.collectAsStateWithLifecycle()
     val syncDownloadedPlaylists by AppSettings.syncDownloadedPlaylists.collectAsStateWithLifecycle()
@@ -1266,38 +1264,21 @@ fun SettingsScreen(
             search,
             header = stringResource(R.string.settings_block_dl_playlists),
         ) {
-            val autoSyncTitle = stringResource(R.string.autosync_setting)
-            row(autoSyncTitle, "sync", "spotify", "playlists", "update", "library") {
+            // Only downloads what a downloaded playlist gains in the library; nothing refreshes a copy from its
+            // source by itself any more (that is "Refresh from source", on the playlist).
+            val syncPlaylistsTitle = stringResource(R.string.sync_downloaded_playlists)
+            row(syncPlaylistsTitle, "sync", "playlist", "new songs", "background", "automatic") {
                 SettingsRow(
                     icon = Icons.Rounded.Sync,
-                    title = autoSyncTitle,
-                    subtitle = stringResource(R.string.autosync_setting_subtitle),
+                    title = syncPlaylistsTitle,
+                    subtitle = stringResource(R.string.sync_downloaded_playlists_subtitle),
                     trailing = {
                         IosSwitch(
-                            checked = autoSync,
-                            onCheckedChange = AppSettings::setAutoSyncPlaylists,
+                            checked = syncDownloadedPlaylists,
+                            onCheckedChange = AppSettings::setSyncDownloadedPlaylists,
                         )
                     },
-                    onClick = { AppSettings.setAutoSyncPlaylists(!autoSync) },
-                )
-            }
-            if (autoSync) {
-                val autoSyncMobileTitle = stringResource(R.string.autosync_mobile)
-                row(autoSyncMobileTitle, "sync", "cellular", "mobile data", divided = false) {
-                    SettingsSubRow(
-                        title = autoSyncMobileTitle,
-                        checked = autoSyncMobile,
-                        onCheckedChange = AppSettings::setAutoSyncOnMobileData,
-                    )
-                }
-            }
-            val syncPlaylistsTitle = stringResource(R.string.sync_downloaded_playlists)
-            row(syncPlaylistsTitle, "playlist", "new songs", "background", "automatic") {
-                SettingsSubRow(
-                    title = syncPlaylistsTitle,
-                    checked = syncDownloadedPlaylists,
-                    onCheckedChange = AppSettings::setSyncDownloadedPlaylists,
-                    subtitle = stringResource(R.string.sync_downloaded_playlists_subtitle),
+                    onClick = { AppSettings.setSyncDownloadedPlaylists(!syncDownloadedPlaylists) },
                 )
             }
         }

@@ -9,26 +9,28 @@ import dev.auden.library.PlaylistOrigin
 import dev.auden.library.Service
 
 /**
- * YouTube Music playlists downloaded whole are the one place Auden still follows a remote list by itself:
- * [PlaylistSync] re-reads each one to download what it gained. Each gets a library copy that records its origin,
- * so when that read goes (refreshing becomes the listener's call) the playlist lives on in the library and can
- * be refreshed from there.
+ * YouTube Music playlists downloaded whole used to be re-read from YouTube Music by [PlaylistSync] to download
+ * what they gained. Each gets a library copy that records its origin, so the playlist lives on in the library and
+ * is refreshed from there when the listener asks (`PlaylistRefresher`).
  *
- * The download records are not touched here: they keep their YouTube Music id, the downloads screens keep
- * finding them, and [PlaylistSync] keeps working as it does. Pointing them at their copy goes with the read.
+ * The download records are not rewritten: they keep their YouTube Music id and the downloads screens keep finding
+ * them. [PlaylistSync] follows each through its copy instead ([copySourceId]): what the copy gains is downloaded.
  *
  * A downloaded Liked Music is not copied (likes are never a playlist); [likesRecords] lists it instead.
  */
 object DownloadedCopies {
 
-    /** A record [PlaylistSync] re-reads, and the source id its library copy is saved under. */
+    /** A record downloaded from a YouTube Music playlist, and the source id its library copy is saved under. */
     data class Remote(val record: SavedCollection, val sourceId: String)
 
-    /** The records [PlaylistSync] reads from YouTube Music, but for Liked Music. */
+    /** The records downloaded from YouTube Music playlists, but for Liked Music. */
     fun remote(records: Collection<SavedCollection>): List<Remote> = records.mapNotNull { record ->
-        val origin = origin(record)?.takeIf { !it.isLikesList } ?: return@mapNotNull null
-        Remote(record, origin.sourceId)
+        val sourceId = copySourceId(record) ?: return@mapNotNull null
+        Remote(record, sourceId)
     }.distinctBy { it.sourceId }
+
+    /** The source id the library copy of a downloaded YouTube Music playlist is saved under; null for any other record. */
+    fun copySourceId(record: SavedCollection): String? = origin(record)?.takeIf { !it.isLikesList }?.sourceId
 
     /** Downloads of the account's Liked Music: to be offered as likes, never deleted unasked. */
     fun likesRecords(records: Collection<SavedCollection>): List<SavedCollection> =

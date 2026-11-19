@@ -149,11 +149,11 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         }
         AppSettings.init(this, authStore)
         dev.auden.library.lyrics.SongLyricsOffset.init(this)
-        // Library copies of cloud playlists are brought up to date whenever the app comes to the front.
+        // Library copies of cloud playlists are not refreshed by themselves: only when the listener asks
+        // (dev.auden.transfer.PlaylistRefresher).
         androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(
             object : androidx.lifecycle.DefaultLifecycleObserver {
                 override fun onStart(owner: androidx.lifecycle.LifecycleOwner) {
-                    dev.auden.library.PlaylistAutoSync.onForeground(this@BitChordApplication)
                     // Files deleted while the app was away: forget them, and let the library index notice too.
                     CoroutineScope(Dispatchers.IO).launch {
                         Downloads.pruneMissing(this@BitChordApplication)

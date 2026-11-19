@@ -95,7 +95,8 @@ object LikeListClassifier {
 
 /**
  * The source's listing at the last import or refresh, as kept in `playlist_origin.snapshot`: the remote ids in
- * the source's order (YouTube Music video ids, Spotify track ids), as a JSON array.
+ * the source's order (YouTube Music video ids, Spotify track ids), as a JSON array — those the copy took in, so a
+ * Spotify track that found no YouTube Music match is left out (see [PlaylistMerge]).
  */
 object PlaylistSnapshot {
     private val codec = ListSerializer(String.serializer())

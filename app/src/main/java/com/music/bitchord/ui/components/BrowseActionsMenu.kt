@@ -175,6 +175,8 @@ fun BrowseActionsMenu(
      * that came from YouTube Music, which is the one that depends on it.
      */
     onSyncYtMusic: (() -> Unit)? = null,
+    /** An imported playlist: brings it up to date from where it came from, by hand. */
+    onRefreshFromOrigin: (() -> Unit)? = null,
     ytSync: YtSyncRowState = YtSyncRowState(),
     /** Playlists kept on this device: opens the picker of formats to write the playlist as. */
     onExport: (() -> Unit)? = null,
@@ -204,10 +206,11 @@ fun BrowseActionsMenu(
         onReorder?.let { ActionRow(SfIcons.Reorder, stringResource(R.string.reorder_songs), onClick = it) }
         onDuplicate?.let { ActionRow(Icons.Rounded.ContentCopy, stringResource(R.string.duplicate_playlist), onClick = it) }
         onExport?.let { ActionRow(Icons.Rounded.FileUpload, stringResource(R.string.export_playlist), onClick = it) }
+        onRefreshFromOrigin?.let { ActionRow(Icons.Rounded.Sync, stringResource(R.string.refresh_from_origin), onClick = it) }
         onSyncYtMusic?.let { sync -> YtSyncRow(ytSync, sync) }
         onShare?.let { ActionRow(SfIcons.Share, stringResource(R.string.share), onClick = it) }
     }
-    val manageCount = listOf(onReorder, onDuplicate, onExport, onSyncYtMusic, onShare).count { it != null }
+    val manageCount = listOf(onReorder, onDuplicate, onExport, onRefreshFromOrigin, onSyncYtMusic, onShare).count { it != null }
     val filing = onToggleDevice != null || onDownloadAll != null || onDeleteDownload != null
 
     CompositionLocalProvider(LocalActionRowStyle provides ActionRowStyle.Menu) {

@@ -52,6 +52,8 @@
 - **De dónde viene una playlist.** Las playlists que importas recuerdan su origen —YouTube Music o Spotify— y una instantánea de lo que tenían, listas para actualizarse desde él a mano.
 - **Transfiere tu música.** Un botón nuevo en la hoja de cuenta abre un único sitio para los demás servicios: conecta YouTube Music o Spotify, elige tus Me gusta, playlists, álbumes y artistas, y Auden los copia. Solo lee del servicio y se queda con su propia copia; no se envía nada de vuelta.
 - **Una biblioteca propia.** La biblioteca ya no lee en vivo tu cuenta de YouTube Music ni de Spotify: muestra lo que hay en Auden —tus playlists, Me gusta, descargas y lo que has traído—. Si tenías sesión iniciada, una nota te cuenta una vez adónde fue tu biblioteca.
+- **Actualiza una playlist cuando quieras.** Una playlist traída de YouTube Music o Spotify tiene «Actualizar desde su origen» en su menú. Muestra qué cambió allí (+ añadidas / − quitadas) y lo combina con tu copia —lo que añadiste se queda, lo que quitaste sigue quitado— o reemplaza tu copia por el origen. Nada se actualiza ya por sí solo.
+- **Exportar a YouTube Music, por elección.** Enviar una de tus playlists a YouTube Music es «Exportar a YouTube Music» en su menú, y pregunta antes: te dice qué se creará o cambiará allí, con nombre de lo que se quitaría.
 - **"Playlist" en todas partes.** El español dice "playlist" en lugar de "lista de reproducción".
 
 ## Auden DJ
