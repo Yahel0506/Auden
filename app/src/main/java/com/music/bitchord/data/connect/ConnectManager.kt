@@ -286,6 +286,7 @@ class ConnectManager(
                         ?.takeIf { message.activeDeviceId != null && message.activeDeviceId != myId && it.isWellFormed() }
                         ?.let { RemoteSession(it, message.stateServerMs) },
                 )
+                pauseIfActiveGone()
                 // A restart leaves the room thinking this device still plays: say what it really holds.
                 if (message.activeDeviceId == myId) publish() else claimIfPlaying()
             }
@@ -294,6 +295,7 @@ class ConnectManager(
                 _devices.value = message.devices.filter { it.online }
                 setActive(message.activeDeviceId)
                 if (message.activeDeviceId == null || message.activeDeviceId == myId) setRemote(null)
+                else pauseIfActiveGone()
             }
 
             is ServerMessage.State -> {
@@ -318,6 +320,20 @@ class ConnectManager(
             is ServerMessage.Pong -> Unit
             is ServerMessage.Error -> Log.w(TAG, "connect error: ${message.code}")
         }
+    }
+
+    /**
+     * The device that was playing dropped off the room's list — it did not hand over, it went. The room holds its session
+     * for a while before letting it go, and until then the session mirrored here would carry on as if it were
+     * still sounding: it is paused where it stood.
+     */
+    private fun pauseIfActiveGone() {
+        val active = _activeDeviceId.value ?: return
+        if (active == myId || _devices.value.any { it.deviceId == active }) return
+        val session = _remote.value ?: return
+        if (!session.state.isPlaying) return
+        val head = remotePlayheadMs()
+        setRemote(RemoteSession(session.state.copy(isPlaying = false, positionMs = head), serverNowMs()))
     }
 
     // ---- What the user does -----------------------------------------------------------------
