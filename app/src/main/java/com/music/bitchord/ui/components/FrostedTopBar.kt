@@ -180,6 +180,8 @@ fun FrostedTopBar(
      */
     accessory: (@Composable () -> Unit)? = null,
     actions: @Composable () -> Unit = {},
+    /** A control set in a bubble of its own at the trailing end, past [actions]'. */
+    profile: (@Composable () -> Unit)? = null,
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val useFloatingChrome = artworkPageChrome ||
@@ -337,6 +339,14 @@ fun FrostedTopBar(
                     ArtworkPageActions(hazeState = backButtonHazeState, content = actions)
                 } else {
                     actions()
+                }
+                if (profile != null) {
+                    Spacer(Modifier.width(8.dp))
+                    if (useFloatingChrome) {
+                        ArtworkPageActions(hazeState = backButtonHazeState, content = profile)
+                    } else {
+                        profile()
+                    }
                 }
             }
         }

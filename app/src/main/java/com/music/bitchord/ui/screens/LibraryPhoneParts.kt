@@ -18,7 +18,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
+import com.music.bitchord.ui.icons.SfIcons
 import com.music.bitchord.sharedui.resources.Res
+import com.music.bitchord.sharedui.resources.library_podcasts
 import com.music.bitchord.sharedui.resources.spotify_logo
 import com.music.bitchord.data.model.ShelfItem
 import com.music.bitchord.data.settings.AppSettings
@@ -39,7 +41,11 @@ import com.music.bitchord.ui.replay.ReplayStoryPage
  * libraries it can reach.
  */
 @Composable
-fun libraryLinks(onOpenOther: () -> Unit): List<LibraryLink> {
+fun libraryLinks(
+    /** The account's shelves, as the Library has them: the playlists, and the artists, albums and the rest. */
+    shelves: List<com.music.bitchord.data.model.HomeShelf>,
+    onOpenShelf: (com.music.bitchord.data.model.HomeShelf) -> Unit,
+): List<LibraryLink> {
     val webdavConfigured by AppSettings.webdavUrl.collectAsStateWithLifecycle()
     val smbHost by AppSettings.smbHost.collectAsStateWithLifecycle()
     val smbShare by AppSettings.smbShare.collectAsStateWithLifecycle()
@@ -47,23 +53,43 @@ fun libraryLinks(onOpenOther: () -> Unit): List<LibraryLink> {
         item = ShelfItem(title = title, subtitle = "", thumbnailUrl = null, videoId = null, browseId = browseId),
         icon = icon,
     )
-    fun action(title: String, icon: ImageVector, onClick: () -> Unit) = LibraryLink(
+    fun action(id: String, title: String, icon: ImageVector, onClick: () -> Unit) = LibraryLink(
         item = ShelfItem(title = title, subtitle = "", thumbnailUrl = null, videoId = null, browseId = null),
         icon = icon,
+        id = id,
         onClick = onClick,
     )
+    // What the "Other" page held, each as a row: the account's playlists, then every shelf it had.
+    fun shelfRow(id: String, shelfTitle: String, title: String, icon: ImageVector, always: Boolean = false): LibraryLink? {
+        val shelf = shelves.firstOrNull { it.title == shelfTitle && it.items.isNotEmpty() }
+            ?: if (always && shelves.isNotEmpty()) com.music.bitchord.data.model.HomeShelf(shelfTitle, emptyList()) else null
+        return shelf?.let { action(id, title, icon) { onOpenShelf(it) } }
+    }
+    val playlistsTitle = stringResource(R.string.playlists)
+    val artistsTitle = stringResource(R.string.artists)
+    val albumsTitle = stringResource(R.string.albums)
+    val podcastsTitle = org.jetbrains.compose.resources.stringResource(Res.string.library_podcasts)
+    val subscriptionsTitle = stringResource(R.string.subscriptions)
+    val order by AppSettings.libraryLinkOrder.collectAsStateWithLifecycle()
     // Plain text rows into each section; the account's artists, albums and podcasts are behind "Other".
     return listOfNotNull(
-        link(stringResource(R.string.downloads), "local:downloads"),
-        link(stringResource(R.string.local_music), "local:all"),
+        link(stringResource(R.string.downloads), "local:downloads", SfIcons.Download),
+        link(stringResource(R.string.local_music), "local:all", SfIcons.MusicNote),
         link(stringResource(R.string.cached_songs), CACHE_FOLDER_BROWSE_ID),
         // Only once set up in Sources; unconfigured, they'd just be dead ends.
         link(stringResource(R.string.webdav), com.music.bitchord.data.webdav.WebDavConfig.BROWSE_ID)
             .takeIf { webdavConfigured.isNotBlank() },
         link(stringResource(R.string.smb), com.music.bitchord.data.smb.SmbConfig.BROWSE_ID)
             .takeIf { smbHost.isNotBlank() && smbShare.isNotBlank() },
-        action(stringResource(R.string.library_other), Icons.Rounded.MoreHoriz, onOpenOther),
-    )
+        shelfRow("shelf:playlists", com.music.bitchord.data.YtMusicRepository.PLAYLISTS_SHELF, playlistsTitle, SfIcons.PlaylistPlay, always = true),
+        shelfRow("shelf:artists", "Artists", artistsTitle, SfIcons.Artist),
+        shelfRow("shelf:albums", "Albums", albumsTitle, SfIcons.Album),
+        shelfRow("shelf:podcasts", "Podcasts", podcastsTitle, SfIcons.Radio),
+        shelfRow("shelf:subscriptions", "Subscriptions", subscriptionsTitle, SfIcons.Groups),
+    ).let { all ->
+        // In the order the editing left them in; what it has not heard of stands after them, as it came.
+        all.sortedBy { link -> order.indexOf(link.id).let { if (it < 0) Int.MAX_VALUE else it } }
+    }
 }
 
 /**

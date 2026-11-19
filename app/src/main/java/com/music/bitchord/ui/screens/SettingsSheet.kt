@@ -305,6 +305,7 @@ fun SettingsScreen(
     val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
     val backdropMotion by AppSettings.backdropMotion.collectAsStateWithLifecycle()
     val showDjTab by AppSettings.showDjTab.collectAsStateWithLifecycle()
+    val showLibraryStats by AppSettings.showLibraryStats.collectAsStateWithLifecycle()
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
     val disableBlendEffects by AppSettings.disableBlendEffects.collectAsStateWithLifecycle()
     val glassOpacity by AppSettings.glassOpacity.collectAsStateWithLifecycle()
@@ -1426,6 +1427,21 @@ fun SettingsScreen(
                         )
                     },
                     onClick = { AppSettings.setHideHomeMoods(!hideHomeMoods) },
+                )
+            }
+            val libraryStatsTitle = stringResource(R.string.show_library_stats)
+            row(libraryStatsTitle, "library", "statistics", "stats", "replay", "banner") {
+                SettingsRow(
+                    icon = SfIcons.BarChart,
+                    title = libraryStatsTitle,
+                    subtitle = stringResource(R.string.show_library_stats_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = showLibraryStats,
+                            onCheckedChange = AppSettings::setShowLibraryStats,
+                        )
+                    },
+                    onClick = { AppSettings.setShowLibraryStats(!showLibraryStats) },
                 )
             }
         }
@@ -3099,7 +3115,7 @@ internal fun SettingsGroup(
 @Composable
 internal fun RowDivider() {
     HorizontalDivider(
-        modifier = Modifier.padding(start = TEXT_INSET),
+        modifier = Modifier.padding(start = TEXT_INSET, end = ROW_INSET),
         thickness = 0.5.dp,
         color = MaterialTheme.colorScheme.outline,
     )

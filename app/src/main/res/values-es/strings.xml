@@ -2060,4 +2060,8 @@
     <string name="playback_statistics">Estadísticas de reproducción</string>
     <string name="auden_settings">Configuración de Auden</string>
     <string name="about_this_version">Acerca de esta versión</string>
+    <string name="show_library_stats">Banner de estadísticas en la Biblioteca</string>
+    <string name="show_library_stats_subtitle">Tu resumen de Replay arriba de la Biblioteca</string>
+    <string name="edit_pinned">Editar anclados</string>
+    <string name="edit_sections">Editar secciones</string>
 </resources>

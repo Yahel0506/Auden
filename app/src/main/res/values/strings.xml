@@ -1944,4 +1944,8 @@
     <string name="playback_statistics">Playback statistics</string>
     <string name="auden_settings">Auden settings</string>
     <string name="about_this_version">About this version</string>
+    <string name="show_library_stats">Statistics banner in Library</string>
+    <string name="show_library_stats_subtitle">Your Replay headline at the top of the Library</string>
+    <string name="edit_pinned">Edit pinned</string>
+    <string name="edit_sections">Edit sections</string>
 </resources>

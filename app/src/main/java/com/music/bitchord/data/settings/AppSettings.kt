@@ -546,6 +546,15 @@ object AppSettings {
     /** A DJ button in the middle of the navigation bar. */
     val showDjTab = MutableStateFlow(true)
 
+    /** The Statistics banner at the top of the Library: off until asked for. */
+    val showLibraryStats = MutableStateFlow(false)
+
+    /** The Library's folder rows in the order they were left in, by id; ones not named stand after them. */
+    val libraryLinkOrder = MutableStateFlow<List<String>>(emptyList())
+
+    /** The Library's folder rows that are ticked off, by id. */
+    val libraryHiddenLinks = MutableStateFlow<Set<String>>(emptySet())
+
     /** How strong the blur on unfocused lyrics is, in percent: 75 is the strength the table in PlayerLyrics was tuned at; the default is a little under it. */
     val lyricsBlurAmount = MutableStateFlow(DEFAULT_LYRICS_BLUR_AMOUNT)
 
@@ -1133,6 +1142,9 @@ object AppSettings {
         glassOpacity.value = prefs.getFloat(KEY_GLASS_OPACITY, 0.9f).coerceIn(0f, 1.5f)
         likeSync.value = LikeSync.entries.firstOrNull { it.name == prefs.getString(KEY_LIKE_SYNC, null) } ?: LikeSync.ASK
         showDjTab.value = prefs.getBoolean(KEY_SHOW_DJ_TAB, true)
+        showLibraryStats.value = prefs.getBoolean(KEY_SHOW_LIBRARY_STATS, false)
+        libraryLinkOrder.value = prefs.getString(KEY_LIBRARY_LINK_ORDER, null)?.split(",")?.filter { it.isNotBlank() }.orEmpty()
+        libraryHiddenLinks.value = prefs.getString(KEY_LIBRARY_HIDDEN_LINKS, null)?.split(",")?.filter { it.isNotBlank() }?.toSet().orEmpty()
         lyricsBlur.value = prefs.getBoolean(KEY_LYRICS_BLUR, true)
         lyricsBlurAmount.value = prefs.getInt(KEY_LYRICS_BLUR_AMOUNT, DEFAULT_LYRICS_BLUR_AMOUNT).coerceIn(0, 100)
         accentColor.value = com.music.bitchord.ui.components.AccentChoice.fromKey(prefs.getString(KEY_ACCENT_COLOR, null))
@@ -1680,6 +1692,22 @@ object AppSettings {
         val normalized = normalizePerformanceRefreshRate(value)
         performanceRefreshRate.value = normalized
         prefs.edit().putInt(KEY_PERFORMANCE_REFRESH_RATE, normalized).apply()
+    }
+
+    fun setLibraryLinkOrder(ids: List<String>) {
+        libraryLinkOrder.value = ids
+        prefs.edit().putString(KEY_LIBRARY_LINK_ORDER, ids.joinToString(",")).apply()
+    }
+
+    fun toggleLibraryLink(id: String) {
+        val updated = libraryHiddenLinks.value.let { if (id in it) it - id else it + id }
+        libraryHiddenLinks.value = updated
+        prefs.edit().putString(KEY_LIBRARY_HIDDEN_LINKS, updated.joinToString(",")).apply()
+    }
+
+    fun setShowLibraryStats(value: Boolean) {
+        showLibraryStats.value = value
+        prefs.edit().putBoolean(KEY_SHOW_LIBRARY_STATS, value).apply()
     }
 
     fun setShowDjTab(value: Boolean) {
@@ -2552,6 +2580,9 @@ object AppSettings {
     private const val WELCOME_ID = "rebrand-2"
     private const val KEY_LYRICS_BLUR = "lyrics_blur"
     private const val KEY_SHOW_DJ_TAB = "show_dj_tab"
+    private const val KEY_SHOW_LIBRARY_STATS = "show_library_stats"
+    private const val KEY_LIBRARY_LINK_ORDER = "library_link_order"
+    private const val KEY_LIBRARY_HIDDEN_LINKS = "library_hidden_links"
     private const val KEY_LYRICS_BLUR_AMOUNT = "lyrics_blur_amount"
     private const val KEY_ACCENT_COLOR = "accent_color"
     const val DEFAULT_LYRICS_BLUR_AMOUNT = 65

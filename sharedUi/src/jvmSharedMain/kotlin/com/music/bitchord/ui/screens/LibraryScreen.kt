@@ -6,7 +6,16 @@ import org.jetbrains.compose.resources.painterResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.Image
 import org.jetbrains.compose.resources.stringResource
 import androidx.compose.foundation.clickable
@@ -39,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.music.bitchord.ui.components.accentColor
@@ -103,6 +113,15 @@ fun LibraryScreen(
     onShowAll: (HomeShelf) -> Unit,
     /** The Statistics banner at the very top: Replay's headline, or nothing while there is no listening to show. */
     replay: @Composable () -> Unit = {},
+    /** False leaves the banner's place out altogether — not an empty one, whose room would double the gap. */
+    showReplay: Boolean = true,
+    /** The links the sections mode has unticked: not drawn at rest. */
+    hiddenLinks: Set<String> = emptySet(),
+    onToggleLink: (String) -> Unit = {},
+    /** The links' ids, in the order they were left in. */
+    onReorderLinks: (List<String>) -> Unit = {},
+    /** Takes a list out of the pinned ones. */
+    onUnpin: (String) -> Unit = {},
     onSignIn: () -> Unit,
     onRetry: () -> Unit,
     refreshing: Boolean,
@@ -132,6 +151,9 @@ fun LibraryScreen(
     showTitle: Boolean = true,
 ) {
     val pinnedPlaylists by AppUi.host.pinnedPlaylists.collectAsStateWithLifecycle()
+    val editing = LibraryEditing.mode
+    // Leaving the page leaves the editing.
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { LibraryEditing.mode = LibraryEditMode.NONE } }
     val onDevice = stringResource(Res.string.on_device)
     val ytMusicTitle = stringResource(Res.string.library_yt_music)
     CompositionLocalProvider(LocalMarkNowPlaying provides true) {
@@ -145,6 +167,8 @@ fun LibraryScreen(
             state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = contentPadding,
+            // Editing the sections holds the page still, so dragging a row moves the row and not the page.
+            userScrollEnabled = editing != LibraryEditMode.SECTIONS,
         ) {
             if (showTitle) {
                 item {
@@ -166,22 +190,44 @@ fun LibraryScreen(
                     }
                 }
             }
-            item(key = "replay") { Column(Modifier.padding(top = 8.dp, bottom = 10.dp)) { replay() } }
+            if (showReplay && editing == LibraryEditMode.NONE) item(key = "replay") { Column(Modifier.padding(top = 8.dp, bottom = 10.dp)) { replay() } }
             // Pinned lists only, at most six, centred when they do not fill a row of three.
             val shelves = (state as? UiState.Success)?.data?.shelves.orEmpty()
             val everyList = deviceItems + shelves.flatMap { it.items } + spotifyPlaylists
             val pinnedItems = pinnedPlaylists.mapNotNull { id -> everyList.firstOrNull { it.browseId == id } }.take(PINNED_MAX_ITEMS)
+            // Editing the sections, the pinned lists step aside — closing up and fading, and opening again after.
             if (pinnedItems.isNotEmpty()) {
                 item(key = "pinned") {
-                    PinnedGrid(
-                        items = pinnedItems,
-                        onItemClick = onShelfItemClick,
-                        onItemLongPress = onShelfItemLongPress,
-                    )
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = editing != LibraryEditMode.SECTIONS,
+                        enter = androidx.compose.animation.expandVertically(spring(dampingRatio = 0.9f, stiffness = 380f)) +
+                            androidx.compose.animation.fadeIn(),
+                        exit = androidx.compose.animation.shrinkVertically(spring(dampingRatio = 0.9f, stiffness = 380f)) +
+                            androidx.compose.animation.fadeOut(),
+                    ) {
+                        PinnedGrid(
+                            items = pinnedItems,
+                            onItemClick = if (editing == LibraryEditMode.PINNED) ({ _ -> }) else onShelfItemClick,
+                            onItemLongPress = if (editing == LibraryEditMode.PINNED) ({ _ -> }) else onShelfItemLongPress,
+                            editing = editing == LibraryEditMode.PINNED,
+                            onUnpin = onUnpin,
+                        )
+                    }
                 }
             }
-            if (links.isNotEmpty()) {
-                item(key = "links") { LibraryLinkList(links = links, onClick = onShelfItemClick) }
+            val shownLinks = links.filter { it.id !in hiddenLinks }
+            if (shownLinks.isNotEmpty() || editing == LibraryEditMode.SECTIONS) {
+                item(key = "links") {
+                    // The sections extend where they stand: every one there is, the unticked among them, opens out of
+                    // the list that was there.
+                    Column(Modifier.animateContentSize(spring(dampingRatio = 0.9f, stiffness = 380f))) {
+                        if (editing == LibraryEditMode.SECTIONS) {
+                            SectionsEditor(links = links, hidden = hiddenLinks, onToggle = onToggleLink, onReorder = onReorderLinks)
+                        } else {
+                            LibraryLinkList(links = shownLinks, onClick = onShelfItemClick)
+                        }
+                    }
+                }
             }
             if (deviceItems.isNotEmpty()) {
                 item(key = "my-lists") {
@@ -276,6 +322,8 @@ fun LibraryScreen(
 data class LibraryLink(
     val item: ShelfItem,
     val icon: ImageVector,
+    /** What the link is called in what is kept of the order and of what is hidden. */
+    val id: String = item.browseId ?: item.title,
     val logo: DrawableResource? = null,
     /** Set, it runs instead of opening [item]'s page. */
     val onClick: (() -> Unit)? = null,
@@ -343,7 +391,7 @@ private fun LibraryLinkList(links: List<LibraryLink>, onClick: (ShelfItem) -> Un
             }
             if (index < links.lastIndex) {
                 HorizontalDivider(
-                    modifier = Modifier.padding(start = PAGE_GUTTER + LINK_ICON_SIZE + LINK_ICON_GAP),
+                    modifier = Modifier.padding(start = PAGE_GUTTER + LINK_ICON_SIZE + LINK_ICON_GAP, end = PAGE_GUTTER),
                     thickness = 0.5.dp,
                     color = MaterialTheme.colorScheme.outline,
                 )
@@ -522,6 +570,8 @@ private fun PinnedGrid(
     items: List<ShelfItem>,
     onItemClick: (ShelfItem) -> Unit,
     onItemLongPress: (ShelfItem) -> Unit,
+    editing: Boolean = false,
+    onUnpin: (String) -> Unit = {},
 ) {
     BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = PAGE_GUTTER).padding(top = 4.dp, bottom = 20.dp)) {
         val cardWidth = (maxWidth - LIBRARY_GRID_SPACING * (PINNED_COLUMNS - 1)) / PINNED_COLUMNS
@@ -532,14 +582,50 @@ private fun PinnedGrid(
                     horizontalArrangement = Arrangement.spacedBy(LIBRARY_GRID_SPACING, Alignment.CenterHorizontally),
                 ) {
                     rowItems.forEach { item ->
-                        ShelfCard(
-                            item = item,
-                            onClick = { onItemClick(item) },
-                            onLongPress = { onItemLongPress(item) },
-                            modifier = Modifier.width(cardWidth),
-                            showSubtitle = false,
-                            compactTitle = true,
-                        )
+                        // Editing: each card shakes, turning a little to either side, each at a pace of its own.
+                        val shake = if (editing) {
+                            val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "pinnedShake")
+                            val seed = kotlin.math.abs(item.browseId.hashCode()) % 5
+                            transition.animateFloat(
+                                initialValue = -1.6f,
+                                targetValue = 1.6f,
+                                animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                                    animation = androidx.compose.animation.core.tween(
+                                        durationMillis = 110 + seed * 9,
+                                        easing = androidx.compose.animation.core.LinearEasing,
+                                    ),
+                                    repeatMode = androidx.compose.animation.core.RepeatMode.Reverse,
+                                ),
+                                label = "pinnedShakeAngle",
+                            ).value
+                        } else {
+                            0f
+                        }
+                        Box(Modifier.width(cardWidth).graphicsLayer { rotationZ = shake }) {
+                            ShelfCard(
+                                item = item,
+                                onClick = { onItemClick(item) },
+                                onLongPress = { onItemLongPress(item) },
+                                modifier = Modifier.fillMaxWidth(),
+                                showSubtitle = false,
+                                compactTitle = true,
+                            )
+                            if (editing) {
+                                // The minus that takes the list out of the pinned ones.
+                                Box(
+                                    Modifier
+                                        .align(Alignment.TopStart)
+                                        .offset(x = (-6).dp, y = (-6).dp)
+                                        .size(30.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF48484A))
+                                        .clickable { item.browseId?.let(onUnpin) },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Box(Modifier.size(width = 13.dp, height = 2.dp).background(Color.White))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -612,3 +698,154 @@ fun LibraryOtherPage(
         }
     }
 }
+
+
+/** What the Library's editing is of: nothing, the pinned lists, or the sections (the folder rows). */
+enum class LibraryEditMode { NONE, PINNED, SECTIONS }
+
+/** The Library's editing, held where the top bar's controls and the page can both reach it. */
+object LibraryEditing {
+    var mode by androidx.compose.runtime.mutableStateOf(LibraryEditMode.NONE)
+
+    /** The menu that offers what to edit, and the ⋯ it hangs off. */
+    var optionsOpen by androidx.compose.runtime.mutableStateOf(false)
+    var anchor by androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null)
+}
+
+/**
+ * The sections as the Library's editing shows them: each with a tick that says whether it is shown, and a handle to
+ * drag it to another place. The order is kept as it is let go of.
+ */
+@Composable
+private fun SectionsEditor(
+    links: List<LibraryLink>,
+    hidden: Set<String>,
+    onToggle: (String) -> Unit,
+    onReorder: (List<String>) -> Unit,
+) {
+    val rows = androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateListOf<LibraryLink>() }
+    androidx.compose.runtime.LaunchedEffect(links.map { it.id }) {
+        rows.clear()
+        rows.addAll(links)
+    }
+    var dragging by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<String?>(null) }
+    var dragY by androidx.compose.runtime.remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    val rowHeight = SECTION_ROW_HEIGHT
+    val rowPx = androidx.compose.ui.platform.LocalDensity.current.run { rowHeight.toPx() }
+    val accent = accentColor()
+    Column(Modifier.padding(top = 4.dp, bottom = 14.dp)) {
+        rows.forEach { link ->
+            // Keyed by what the row is: moved, its composition goes with it, and the drag in progress on its handle
+            // goes on — by position, the next row would take over the composition and the drag would be lost.
+            androidx.compose.runtime.key(link.id) {
+            val shown = link.id !in hidden
+            // The sections that were not on the page open out as it does; those that were stand as they are.
+            val appearing = androidx.compose.runtime.remember(link.id) {
+                androidx.compose.animation.core.MutableTransitionState(shown).apply { targetState = true }
+            }
+            androidx.compose.animation.AnimatedVisibility(
+                visibleState = appearing,
+                enter = androidx.compose.animation.expandVertically(spring(dampingRatio = 0.9f, stiffness = 380f)) +
+                    androidx.compose.animation.fadeIn(),
+            ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(rowHeight)
+                    .zIndex(if (dragging == link.id) 1f else 0f)
+                    .graphicsLayer { translationY = if (dragging == link.id) dragY else 0f }
+                    .padding(horizontal = PAGE_GUTTER),
+            ) {
+                // The tick: filled in the accent while the section is shown.
+                Box(
+                    Modifier
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(if (shown) accent else Color.Transparent)
+                        .border(1.5.dp, if (shown) accent else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), CircleShape)
+                        .clickable { onToggle(link.id) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (shown) {
+                        Icon(
+                            imageVector = BitChordIcons.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.width(16.dp))
+                if (link.logo != null) {
+                    Icon(
+                        painter = painterResource(link.logo),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.size(LINK_ICON_SIZE),
+                    )
+                } else {
+                    Icon(imageVector = link.icon, contentDescription = null, tint = accent, modifier = Modifier.size(LINK_ICON_SIZE))
+                }
+                Spacer(Modifier.width(LINK_ICON_GAP))
+                Text(
+                    text = link.item.title,
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                // The handle: dragged, it moves the section through the others.
+                // Three lines, as a handle is drawn.
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .pointerInput(link.id) {
+                            detectDragGestures(
+                                onDragStart = {
+                                    dragging = link.id
+                                    dragY = 0f
+                                },
+                                onDrag = { change, amount ->
+                                    change.consume()
+                                    dragY += amount.y
+                                    val at = rows.indexOfFirst { it.id == link.id }
+                                    val shift = kotlin.math.round(dragY / rowPx).toInt()
+                                    val to = (at + shift).coerceIn(0, rows.lastIndex)
+                                    if (to != at) {
+                                        rows.add(to, rows.removeAt(at))
+                                        dragY -= (to - at) * rowPx
+                                    }
+                                },
+                                onDragEnd = {
+                                    dragging = null
+                                    dragY = 0f
+                                    onReorder(rows.map { it.id })
+                                },
+                                onDragCancel = {
+                                    dragging = null
+                                    dragY = 0f
+                                    onReorder(rows.map { it.id })
+                                },
+                            )
+                        },
+                ) {
+                    repeat(3) {
+                        Box(
+                            Modifier
+                                .size(width = 18.dp, height = 2.dp)
+                                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)),
+                        )
+                    }
+                }
+            }
+            }
+            }
+        }
+    }
+}
+
+private val SECTION_ROW_HEIGHT = 52.dp

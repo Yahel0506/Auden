@@ -417,6 +417,8 @@ import com.music.bitchord.ui.screens.HomeScreen
 import com.music.bitchord.ui.screens.LibraryGridPage
 import com.music.bitchord.ui.screens.LibraryOtherPage
 import com.music.bitchord.ui.screens.OTHER_SHELVES
+import com.music.bitchord.ui.screens.LibraryEditing
+import com.music.bitchord.ui.screens.LibraryEditMode
 import com.music.bitchord.ui.screens.LibraryScreen
 import com.music.bitchord.ui.screens.MoodGenrePlaylistsScreen
 import com.music.bitchord.ui.screens.SearchScreen
@@ -3400,6 +3402,15 @@ private fun BitChordApp(
                         } else if (showAccountSheet && owner != null && target.key == owner && initial.key != owner) {
                             (slideInHorizontally(StackPushSpec) { -it / 3 } togetherWith slideOutHorizontally(StackPushSpec) { it })
                                 .apply { targetContentZIndex = -1f }
+                        } else if (initial.isSettingsPage() || target.isSettingsPage()) {
+                            // Every settings screen is stacked as one is on the platform, opened or left.
+                            if (target.stackOrder() > initial.stackOrder()) {
+                                (slideInHorizontally(StackPushSpec) { it } togetherWith slideOutHorizontally(StackPushSpec) { -it / 3 })
+                                    .apply { targetContentZIndex = 1f }
+                            } else {
+                                (slideInHorizontally(StackPushSpec) { -it / 3 } togetherWith slideOutHorizontally(StackPushSpec) { it })
+                                    .apply { targetContentZIndex = -1f }
+                            }
                         } else {
                         val tabSwap = initial is AppDestination.Tab && target is AppDestination.Tab
                         val libraryTab = AppDestination.Tab(TAB_LIBRARY)
@@ -4246,6 +4257,11 @@ private fun BitChordApp(
                                 onRefresh = { viewModel.refresh(MainViewModel.Feed.LIBRARY) },
                                 pullState = libraryPull,
                                 contentPadding = titledListPadding,
+                                showReplay = AppSettings.showLibraryStats.collectAsStateWithLifecycle().value,
+                                hiddenLinks = AppSettings.libraryHiddenLinks.collectAsStateWithLifecycle().value,
+                                onToggleLink = AppSettings::toggleLibraryLink,
+                                onReorderLinks = AppSettings::setLibraryLinkOrder,
+                                onUnpin = { id -> AppSettings.togglePinnedPlaylist(id) },
                                 replay = {
                                     LibraryReplayEntry(
                                         cards = replayCards,
@@ -4259,10 +4275,8 @@ private fun BitChordApp(
                                     )
                                 },
                                 links = libraryLinks(
-                                    onOpenOther = {
-                                        val shelves = (libraryState as? UiState.Success)?.data?.shelves.orEmpty()
-                                        navigator.push(AppRoute.LibraryOther(shelves.filter { it.title in OTHER_SHELVES }))
-                                    },
+                                    shelves = (libraryState as? UiState.Success)?.data?.shelves.orEmpty(),
+                                    onOpenShelf = { shelf -> navigator.push(AppRoute.LibraryShowAll(shelf)) },
                                 ),
                                 spotifyTitle = stringResource(R.string.from_spotify),
                                 spotifyPlaylists = rememberSpotifyShelf(),
@@ -4296,6 +4310,7 @@ private fun BitChordApp(
                     }
                     // A screen stacked on the account sheet's page is opaque: the sheet is under it.
                     val slotStacked = showAccountSheet && sheetOwnerKey != null && key != sheetOwnerKey
+                    val slotSettings = pageRoute.isSettingsRoute()
                     val slotGrouped = lightTheme && (pageRoute == AppRoute.Settings || pageRoute is AppRoute.SettingsSection ||
                         pageRoute == AppRoute.AccountScrobbling || pageRoute == AppRoute.Sources ||
                         pageRoute == AppRoute.ListenTogether || pageRoute == AppRoute.WearOs ||
@@ -4323,6 +4338,9 @@ private fun BitChordApp(
                                 .background(if (slotGrouped) GroupedLightPage else MaterialTheme.colorScheme.background)
                         } else if (slotGrouped) {
                             Modifier.fillMaxSize().background(GroupedLightPage)
+                        } else if (slotSettings) {
+                            // Opaque: it slides over the page it was opened from.
+                            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
                         } else {
                             Modifier
                         },
@@ -4609,24 +4627,36 @@ private fun BitChordApp(
                             // a history is a record of what was played, which reads
                             // as that tab's business rather than every tab's.
                             if (route == null && detail == null && selectedTab == TAB_LIBRARY) {
-                                IconButton(onClick = { showNewPlaylistTypes = true }) {
-                                    Icon(
-                                        Icons.Rounded.Add,
-                                        contentDescription = stringResource(R.string.new_playlist),
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                }
-                                IconButton(
-                                    onClick = {
-                                        navigator.push(AppRoute.History)
-                                        viewModel.loadHistory()
-                                    },
-                                ) {
-                                    Icon(
-                                        Icons.Rounded.History,
-                                        contentDescription = stringResource(R.string.listening_history),
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                    )
+                                if (LibraryEditing.mode != LibraryEditMode.NONE) {
+                                    // Editing: the one control is the one that ends it.
+                                    IconButton(onClick = { LibraryEditing.mode = LibraryEditMode.NONE }) {
+                                        Icon(
+                                            Icons.Rounded.Check,
+                                            contentDescription = stringResource(R.string.done),
+                                            tint = com.music.bitchord.ui.components.accentColor(),
+                                        )
+                                    }
+                                } else {
+                                    IconButton(onClick = { showNewPlaylistTypes = true }) {
+                                        Icon(
+                                            Icons.Rounded.Add,
+                                            contentDescription = stringResource(R.string.new_playlist),
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            LibraryEditing.anchor = MenuAnchor.consume()
+                                            LibraryEditing.optionsOpen = true
+                                        },
+                                        modifier = Modifier.menuAnchor(),
+                                    ) {
+                                        Icon(
+                                            Icons.Rounded.MoreHoriz,
+                                            contentDescription = stringResource(R.string.more),
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
                                 }
                             }
                             // Left of the account photo, and only on a Library
@@ -4774,7 +4804,9 @@ private fun BitChordApp(
                             // three of its own controls — Apple Music leaves the
                             // profile off its album pages too.
                             // Nor on a screen opened from the account sheet: it would open the sheet it came from.
-                            if (!isReleaseDetail && !stackedOnSheet && !wasStacked) TopBarAccountButton(
+                            // On the Library the photo has a bubble of its own (the bar's `profile`).
+                            if (!(route == null && detail == null && selectedTab == TAB_LIBRARY) &&
+                                !isReleaseDetail && !stackedOnSheet && !wasStacked) TopBarAccountButton(
                                 account = account,
                                 onClick = {
                                     sheetOwnerKey = destinationNow.key
@@ -4785,6 +4817,20 @@ private fun BitChordApp(
                             )
                         }
                     },
+                    profile = if (route == null && detail == null && selectedTab == TAB_LIBRARY &&
+                        LibraryEditing.mode == LibraryEditMode.NONE && !stackedOnSheet && !wasStacked) {
+                        {
+                            TopBarAccountButton(
+                                account = account,
+                                onClick = {
+                                    sheetOwnerKey = destinationNow.key
+                                    sheetOwnerDepth = navigator.entries.size
+                                    showAccountSheet = true
+                                },
+                                onSwipeProfile = { forward -> viewModel.stepProfile(forward) },
+                            )
+                        }
+                    } else null,
                 )
 
                 // The selection's bar, under the top bar of whatever page songs are being picked on.
@@ -5010,7 +5056,7 @@ private fun BitChordApp(
             val pageMenuUp =
                 (songActions != null && songMenuOrigin == null && !(menuFromPlayer && playerRaised)) ||
                     (browseActions != null && browseMenuOrigin == null) ||
-                    selectionMenuOpen
+                    selectionMenuOpen || LibraryEditing.optionsOpen
             LaunchedEffect(pageMenuUp, reduceDynamicBlur) {
                 if (pageMenuUp && !reduceDynamicBlur && isGlassSupported()) {
                     pageBackdrop.capture()
@@ -6724,6 +6770,25 @@ private fun BitChordApp(
                     browseMenuAnchor = null
                 }
             }
+            // The Library's ⋯, hung off it as the playlists' is.
+            IosMenuPopover(
+                item = if (LibraryEditing.optionsOpen) Unit else null,
+                anchor = LibraryEditing.anchor,
+                onDismiss = { LibraryEditing.optionsOpen = false },
+                backdrop = pageBackdrop,
+                hazeState = hazeState,
+            ) {
+                com.music.bitchord.ui.components.LibraryOptionsMenu(
+                    onEditPinned = {
+                        LibraryEditing.optionsOpen = false
+                        LibraryEditing.mode = LibraryEditMode.PINNED
+                    },
+                    onEditSections = {
+                        LibraryEditing.optionsOpen = false
+                        LibraryEditing.mode = LibraryEditMode.SECTIONS
+                    },
+                )
+            }
         }
 
         // ---- Welcome (once; under the sign-in WebView it can open) ----
@@ -6995,6 +7060,8 @@ private fun BitChordApp(
             if (sheetInOverlay) accountSheetHost()
             // The profile alert from Account and integrations, with no sheet up: over the page as any other.
             if (showAccountSelector && !showAccountSheet) profileAlert()
+
+            BackHandler(enabled = LibraryEditing.mode != LibraryEditMode.NONE) { LibraryEditing.mode = LibraryEditMode.NONE }
 
             if (showAppLanguage) {
                 BackHandler { showAppLanguage = false }
@@ -7758,6 +7825,17 @@ private val PLAYER_PULL_FLING_VELOCITY = 400.dp
  */
 /** How much smaller the expanded bar is the moment before it folds. */
 private const val NAV_SHRINK = 0.06f
+
+/** Whether a route is one of the settings screens: Settings and the pages opened from it. */
+private fun AppRoute?.isSettingsRoute(): Boolean =
+    this == AppRoute.Settings || this is AppRoute.SettingsSection || this == AppRoute.AccountScrobbling ||
+        this == AppRoute.Sources || this == AppRoute.ListenTogether || this == AppRoute.WearOs ||
+        this == AppRoute.Equalizer || this == AppRoute.EqualizerPresets || this == AppRoute.Discord
+
+private fun AppDestination.isSettingsPage(): Boolean = (this as? AppDestination.Route)?.entry?.route.isSettingsRoute()
+
+/** Where a destination stands in the back stack: a tab or a release is under every route, which stand in the order opened. */
+private fun AppDestination.stackOrder(): Long = (this as? AppDestination.Route)?.entry?.id ?: -1L
 
 /** The grouped grey a settings page stands on in the light theme, and the account sheet's. */
 private val GroupedLightPage = Color(0xFFF2F2F7)
