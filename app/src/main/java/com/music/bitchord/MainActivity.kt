@@ -4906,8 +4906,9 @@ private fun BitChordApp(
                             // profile off its album pages too.
                             // Nor on a screen opened from the account sheet: it would open the sheet it came from.
                             // On the Library the photo has a bubble of its own (the bar's `profile`).
+                            // Nor on a list kept on this device: its pill is for the list's own options.
                             if (!(route == null && detail == null && selectedTab == TAB_LIBRARY) &&
-                                !isReleaseDetail && !stackedOnSheet && !wasStacked) TopBarAccountButton(
+                                !isReleaseDetail && !isLocalDetail && !stackedOnSheet && !wasStacked) TopBarAccountButton(
                                 account = account,
                                 onClick = {
                                     sheetOwnerKey = destinationNow.key

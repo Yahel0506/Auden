@@ -20,6 +20,8 @@ fun TrackRecentSources(song: Song?, isPlaying: Boolean) {
         val title = (s.playbackSource ?: s.albumName)?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
         // A device folder has a cover of its own, so no song's is kept for it.
         val folder = com.music.bitchord.ui.components.folderCoverStyle(id) != null
-        AppSettings.recordRecentSource(RecentSource(id, title, if (folder) null else s.thumbnailUrl))
+        // An artist is remembered with their own picture, not the cover of the song that was playing.
+        val cover = ArtistPhotos.get(id)?.takeIf { ArtistPhotos.isArtist(id) } ?: s.thumbnailUrl
+        AppSettings.recordRecentSource(RecentSource(id, title, if (folder) null else cover))
     }
 }

@@ -785,6 +785,12 @@ val LocalNowPlayingList = compositionLocalOf { NowPlayingList(null, false) }
 /** True where a card of a list should mark itself as playing — the Library, not every shelf of every page. */
 val LocalMarkNowPlaying = compositionLocalOf { false }
 
+/** True where artists are drawn with their own picture in a circle: the Library's cards and rows. */
+val LocalRoundArtists = compositionLocalOf { false }
+
+/** A YouTube Music artist's page id. */
+fun isArtistBrowseId(browseId: String?): Boolean = browseId != null && (browseId.startsWith("UC") || browseId.startsWith("MPLA"))
+
 /** The meter is shared by everything that listens to it, and on only while something does. */
 private object MusicLevelMeterUsers {
     private var users = 0

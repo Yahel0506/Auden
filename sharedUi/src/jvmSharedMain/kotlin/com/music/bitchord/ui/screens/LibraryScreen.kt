@@ -172,7 +172,10 @@ fun LibraryScreen(
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { LibraryEditing.mode = LibraryEditMode.NONE } }
     val onDevice = stringResource(Res.string.on_device)
     val ytMusicTitle = stringResource(Res.string.library_yt_music)
-    CompositionLocalProvider(LocalMarkNowPlaying provides true) {
+    CompositionLocalProvider(
+        LocalMarkNowPlaying provides true,
+        com.music.bitchord.ui.components.LocalRoundArtists provides true,
+    ) {
     PullToRefresh(
         refreshing = refreshing,
         onRefresh = onRefresh,
@@ -526,7 +529,10 @@ fun LibraryListPage(
     var query by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
     val sorted = shelf.pinnedFirst(pinnedPlaylists).sortedForLibrary(librarySort)
     val shown = sorted.items.filter { query.isBlank() || it.title.contains(query.trim(), ignoreCase = true) }
-    CompositionLocalProvider(LocalMarkNowPlaying provides true) {
+    CompositionLocalProvider(
+        LocalMarkNowPlaying provides true,
+        com.music.bitchord.ui.components.LocalRoundArtists provides true,
+    ) {
         LazyColumn(modifier = modifier.fillMaxSize(), contentPadding = contentPadding) {
             item(key = "title") {
                 Box(
@@ -588,7 +594,8 @@ private fun LibraryListRow(
     val coverToken = com.music.bitchord.ui.components.rememberCoverToken()
     val nowPlaying = LocalNowPlayingList.current
     val onAir = LocalMarkNowPlaying.current && nowPlaying.matches(item.browseId)
-    val shape = RoundedCornerShape(8.dp)
+    // An artist is their own picture in a circle, whatever else is on the page.
+    val shape = if (com.music.bitchord.ui.components.LocalRoundArtists.current && (item.isArtist || com.music.bitchord.ui.components.isArtistBrowseId(item.browseId))) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(8.dp)
     Column(
         Modifier
             .fillMaxWidth()

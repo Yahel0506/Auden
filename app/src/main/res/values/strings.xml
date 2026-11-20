@@ -2051,4 +2051,5 @@
     <string name="transfer_start_count">Transfer (%1$d)</string>
     <string name="library_section_empty">Nothing here yet. Bring your music over from YouTube Music or Spotify with Transfer your music, in your account sheet.</string>
     <string name="transfer_running_percent">Transferring %1$d%%</string>
+    <string name="transfer_unit_of">%1$d of %2$d</string>
 </resources>

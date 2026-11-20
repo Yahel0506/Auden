@@ -31,7 +31,17 @@ object TransferSession {
         data object Idle : State
         data class Loading(val service: Service) : State
         data class Choosing(val offer: Offer) : State
-        data class Running(val service: Service, val progress: ImportProgress?) : State
+        /**
+         * [fraction] is the whole transfer's, 0 to 1, across everything ticked; [unit] of [units] is which of the
+         * things being brought over this is (likes, each playlist or album, the artists), counted from 1.
+         */
+        data class Running(
+            val service: Service,
+            val progress: ImportProgress?,
+            val fraction: Float = 0f,
+            val unit: Int = 1,
+            val units: Int = 1,
+        ) : State
         data class Done(val service: Service, val report: ImportReport) : State
         data class Failed(val service: Service, val reason: String?) : State
     }
@@ -140,11 +150,29 @@ object TransferSession {
         if (_state.value is State.Running) return
         val app = context.applicationContext
         job?.cancel()
-        _state.value = State.Running(service, null)
+        // The units of work: the likes, each playlist and album, and the artists together. The bar is the share of
+        // them done, with the one in hand counted by how far along its own matching is.
+        val units = ((if (selection.likes) 1 else 0) + selection.collections.size +
+            (if (selection.artists.isNotEmpty()) 1 else 0)).coerceAtLeast(1)
+        _state.value = State.Running(service, null, 0f, 1, units)
         job = scope.launch {
+            var lastKey: String? = null
+            var finished = 0
+            var best = 0f
             val report = runCatching {
                 TransferMigrations.engine(app).import(source(service), selection) { progress ->
-                    _state.value = State.Running(service, progress)
+                    val key = "${progress.step}:${progress.title}"
+                    if (lastKey != null && key != lastKey) finished = (finished + 1).coerceAtMost(units - 1)
+                    lastKey = key
+                    val within = when {
+                        progress.total > 0 -> progress.done.toFloat() / progress.total
+                        // A length not known yet (a long list of likes being read): ever closer to done, never there.
+                        progress.done > 0 -> progress.done / (progress.done + 60f)
+                        else -> 0f
+                    }
+                    // Never backwards, and never full until it is: the last unit's tail is the report's.
+                    best = maxOf(best, ((finished + within) / units).coerceIn(0f, 0.99f))
+                    _state.value = State.Running(service, progress, best, finished + 1, units)
                 }
             }
             // Likes brought over by hand from YouTube Music are the likes the launch-time move was after: once the whole

@@ -3214,6 +3214,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         onSuccess = { page ->
                             sections = page.sections
                             artwork = page.thumbnailUrl
+                            com.music.bitchord.data.ArtistPhotos.put(browseId, page.thumbnailUrl)
                             name = page.name
                             description = page.description
                             subscriberCountText = page.subscriberCountText

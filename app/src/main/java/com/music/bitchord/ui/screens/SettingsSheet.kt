@@ -3368,7 +3368,7 @@ enum class SettingsCategory(@param:StringRes val title: Int) {
             NOW_PLAYING -> Icons.Rounded.Album
             LYRICS -> Icons.Rounded.Lyrics
             HOME -> Icons.Rounded.Home
-            DOWNLOADS -> Icons.Rounded.Download
+            DOWNLOADS -> com.music.bitchord.ui.icons.SfIcons.DownloadFill
             YOUR_DATA -> Icons.Rounded.Inventory2
             MISCELLANEOUS -> Icons.Rounded.Settings
         }

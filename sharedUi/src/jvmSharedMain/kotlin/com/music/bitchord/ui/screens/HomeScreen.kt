@@ -1060,13 +1060,17 @@ internal fun ShelfCard(
                     .fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(12.dp)),
             )
             else -> {
+                // An artist is their own picture in a circle where the page asks for it (the Library).
+                val coverShape = if (com.music.bitchord.ui.components.LocalRoundArtists.current &&
+                    (item.isArtist || com.music.bitchord.ui.components.isArtistBrowseId(item.browseId))
+                ) androidx.compose.foundation.shape.CircleShape else RoundedCornerShape(12.dp)
                 Box(
                     modifier = Modifier
                         .cardCoverSharedElement(item.browseId, coverSection, coverToken)
                         .fillMaxWidth()
                         .aspectRatio(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .thumbnailBorder(RoundedCornerShape(12.dp))
+                        .clip(coverShape)
+                        .thumbnailBorder(coverShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                 ) {
                     AsyncImage(

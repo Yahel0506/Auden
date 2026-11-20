@@ -1,6 +1,15 @@
 package com.music.bitchord.ui.screens
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -384,9 +393,24 @@ private fun SelectTile(
     }
 }
 
+/**
+ * The transfer under way: a ring that fills with the real share done, the thing being brought over and what is
+ * happening to it (reading, finding songs, saving), and which of the things ticked this is. The bar pinned at the
+ * foot (see TransferActionBar) moves with the same number.
+ */
 @Composable
 private fun Running(state: TransferSession.State.Running) {
+    val accent = accentColor()
     val p = state.progress
+    val fraction by animateFloatAsState(state.fraction, spring(dampingRatio = 1f, stiffness = 300f), label = "transfer-fraction")
+    // A slow breath behind the ring, so a long read of a big library still looks alive.
+    val breath = rememberInfiniteTransition(label = "transfer-breath")
+    val glow by breath.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 0.6f,
+        animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "transfer-glow",
+    )
     val step = when (p?.step) {
         ImportStep.LIKES -> stringResource(R.string.transfer_step_likes)
         ImportStep.PLAYLIST -> stringResource(R.string.transfer_playlists)
@@ -394,19 +418,64 @@ private fun Running(state: TransferSession.State.Running) {
         ImportStep.ARTISTS -> stringResource(R.string.transfer_artists)
         null -> stringResource(R.string.transfer_running)
     }
-    val stage = when (p?.stage) {
-        ImportStage.READING -> stringResource(R.string.transfer_stage_reading)
-        ImportStage.MATCHING -> stringResource(R.string.transfer_stage_matching)
-        ImportStage.STORING -> stringResource(R.string.transfer_stage_storing)
-        null -> ""
-    }
-    Column(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(step, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
+    val stages = listOf(
+        ImportStage.READING to R.string.transfer_stage_reading,
+        ImportStage.MATCHING to R.string.transfer_stage_matching,
+        ImportStage.STORING to R.string.transfer_stage_storing,
+    )
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 28.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.size(224.dp), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier
+                    .size(224.dp)
+                    .graphicsLayer { alpha = glow }
+                    .background(Brush.radialGradient(listOf(accent.copy(alpha = 0.5f), Color.Transparent)), CircleShape),
+            )
+            CircularProgressIndicator(
+                progress = { fraction },
+                modifier = Modifier.size(172.dp),
+                strokeWidth = 10.dp,
+                color = accent,
+                trackColor = accent.copy(alpha = 0.16f),
+                strokeCap = StrokeCap.Round,
+            )
+            Text(
+                "${(fraction * 100).toInt()}%",
+                fontSize = 40.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        Text(step, style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
         Text(
-            listOfNotNull(stage.takeIf { it.isNotBlank() }, p?.title).joinToString(" · "),
+            p?.title.orEmpty(),
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            stringResource(R.string.transfer_unit_of, state.unit, state.units),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            stages.forEachIndexed { index, (stage, label) ->
+                if (index > 0) Text("›", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                val on = p?.stage == stage
+                Text(
+                    stringResource(label),
+                    fontSize = 13.sp,
+                    fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (on) accent else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                )
+            }
+        }
     }
 }
 

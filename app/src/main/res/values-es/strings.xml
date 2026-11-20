@@ -2165,4 +2165,5 @@
     <string name="transfer_start_count">Transferir (%1$d)</string>
     <string name="library_section_empty">Aún no hay nada aquí. Trae tu música de YouTube Music o Spotify con Transfiere tu música, en la hoja de tu cuenta.</string>
     <string name="transfer_running_percent">Transfiriendo %1$d%%</string>
+    <string name="transfer_unit_of">%1$d de %2$d</string>
 </resources>

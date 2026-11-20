@@ -432,6 +432,8 @@ data class ShelfItem(
      * subtitle carries a `\uFFFC` where the logo goes.
      */
     val platform: String? = null,
+    /** An artist the Library holds, drawn as their picture in a circle even when it has no page to open. */
+    val isArtist: Boolean = false,
 ) {
     companion object {
         const val PLATFORM_SPOTIFY = "spotify"

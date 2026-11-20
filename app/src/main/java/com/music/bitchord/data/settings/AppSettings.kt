@@ -1688,7 +1688,11 @@ object AppSettings {
 
     /** Puts [source] first among what was played lately, once. */
     fun recordRecentSource(source: RecentSource) {
-        if (recentSources.value.firstOrNull()?.id == source.id && recentSources.value.first().thumbnailUrl != null) return
+        // Already first with a picture, and the one it has: nothing to write. (A different one — an artist's own,
+        // where a song's cover was kept before — replaces it.)
+        recentSources.value.firstOrNull()?.let { first ->
+            if (first.id == source.id && first.thumbnailUrl != null && (source.thumbnailUrl == null || source.thumbnailUrl == first.thumbnailUrl)) return
+        }
         val updated = (listOf(source) + recentSources.value.filter { it.id != source.id }).take(MAX_RECENT_SOURCES)
         recentSources.value = updated
         val array = org.json.JSONArray()

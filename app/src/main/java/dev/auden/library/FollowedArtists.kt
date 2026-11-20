@@ -21,6 +21,8 @@ object FollowedArtists {
                     thumbnailUrl = artist.thumb,
                     videoId = null,
                     browseId = artist.id.takeUnless { it.startsWith("spotify:artist:") },
+                    // A followed show (MPSP…) shares the table but is not an artist.
+                    isArtist = !artist.id.startsWith("MPSP"),
                     platform = when (artist.originService) {
                         Service.SPOTIFY.name -> ShelfItem.PLATFORM_SPOTIFY
                         Service.YT_MUSIC.name -> ShelfItem.PLATFORM_YT_MUSIC

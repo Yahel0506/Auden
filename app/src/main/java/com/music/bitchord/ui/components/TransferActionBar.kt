@@ -1,5 +1,7 @@
 package com.music.bitchord.ui.components
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -68,13 +70,12 @@ fun TransferActionBar() {
                     enabled = ticked.count > 0,
                 )
                 is TransferSession.State.Running -> {
-                    val progress = s.progress
-                    val fraction = if (progress != null && progress.total > 0) (progress.done.toFloat() / progress.total).coerceIn(0f, 1f) else 0f
+                    // The whole transfer's share done, eased as the update's bar is, and the same number as the page's ring.
+                    val fraction by animateFloatAsState(s.fraction, spring(dampingRatio = 1f, stiffness = 300f), label = "transfer-bar")
                     TransferProgressBar(fraction)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(
-                            if (progress != null && progress.total > 0) stringResource(R.string.transfer_running_percent, (fraction * 100).toInt())
-                            else stringResource(R.string.transfer_running),
+                            stringResource(R.string.transfer_running_percent, (fraction * 100).toInt()),
                             color = p.fg.copy(alpha = 0.7f), fontSize = 14.sp,
                         )
                         Text(
