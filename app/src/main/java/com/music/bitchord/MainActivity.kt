@@ -3567,6 +3567,7 @@ private fun BitChordApp(
                                     onItemLongPress = onBrowseLongPress,
                                     // Clear of the top bar's buttons and the blur under them: a pushed page's title starts below them.
                                     contentPadding = listPadding,
+                                    emptyMessage = stringResource(R.string.library_section_empty),
                                 )
                             }
                         } else if (pageRoute == AppRoute.Dj) {

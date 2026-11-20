@@ -9,6 +9,9 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -194,7 +197,8 @@ private fun Choose(offer: TransferSession.Offer, contentPadding: PaddingValues, 
                 start = 16.dp,
                 end = 16.dp,
                 top = contentPadding.calculateTopPadding(),
-                bottom = contentPadding.calculateBottomPadding() + barHeight,
+                // Clear of the pinned bar and of the system's own bar under it: this page hides the app's navigation.
+                bottom = androidx.compose.foundation.layout.WindowInsets.Companion.navigationBars.asPaddingValues().calculateBottomPadding() + barHeight,
             ),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -230,8 +234,9 @@ private fun Choose(offer: TransferSession.Offer, contentPadding: PaddingValues, 
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(bottom = contentPadding.calculateBottomPadding())
-                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.94f))
+                // Solid, so nothing of the grid shows through it, and carried under the system's bar.
+                .background(MaterialTheme.colorScheme.background)
+                .navigationBarsPadding()
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,

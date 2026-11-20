@@ -518,6 +518,8 @@ fun LibraryListPage(
     onItemLongPress: (ShelfItem) -> Unit,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
+    /** Said under the search when the section holds nothing yet; null says nothing. */
+    emptyMessage: String? = null,
 ) {
     val pinnedPlaylists by AppUi.host.pinnedPlaylists.collectAsStateWithLifecycle()
     val librarySort by AppUi.host.librarySort.collectAsStateWithLifecycle()
@@ -552,6 +554,16 @@ fun LibraryListPage(
                     placeholder = stringResource(Res.string.library_search),
                     modifier = Modifier.padding(horizontal = PAGE_GUTTER, vertical = 6.dp),
                 )
+            }
+            if (shelf.items.isEmpty() && emptyMessage != null) {
+                item(key = "empty") {
+                    Text(
+                        text = emptyMessage,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = PAGE_GUTTER, vertical = 18.dp),
+                    )
+                }
             }
             items(shown, key = { it.browseId ?: it.title }) { item ->
                 LibraryListRow(

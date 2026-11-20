@@ -2163,4 +2163,5 @@
     <string name="liked_music">Música que te gusta</string>
     <string name="transfer_podcasts">Podcasts</string>
     <string name="transfer_start_count">Transferir (%1$d)</string>
+    <string name="library_section_empty">Aún no hay nada aquí. Trae tu música de YouTube Music o Spotify con Transfiere tu música, en la hoja de tu cuenta.</string>
 </resources>

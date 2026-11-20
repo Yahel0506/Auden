@@ -96,10 +96,12 @@ fun libraryLinks(
             .takeIf { webdavConfigured.isNotBlank() },
         link(stringResource(R.string.smb), com.music.bitchord.data.smb.SmbConfig.BROWSE_ID)
             .takeIf { smbHost.isNotBlank() && smbShare.isNotBlank() },
+        // Always there, whatever they hold: a section that is not drawn until it has something is one nobody knows to
+        // fill. Empty, it says how to (see LibraryListPage).
         sectionRow("shelf:playlists", playlistsTitle, SfIcons.PlaylistPlay, deviceItems, always = true),
-        sectionRow("shelf:artists", artistsTitle, SfIcons.Artist, artistItems),
-        sectionRow("shelf:albums", albumsTitle, SfIcons.Album, albumItems),
-        sectionRow("shelf:podcasts", podcastsTitle, SfIcons.Radio, podcastItems),
+        sectionRow("shelf:artists", artistsTitle, SfIcons.Artist, artistItems, always = true),
+        sectionRow("shelf:albums", albumsTitle, SfIcons.Album, albumItems, always = true),
+        sectionRow("shelf:podcasts", podcastsTitle, SfIcons.Radio, podcastItems, always = true),
     ).let { all ->
         // In the order the editing left them in; what it has not heard of stands after them, as it came.
         all.sortedBy { link -> order.indexOf(link.id).let { if (it < 0) Int.MAX_VALUE else it } }

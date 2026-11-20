@@ -2049,4 +2049,5 @@
     <string name="liked_music">Liked Music</string>
     <string name="transfer_podcasts">Podcasts</string>
     <string name="transfer_start_count">Transfer (%1$d)</string>
+    <string name="library_section_empty">Nothing here yet. Bring your music over from YouTube Music or Spotify with Transfer your music, in your account sheet.</string>
 </resources>
