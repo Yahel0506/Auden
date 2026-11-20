@@ -938,62 +938,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (status != LikeStatus.DISLIKE) LikeState.set(videoId, status)
     }
 
-    /**
-     * Takes an un-liked track out of the library as well, and reports whether
-     * it did.
-     *
-     * Liking and saving are two independent flags on YouTube's side, and
-     * clearing only the first leaves the song saved — still feeding the
-     * Library tab's Artists shelf, still in the library feeds, with nowhere
-     * left in this app to reach it and finish the job. Clearing the heart
-     * reads as "forget this song", so it clears both.
-     *
-     * The token is fetched here rather than taken from [songMenu] because the
-     * heart in the player never opens a menu, so there is often nothing
-     * cached to take. One extra request, on an action nobody performs in bulk.
-     * A song that was never saved has no removal token and this is a no-op.
-     */
-    private suspend fun forgetFromLibrary(videoId: String): Boolean {
-        val menu = YtMusicRepository.songMenu(videoId).getOrNull() ?: return false
-        val token = menu.removeFromLibraryToken?.takeIf { menu.inLibrary } ?: return false
-        if (YtMusicRepository.setLibraryStatus(token).isFailure) return false
-        // The menu may be the one on screen; don't leave it offering a
-        // removal that has already happened.
-        _songMenu.value = _songMenu.value?.copy(inLibrary = false)
-        return true
-    }
-
-    /**
-     * Takes an un-liked track out of the lists that exist *because* it was
-     * liked — the Library tab's Liked Music section, and the Liked Music page
-     * itself if it happens to be open.
-     *
-     * Marking the library stale isn't enough on its own: that only acts when
-     * the tab is next opened, and un-liking is nearly always done from inside
-     * one of these two lists, looking straight at the row. Leaving it there
-     * reads as the tap not having worked — the menu says "Like" again while
-     * the song sits in Liked Music.
-     *
-     * Only ever removes. A track liked from somewhere else doesn't get spliced
-     * into a list that YouTube orders for itself; the next fetch places it.
-     */
-    private fun dropFromLikedLists(videoId: String) {
-        val library = (_library.value as? UiState.Success)?.data
-        if (library != null && library.likedSongs.any { it.videoId == videoId }) {
-            _library.value = UiState.Success(
-                library.copy(likedSongs = library.likedSongs.filterNot { it.videoId == videoId }),
-            )
-        }
-        _detailStack.value = _detailStack.value.map { page ->
-            val songs = (page.songs as? UiState.Success)?.data
-            if (page.browseId != YtMusicRepository.LIKED_MUSIC || songs == null) {
-                page
-            } else {
-                page.copy(songs = UiState.Success(songs.filterNot { it.videoId == videoId }))
-            }
-        }
-    }
-
     /** The heart: liked becomes neutral, anything else becomes liked. */
     fun toggleLike(song: Song) = setLike(
         song,
@@ -1903,9 +1847,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * Whether the library needs re-fetching. Set by every write above and
-     * acted on when the tab is next opened, for the same reason [homeStale]
-     * exists: rearranging a page under whoever is reading it is worse than
-     * showing it a moment out of date.
+     * acted on when the tab is next opened: rearranging a page under whoever is
+     * reading it is worse than showing it a moment out of date.
      */
     private var libraryStale = false
 
@@ -1981,41 +1924,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /**
-     * Whether a play has been registered since the home feed was last fetched.
-     *
-     * The feed leads with listening history, so it's out of date the moment a
-     * track starts — but re-fetching there would rearrange the page under
-     * whoever is reading it, and the tab is usually in the background anyway.
-     * It's re-fetched when the tab is next opened instead.
-     */
-    private var homeStale = false
-
-    /** Call when the home tab becomes visible. */
+    /** Call when the home tab becomes visible: what has been played since is on the shelves again. */
     fun onHomeShown() {
         refreshLocalHome()
-        if (!homeStale) return
-        homeStale = false
-        // A first load already in flight will pick the new play up by itself.
-        if (_home.value is UiState.Success) refreshHomeRecents()
-    }
-
-    /**
-     * Re-fetches only the Recents shelf, swapping it in place. The rest of
-     * Home stays exactly as it was, so a shelf someone was eyeing doesn't
-     * vanish because a track started playing.
-     */
-    private fun refreshHomeRecents() {
-        if (!_signedIn.value) return
-        val identity = listenerKey()
-        val generation = homeLoadGeneration.get()
-        viewModelScope.launch {
-            YtMusicRepository.homeRecentlyPlayed().onSuccess { shelf ->
-                // A full load that started meanwhile fetches Recents itself.
-                if (!isCurrentHomeLoad(identity, generation)) return@onSuccess
-                shelf?.let { publishHomeShelves(listOf(it), prepend = true) }
-            }
-        }
     }
 
     private fun loadAccount() {
