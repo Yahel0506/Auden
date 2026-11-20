@@ -169,16 +169,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         tasteJob = viewModelScope.launch {
             val shelves = runCatching { dev.auden.home.TasteShelves.build(getApplication()) }.getOrNull().orEmpty()
             _tasteShelves.value = shelves
+            // Without the catalogue's feed there is nothing else to wait for: Home is what was just built.
+            if (!remoteFeedEnabled && _home.value !is UiState.Success) _home.value = UiState.Success(emptyList())
         }
     }
 
     /**
-     * Whether Home reads YouTube Music's own feed ([home]): its recommendations, videos and new releases, asked of the
-     * catalogue as nobody — the feed is the catalogue's, made personal by what the listener plays here (the taste and
-     * local shelves, and the lists of Top Picks), not by an account.
+     * Whether Home reads YouTube Music's own feed ([home]) and its new releases and explore pages. Asked as nobody,
+     * they are the catalogue's generic charts and whatever is pushed at everyone — low-effort and AI-made uploads
+     * among them — so Home is built only from what the listener plays here: the taste and local shelves, and the
+     * lists of Top Picks.
      */
     @Volatile
-    var remoteFeedEnabled = true
+    var remoteFeedEnabled = false
 
     /** False until the shelves built from the device have been read once, so an empty first frame is not "nothing yet". */
     private val _localHomeLoaded = MutableStateFlow(false)
@@ -2123,6 +2126,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     fun loadHome() {
         if (!remoteFeedEnabled) {
             // The phone's Home is the device's own: no feed is read from YouTube Music or any account.
+            homeContinuation = null
+            _homePendingShelves.value = 0
+            if (_home.value !is UiState.Success) _home.value = UiState.Loading
+            loadTopPicks(listenerKey(), rebuild = false)
             loadTasteShelves()
             return
         }
@@ -2243,6 +2250,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private suspend fun refreshHome(identity: String?) = coroutineScope {
         if (!remoteFeedEnabled) {
             refreshLocalHome()
+            if (topPicksJob?.isActive != true) loadTopPicks(identity, rebuild = false)
             loadTasteShelves()
             return@coroutineScope
         }
