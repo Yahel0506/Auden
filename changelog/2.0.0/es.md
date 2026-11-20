@@ -55,6 +55,8 @@
 - **Actualiza una playlist cuando quieras.** Una playlist traída de YouTube Music o Spotify tiene «Actualizar desde su origen» en su menú. Muestra qué cambió allí (+ añadidas / − quitadas) y lo combina con tu copia —lo que añadiste se queda, lo que quitaste sigue quitado— o reemplaza tu copia por el origen. Nada se actualiza ya por sí solo.
 - **Exportar a YouTube Music, por elección.** Enviar una de tus playlists a YouTube Music es «Exportar a YouTube Music» en su menú, y pregunta antes: te dice qué se creará o cambiará allí, con nombre de lo que se quitaría.
 - **Nada le pide a tu cuenta qué reproducir.** La búsqueda, la radio, las fichas de artista, las letras y las sugerencias del DJ y del autoplay se piden a YouTube Music como nadie —sin tu sesión detrás— y tus búsquedas ya no se escriben en tu historial de YouTube. El DJ se construye solo con tu biblioteca, tus Me gusta y lo que has escuchado, y lo dice cuando todavía no es suficiente.
+- **Un Inicio hecho con lo que escuchas.** Inicio se construye con lo que reproduces en Auden —tus propias estanterías y sugerencias sembradas por tus canciones y artistas favoritos—. Ya no muestra el feed de YouTube Music, lo reciente de tu cuenta ni Top Picks de tu historial de YouTube, y cuando todavía no hay nada lo dice y apunta a Transfiere tu música.
+- **Un Historial propio.** El Historial lista lo que has reproducido en este dispositivo, lo más reciente primero, tengas o no sesión en algún sitio.
 - **"Playlist" en todas partes.** El español dice "playlist" en lugar de "lista de reproducción".
 
 ## Auden DJ

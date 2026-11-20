@@ -194,6 +194,8 @@ fun HomeScreen(
     onMoodsShowAll: () -> Unit = {},
     /** Whether the Top Picks and mood artwork may animate — see [LocalArtworkMotion]. */
     artworkMotion: Boolean = true,
+    /** Drawn in place of the shelves when there are none: Home built from the device's own listening has nothing yet. */
+    emptyContent: (@Composable () -> Unit)? = null,
 ) {
     // Top Picks' pictures and motion wait for the feed — see LocalArtworkImages.
     val feedReady = state !is UiState.Loading
@@ -263,6 +265,7 @@ fun HomeScreen(
                     if (recentlyPlayedLoading) {
                         recentlyPlayedSkeleton()
                     }
+                    if (state.data.isEmpty() && emptyContent != null) item(key = "home-empty") { emptyContent() }
                     itemsIndexedShelves(
                         shelves = state.data,
                         onMoodClick = onMoodClick,

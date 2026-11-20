@@ -52,6 +52,13 @@ fun TvHomeScreen(
     modifier: Modifier = Modifier,
 ) {
     val homeState by viewModel.home.collectAsState()
+    // The phone's Home is the device's own; the TV still shows YouTube Music's feed, so it turns it on and asks.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (!viewModel.remoteFeedEnabled) {
+            viewModel.remoteFeedEnabled = true
+            viewModel.loadHome()
+        }
+    }
     val loadingMore by viewModel.homeLoadingMore.collectAsState()
     val scope = rememberCoroutineScope()
     var menuSong by remember { mutableStateOf<Song?>(null) }

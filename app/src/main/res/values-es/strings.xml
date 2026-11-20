@@ -2115,4 +2115,6 @@
     <string name="export_yt_failed">No se pudo preparar la exportación.</string>
     <string name="refresh_error_generic">No se pudo actualizar la playlist. Inténtalo más tarde.</string>
     <string name="refresh_mark_synced">Marcar como al día</string>
+    <string name="home_empty_title">Aún no hay nada que mostrar</string>
+    <string name="home_empty_body">Inicio se hace con lo que escuchas en Auden. Reproduce algunas canciones o trae tu música de YouTube Music o Spotify.</string>
 </resources>

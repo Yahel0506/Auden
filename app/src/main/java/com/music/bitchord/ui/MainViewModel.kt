@@ -152,46 +152,51 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _tasteShelves = MutableStateFlow<List<HomeShelf>>(emptyList())
     private var tasteJob: Job? = null
 
-    /** Builds [_tasteShelves] while signed out; cleared once signed in, where the account's own feed does this. */
+    /**
+     * Builds [_tasteShelves]: recommendations seeded by what the listener has played here (radio and artist cards
+     * asked of the catalogue as nobody), whether or not an account is connected — Home is built from the device's
+     * own listening, never from an account's feed.
+     */
     private fun loadTasteShelves() {
         tasteJob?.cancel()
-        if (_signedIn.value) {
-            _tasteShelves.value = emptyList()
-            return
-        }
         tasteJob = viewModelScope.launch {
             val shelves = runCatching { dev.auden.home.TasteShelves.build(getApplication()) }.getOrNull().orEmpty()
-            if (!_signedIn.value) _tasteShelves.value = shelves
+            _tasteShelves.value = shelves
         }
     }
 
+    /**
+     * Whether this surface shows YouTube Music's own home feed ([home], read with the account). The phone does not:
+     * its Home is local ([homeComposed]). The TV still does, and turns this on before it asks for the feed.
+     */
+    @Volatile
+    var remoteFeedEnabled = false
+
+    /** False until the shelves built from the device have been read once, so an empty first frame is not "nothing yet". */
+    private val _localHomeLoaded = MutableStateFlow(false)
+
     val homeComposed: StateFlow<UiState<List<HomeShelf>>> = combine(
-        combine(_home, _tasteShelves, _signedIn) { remote, taste, signed ->
-            if (signed || taste.isEmpty()) {
-                remote
-            } else {
-                // After the feed's first shelf, so the page still opens as it always does.
-                val feed = (remote as? UiState.Success)?.data.orEmpty()
-                UiState.Success(feed.take(1) + taste + feed.drop(1))
-            }
-        },
+        combine(_tasteShelves, _localHomeLoaded) { taste, loaded -> taste to loaded },
         _localHomeShelves,
         AppSettings.homeLocalShelves,
         AppSettings.homeLocalWeight,
         AppSettings.meteredConnection,
-    ) { remote, local, kinds, weight, metered ->
+    ) { (taste, loaded), local, kinds, weight, metered ->
+        if (!loaded) return@combine UiState.Loading
         val settings = dev.auden.home.HomeSettings(
             enabled = kinds.mapNotNull { runCatching { dev.auden.home.LocalShelfKind.valueOf(it) }.getOrNull() }.toSet(),
             localWeight = weight,
         )
         val composed = dev.auden.home.HomeComposer.compose(
-            remote = (remote as? UiState.Success)?.data.orEmpty(),
+            // The shelves the listener's own plays seeded (see [loadTasteShelves]); no feed of an account.
+            remote = taste,
             local = local,
             settings = settings,
             // No active network reads as null here; see AppSettings.meteredConnection.
             online = metered != null,
         )
-        if (composed.isNotEmpty()) UiState.Success(composed) else remote
+        // Nothing to show is a state of its own: Home says so and points at Transfer your music.
+        UiState.Success(composed)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, UiState.Loading)
 
     /** Rebuilds the local shelves; cheap, and run whenever Home comes into view. */
@@ -199,6 +204,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             runCatching { dev.auden.home.HomeLocal.load(getApplication()) }
                 .onSuccess { _localHomeShelves.value = it }
+            _localHomeLoaded.value = true
+            // The taste shelves wait for the first look at the device's own listening.
+            if (_tasteShelves.value.isEmpty() && tasteJob?.isActive != true) loadTasteShelves()
         }
     }
 
@@ -2157,6 +2165,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun loadHome() {
+        if (!remoteFeedEnabled) {
+            // The phone's Home is the device's own: no feed is read from YouTube Music or any account.
+            loadTasteShelves()
+            return
+        }
         val identity = listenerKey()
         val generation = homeLoadGeneration.incrementAndGet()
         _home.value = UiState.Loading
@@ -2335,6 +2348,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Refreshes the core feed without blanking the current Play page first. */
     private suspend fun refreshHome(identity: String?) = coroutineScope {
+        if (!remoteFeedEnabled) {
+            refreshLocalHome()
+            loadTasteShelves()
+            return@coroutineScope
+        }
         val recent = if (_signedIn.value) async { YtMusicRepository.homeRecentlyPlayed() } else null
         // Top Picks keeps to its hour; a pull refreshes the feed, not the
         // picks, unless the hour has already turned over.
@@ -2435,21 +2453,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      * history on.
      */
     fun loadHistory() {
-        if (!_signedIn.value) {
-            _history.value = UiState.Error(text(R.string.history_sign_in_required))
-            return
-        }
-        val identity = listenerKey()
         _history.value = UiState.Loading
         viewModelScope.launch {
-            val next = YtMusicRepository.history().fold(
-                onSuccess = { songs ->
-                    if (songs.isEmpty()) UiState.Error(text(R.string.history_empty))
-                    else UiState.Success(songs)
-                },
-                onFailure = { UiState.Error(it.friendly()) },
-            )
-            if (identity == listenerKey()) _history.value = next
+            // What this device has played, most recent first: the app's own listening record, not an account's. It
+            // keeps when each song was last played, not every play, so a song appears once.
+            val played = runCatching { ListeningStats.heardTracks() }.getOrNull().orEmpty()
+                .filter { it.title.isNotBlank() && it.last > 0L }
+                .sortedByDescending { it.last }
+                .take(HISTORY_LIMIT)
+                .map { entry ->
+                    Song(
+                        videoId = entry.id, title = entry.title, artist = entry.artist, thumbnailUrl = entry.art,
+                        albumName = entry.album, artistId = entry.artistId,
+                        localUri = entry.id.takeIf { it.startsWith("content://") || it.startsWith("file://") },
+                    )
+                }
+            _history.value = if (played.isEmpty()) UiState.Error(text(R.string.history_empty)) else UiState.Success(played)
         }
     }
 
@@ -3032,6 +3051,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     companion object {
+        /** How many songs the History page lists: the most recently played of everything heard on this device. */
+        private const val HISTORY_LIMIT = 300
+
         /** Marks a picker row as a playlist kept on this device rather than on the account. */
         const val DEVICE_PLAYLIST_PREFIX = "device:"
         private const val PLAYLIST_CONTENTS_TTL_MS = 2 * 60_000L

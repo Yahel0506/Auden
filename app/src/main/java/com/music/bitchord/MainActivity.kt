@@ -3951,8 +3951,9 @@ private fun BitChordApp(
                                 title = stringResource(R.string.listen_now),
                                 festiveLogo = diwaliFestive,
                                 onFestiveLogoClick = { showDiwali = true },
-                                signedIn = signedIn,
-                                onSignIn = { webSession = WebSessionMode.SIGN_IN },
+                                // Home is built from what has been played here: no sign-in prompt, and when there is
+                                // nothing yet it says so and points at Transfer your music.
+                                emptyContent = { com.music.bitchord.ui.components.HomeEmptyCard { navigator.push(AppRoute.Transfer) } },
                                 onItemClick = { item, shelfTitle ->
                                     val song = shelfSong(item)
                                     // Hoisted because ShelfItem lives in :shared, and
