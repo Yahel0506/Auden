@@ -123,7 +123,7 @@ fun TransferScreen(
     }
     (state as? TransferSession.State.Choosing)?.let { choosing ->
         // The grid scrolls on its own and the button stays under it, so this page is not the scrolling column below.
-        Choose(choosing.offer, contentPadding, modifier)
+        TransferChooser(choosing.offer, contentPadding, modifier)
         return
     }
     Column(
@@ -195,7 +195,7 @@ private fun Sources(
  * far it is scrolled, and counting what is ticked.
  */
 @Composable
-private fun Choose(offer: TransferSession.Offer, contentPadding: PaddingValues, modifier: Modifier = Modifier) {
+internal fun TransferChooser(offer: TransferSession.Offer, contentPadding: PaddingValues = PaddingValues(), modifier: Modifier = Modifier) {
     val ticked by TransferSession.selection.collectAsStateWithLifecycle()
     val serviceName = stringResource(if (offer.service == Service.SPOTIFY) R.string.spotify else R.string.transfer_yt_music)
     LazyVerticalGrid(

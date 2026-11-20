@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.ensureActive
 
 /**
  * "Transfer your music" as a process-wide session: what a source offers, what the listener picked, and the import
@@ -110,10 +111,14 @@ object TransferSession {
             suspend fun <T> read(step: ImportStep, load: suspend () -> List<T>): List<T> =
                 runCatching { load() }.getOrElse { unreadable += step; emptyList() }
             val playlists = read(ImportStep.PLAYLIST) { src.playlists() }
+            coroutineContext.ensureActive()
             val albums = read(ImportStep.ALBUM) { src.albums() }
+            coroutineContext.ensureActive()
             val artists = read(ImportStep.ARTISTS) { src.artists() }
+            coroutineContext.ensureActive()
             // Podcast shows are followed like artists: a failure to read them is not worth failing the page for.
             val podcasts = runCatching { src.podcasts() }.getOrDefault(emptyList())
+            coroutineContext.ensureActive()
             _state.value = if (unreadable.size == 3) {
                 State.Failed(service, null)
             } else {

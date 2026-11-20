@@ -1647,6 +1647,12 @@ object AppSettings {
      */
     fun shouldShowWelcome(context: Context): Boolean {
         if (prefs.getString(KEY_WELCOME_SEEN, null) == WELCOME_ID) return false
+        // Someone who has not been through the first-run setup is new to Auden: the setup is their welcome, and the
+        // page about what changed in an update has nothing to tell them.
+        if (!prefs.getBoolean(KEY_ONBOARDING_COMPLETE, false)) {
+            markWelcomeSeen()
+            return false
+        }
         val info = runCatching { context.packageManager.getPackageInfo(context.packageName, 0) }.getOrNull()
         val freshInstall = info != null && info.firstInstallTime == info.lastUpdateTime
         if (freshInstall) {

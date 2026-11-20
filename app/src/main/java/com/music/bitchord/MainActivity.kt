@@ -66,8 +66,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -101,6 +100,7 @@ import com.music.bitchord.data.listentogether.ServerConnectionState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -969,6 +969,12 @@ private fun BitChordApp(
     // Every other surface follows the theme; Replay's page and stories remain
     // dark artwork either way. So is the welcome, drawn over all of it.
     val onboardingComplete by AppSettings.onboardingComplete.collectAsStateWithLifecycle()
+    var onboardingAuthOrigin by rememberSaveable { mutableStateOf(false) }
+    var onboardingSpotifyOrigin by rememberSaveable { mutableStateOf(false) }
+    var confirmOnboardingBackup by remember { mutableStateOf(false) }
+    var onboardingBackupStatus by remember { mutableStateOf<String?>(null) }
+    var onboardingImportBusy by remember { mutableStateOf(false) }
+    var onboardingRequestedMediaPermission by remember { mutableStateOf(false) }
     // Held through the slide away as well, so the glyphs don't turn dark over
     // the mesh while it is still on its way off the screen.
     val onboardingShown = remember { MutableTransitionState(!onboardingComplete) }
@@ -2606,13 +2612,49 @@ private fun BitChordApp(
             viewModel.reloadLocalDetail("local:downloads")
             viewModel.loadLibrarySongs()
         } else {
-            Toast.makeText(context, context.getString(R.string.storage_required_read), Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(if (onboardingRequestedMediaPermission) R.string.setup_permission_declined else R.string.storage_required_read), Toast.LENGTH_SHORT).show()
         }
+        onboardingRequestedMediaPermission = false
     }
     val mediaPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         Manifest.permission.READ_MEDIA_AUDIO
     } else {
         Manifest.permission.READ_EXTERNAL_STORAGE
+    }
+    val onboardingPlaylistPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            onboardingImportBusy = true
+            try {
+                dev.auden.library.io.PlaylistTransfer.import(context, uri, searchOnline = true).fold(
+                    onSuccess = { showQueueNotice(context.getString(R.string.playlist_imported, it.name, it.local + it.online, it.total)) },
+                    onFailure = { showQueueNotice(context.getString(R.string.playlist_import_failed)) },
+                )
+            } finally { onboardingImportBusy = false }
+        }
+    }
+    val onboardingBackupPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            onboardingImportBusy = true
+            try {
+                com.music.bitchord.data.stats.Backup.importFrom(context, uri).fold(
+                    onSuccess = {
+                        onboardingBackupStatus = context.getString(R.string.import_succeeded, it.months.toString(), it.from)
+                        viewModel.loadLibrarySongs()
+                    },
+                    onFailure = { onboardingBackupStatus = context.getString(R.string.import_failed, it.message ?: context.getString(R.string.unknown_error)) },
+                )
+            } finally { onboardingImportBusy = false }
+        }
+    }
+    val onboardingPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) scope.launch {
+            onboardingImportBusy = true
+            try {
+                val photo = withContext(Dispatchers.IO) { dev.auden.profile.ProfilePhoto.save(context, uri) }
+                if (photo != null) dev.auden.profile.ProfileStore.setPhoto(photo)
+                else showQueueNotice(context.getString(R.string.setup_photo_failed))
+            } finally { onboardingImportBusy = false }
+        }
     }
     // The Search tab's Library source reads the Local Music folder, so it asks
     // for the same permission opening that folder does.
@@ -4410,6 +4452,7 @@ private fun BitChordApp(
                                 recents = AppSettings.recentSources.collectAsStateWithLifecycle().value.map { r ->
                                     ShelfItem(title = r.title, subtitle = "", thumbnailUrl = r.thumbnailUrl.takeUnless { com.music.bitchord.ui.components.folderCoverStyle(r.id) != null }, videoId = null, browseId = r.id)
                                 },
+                                topPicks = topPicks.orEmpty(),
                                 spotifyTitle = stringResource(R.string.from_spotify),
                                 spotifyPlaylists = emptyList(),
                                 onOpenSpotify = { navigator.push(AppRoute.Spotify) },
@@ -6932,6 +6975,22 @@ private fun BitChordApp(
         // ---- Welcome (once; under the sign-in WebView it can open) ----
         // There from the first frame, so no way in; on the way out it drops
         // like a dismissed sheet onto the app it was standing in front of.
+        if (confirmOnboardingBackup) {
+            AlertDialog(
+                onDismissRequest = { confirmOnboardingBackup = false },
+                title = { Text(stringResource(R.string.import_backup_title)) },
+                text = { Text(stringResource(R.string.import_backup_warning)) },
+                confirmButton = { TextButton(onClick = { confirmOnboardingBackup = false; onboardingBackupPicker.launch(arrayOf("application/json", "text/plain", "*/*")) }) { Text(stringResource(R.string.choose_file)) } },
+                dismissButton = { TextButton(onClick = { confirmOnboardingBackup = false }) { Text(stringResource(R.string.cancel)) } },
+            )
+        }
+        onboardingBackupStatus?.let { status ->
+            AlertDialog(onDismissRequest = { onboardingBackupStatus = null }, title = { Text(stringResource(R.string.settings)) }, text = { Text(status) }, confirmButton = { TextButton(onClick = { onboardingBackupStatus = null }) { Text(stringResource(R.string.done)) } })
+        }
+        val spotifyToken by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
+        val smartFade by AppSettings.smartFadeEnabled.collectAsStateWithLifecycle()
+        val reduceBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+        val profile by dev.auden.profile.ProfileStore.profile.collectAsStateWithLifecycle()
         AnimatedVisibility(
             visibleState = onboardingShown,
             enter = EnterTransition.None,
@@ -6940,37 +6999,55 @@ private fun BitChordApp(
             ) { it },
         ) {
             OnboardingScreen(
-                signedIn = signedIn,
-                initialName = remember {
-                    ListenTogether.nickname().ifBlank { account?.name.orEmpty() }
-                },
-                onNameChosen = ListenTogether::setNickname,
-                onSignIn = { webSession = WebSessionMode.SIGN_IN },
-                onFinish = AppSettings::setOnboardingComplete,
+                initialName = profile?.let { if (it.nameIsDefault) "" else it.name }.orEmpty(),
+                initialPhoto = profile?.photo,
+                spotifyConnected = spotifyToken.isNotBlank(),
+                youtubeConnected = signedIn,
+                authInProgress = (onboardingAuthOrigin && webSession == WebSessionMode.SIGN_IN) || (onboardingSpotifyOrigin && showSpotifyLogin),
+                smartFade = smartFade,
+                reduceBlur = reduceBlur,
+                reduceMotion = reducePlayerMotion,
+                importBusy = onboardingImportBusy,
+                onConnectSpotify = { onboardingSpotifyOrigin = true; showSpotifyLogin = true },
+                onConnectYoutube = { onboardingAuthOrigin = true; webSession = WebSessionMode.SIGN_IN },
+                onImportBackup = { confirmOnboardingBackup = true },
+                onImportPlaylist = { onboardingPlaylistPicker.launch(arrayOf("audio/x-mpegurl", "audio/mpegurl", "application/vnd.apple.xspf+xml", "application/json", "text/plain")) },
+                onRequestMusicPermission = { onboardingRequestedMediaPermission = true; mediaPermissionLauncher.launch(mediaPermission) },
+                onChoosePhoto = { onboardingPhotoPicker.launch("image/*") },
+                onSaveName = dev.auden.profile.ProfileStore::setName,
+                onSaveSmartFade = AppSettings::setSmartFadeEnabled,
+                onSaveReduceBlur = AppSettings::setReduceDynamicBlur,
+                onFinish = { selectedTab = TAB_HOME; AppSettings.setOnboardingComplete() },
             )
         }
 
-        // ---- Google sign-in (full screen WebView) ----
+        // ---- Google sign-in WebView ----
         webSession?.let { mode ->
-            WebSignInPage(
-                mode = mode,
-                initialCookie = if (mode == WebSessionMode.SWITCH_CHANNEL) {
-                    googleAccounts.firstOrNull { it.accountId == activeAccountId }?.cookie
-                } else null,
-                onClose = { webSession = null },
-                onSession = { session, done ->
-                    viewModel.onWebSession(session, mode) { accepted ->
-                        if (accepted) {
-                            webSession = null
-                            if (mode == WebSessionMode.SIGN_IN) {
-                                navigator.clear()
-                                selectedTab = TAB_LIBRARY
+            ServiceLoginSheet(onDismiss = { webSession = null; onboardingAuthOrigin = false }) { closeAfter ->
+                WebSignInPage(
+                    mode = mode,
+                    initialCookie = if (mode == WebSessionMode.SWITCH_CHANNEL) {
+                        googleAccounts.firstOrNull { it.accountId == activeAccountId }?.cookie
+                    } else null,
+                    onClose = { closeAfter {} },
+                    onSession = { session, done ->
+                        viewModel.onWebSession(session, mode) { accepted ->
+                            if (accepted) {
+                                closeAfter {
+                                    webSession = null
+                                    if (mode == WebSessionMode.SIGN_IN) {
+                                        if (onboardingAuthOrigin) onboardingAuthOrigin = false else {
+                                            navigator.clear()
+                                            selectedTab = TAB_LIBRARY
+                                        }
+                                    }
+                                }
                             }
+                            done(accepted)
                         }
-                        done(accepted)
-                    }
-                },
-            )
+                    },
+                )
+            }
         }
 
         // ---- Diwali greeting, the update page and What's new: full-screen pages over everything ----
@@ -7284,19 +7361,17 @@ private fun BitChordApp(
                 )
             }
 
-            // ---- Discord sign-in (full screen WebView) ----
+            // ---- Discord sign-in WebView ----
             if (showDiscordLogin) {
-                BackHandler { showDiscordLogin = false }
-                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                ServiceLoginSheet(onDismiss = { showDiscordLogin = false }) { closeAfter ->
                     Column(Modifier.fillMaxSize()) {
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .statusBarsPadding()
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            IconButton(onClick = { showDiscordLogin = false }) {
+                            IconButton(onClick = { closeAfter {} }) {
                                 Icon(
                                     Icons.Rounded.Close,
                                     contentDescription = stringResource(R.string.close),
@@ -7310,30 +7385,29 @@ private fun BitChordApp(
                             )
                         }
                         DiscordLoginScreen(
+                            modifier = Modifier.weight(1f),
                             onTokenCaptured = { token ->
                                 AppSettings.setDiscordToken(token)
-                                showDiscordLogin = false
+                                closeAfter {}
                             },
                         )
                     }
                 }
             }
 
-            // ---- Spotify sign-in (full screen WebView) ----
+            // ---- Spotify sign-in WebView ----
             // Out here with Discord's rather than on the Spotify page itself: see
             // SpotifyLoginScreen for what the blurred content tree does to a WebView.
             if (showSpotifyLogin) {
-                BackHandler { showSpotifyLogin = false }
-                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            ServiceLoginSheet(onDismiss = { showSpotifyLogin = false; onboardingSpotifyOrigin = false }) { closeAfter ->
                     Column(Modifier.fillMaxSize()) {
                         Row(
                             Modifier
                                 .fillMaxWidth()
-                                .statusBarsPadding()
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            IconButton(onClick = { showSpotifyLogin = false }) {
+                            IconButton(onClick = { closeAfter {} }) {
                                 Icon(
                                     Icons.Rounded.Close,
                                     contentDescription = stringResource(R.string.close),
@@ -7347,10 +7421,11 @@ private fun BitChordApp(
                             )
                         }
                         SpotifyLoginScreen(
-                            modifier = Modifier.navigationBarsPadding(),
+                            modifier = Modifier.weight(1f),
                             onConnected = { token ->
                                 AppSettings.setSpotifySpdcToken(token)
-                                showSpotifyLogin = false
+                                onboardingSpotifyOrigin = false
+                                closeAfter {}
                             },
                         )
                     }
@@ -8031,10 +8106,7 @@ private fun WhatsNewPage(state: SeekableTransitionState<Boolean>, onBack: () -> 
     }
 }
 
-/**
- * The Google sign-in, as a full screen over everything: a browser, and above it the button that takes the session from
- * the page as it now stands. [onSession] answers through its second argument whether the session was accepted.
- */
+/** The Google sign-in browser and the button that takes the session from the page as it now stands. */
 @Composable
 private fun WebSignInPage(
     mode: WebSessionMode,
@@ -8042,7 +8114,6 @@ private fun WebSignInPage(
     onClose: () -> Unit,
     onSession: (CapturedSession, (Boolean) -> Unit) -> Unit,
 ) {
-    BackHandler(onBack = onClose)
     // Raised by "Use this channel", read by the browser as "take the
     // session from the page as it now stands". A counter rather than a
     // flag so a second tap, after a failed first one, is still a new
@@ -8051,73 +8122,120 @@ private fun WebSignInPage(
     var captureFailed by remember(mode) { mutableStateOf(false) }
     var pageReady by remember(mode) { mutableStateOf(false) }
     var confirmingProfile by remember(mode) { mutableStateOf(false) }
-    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-        Column(Modifier.fillMaxSize()) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onClose) {
-                    Icon(
-                        Icons.Rounded.Close,
-                        contentDescription = stringResource(R.string.close),
-                        tint = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = when (mode) {
-                            WebSessionMode.SIGN_IN -> stringResource(R.string.sign_in_youtube_music)
-                            WebSessionMode.SWITCH_CHANNEL -> stringResource(R.string.choose_profile)
-                        },
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                    if (pageReady) {
-                        Text(
-                            text = if (captureFailed) {
-                                stringResource(R.string.profile_unavailable)
-                            } else {
-                                stringResource(R.string.switch_profile_hint)
-                            },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
-                        )
-                    }
-                }
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onClose) {
+                Icon(
+                    Icons.Rounded.Close,
+                    contentDescription = stringResource(R.string.close),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                )
+            }
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = when (mode) {
+                        WebSessionMode.SIGN_IN -> stringResource(R.string.sign_in_youtube_music)
+                        WebSessionMode.SWITCH_CHANNEL -> stringResource(R.string.choose_profile)
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
                 if (pageReady) {
-                    TextButton(onClick = {
-                        captureFailed = false
-                        confirmingProfile = true
-                        captureRequest++
-                    }, enabled = !confirmingProfile) {
-                        Text(
-                            if (confirmingProfile) stringResource(R.string.checking)
-                            else stringResource(R.string.use_this_profile),
-                        )
-                    }
+                    Text(
+                        text = if (captureFailed) {
+                            stringResource(R.string.profile_unavailable)
+                        } else {
+                            stringResource(R.string.switch_profile_hint)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                    )
                 }
             }
-            YtMusicLoginScreen(
-                mode = mode,
-                initialCookie = initialCookie,
-                captureRequest = captureRequest,
-                onPageReady = { pageReady = it },
-                onCaptureUnavailable = {
+            if (pageReady) {
+                TextButton(onClick = {
+                    captureFailed = false
+                    confirmingProfile = true
+                    captureRequest++
+                }, enabled = !confirmingProfile) {
+                    Text(
+                        if (confirmingProfile) stringResource(R.string.checking)
+                        else stringResource(R.string.use_this_profile),
+                    )
+                }
+            }
+        }
+        YtMusicLoginScreen(
+            mode = mode,
+            initialCookie = initialCookie,
+            modifier = Modifier.weight(1f),
+            captureRequest = captureRequest,
+            onPageReady = { pageReady = it },
+            onCaptureUnavailable = {
+                confirmingProfile = false
+                captureFailed = true
+            },
+            onCaptured = { session ->
+                onSession(session) { accepted ->
                     confirmingProfile = false
-                    captureFailed = true
-                },
-                onCaptured = { session ->
-                    onSession(session) { accepted ->
-                        confirmingProfile = false
-                        if (!accepted) captureFailed = true
-                    }
-                },
-            )
+                    if (!accepted) captureFailed = true
+                }
+            },
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ServiceLoginSheet(
+    onDismiss: () -> Unit,
+    content: @Composable (closeAfter: (() -> Unit) -> Unit) -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val scope = rememberCoroutineScope()
+    var closing by remember { mutableStateOf(false) }
+    var contentMounted by remember { mutableStateOf(false) }
+    val closeAfter: (() -> Unit) -> Unit = { action ->
+        if (!closing) {
+            closing = true
+            scope.launch {
+                sheetState.hide()
+                action()
+                onDismiss()
+            }
+        }
+    }
+
+    LaunchedEffect(sheetState.currentValue) {
+        if (sheetState.currentValue == SheetValue.Expanded) contentMounted = true
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = { closeAfter {} },
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.background,
+        properties = ModalBottomSheetProperties(shouldDismissOnBackPress = false),
+    ) {
+        BackHandler { closeAfter {} }
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.94f)
+                .imePadding(),
+        ) {
+            if (contentMounted) {
+                content(closeAfter)
+            } else {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
         }
     }
 }
