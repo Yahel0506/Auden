@@ -459,7 +459,7 @@ fun DetailScreen(
     val palette = rememberArtworkPalette(
         imageUrl = appleArt?.heroUrl ?: page.thumbnailUrl,
         // One of the lists made each day has a cover that is drawn, not a picture: its own colours tint the page.
-        keyColors = appleArt?.keyColors() ?: com.music.bitchord.ui.screens.mixKindOf(page.browseId)?.mixStyle()
+        keyColors = appleArt?.keyColors() ?: com.music.bitchord.ui.screens.mixKindOf(page.browseId)?.mixStyle(dev.auden.home.GeneratedMixes.get(page.browseId)?.title.orEmpty())
             ?.let { com.music.bitchord.ui.theme.ArtworkKeyColors(it.bottom, it.accent) },
     )
 
@@ -600,7 +600,7 @@ fun DetailScreen(
                     CoverContinuation(
                         imageUrl = if (isArtist) appleArt?.heroUrl ?: page.thumbnailUrl else page.thumbnailUrl,
                         folderId = page.browseId.takeIf { page.thumbnailUrl == null && !isArtist },
-                        gradient = com.music.bitchord.ui.screens.mixKindOf(page.browseId)?.mixStyle()?.let { it.top to it.bottom },
+                        gradient = com.music.bitchord.ui.screens.mixKindOf(page.browseId)?.mixStyle(dev.auden.home.GeneratedMixes.get(page.browseId)?.title.orEmpty())?.let { it.top to it.bottom },
                         seam = continuationSeam,
                         length = maxHeight * COVER_CONTINUATION_LENGTH,
                         pageColor = pageColor,

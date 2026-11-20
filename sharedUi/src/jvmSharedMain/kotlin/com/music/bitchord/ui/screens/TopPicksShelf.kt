@@ -74,6 +74,7 @@ import com.music.bitchord.ui.components.SHELF_CARD_WIDTH
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -376,7 +377,7 @@ private fun TopPickCard(
             TopPickKind.IN_LOOP, TopPickKind.GENRE_MIX, TopPickKind.NEW_FOR_YOU, TopPickKind.BECAUSE_YOU_LIKE,
             TopPickKind.REDISCOVER, TopPickKind.LIKES_MIX, TopPickKind.DEEP_CUTS, TopPickKind.ONE_YEAR_AGO -> {
                 MixCoverArt(pick.kind, pick.images, Modifier.fillMaxSize(), label = pick.title)
-                eyebrowColor = pick.kind.mixEyebrow()
+                eyebrowColor = pick.kind.mixEyebrow(pick.title)
                 branded = true
             }
             TopPickKind.FEATURED_ARTIST -> {
@@ -1785,5 +1786,139 @@ private fun String?.croppedAt(width: Int, height: Int = width): String? {
         replace(GOOGLE_SIZE_SUFFIX, "=w$width-h$height-p-l90-rj")
     } else {
         artworkAt(maxOf(width, height))
+    }
+}
+
+// ---- The lists Auden makes each day ----------------------------------------------------------------------------
+//
+// Drawn in the same hand as the stations and moods above — a flat colour, one pale emblem that moves, or the
+// discovery station's fan — with each list's emblem saying what it is, and its own songs' sleeves on it.
+
+/**
+ * The colours one of the generated lists wears: its cover's flat colour, a lighter one, the emblem's stroke and the
+ * eyebrow on its card. [top] and [accent] also tint the page the list opens, as every list's page is tinted by its cover.
+ */
+data class MixStyle(val top: Color, val bottom: Color, val accent: Color, val eyebrow: Color)
+
+/** The kind of a generated list's page, read off its id (`local:mix:loop` …); null for any other page. */
+fun mixKindOf(pageId: String?): TopPickKind? = when (pageId) {
+    "local:mix:loop" -> TopPickKind.IN_LOOP
+    "local:mix:genre" -> TopPickKind.GENRE_MIX
+    "local:mix:new" -> TopPickKind.NEW_FOR_YOU
+    "local:mix:because" -> TopPickKind.BECAUSE_YOU_LIKE
+    "local:mix:likes" -> TopPickKind.LIKES_MIX
+    "local:mix:rediscover" -> TopPickKind.REDISCOVER
+    "local:mix:deep" -> TopPickKind.DEEP_CUTS
+    "local:mix:year" -> TopPickKind.ONE_YEAR_AGO
+    else -> null
+}
+
+/** Which emblem a list wears, and in what colours; [label] is the genre of a genre mix. */
+private fun mixMood(kind: TopPickKind, label: String): Pair<TopPickMood, MoodStyle> = when (kind) {
+    // A record spinning: what is played over and over.
+    TopPickKind.IN_LOOP -> TopPickMood.WEEKEND to MoodStyle(Color(0xFFFF5A3C), Color(0xFFFFD6CA), 2_400, Color(0xFFFFE3DA))
+    // The heart, beating.
+    TopPickKind.LIKES_MIX -> TopPickMood.LOVE to TopPickMood.LOVE.style()
+    // Rings drawn in toward the centre: songs closing in on the one it is about.
+    TopPickKind.BECAUSE_YOU_LIKE -> TopPickMood.FOCUS to MoodStyle(Color(0xFF2F7BEA), Color(0xFFC4DCFF), 3_600, Color(0xFFDCEAFF))
+    // The spiral, unwinding: further into one artist.
+    TopPickKind.DEEP_CUTS -> TopPickMood.FEELING_BLUE to MoodStyle(Color(0xFF0E9A8A), Color(0xFFA9F2E6), 3_700, Color(0xFFCFFAF2))
+    // The sun going down and coming back: old favourites, back again.
+    TopPickKind.REDISCOVER -> TopPickMood.EVENING to MoodStyle(Color(0xFFF2A900), Color(0xFFFFEBA8), 6_000, Color(0xFFFFF4C7))
+    // The season it was this week a year ago.
+    TopPickKind.ONE_YEAR_AGO -> seasonMood() to MoodStyle(Color(0xFF8C6CE0), Color(0xFFE6DAFF), 7_000, Color(0xFFF0E8FF))
+    // The genre's own emblem, in its own colours.
+    else -> genreMood(label).let { it to it.style() }
+}
+
+/** This week's season, which was the season a year ago too. */
+private fun seasonMood(): TopPickMood = when (java.time.LocalDate.now().monthValue) {
+    12, 1, 2 -> TopPickMood.HOLIDAY
+    3, 4, 5 -> TopPickMood.MORNING
+    6, 7, 8 -> TopPickMood.SUMMERTIME
+    else -> TopPickMood.OUTDOORS
+}
+
+/** An emblem for a genre, by the words its name is made of; pop and anything unknown get the star. */
+private fun genreMood(genre: String): TopPickMood {
+    val g = genre.lowercase()
+    fun has(vararg words: String) = words.any { it in g }
+    return when {
+        has("rock", "metal", "punk", "grunge") -> TopPickMood.ENERGY
+        has("latin", "urban", "reggaeton", "salsa", "cumbia", "bachata", "regional", "mexican", "mexicana", "banda", "corrido") -> TopPickMood.PARTY
+        has("hip-hop", "hip hop", "rap", "trap", "drill") -> TopPickMood.MOTIVATION
+        has("electr", "dance", "house", "techno", "edm") -> TopPickMood.SOCIAL
+        has("jazz", "soul", "r&b", "blues", "funk") -> TopPickMood.AFTER_HOURS
+        has("indie", "altern", "folk", "acoust", "singer") -> TopPickMood.RELAX
+        has("chill", "lo-fi", "lofi", "ambient", "classical", "clásica", "instrumental", "piano") -> TopPickMood.CHILL
+        else -> TopPickMood.FEEL_GOOD
+    }
+}
+
+/** The list's colours; [label] matters only to a genre mix, whose colour is its genre's. */
+fun TopPickKind.mixStyle(label: String = ""): MixStyle {
+    if (this == TopPickKind.NEW_FOR_YOU) {
+        return MixStyle(Color(0xFF2A869F), Color(0xFF3477BA), Color(0xFF502798), Color(0xFFCDBDFF))
+    }
+    val style = mixMood(this, label).second
+    return MixStyle(style.background, lerp(style.background, Color.White, 0.25f), style.stroke, style.eyebrow)
+}
+
+/** The small line above a generated list's title: its colour, matched to its cover. */
+fun TopPickKind.mixEyebrow(label: String = ""): Color = mixStyle(label).eyebrow
+
+/**
+ * The cover of one of the lists Auden makes each day: the stations' and moods' own art — a flat colour and one pale
+ * emblem that moves, or the discovery fan — with the emblem chosen for what the list is, and the sleeves of its first
+ * songs set on it, so the cover says what is inside. The same on the big card on Home and at the head of the list's
+ * page; with [captionSpace] (the card) the emblem keeps above the caption, without it (the page) it is centred.
+ * [label] is the genre of a genre mix.
+ */
+@Composable
+fun MixCoverArt(
+    kind: TopPickKind,
+    images: List<String>,
+    modifier: Modifier = Modifier,
+    label: String = "",
+    motion: Boolean = LocalArtworkMotion.current,
+    captionSpace: Boolean = true,
+) {
+    CompositionLocalProvider(LocalArtworkMotion provides motion) {
+        BoxWithConstraints(modifier) {
+            if (kind == TopPickKind.NEW_FOR_YOU) {
+                DiscoveryStationArt(Modifier.fillMaxSize())
+            } else {
+                val (mood, style) = mixMood(kind, label)
+                MoodArt(mood, style, Modifier.fillMaxSize(), square = !captionSpace)
+            }
+            // What is in it: its first songs' sleeves, overlapping — at the top left of the card, and under the emblem
+            // on the page, where the bar's buttons stand over the top corners.
+            val chip = minOf(maxWidth, maxHeight) * (if (captionSpace) 0.17f else 0.12f)
+            val chipCount = images.size.coerceAtMost(3)
+            Box(
+                if (captionSpace) {
+                    Modifier.padding(start = chip * 0.45f, top = chip * 0.45f)
+                } else {
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = maxHeight * 0.24f)
+                        .size(width = chip + chip * 0.68f * (chipCount - 1).coerceAtLeast(0), height = chip)
+                },
+            ) {
+                images.take(3).forEachIndexed { i, url ->
+                    AsyncImage(
+                        model = url,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .offset(x = chip * 0.68f * i)
+                            .size(chip)
+                            .clip(CircleShape)
+                            .border(1.5.dp, Color.White, CircleShape)
+                            .background(Color.White.copy(alpha = 0.25f)),
+                    )
+                }
+            }
+        }
     }
 }
