@@ -140,6 +140,7 @@ private fun Choose(offer: TransferSession.Offer) {
     val playlists = remember(offer) { mutableStateListOf<String>() }
     val albums = remember(offer) { mutableStateListOf<String>() }
     val artists = remember(offer) { mutableStateListOf<String>() }
+    val podcasts = remember(offer) { mutableStateListOf<String>() }
     val serviceName = stringResource(if (offer.service == Service.SPOTIFY) R.string.spotify else R.string.transfer_yt_music)
     SettingsGroup(header = stringResource(R.string.transfer_choose_header, serviceName), topSpacing = 0.dp) {
         SettingsRow(
@@ -151,13 +152,19 @@ private fun Choose(offer: TransferSession.Offer) {
     }
     CollectionGroup(R.string.transfer_playlists, offer.playlists, ImportStep.PLAYLIST in offer.unreadable, playlists)
     CollectionGroup(R.string.transfer_albums, offer.albums, ImportStep.ALBUM in offer.unreadable, albums)
-    ArtistGroup(offer.artists, ImportStep.ARTISTS in offer.unreadable, artists)
-    val any = likes || playlists.isNotEmpty() || albums.isNotEmpty() || artists.isNotEmpty()
+    ArtistGroup(R.string.transfer_artists, offer.artists, ImportStep.ARTISTS in offer.unreadable, artists)
+    if (offer.podcasts.isNotEmpty()) ArtistGroup(R.string.transfer_podcasts, offer.podcasts, false, podcasts)
+    val any = likes || playlists.isNotEmpty() || albums.isNotEmpty() || artists.isNotEmpty() || podcasts.isNotEmpty()
     ActionButton(stringResource(R.string.transfer_start), enabled = any) {
         val chosen = (offer.playlists + offer.albums).filter { it.sourceId in playlists || it.sourceId in albums }
         TransferSession.start(
             context, offer.service,
-            ImportSelection(likes = likes, collections = chosen, artists = offer.artists.filter { it.id in artists }),
+            ImportSelection(
+                likes = likes,
+                collections = chosen,
+                // Podcast shows are followed the way artists are, and shelved apart by their page's id.
+                artists = (offer.artists.filter { it.id in artists } + offer.podcasts.filter { it.id in podcasts }),
+            ),
         )
     }
     ActionButton(stringResource(R.string.transfer_cancel), primary = false) { TransferSession.reset() }
@@ -193,8 +200,8 @@ private fun CollectionGroup(title: Int, items: List<RemoteCollection>, unreadabl
 }
 
 @Composable
-private fun ArtistGroup(items: List<RemoteArtist>, unreadable: Boolean, chosen: MutableList<String>) {
-    SettingsGroup(header = stringResource(R.string.transfer_artists)) {
+private fun ArtistGroup(title: Int, items: List<RemoteArtist>, unreadable: Boolean, chosen: MutableList<String>) {
+    SettingsGroup(header = stringResource(title)) {
         if (items.isEmpty()) {
             Text(
                 stringResource(if (unreadable) R.string.transfer_unreadable else R.string.transfer_none),

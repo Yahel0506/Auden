@@ -65,6 +65,9 @@ interface MusicSource {
 
     suspend fun artists(): List<RemoteArtist>
 
+    /** The podcast shows followed there, in the shape of an artist: a name, a picture and the page that opens it. */
+    suspend fun podcasts(): List<RemoteArtist> = emptyList()
+
     /** Every track of the playlist or album [sourceId] (a [RemoteCollection.sourceId]), in order. */
     suspend fun playlistTracks(sourceId: String): List<RemoteTrack>
 }

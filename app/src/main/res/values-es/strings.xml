@@ -2161,4 +2161,5 @@
     <string name="home_empty_title">Aún no hay nada que mostrar</string>
     <string name="home_empty_body">Inicio se hace con lo que escuchas en Auden. Reproduce algunas canciones o trae tu música de YouTube Music o Spotify.</string>
     <string name="liked_music">Música que te gusta</string>
+    <string name="transfer_podcasts">Podcasts</string>
 </resources>

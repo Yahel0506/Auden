@@ -23,6 +23,7 @@ object TransferSession {
         val playlists: List<RemoteCollection>,
         val albums: List<RemoteCollection>,
         val artists: List<RemoteArtist>,
+        val podcasts: List<RemoteArtist>,
         val unreadable: Set<ImportStep>,
     )
 
@@ -56,10 +57,12 @@ object TransferSession {
             val playlists = read(ImportStep.PLAYLIST) { src.playlists() }
             val albums = read(ImportStep.ALBUM) { src.albums() }
             val artists = read(ImportStep.ARTISTS) { src.artists() }
+            // Podcast shows are followed like artists: a failure to read them is not worth failing the page for.
+            val podcasts = runCatching { src.podcasts() }.getOrDefault(emptyList())
             _state.value = if (unreadable.size == 3) {
                 State.Failed(service, null)
             } else {
-                State.Choosing(Offer(service, playlists, albums, artists, unreadable))
+                State.Choosing(Offer(service, playlists, albums, artists, podcasts, unreadable))
             }
         }
     }

@@ -42,10 +42,10 @@ import com.music.bitchord.ui.replay.ReplayStoryPage
  */
 @Composable
 fun libraryLinks(
-    /** The account's shelves, as the Library has them: the playlists, and the artists, albums and the rest. */
-    shelves: List<com.music.bitchord.data.model.HomeShelf>,
-    /** What is kept on this device as lists of its own, for the Playlists section to hold with the others. */
+    /** What is kept on this device as lists of its own — made here or brought over — for the Playlists section. */
     deviceItems: List<ShelfItem>,
+    /** The albums kept on this device: brought over and saved, or downloaded whole. */
+    albumItems: List<ShelfItem>,
     onOpenShelf: (com.music.bitchord.data.model.HomeShelf) -> Unit,
     /** A device folder opened from its row — told apart from a card, which brings its own cover along. */
     onOpenFolder: (ShelfItem) -> Unit = {},
@@ -68,34 +68,25 @@ fun libraryLinks(
         id = id,
         onClick = onClick,
     )
-    // What the "Other" page held, each as a row: the account's playlists, then every shelf it had.
-    val spotifyItems = rememberSpotifyShelf()
-    fun shelfRow(id: String, shelfTitle: String, title: String, icon: ImageVector, always: Boolean = false): LibraryLink? {
-        val base = shelves.firstOrNull { it.title == shelfTitle }
-        // One section, every source: the account's own, Spotify's and what is kept on this device, each marked with where it
-        // comes from (the device's by having no service).
-        val items = base?.items.orEmpty().map { it.copy(platform = ShelfItem.PLATFORM_YT_MUSIC) } +
-            if (shelfTitle == com.music.bitchord.data.YtMusicRepository.PLAYLISTS_SHELF) {
-                spotifyItems.map { it.copy(platform = ShelfItem.PLATFORM_SPOTIFY) } + deviceItems
-            } else {
-                emptyList()
-            }
-        // Liked Music stands first among the lists, as it does in the app it comes from.
+    // The Library is Auden's own: each section holds what is on this device or was brought over with "Transfer
+    // your music", never what an account holds live. Where an item came from is told by its logo.
+    val followed by dev.auden.library.FollowedArtists.items(androidx.compose.ui.platform.LocalContext.current)
+        .collectAsStateWithLifecycle(emptyList())
+    val artistItems = followed.filterNot { it.browseId?.startsWith(PODCAST_PREFIX) == true }
+    val podcastItems = followed.filter { it.browseId?.startsWith(PODCAST_PREFIX) == true }
+    fun sectionRow(id: String, title: String, icon: ImageVector, items: List<ShelfItem>, always: Boolean = false): LibraryLink? {
         // One row per list, however many sources hold it: Mis favoritas comes both as the device's liked list and as one
         // of its offline playlists, and a list keyed twice is a crash the moment it scrolls into view.
         val ordered = items.distinctBy { it.browseId ?: it.title }
-            .sortedBy { if (it.browseId == com.music.bitchord.data.YtMusicRepository.LIKED_MUSIC) 0 else 1 }
-        if (items.isEmpty() && !(always && shelves.isNotEmpty())) return null
-        val merged = com.music.bitchord.data.model.HomeShelf(title, ordered)
-        return action(id, title, icon) { onOpenShelf(merged) }
+        if (ordered.isEmpty() && !always) return null
+        val section = com.music.bitchord.data.model.HomeShelf(title, ordered)
+        return action(id, title, icon) { onOpenShelf(section) }
     }
     val playlistsTitle = stringResource(R.string.playlists)
     val artistsTitle = stringResource(R.string.artists)
     val albumsTitle = stringResource(R.string.albums)
     val podcastsTitle = org.jetbrains.compose.resources.stringResource(Res.string.library_podcasts)
-    val subscriptionsTitle = stringResource(R.string.subscriptions)
     val order by AppSettings.libraryLinkOrder.collectAsStateWithLifecycle()
-    // Plain text rows into each section; the account's artists, albums and podcasts are behind "Other".
     return listOfNotNull(
         link(stringResource(R.string.downloads), "local:downloads"),
         link(stringResource(R.string.local_music), "local:all"),
@@ -105,11 +96,10 @@ fun libraryLinks(
             .takeIf { webdavConfigured.isNotBlank() },
         link(stringResource(R.string.smb), com.music.bitchord.data.smb.SmbConfig.BROWSE_ID)
             .takeIf { smbHost.isNotBlank() && smbShare.isNotBlank() },
-        shelfRow("shelf:playlists", com.music.bitchord.data.YtMusicRepository.PLAYLISTS_SHELF, playlistsTitle, SfIcons.PlaylistPlay, always = true),
-        shelfRow("shelf:artists", "Artists", artistsTitle, SfIcons.Artist),
-        shelfRow("shelf:albums", "Albums", albumsTitle, SfIcons.Album),
-        shelfRow("shelf:podcasts", "Podcasts", podcastsTitle, SfIcons.Radio),
-        shelfRow("shelf:subscriptions", "Subscriptions", subscriptionsTitle, SfIcons.Groups),
+        sectionRow("shelf:playlists", playlistsTitle, SfIcons.PlaylistPlay, deviceItems, always = true),
+        sectionRow("shelf:artists", artistsTitle, SfIcons.Artist, artistItems),
+        sectionRow("shelf:albums", albumsTitle, SfIcons.Album, albumItems),
+        sectionRow("shelf:podcasts", podcastsTitle, SfIcons.Radio, podcastItems),
     ).let { all ->
         // In the order the editing left them in; what it has not heard of stands after them, as it came.
         all.sortedBy { link -> order.indexOf(link.id).let { if (it < 0) Int.MAX_VALUE else it } }
@@ -186,3 +176,19 @@ const val SPOTIFY_BROWSE_ID = "app:spotify"
 
 /** The Cached songs folder's page id — one of the `local:` device folders. */
 const val CACHE_FOLDER_BROWSE_ID = "local:cache"
+
+/** A podcast show's page id on YouTube Music; the followed shows share the artists' table and are told apart by it. */
+private const val PODCAST_PREFIX = "MPSP"
+
+/** The albums downloaded whole, as cards, for the Albums section. */
+@Composable
+fun libraryAlbumItems(downloadedReleases: List<SavedCollection>): List<ShelfItem> =
+    downloadedReleases.filterNot { it.playlist }.map { release ->
+        ShelfItem(
+            title = release.title,
+            subtitle = release.subtitle,
+            thumbnailUrl = release.thumbnailUrl,
+            videoId = null,
+            browseId = Downloads.pageIdFor(release.id),
+        )
+    }

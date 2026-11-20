@@ -19,6 +19,7 @@ class YtMusicSource(
     private val playlistCards: suspend () -> Result<List<ShelfItem>> = { YtMusicRepository.libraryPlaylistCards() },
     private val albumCards: suspend () -> Result<List<ShelfItem>> = { YtMusicRepository.libraryAlbums() },
     private val subscriptionCards: suspend () -> Result<List<ShelfItem>> = { YtMusicRepository.librarySubscriptions() },
+    private val podcastCards: suspend () -> Result<List<ShelfItem>> = { YtMusicRepository.libraryPodcasts() },
 ) : MusicSource {
     override val service = Service.YT_MUSIC
 
@@ -42,6 +43,12 @@ class YtMusicSource(
 
     override suspend fun artists(): List<RemoteArtist> =
         subscriptionCards().getOrThrow().mapNotNull { card ->
+            val id = card.browseId?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            RemoteArtist(id, service, card.title, card.thumbnailUrl)
+        }.distinctBy { it.id }
+
+    override suspend fun podcasts(): List<RemoteArtist> =
+        podcastCards().getOrThrow().mapNotNull { card ->
             val id = card.browseId?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
             RemoteArtist(id, service, card.title, card.thumbnailUrl)
         }.distinctBy { it.id }

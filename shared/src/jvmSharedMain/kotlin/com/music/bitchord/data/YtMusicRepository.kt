@@ -1117,6 +1117,12 @@ object YtMusicRepository {
         libraryItemsPaged(LIBRARY_SUBSCRIPTIONS)
     }
 
+    /** The podcast shows the account subscribes to, every page. */
+    suspend fun libraryPodcasts(): Result<List<ShelfItem>> = call("library:podcasts") {
+        libraryItemsPaged(LIBRARY_PODCASTS)
+    }
+
+    private const val LIBRARY_PODCASTS = "FEmusic_library_non_music_audio_list"
     private const val LIBRARY_ALBUMS = "FEmusic_liked_albums"
     private const val LIBRARY_SUBSCRIPTIONS = "FEmusic_library_corpus_artists"
 

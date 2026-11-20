@@ -232,6 +232,7 @@ import com.music.bitchord.ui.screens.LibraryBackupBanner
 import com.music.bitchord.ui.screens.LibraryReplayEntry
 import com.music.bitchord.ui.screens.LibraryReplayEntry
 import com.music.bitchord.ui.screens.rememberSpotifyShelf
+import com.music.bitchord.ui.screens.libraryAlbumItems
 import com.music.bitchord.ui.screens.libraryDeviceItems
 import com.music.bitchord.ui.screens.SPOTIFY_BROWSE_ID
 import com.music.bitchord.ui.screens.libraryLinks
@@ -4307,16 +4308,21 @@ private fun BitChordApp(
                                 },
                             )
                             else -> {
-                                val deviceItemsBase = libraryDeviceItems(
-                                    downloadedReleases.filterNot { release ->
-                                        localPlaylists.any {
-                                            // Downloaded from the page it was copied from, or from the copy itself.
-                                            it.sourceId == release.id.removePrefix("VL") ||
-                                                it.browseId == release.id ||
-                                                it.id == release.id
-                                        }
-                                    },
-                                ) + offlinePlaylistItems + localPlaylistItems
+                                val notCopied = downloadedReleases.filterNot { release ->
+                                    localPlaylists.any {
+                                        // Downloaded from the page it was copied from, or from the copy itself.
+                                        it.sourceId == release.id.removePrefix("VL") ||
+                                            it.browseId == release.id ||
+                                            it.id == release.id
+                                    }
+                                }
+                                // An album brought over or downloaded is in the Albums section, not among the playlists.
+                                val albumCopies = localPlaylists.filter {
+                                    dev.auden.library.PlaylistOrigin.of(it.sourceId)?.kind == dev.auden.library.OriginKind.ALBUM
+                                }.mapTo(HashSet()) { it.browseId }
+                                val deviceItemsBase = libraryDeviceItems(notCopied.filter { it.playlist }) +
+                                    offlinePlaylistItems + localPlaylistItems.filter { it.browseId !in albumCopies }
+                                val albumItemsNow = localPlaylistItems.filter { it.browseId in albumCopies } + libraryAlbumItems(notCopied)
                                 // The account's Liked Music is a playlist like any other: it has its place in the
                                 // Playlists section, which is the only way in to it.
                                 val likedMusicItem = likedMusicShelfItem(signedIn, libraryState, stringResource(R.string.liked_music))
@@ -4358,8 +4364,8 @@ private fun BitChordApp(
                                     )
                                 },
                                 links = libraryLinks(
-                                    shelves = emptyList(),
                                     deviceItems = deviceItemsNow,
+                                    albumItems = albumItemsNow,
                                     onOpenShelf = { shelf -> navigator.push(AppRoute.LibraryShowAll(shelf)) },
                                     onOpenFolder = { item ->
                                         // From its row a folder slides in over the Library like any pushed screen.
