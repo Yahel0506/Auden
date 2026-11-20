@@ -182,7 +182,7 @@ object ArtistFacts {
         // A miss is remembered too, or an artist neither service has heard of is
         // asked about on every play forever. It expires, because the reason for
         // a miss is as often a dropped connection as an unknown artist.
-        val wantsCard = browseId == null &&
+        val wantsCard = (browseId == null || image == null) &&
             System.currentTimeMillis() - cardAt > TimeUnit.DAYS.toMillis(RETRY_DAYS)
         val wantsGenres = genresAvailable && genres.isEmpty() &&
             System.currentTimeMillis() - genresAt > TimeUnit.DAYS.toMillis(RETRY_DAYS)
@@ -202,7 +202,7 @@ object ArtistFacts {
     private suspend fun worker() {
         for (name in requests) {
             val existing = known[key(name)]
-            if (existing?.browseId == null) {
+            if (existing?.browseId == null || existing.image == null) {
                 runCatching { fetchCard(name) }
                     .onFailure { Log.w(TAG, "Artist lookup failed for $name", it) }
             }

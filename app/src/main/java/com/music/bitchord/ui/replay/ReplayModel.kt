@@ -36,6 +36,10 @@ import java.util.Locale
  */
 class ReplayState(
     val period: ReplayPeriod,
+    /** 0 = the current week/month/year, -1 the one before, and so on. */
+    val offset: Int,
+    /** First day anything was recorded; bounds how far back [offset] may go. */
+    val earliest: LocalDate?,
     val summary: ReplaySummary?,
     val loading: Boolean,
     /**
@@ -58,8 +62,10 @@ class ReplayState(
  *   since is on it.
  */
 @Composable
-fun rememberReplayState(active: Boolean): Pair<ReplayState, (ReplayPeriod) -> Unit> {
+fun rememberReplayState(active: Boolean): Pair<ReplayState, (ReplayPeriod, Int) -> Unit> {
     var period by rememberSaveable { mutableStateOf(ReplayPeriod.THIS_WEEK) }
+    var offset by rememberSaveable { mutableStateOf(0) }
+    var earliest by remember { mutableStateOf<LocalDate?>(null) }
     var summary by remember { mutableStateOf<ReplaySummary?>(null) }
     var loading by remember { mutableStateOf(true) }
     var memberSince by remember { mutableStateOf<String?>(null) }
@@ -67,19 +73,17 @@ fun rememberReplayState(active: Boolean): Pair<ReplayState, (ReplayPeriod) -> Un
     LaunchedEffect(active) {
         if (!active) return@LaunchedEffect
         // A directory listing, so off the composition's thread.
-        memberSince = withContext(Dispatchers.IO) {
-            ListeningStats.months().firstOrNull()?.let {
-                "%02d/%02d".format(Locale.ROOT, it.monthValue, it.year % 100)
-            }
-        }
+        val first = withContext(Dispatchers.IO) { ListeningStats.months().firstOrNull() }
+        earliest = first?.atDay(1)
+        memberSince = first?.let { "%02d/%02d".format(Locale.ROOT, it.monthValue, it.year % 100) }
     }
-    LaunchedEffect(period, active) {
+    LaunchedEffect(period, offset, active) {
         if (!active) return@LaunchedEffect
         // Only the first read shows a spinner. Switching period must not blank
         // the charts for the beat it takes to merge the files — that reads as
         // the page breaking rather than as it answering a different question.
         loading = summary == null
-        summary = ListeningStats.summary(period)
+        summary = ListeningStats.summary(period, offset)
         loading = false
 
         // Artist pictures and pages arrive after the page has been built — see
@@ -93,11 +97,11 @@ fun rememberReplayState(active: Boolean): Pair<ReplayState, (ReplayPeriod) -> Un
         // gets as far as a rebuild.
         ArtistFacts.revision.drop(1).collectLatest {
             delay(SETTLE_MILLIS)
-            summary = ListeningStats.summary(period)
+            summary = ListeningStats.summary(period, offset)
         }
     }
-    return ReplayState(period, summary, loading, memberSince) to
-        { next: ReplayPeriod -> period = next }
+    return ReplayState(period, offset, earliest, summary, loading, memberSince) to
+        { next: ReplayPeriod, nextOffset: Int -> period = next; offset = nextOffset }
 }
 
 /** How long a burst of artist lookups is allowed to settle before a rebuild. */
@@ -197,13 +201,80 @@ fun ReplayPeriod.localizedTab(context: Context): String = when (this) {
     ReplayPeriod.ALL_TIME -> context.getString(R.string.replay_period_lifetime)
 }
 
-fun ReplaySummary.localizedLabel(context: Context): String = when (period) {
-    ReplayPeriod.THIS_WEEK -> "This week"
-    ReplayPeriod.THIS_MONTH -> DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
-        .format(LocalDate.now())
-        .replaceFirstChar { it.titlecase(Locale.getDefault()) }
-    ReplayPeriod.THIS_YEAR -> LocalDate.now().year.toString()
+fun ReplaySummary.localizedLabel(context: Context): String {
+    val today = LocalDate.now()
+    val locale = Locale.getDefault()
+    return when (period) {
+        ReplayPeriod.THIS_WEEK ->
+            if (offset == 0) context.getString(R.string.replay_this_week) else periodShort(context, period, offset)
+        ReplayPeriod.THIS_MONTH -> DateTimeFormatter.ofPattern("MMMM yyyy", locale)
+            .format(today.plusMonths(offset.toLong()))
+            .replaceFirstChar { it.titlecase(locale) }
+        ReplayPeriod.THIS_YEAR -> (today.year + offset).toString()
+        ReplayPeriod.ALL_TIME -> context.getString(R.string.all_time)
+    }
+}
+
+/** The pill's name for a kind of period: Week, Month, Year, All time. */
+fun ReplayPeriod.kindName(context: Context): String = when (this) {
+    ReplayPeriod.THIS_WEEK -> context.getString(R.string.replay_kind_week)
+    ReplayPeriod.THIS_MONTH -> context.getString(R.string.replay_kind_month)
+    ReplayPeriod.THIS_YEAR -> context.getString(R.string.replay_kind_year)
     ReplayPeriod.ALL_TIME -> context.getString(R.string.all_time)
+}
+
+/** A short name for the stretch [offset] back, as it appears in the period row. */
+fun periodShort(context: Context, period: ReplayPeriod, offset: Int): String {
+    val today = LocalDate.now()
+    val locale = Locale.getDefault()
+    return when (period) {
+        ReplayPeriod.THIS_WEEK -> when (offset) {
+            0 -> context.getString(R.string.replay_this_week)
+            else -> {
+                val (start, end) = period.range(today, offset)!!
+                val day = DateTimeFormatter.ofPattern("d MMM", locale)
+                "${day.format(start)} – ${day.format(end)}"
+            }
+        }
+        ReplayPeriod.THIS_MONTH ->
+            DateTimeFormatter.ofPattern("MMM", locale).format(today.plusMonths(offset.toLong()))
+                .trimEnd('.').lowercase(locale)
+        ReplayPeriod.THIS_YEAR -> (today.year + offset).toString()
+        ReplayPeriod.ALL_TIME -> context.getString(R.string.all_time)
+    }
+}
+
+/** How many stretches back [period] can go, given the first day with data. */
+fun maxBack(period: ReplayPeriod, earliest: LocalDate?): Int {
+    val first = earliest ?: return 0
+    val today = LocalDate.now()
+    return when (period) {
+        ReplayPeriod.THIS_WEEK -> java.time.temporal.ChronoUnit.WEEKS.between(
+            first.with(java.time.DayOfWeek.MONDAY), today.with(java.time.DayOfWeek.MONDAY),
+        ).toInt().coerceIn(0, 52)
+        ReplayPeriod.THIS_MONTH -> java.time.temporal.ChronoUnit.MONTHS.between(
+            java.time.YearMonth.from(first), java.time.YearMonth.from(today),
+        ).toInt().coerceIn(0, 24)
+        ReplayPeriod.THIS_YEAR -> (today.year - first.year).coerceAtLeast(0)
+        ReplayPeriod.ALL_TIME -> 0
+    }
+}
+
+/** The big sentence's tail: "this week", "in October", "in 2026", "since you started using Auden". */
+fun ReplaySummary.minutesWhen(context: Context): String {
+    val today = LocalDate.now()
+    val locale = Locale.getDefault()
+    return when (period) {
+        ReplayPeriod.THIS_WEEK -> if (offset == 0) context.getString(R.string.replay_when_this_week)
+        else if (offset == -1) context.getString(R.string.replay_when_last_week)
+        else context.getString(R.string.replay_when_week_of, periodShort(context, period, offset))
+        ReplayPeriod.THIS_MONTH -> context.getString(
+            R.string.replay_when_in,
+            DateTimeFormatter.ofPattern("MMMM", locale).format(today.plusMonths(offset.toLong())).lowercase(locale),
+        )
+        ReplayPeriod.THIS_YEAR -> context.getString(R.string.replay_when_in, (today.year + offset).toString())
+        ReplayPeriod.ALL_TIME -> context.getString(R.string.replay_when_all_time)
+    }
 }
 
 /**
@@ -449,4 +520,22 @@ fun ReplaySummary.cards(context: Context): List<ReplayHeroCard> = buildList {
             ),
         )
     }
+}
+
+/**
+ * Makes the Replay's playlist once, keeps it in the library, and opens it like
+ * any other; opened again, it is refreshed with the current songs.
+ */
+fun openReplayPlaylist(viewModel: com.music.bitchord.ui.MainViewModel, title: String, songs: List<com.music.bitchord.data.model.Song>) {
+    val library = dev.auden.library.LocalPlaylists
+    val existing = library.playlists.value.firstOrNull { it.title == title && it.sourceId == null }
+    val list = existing?.also { library.setOrder(it.id, songs) }
+        ?: library.create(title, songs, coverUrl = songs.firstOrNull()?.thumbnailUrl)
+    viewModel.openDetail(
+        browseId = "local:playlist:${list.id}",
+        title = title,
+        subtitle = "",
+        thumbnailUrl = songs.firstOrNull()?.thumbnailUrl,
+        type = com.music.bitchord.data.model.BrowseType.PLAYLIST,
+    )
 }

@@ -100,6 +100,7 @@ object ListeningStats {
 
     private class Cached(
         val period: ReplayPeriod,
+        val offset: Int,
         val version: Long,
         val facts: Int,
         val day: LocalDate,
@@ -316,7 +317,7 @@ object ListeningStats {
      * files, and the one being written to is flushed first so that the page
      * agrees with what has just been playing.
      */
-    suspend fun summary(period: ReplayPeriod): ReplaySummary = withContext(Dispatchers.IO) {
+    suspend fun summary(period: ReplayPeriod, offset: Int = 0): ReplaySummary = withContext(Dispatchers.IO) {
         flushAndAwait()
         val today = LocalDate.now()
         val facts = ArtistFacts.revision.value
@@ -327,14 +328,14 @@ object ListeningStats {
         // Library tab asks for this, so it is asked often and usually for an
         // answer that has not changed.
         cached?.takeIf {
-            it.period == period && it.version == version && it.facts == facts && it.day == today
+            it.period == period && it.offset == offset && it.version == version && it.facts == facts && it.day == today
         }?.let { return@withContext it.summary }
 
         val merged = MergedBucket()
         when {
             period.needsDayFilter() -> {
                 // Week may span two months: read both, filter by day.
-                val range = period.range(today)!!
+                val range = period.range(today, offset)!!
                 months().filter { month ->
                     val start = month.atDay(1)
                     val end = month.atEndOfMonth()
@@ -342,12 +343,12 @@ object ListeningStats {
                 }.forEach { month -> read(month.toString())?.let { bucket -> merged.add(bucket, range) } }
             }
             else -> {
-                months().filter { period.covers(it, today) }
+                months().filter { period.covers(it, today, offset) }
                     .forEach { month -> read(month.toString())?.let(merged::add) }
             }
         }
-        merged.toSummary(period, today).also {
-            cached = Cached(period, version, facts, today, it)
+        merged.toSummary(period, today, offset).also {
+            cached = Cached(period, offset, version, facts, today, it)
         }
     }
 
@@ -610,9 +611,9 @@ object ListeningStats {
             }
         }
 
-        fun toSummary(period: ReplayPeriod, today: LocalDate): ReplaySummary {
+        fun toSummary(period: ReplayPeriod, today: LocalDate, offset: Int = 0): ReplaySummary {
             // For weekly mode, compute per-entity totals from day-level sub-buckets.
-            val weekRange = if (period.needsDayFilter()) period.range(today) else null
+            val weekRange = if (period.needsDayFilter()) period.range(today, offset) else null
 
             val rankedSongs = if (weekRange != null) {
                 tracks.values
@@ -734,7 +735,7 @@ object ListeningStats {
             // playing the music, which is no help to someone who has just
             // installed a build that started collecting them.
             rankedArtists.take(ARTISTS_TO_RESOLVE)
-                .filter { it.artworkUrl == null || it.browseId == null }
+                .filter { ArtistFacts.imageFor(it.title) == null || it.browseId == null }
                 .forEach { ArtistFacts.noticed(it.title) }
 
             val rankedGenres = genreMs.entries
@@ -753,7 +754,10 @@ object ListeningStats {
             val busiest = days.entries.maxByOrNull { it.value }
             return ReplaySummary(
                 period = period,
-                label = period.label(today),
+                label = period.label(today, offset),
+                offset = offset,
+                rangeStart = period.range(today, offset)?.first,
+                rangeEnd = period.range(today, offset)?.second,
                 totalMs = rankedSongs.sumOf { it.ms },
                 totalPlays = rankedSongs.sumOf { it.plays },
                 songs = rankedSongs,
@@ -1020,40 +1024,41 @@ enum class ReplayPeriod(val chip: String) {
     ALL_TIME("All time"),
     ;
 
-    /** The inclusive date range this period covers. Null for ALL_TIME. */
-    fun range(today: LocalDate): Pair<LocalDate, LocalDate>? = when (this) {
+    /**
+     * The inclusive date range this period covers, [offset] stretches back
+     * (0 = the current one). Null for ALL_TIME.
+     */
+    fun range(today: LocalDate, offset: Int = 0): Pair<LocalDate, LocalDate>? = when (this) {
         THIS_WEEK -> {
-            val start = today.with(java.time.DayOfWeek.MONDAY)
-            start to today
+            val start = today.with(java.time.DayOfWeek.MONDAY).plusWeeks(offset.toLong())
+            start to if (offset == 0) today else start.plusDays(6)
         }
         THIS_MONTH -> {
-            val ym = YearMonth.from(today)
+            val ym = YearMonth.from(today).plusMonths(offset.toLong())
             ym.atDay(1) to ym.atEndOfMonth()
         }
-        THIS_YEAR -> LocalDate.of(today.year, 1, 1) to LocalDate.of(today.year, 12, 31)
+        THIS_YEAR -> {
+            val year = today.year + offset
+            LocalDate.of(year, 1, 1) to LocalDate.of(year, 12, 31)
+        }
         ALL_TIME -> null
     }
 
-    fun covers(month: YearMonth, today: LocalDate): Boolean = when (this) {
-        THIS_WEEK -> {
-            val range = month.atDay(1)..month.atEndOfMonth()
-            val weekStart = today.with(java.time.DayOfWeek.MONDAY)
-            val weekEnd = today
-            !(weekEnd < range.start || weekStart > range.endInclusive)
-        }
-        THIS_MONTH -> month == YearMonth.from(today)
-        THIS_YEAR -> month.year == today.year
-        ALL_TIME -> true
+    fun covers(month: YearMonth, today: LocalDate, offset: Int = 0): Boolean {
+        val range = range(today, offset) ?: return true
+        return !(month.atEndOfMonth() < range.first || month.atDay(1) > range.second)
     }
 
     /** Whether this period needs day-level filtering (week spans potentially multiple months). */
     fun needsDayFilter(): Boolean = this == THIS_WEEK
 
-    fun label(today: LocalDate): String = when (this) {
-        THIS_WEEK -> "This week"
-        THIS_MONTH -> YearMonth.from(today).month.name.lowercase(Locale.ROOT)
-            .replaceFirstChar { it.uppercase(Locale.ROOT) } + " ${today.year}"
-        THIS_YEAR -> today.year.toString()
+    fun label(today: LocalDate, offset: Int = 0): String = when (this) {
+        THIS_WEEK -> if (offset == 0) "This week" else "Week of ${range(today, offset)!!.first}"
+        THIS_MONTH -> {
+            val ym = YearMonth.from(today).plusMonths(offset.toLong())
+            ym.month.name.lowercase(Locale.ROOT).replaceFirstChar { it.uppercase(Locale.ROOT) } + " ${ym.year}"
+        }
+        THIS_YEAR -> (today.year + offset).toString()
         ALL_TIME -> "All time"
     }
 }
@@ -1083,6 +1088,10 @@ data class ReplaySummary(
     val distinctAlbums: Int,
     /** The earliest month with anything in it, `YYYY-MM`. */
     val since: String?,
+    /** 0 is the current stretch, -1 the one before it, and so on. */
+    val offset: Int = 0,
+    val rangeStart: LocalDate? = null,
+    val rangeEnd: LocalDate? = null,
 ) {
     val minutes: Long get() = totalMs / 60_000
     val hours: Long get() = totalMs / 3_600_000

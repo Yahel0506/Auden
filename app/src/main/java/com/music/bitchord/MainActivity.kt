@@ -3677,6 +3677,7 @@ private fun BitChordApp(
                                     replaySharePage = null
                                     showReplayShare = true
                                 },
+                                viewModel = viewModel,
                                 contentPadding = listPadding,
                                 listState = replayListState,
                                 landingPage = replayLandingPage,
@@ -7069,6 +7070,7 @@ private fun BitChordApp(
                 hazeState = hazeState,
                 onOpenTransfer = { navigator.push(AppRoute.Transfer) },
             )
+            com.music.bitchord.ui.replay.ReplayKindMenuHost()
             if (showLyricsSources) {
                 BackHandler { showLyricsSources = false }
                 LyricsSourcesDialog(
