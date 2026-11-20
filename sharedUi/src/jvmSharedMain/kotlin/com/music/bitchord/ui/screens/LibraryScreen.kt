@@ -613,12 +613,16 @@ private fun LibraryListRow(
                     .thumbnailBorder(shape)
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             ) {
-                AsyncImage(
-                    model = item.thumbnailUrl.artworkAt(CARD_ART_PX),
-                    contentDescription = null,
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
-                )
+                if (com.music.bitchord.ui.components.folderCoverStyle(item.browseId) != null) {
+                    com.music.bitchord.ui.components.FolderCover(item.browseId, Modifier.fillMaxSize())
+                } else {
+                    AsyncImage(
+                        model = item.thumbnailUrl.artworkAt(CARD_ART_PX),
+                        contentDescription = null,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
             Spacer(Modifier.width(LIST_COVER_GAP))
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {

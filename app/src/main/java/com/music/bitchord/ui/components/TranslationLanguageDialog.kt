@@ -156,7 +156,13 @@ fun TranslationLanguageDialog(
             }
 
             AlertRule()
-            SearchField(query = query, onQueryChange = { query = it })
+            SearchField(
+                query = query,
+                onQueryChange = { query = it },
+                onSubmit = {},
+                placeholder = stringResource(R.string.search_languages),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
+            )
             AlertRule()
 
             LazyColumn(modifier = Modifier.heightIn(max = LIST_MAX_HEIGHT)) {
@@ -215,46 +221,6 @@ fun TranslationLanguageDialog(
                 label = stringResource(R.string.done),
                 emphasised = true,
                 onClick = animatedExit(onDismiss),
-            )
-        }
-    }
-}
-
-@Composable
-private fun SearchField(query: String, onQueryChange: (String) -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = ACTION_HEIGHT)
-            .padding(horizontal = 16.dp, vertical = 9.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.Search,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-            modifier = Modifier.size(16.dp),
-        )
-        Spacer(Modifier.width(8.dp))
-        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-            if (query.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.search_languages),
-                    style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
-                )
-            }
-            BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    fontSize = 15.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                ),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

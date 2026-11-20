@@ -18,6 +18,8 @@ fun TrackRecentSources(song: Song?, isPlaying: Boolean) {
         if (!isPlaying || s.playbackSourceType != PlaybackSourceType.BROWSE) return@LaunchedEffect
         val id = s.playbackSourceId?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
         val title = (s.playbackSource ?: s.albumName)?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
-        AppSettings.recordRecentSource(RecentSource(id, title, s.thumbnailUrl))
+        // A device folder has a cover of its own, so no song's is kept for it.
+        val folder = com.music.bitchord.ui.components.folderCoverStyle(id) != null
+        AppSettings.recordRecentSource(RecentSource(id, title, if (folder) null else s.thumbnailUrl))
     }
 }

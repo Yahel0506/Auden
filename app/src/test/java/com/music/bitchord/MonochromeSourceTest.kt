@@ -92,8 +92,14 @@ class MonochromeSourceTest {
     fun `the source is seeded only where the build carries the server`() {
         val with = SourceRegistry.sourcesForInit(emptyList(), forceJioSaavnOff = false, monochromeAvailable = true)
         val monochrome = with.single { it.kind == SourceKind.MONOCHROME }
-        assertTrue(monochrome.enabled)
+        // Off until the listener turns it on, and a choice made once is kept.
+        assertFalse(monochrome.enabled)
         assertTrue(monochrome.isComplete)
+        val turnedOn = with.map { if (it.kind == SourceKind.MONOCHROME) it.copy(enabled = true) else it }
+        assertTrue(
+            SourceRegistry.sourcesForInit(turnedOn, forceJioSaavnOff = false, monochromeAvailable = true)
+                .single { it.kind == SourceKind.MONOCHROME }.enabled,
+        )
 
         val without = SourceRegistry.sourcesForInit(with, forceJioSaavnOff = false, monochromeAvailable = false)
         assertNull(without.firstOrNull { it.kind == SourceKind.MONOCHROME })

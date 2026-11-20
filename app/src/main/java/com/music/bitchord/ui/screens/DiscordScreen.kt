@@ -227,7 +227,6 @@ fun DiscordScreen(
                 footer = stringResource(R.string.discord_sign_in_footer),
             ) {
                 SettingsRow(
-                    icon = SfIcons.Key,
                     title = stringResource(R.string.enter_token_instead),
                     subtitle = stringResource(R.string.enter_token_instead_subtitle),
                     onClick = { onOpenDialog(DiscordDialog.TOKEN) },
@@ -247,7 +246,6 @@ fun DiscordScreen(
             footer = stringResource(R.string.discord_presence_footer),
         ) {
             SettingsRow(
-                icon = discordIcon,
                 title = stringResource(R.string.show_what_playing),
                 subtitle = if (connected) null else stringResource(R.string.connect_account_first),
                 enabled = connected,
@@ -260,9 +258,8 @@ fun DiscordScreen(
                 },
                 onClick = { AppSettings.setDiscordRpcEnabled(!rpcEnabled) },
             )
-            RowDivider()
+            RowDivider(start = ROW_INSET)
             SettingsRow(
-                icon = SfIcons.Label,
                 title = stringResource(R.string.lead_with_song),
                 subtitle = stringResource(R.string.lead_with_song_subtitle),
                 enabled = connected && rpcEnabled,
@@ -275,9 +272,8 @@ fun DiscordScreen(
                 },
                 onClick = { AppSettings.setDiscordUseDetails(!useDetails) },
             )
-            RowDivider()
+            RowDivider(start = ROW_INSET)
             SettingsRow(
-                icon = SfIcons.GraphicEq,
                 title = stringResource(R.string.discord_show_audio_quality),
                 subtitle = stringResource(R.string.discord_show_audio_quality_subtitle),
                 enabled = connected && rpcEnabled,
@@ -290,9 +286,8 @@ fun DiscordScreen(
                 },
                 onClick = { AppSettings.setDiscordShowAudioQuality(!showAudioQuality) },
             )
-            RowDivider()
+            RowDivider(start = ROW_INSET)
             SettingsRow(
-                icon = SfIcons.Tune,
                 title = stringResource(R.string.customize_card),
                 subtitle = stringResource(R.string.customize_card_subtitle),
                 enabled = connected && rpcEnabled,
@@ -311,21 +306,18 @@ fun DiscordScreen(
             Column(Modifier.fillMaxWidth()) {
                 SettingsGroup(header = stringResource(R.string.presence)) {
                     SettingsRow(
-                        icon = SfIcons.RadioButtonChecked,
                         title = stringResource(R.string.status),
                         value = statusOf(status).localizedLabel(),
                         onClick = { onOpenDialog(DiscordDialog.STATUS) },
                     )
-                    RowDivider()
+                    RowDivider(start = ROW_INSET)
                     SettingsRow(
-                        icon = SfIcons.Tune,
                         title = stringResource(R.string.activity),
                         value = kindOf(activityType).localizedLabel(),
                         onClick = { onOpenDialog(DiscordDialog.ACTIVITY_TYPE) },
                     )
-                    RowDivider()
+                    RowDivider(start = ROW_INSET)
                     SettingsRow(
-                        icon = SfIcons.Label,
                         title = stringResource(R.string.name),
                         subtitle = activityName.ifEmpty { appName() },
                         onClick = { onOpenDialog(DiscordDialog.ACTIVITY_NAME) },
@@ -337,7 +329,6 @@ fun DiscordScreen(
                     footer = stringResource(R.string.discord_buttons_footer),
                 ) {
                     SettingsRow(
-                        icon = SfIcons.SmartButton,
                         title = stringResource(R.string.first_button),
                         subtitle = button1Text.ifEmpty { DiscordRPC.DEFAULT_BUTTON_1 },
                         trailing = {
@@ -348,9 +339,8 @@ fun DiscordScreen(
                         },
                         onClick = { onOpenDialog(DiscordDialog.BUTTON_1) },
                     )
-                    RowDivider()
+                    RowDivider(start = ROW_INSET)
                     SettingsRow(
-                        icon = SfIcons.SmartButton,
                         title = stringResource(R.string.second_button),
                         subtitle = button2Text.ifEmpty { DiscordRPC.DEFAULT_BUTTON_2 },
                         trailing = {

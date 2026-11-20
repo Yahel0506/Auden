@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +46,14 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
  * rather than its own 46dp.
  */
 val LocalSearchFieldOnSurface = staticCompositionLocalOf { false }
+
+/**
+ * Starts the phone's voice dictation and hands back what was heard. Null where there is none — a search field then
+ * draws no microphone. Provided by the platform host, and read by every search field.
+ */
+typealias VoiceDictation = (onText: (String) -> Unit) -> Unit
+
+val LocalVoiceDictation = staticCompositionLocalOf<VoiceDictation?> { null }
 
 /**
  * The pill-shaped search field used at the top of the search page — a
@@ -80,14 +89,13 @@ fun SearchField(
                 } else {
                     // Fixed height prevents the row from growing when text is entered
                     Modifier
-                        .height(46.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(11.dp))
+                        .height(40.dp)
+                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                 },
             )
-            // Asymmetric: the magnifier is a button now and wants a real touch
-            // target, so it's given the room by pulling the field's own start
-            // padding in rather than by pushing the glyph and the text along.
-            .padding(start = 8.dp, end = 12.dp),
+            // Fully round, so the ends are padded in further than a rounded rectangle's would be: the magnifier
+            // on the left and the microphone on the right sit inside the curve rather than against it.
+            .padding(start = 10.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // The search button. It reads as one — a magnifier at the head of a
@@ -97,12 +105,14 @@ fun SearchField(
         Icon(
             Icons.Rounded.Search,
             contentDescription = stringResource(Res.string.search),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            // The text colour, not the hint's: the magnifier is what says this is a search, and it was lost
+            // against the field at the hint's contrast.
+            tint = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier
                 .size(32.dp)
                 .clip(CircleShape)
                 .clickable(enabled = query.isNotBlank(), onClick = submit)
-                .padding(6.dp),
+                .padding(5.dp),
         )
         Spacer(Modifier.width(4.dp))
         Box(Modifier.weight(1f)) {
@@ -153,6 +163,28 @@ fun SearchField(
                     contentDescription = stringResource(Res.string.clear_search),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+        val dictate = LocalVoiceDictation.current
+        if (dictate != null) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .clickable {
+                        dictate { heard ->
+                            onQueryChange(heard)
+                            submit()
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Rounded.Mic,
+                    contentDescription = stringResource(Res.string.voice_search),
+                    tint = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.size(20.dp),
                 )
             }
         }

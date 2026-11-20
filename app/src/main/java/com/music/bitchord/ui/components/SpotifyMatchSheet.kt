@@ -80,14 +80,12 @@ fun SpotifyMatchSheet(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            singleLine = true,
-            placeholder = { Text(stringResource(R.string.spotify_search_hint)) },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { search++ }),
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp),
+        SearchField(
+            query = query,
+            onQueryChange = { query = it },
+            onSubmit = { search++ },
+            placeholder = stringResource(R.string.spotify_search_hint),
+            modifier = Modifier.padding(horizontal = 22.dp),
         )
         Spacer(Modifier.height(8.dp))
         HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)

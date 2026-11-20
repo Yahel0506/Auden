@@ -287,6 +287,9 @@ object AudioCache {
             .onFailure { legacy.deleteRecursively() }
     }
 
+    /** Bytes the cache holds on disk right now. */
+    fun usedBytes(): Long = if (::cache.isInitialized) runCatching { cache.cacheSpace }.getOrDefault(0L) else 0L
+
     /** Drops everything on disk. The listener asked; no grace period. */
     fun clear(onComplete: () -> Unit = {}) {
         cancel()

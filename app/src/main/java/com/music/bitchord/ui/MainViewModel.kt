@@ -3315,7 +3315,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             browseId = browseId,
             title = title,
             subtitle = subtitle,
-            thumbnailUrl = thumbnailUrl,
+            // A device folder is a special playlist with a cover of its own (FolderCover), whichever way it was opened:
+            // never the cover of a song that happened to be playing out of it, as a Recents card carries.
+            thumbnailUrl = thumbnailUrl.takeUnless { com.music.bitchord.ui.components.folderCoverStyle(browseId) != null },
             songs = UiState.Loading,
             type = resolved,
         )
