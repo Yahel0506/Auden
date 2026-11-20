@@ -56,10 +56,22 @@ enum class TopPickKind {
 
     /** Songs like one they play over and over; [TopPick.title] is that song. */
     BECAUSE_YOU_LIKE,
+
+    /** Songs they used to play a lot and have not for a while. */
+    REDISCOVER,
+
+    /** Their likes, in another order every day. */
+    LIKES_MIX,
+
+    /** What they have not heard yet from the artist they play most; [TopPick.title] is the artist. */
+    DEEP_CUTS,
+
+    /** What they played this same week a year ago; [TopPick.title] is that year. */
+    ONE_YEAR_AGO,
     ;
 
     /** Whether this card is one of the generated lists: a page of songs, not a station that starts on a tap. */
-    val isGeneratedList: Boolean get() = this == IN_LOOP || this == GENRE_MIX || this == NEW_FOR_YOU || this == BECAUSE_YOU_LIKE
+    val isGeneratedList: Boolean get() = ordinal >= IN_LOOP.ordinal
 }
 
 /**

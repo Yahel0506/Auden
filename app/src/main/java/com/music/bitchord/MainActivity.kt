@@ -2101,6 +2101,10 @@ private fun BitChordApp(
             TopPickKind.IN_LOOP -> context.getString(R.string.mix_in_loop)
             TopPickKind.GENRE_MIX -> context.getString(R.string.mix_genre, pick.title)
             TopPickKind.NEW_FOR_YOU -> context.getString(R.string.mix_new)
+            TopPickKind.REDISCOVER -> context.getString(R.string.mix_rediscover)
+            TopPickKind.LIKES_MIX -> context.getString(R.string.mix_likes)
+            TopPickKind.DEEP_CUTS -> context.getString(R.string.mix_deep_cuts, pick.title)
+            TopPickKind.ONE_YEAR_AGO -> context.getString(R.string.mix_one_year_ago)
             else -> context.getString(R.string.mix_because, pick.title)
         }
     }
@@ -7760,7 +7764,9 @@ private fun AppDestination.isPushedFolder(folder: String?): Boolean =
 private fun String?.isDeviceFolder(): Boolean =
     this != null && startsWith("local:") &&
         !startsWith(Downloads.PLAYLIST_PREFIX) && !startsWith(LocalGroups.PREFIX) &&
-        !startsWith(OfflinePlaylists.PREFIX)
+        !startsWith(OfflinePlaylists.PREFIX) &&
+        // A list made each day is a list, not a folder to sort into songs, artists and albums.
+        !startsWith(dev.auden.home.GeneratedMixes.PAGE_PREFIX)
 
 /**
  * Whether [videoId] is the track playing, and is known to be playing YouTube's

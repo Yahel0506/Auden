@@ -2057,4 +2057,8 @@
     <string name="mix_genre">%1$s Mix</string>
     <string name="mix_new">New music for you</string>
     <string name="mix_because">Because you like %1$s</string>
+    <string name="mix_rediscover">Rediscover</string>
+    <string name="mix_likes">Your Likes Mix</string>
+    <string name="mix_deep_cuts">Deep cuts: %1$s</string>
+    <string name="mix_one_year_ago">One year ago</string>
 </resources>

@@ -2171,4 +2171,8 @@
     <string name="mix_genre">Mix de %1$s</string>
     <string name="mix_new">Música nueva para ti</string>
     <string name="mix_because">Porque te gusta %1$s</string>
+    <string name="mix_rediscover">Redescubre</string>
+    <string name="mix_likes">Mix de tus Me gusta</string>
+    <string name="mix_deep_cuts">A fondo: %1$s</string>
+    <string name="mix_one_year_ago">Hace un año</string>
 </resources>

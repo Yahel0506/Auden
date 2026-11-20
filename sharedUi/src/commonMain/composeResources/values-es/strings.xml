@@ -231,12 +231,11 @@
     <string name="library_my_lists">Mis playlists</string>
     <string name="library_recents">Recientes</string>
     <string name="library_search">Buscar</string>
-    <string name="top_pick_updated_daily">Se actualiza a diario</string>
     <string name="top_pick_in_loop">En loop</string>
-    <string name="top_pick_in_loop_sub">Tus 30 canciones más repetidas</string>
+    <string name="top_pick_in_loop_sub">Las que no puedes dejar de poner</string>
     <string name="top_pick_genre_mix">Mix de %1$s</string>
     <string name="top_pick_new_for_you">Música nueva para ti</string>
-    <string name="top_pick_new_for_you_sub">Nada que hayas escuchado aún</string>
+    <string name="top_pick_new_for_you_sub">Tu próxima canción favorita está aquí</string>
     <string name="top_pick_because">Porque te gusta %1$s</string>
     <string name="top_pick_play">Reproducir</string>
     <string name="dj_personal_title">Tu propio DJ personal</string>
@@ -247,4 +246,13 @@
     <string name="dj_line_5">Dale play cuando quieras</string>
     <string name="dj_line_6">Yo me encargo del resto</string>
     <string name="mix_badge_new">Nuevo</string>
+    <string name="top_pick_rediscover">Redescubre</string>
+    <string name="top_pick_rediscover_sub">Las que te encantaban y dejaste de oír</string>
+    <string name="top_pick_likes_mix">Mix de tus Me gusta</string>
+    <string name="top_pick_likes_mix_sub">Todo lo que te gusta, recién mezclado</string>
+    <string name="top_pick_deep_cuts">A fondo: %1$s</string>
+    <string name="top_pick_deep_cuts_sub">Lo que aún no has oído de este artista</string>
+    <string name="top_pick_one_year_ago">Hace un año</string>
+    <string name="top_pick_one_year_ago_sub">Lo que sonaba esta semana en %1$s</string>
+    <string name="top_pick_made_for_you">Hecho para ti</string>
 </resources>

@@ -311,12 +311,11 @@
     <string name="library_my_lists">My lists</string>
     <string name="library_recents">Recents</string>
     <string name="library_search">Search</string>
-    <string name="top_pick_updated_daily">Updated daily</string>
     <string name="top_pick_in_loop">In loop</string>
-    <string name="top_pick_in_loop_sub">Your 30 most repeated songs</string>
+    <string name="top_pick_in_loop_sub">The ones you can’t stop playing</string>
     <string name="top_pick_genre_mix">%1$s Mix</string>
     <string name="top_pick_new_for_you">New music for you</string>
-    <string name="top_pick_new_for_you_sub">Nothing you have played yet</string>
+    <string name="top_pick_new_for_you_sub">Your next favourite song is in here</string>
     <string name="top_pick_because">Because you like %1$s</string>
     <string name="top_pick_play">Play</string>
     <string name="dj_personal_title">Your own personal DJ</string>
@@ -327,4 +326,12 @@
     <string name="dj_line_5">Hit play whenever you like</string>
     <string name="dj_line_6">I’ll take care of the rest</string>
     <string name="mix_badge_new">New</string>
+    <string name="top_pick_rediscover">Rediscover</string>
+    <string name="top_pick_rediscover_sub">Old favourites you stopped playing</string>
+    <string name="top_pick_likes_mix">Your Likes Mix</string>
+    <string name="top_pick_likes_mix_sub">Everything you love, shuffled fresh</string>
+    <string name="top_pick_deep_cuts">Deep cuts: %1$s</string>
+    <string name="top_pick_deep_cuts_sub">What you haven’t heard from them yet</string>
+    <string name="top_pick_one_year_ago">One year ago</string>
+    <string name="top_pick_one_year_ago_sub">What you played this week in %1$s</string>
 </resources>

@@ -271,24 +271,44 @@ private fun cardText(pick: TopPick, listenerName: String?): CardText {
             subtitle = "",
         )
         TopPickKind.IN_LOOP -> CardText(
-            eyebrow = stringResource(Res.string.top_pick_updated_daily),
+            eyebrow = stringResource(Res.string.top_pick_made_for_you),
             title = stringResource(Res.string.top_pick_in_loop),
             subtitle = stringResource(Res.string.top_pick_in_loop_sub),
         )
         TopPickKind.GENRE_MIX -> CardText(
-            eyebrow = stringResource(Res.string.top_pick_updated_daily),
+            eyebrow = stringResource(Res.string.top_pick_made_for_you),
             title = stringResource(Res.string.top_pick_genre_mix, pick.title),
             subtitle = pick.subtitle,
         )
         TopPickKind.NEW_FOR_YOU -> CardText(
-            eyebrow = stringResource(Res.string.top_pick_updated_daily),
+            eyebrow = stringResource(Res.string.top_pick_made_for_you),
             title = stringResource(Res.string.top_pick_new_for_you),
             subtitle = stringResource(Res.string.top_pick_new_for_you_sub),
         )
         TopPickKind.BECAUSE_YOU_LIKE -> CardText(
-            eyebrow = stringResource(Res.string.top_pick_updated_daily),
+            eyebrow = stringResource(Res.string.top_pick_made_for_you),
             title = stringResource(Res.string.top_pick_because, pick.title),
             subtitle = pick.subtitle,
+        )
+        TopPickKind.REDISCOVER -> CardText(
+            eyebrow = stringResource(Res.string.top_pick_made_for_you),
+            title = stringResource(Res.string.top_pick_rediscover),
+            subtitle = stringResource(Res.string.top_pick_rediscover_sub),
+        )
+        TopPickKind.LIKES_MIX -> CardText(
+            eyebrow = stringResource(Res.string.top_pick_made_for_you),
+            title = stringResource(Res.string.top_pick_likes_mix),
+            subtitle = stringResource(Res.string.top_pick_likes_mix_sub),
+        )
+        TopPickKind.DEEP_CUTS -> CardText(
+            eyebrow = stringResource(Res.string.top_pick_made_for_you),
+            title = stringResource(Res.string.top_pick_deep_cuts, pick.title),
+            subtitle = stringResource(Res.string.top_pick_deep_cuts_sub),
+        )
+        TopPickKind.ONE_YEAR_AGO -> CardText(
+            eyebrow = stringResource(Res.string.top_pick_made_for_you),
+            title = stringResource(Res.string.top_pick_one_year_ago),
+            subtitle = stringResource(Res.string.top_pick_one_year_ago_sub, pick.title),
         )
     }
 }
@@ -353,7 +373,8 @@ private fun TopPickCard(
                 eyebrowColor = PhotoEyebrow
                 branded = false
             }
-            TopPickKind.IN_LOOP, TopPickKind.GENRE_MIX, TopPickKind.NEW_FOR_YOU, TopPickKind.BECAUSE_YOU_LIKE -> {
+            TopPickKind.IN_LOOP, TopPickKind.GENRE_MIX, TopPickKind.NEW_FOR_YOU, TopPickKind.BECAUSE_YOU_LIKE,
+            TopPickKind.REDISCOVER, TopPickKind.LIKES_MIX, TopPickKind.DEEP_CUTS, TopPickKind.ONE_YEAR_AGO -> {
                 MixCoverArt(pick.kind, pick.images, Modifier.fillMaxSize(), label = pick.title)
                 eyebrowColor = pick.kind.mixEyebrow()
                 branded = true

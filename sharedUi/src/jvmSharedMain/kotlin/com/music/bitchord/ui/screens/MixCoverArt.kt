@@ -1,5 +1,7 @@
 package com.music.bitchord.ui.screens
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -7,27 +9,24 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorMatrix
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -53,21 +52,20 @@ import kotlin.math.floor
 import kotlin.math.sin
 
 /**
- * The colours one of the generated lists wears: its cover's backdrop, the accent its marks are drawn in, the
- * eyebrow on its card, and — through [top] and [accent] — the tint of the page it opens, as every list's page is
- * tinted by its cover.
+ * The colours one of the generated lists wears: the two of its cover's gradient, which also tint the page it opens
+ * (as every list's page is tinted by its cover), and the eyebrow on its card.
  */
 data class MixStyle(val top: Color, val bottom: Color, val accent: Color, val eyebrow: Color)
 
 fun TopPickKind.mixStyle(): MixStyle = when (this) {
-    // Embers: a record spinning on a warm dark.
-    TopPickKind.IN_LOOP -> MixStyle(Color(0xFF1C0904), Color(0xFF9A2E0A), Color(0xFFFF7A2F), Color(0xFFFFD2B5))
-    // Ink and neon teal: a poster.
-    TopPickKind.GENRE_MIX -> MixStyle(Color(0xFF031A26), Color(0xFF0B5C70), Color(0xFF5EEAD4), Color(0xFFB9FFF2))
-    // Midnight violet with an electric lime sticker.
-    TopPickKind.NEW_FOR_YOU -> MixStyle(Color(0xFF0E0524), Color(0xFF43178C), Color(0xFFD7FF5E), Color(0xFFE6D6FF))
-    // Deep rose: a song and its echoes.
-    else -> MixStyle(Color(0xFF22040F), Color(0xFFA3154E), Color(0xFFFF8FBF), Color(0xFFFFD1E2))
+    TopPickKind.IN_LOOP -> MixStyle(Color(0xFFFF4F6D), Color(0xFFFFB36B), Color(0xFFFF4F6D), Color(0xFFFFE6D9))
+    TopPickKind.NEW_FOR_YOU -> MixStyle(Color(0xFF7B2FF7), Color(0xFFFF5FA8), Color(0xFFD9FF4A), Color(0xFFF2E6FF))
+    TopPickKind.LIKES_MIX -> MixStyle(Color(0xFFFF1F4B), Color(0xFFFF8F7A), Color(0xFFFF1F4B), Color(0xFFFFE1E1))
+    TopPickKind.BECAUSE_YOU_LIKE -> MixStyle(Color(0xFF2F80FF), Color(0xFF2FD3FF), Color(0xFF2F80FF), Color(0xFFDDF2FF))
+    TopPickKind.GENRE_MIX -> MixStyle(Color(0xFF0FA37F), Color(0xFF5BE38C), Color(0xFF0FA37F), Color(0xFFDDFFEC))
+    TopPickKind.DEEP_CUTS -> MixStyle(Color(0xFF1F8FD6), Color(0xFF7FD8F2), Color(0xFF1F8FD6), Color(0xFFE0F6FF))
+    TopPickKind.REDISCOVER -> MixStyle(Color(0xFFFF8A00), Color(0xFFFFD43B), Color(0xFFFF8A00), Color(0xFFFFF1CC))
+    else -> MixStyle(Color(0xFF9B7BE8), Color(0xFFF7A6D8), Color(0xFF9B7BE8), Color(0xFFF6EAFF))
 }
 
 /** The small line above a generated list's title: its colour, matched to its cover. */
@@ -79,20 +77,28 @@ fun mixKindOf(pageId: String?): TopPickKind? = when (pageId) {
     "local:mix:genre" -> TopPickKind.GENRE_MIX
     "local:mix:new" -> TopPickKind.NEW_FOR_YOU
     "local:mix:because" -> TopPickKind.BECAUSE_YOU_LIKE
+    "local:mix:likes" -> TopPickKind.LIKES_MIX
+    "local:mix:rediscover" -> TopPickKind.REDISCOVER
+    "local:mix:deep" -> TopPickKind.DEEP_CUTS
+    "local:mix:year" -> TopPickKind.ONE_YEAR_AGO
     else -> null
 }
 
 /**
- * The cover of one of the lists Auden makes each day, each with an idea of its own and always moving:
+ * The cover of one of the lists Auden makes each day. One bright gradient, one idea, slow movement — nothing else:
  *
- * - **In loop**: a record spinning with the most repeated song on its label, a loop arrow orbiting it.
- * - **Genre mix**: a poster — the genre in heavy type running in rows, the artists in it in duotone.
- * - **New music**: a fanned deck of new sleeves dealing itself, a "new" sticker turning on top.
- * - **Because you like**: the song, its echoes widening out, songs like it circling round.
+ * - **In loop**: the most repeated song in a circle, a loop arrow turning round it.
+ * - **New music**: a fanned deck of new sleeves dealing itself, a "new" sticker on top.
+ * - **Your likes**: a heart with a liked song in it, beating.
+ * - **Because you like**: the song, with its sleeve's echoes drifting behind it.
+ * - **Genre mix**: the genre in big type running in rows, two of its artists over it.
+ * - **Deep cuts**: the artist, close and slowly closer.
+ * - **Rediscover**: four old favourites in a grid, one changing at a time.
+ * - **One year ago**: the year in big type, three sleeves of it pinned under it.
  *
- * The same cover on the big card on Home and at the head of the list's page, so opening it changes nothing of what it
- * looks like. With [captionSpace] (the card) it keeps to the upper part and darkens the foot for the caption; without
- * it (the page) it is centred on the whole square. [label] is what the cover may write: the genre's name.
+ * The same cover on the big card on Home and at the head of the list's page. With [captionSpace] (the card) it keeps
+ * to the upper part and shades the foot for the caption; without it (the page) it fills the square. [label] is what
+ * some covers write: the genre, the year.
  */
 @Composable
 fun MixCoverArt(
@@ -105,288 +111,151 @@ fun MixCoverArt(
 ) {
     val style = kind.mixStyle()
     val clock = rememberDjClock(motion)
-    Box(modifier.background(Brush.verticalGradient(listOf(style.top, style.bottom)))) {
+    Box(modifier.background(Brush.linearGradient(listOf(style.top, style.bottom)))) {
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            // The stage the art keeps to: the upper part of a card, the whole square of a page.
-            val stage = Stage(
-                width = maxWidth,
-                height = if (captionSpace) maxHeight * 0.64f else maxHeight,
-            )
+            val stage = Stage(maxWidth, if (captionSpace) maxHeight * 0.66f else maxHeight)
             when (kind) {
-                TopPickKind.IN_LOOP -> LoopArt(images, style, stage, clock)
-                TopPickKind.GENRE_MIX -> GenreArt(images, label, style, stage, clock)
-                TopPickKind.NEW_FOR_YOU -> FreshArt(images, style, stage, clock)
-                else -> EchoArt(images, style, stage, clock)
+                TopPickKind.IN_LOOP -> LoopArt(images, stage, clock)
+                TopPickKind.NEW_FOR_YOU -> DeckArt(images, style, stage, clock)
+                TopPickKind.LIKES_MIX -> HeartArt(images, stage, clock)
+                TopPickKind.BECAUSE_YOU_LIKE -> EchoArt(images, stage, clock)
+                TopPickKind.GENRE_MIX -> GenreArt(images, label, stage, clock)
+                TopPickKind.DEEP_CUTS -> ArtistArt(images, stage, clock)
+                TopPickKind.REDISCOVER -> GridArt(images, stage, clock)
+                else -> YearArt(images, label, stage, clock)
             }
         }
         if (captionSpace) {
             Box(
                 Modifier
                     .matchParentSize()
-                    .background(Brush.verticalGradient(0.52f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.62f))),
+                    .background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.42f))),
             )
         }
     }
 }
 
-private class Stage(val width: Dp, val height: Dp)
+private class Stage(val width: Dp, val height: Dp) {
+    val short: Dp get() = minOf(width, height)
+}
 
-/** A picture in grey with the colour [tint] laid over it: one cover in the list's own two tones. */
-private fun Modifier.duotone(tint: Color): Modifier = this
-    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-    .drawWithContent {
-        drawContent()
-        drawRect(tint, blendMode = BlendMode.Color)
-    }
+/** The clock's step every [period] seconds, read so the composable recomposes once a step and not every frame. */
+@Composable
+private fun rememberStep(clock: State<Float>, period: Float): State<Int> =
+    remember(period) { derivedStateOf { floor(clock.value / period).toInt() } }
 
-private val Greyscale = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+private val Sleeve = RoundedCornerShape(14)
 
-// ---- In loop: the record ------------------------------------------------------------------------------------
+// ---- In loop ------------------------------------------------------------------------------------------------
 
 @Composable
-private fun LoopArt(images: List<String>, style: MixStyle, stage: Stage, clock: State<Float>) {
-    val disc = minOf(stage.width * 0.66f, stage.height * 0.80f)
+private fun LoopArt(images: List<String>, stage: Stage, clock: State<Float>) {
+    val cover = stage.short * 0.50f
+    val ring = stage.short * 0.78f
     val cx = stage.width / 2
     val cy = stage.height * 0.52f
-    // A warm glow under the record.
-    Canvas(Modifier.fillMaxSize()) {
-        drawCircle(
-            Brush.radialGradient(listOf(style.accent.copy(alpha = 0.55f), Color.Transparent), Offset(cx.toPx(), cy.toPx()), disc.toPx() * 0.9f),
-            radius = disc.toPx() * 0.9f,
-            center = Offset(cx.toPx(), cy.toPx()),
-        )
-    }
-    // The orbiting loop: an arc that brightens into an arrowhead, turning the other way.
-    val orbit = disc * 1.26f
     Canvas(
         Modifier
-            .offset(cx - orbit / 2, cy - orbit / 2)
-            .size(orbit)
-            .graphicsLayer { rotationZ = -(clock.value * 34f) % 360f },
+            .offset(cx - ring / 2, cy - ring / 2)
+            .size(ring)
+            .graphicsLayer { rotationZ = (clock.value * 30f) % 360f },
     ) {
-        val stroke = size.width * 0.028f
-        val inset = stroke * 1.6f
-        val arcSize = Size(size.width - inset * 2, size.height - inset * 2)
-        drawArc(
-            brush = Brush.sweepGradient(listOf(Color.Transparent, style.accent.copy(alpha = 0.35f), style.accent), center),
-            startAngle = 0f,
-            sweepAngle = 300f,
-            useCenter = false,
-            topLeft = Offset(inset, inset),
-            size = arcSize,
-            style = Stroke(stroke, cap = StrokeCap.Round),
-        )
-        val r = arcSize.width / 2
-        val a = 300f * (PI / 180f).toFloat()
-        val tip = Offset(center.x + r * cos(a), center.y + r * sin(a))
-        // The arrowhead, pointing along the arc.
-        rotate(300f + 90f, tip) {
-            val h = stroke * 2.8f
+        val stroke = size.width * 0.06f
+        val inset = stroke / 2 + stroke * 0.6f
+        val arc = Size(size.width - inset * 2, size.height - inset * 2)
+        drawArc(Color.White, -90f, 290f, false, Offset(inset, inset), arc, style = Stroke(stroke, cap = StrokeCap.Round))
+        // The arrowhead at the end of the arc, pointing on round it.
+        val r = arc.width / 2
+        val end = (-90f + 290f) * (PI / 180f).toFloat()
+        val tip = Offset(center.x + r * cos(end), center.y + r * sin(end))
+        rotate(-90f + 290f + 90f, tip) {
+            val h = stroke * 1.25f
             drawPath(
                 Path().apply {
-                    moveTo(tip.x + h * 0.9f, tip.y)
-                    lineTo(tip.x - h * 0.55f, tip.y - h * 0.75f)
-                    lineTo(tip.x - h * 0.55f, tip.y + h * 0.75f)
+                    moveTo(tip.x + h, tip.y)
+                    lineTo(tip.x - h * 0.4f, tip.y - h)
+                    lineTo(tip.x - h * 0.4f, tip.y + h)
                     close()
                 },
-                style.accent,
+                Color.White,
             )
         }
     }
-    // The record, turning.
-    Box(
-        Modifier
-            .offset(cx - disc / 2, cy - disc / 2)
-            .size(disc)
-            .shadow(18.dp, CircleShape)
-            .graphicsLayer { rotationZ = (clock.value * 42f) % 360f },
-    ) {
-        Canvas(Modifier.fillMaxSize()) {
-            val r = size.minDimension / 2
-            drawCircle(Color(0xFF0C0B0D))
-            for (i in 0..22) {
-                drawCircle(
-                    Color.White.copy(alpha = if (i % 4 == 0) 0.09f else 0.04f),
-                    radius = r * (0.40f + i * 0.026f),
-                    style = Stroke(0.8.dp.toPx()),
-                )
-            }
-            // The light on the vinyl, two soft wedges.
-            drawCircle(
-                Brush.sweepGradient(
-                    listOf(
-                        Color.Transparent, Color.White.copy(alpha = 0.16f), Color.Transparent, Color.Transparent,
-                        Color.White.copy(alpha = 0.10f), Color.Transparent, Color.Transparent,
-                    ),
-                ),
-                radius = r,
-            )
-        }
-        AsyncImage(
-            model = images.firstOrNull(),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(disc * 0.40f)
-                .clip(CircleShape)
-                .background(style.accent),
-        )
-        Box(
-            Modifier
-                .align(Alignment.Center)
-                .size(disc * 0.045f)
-                .clip(CircleShape)
-                .background(Color(0xFF0C0B0D)),
-        )
-    }
+    AsyncImage(
+        model = images.firstOrNull(),
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier
+            .offset(cx - cover / 2, cy - cover / 2)
+            .size(cover)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.25f)),
+    )
 }
 
-// ---- Genre mix: the poster ----------------------------------------------------------------------------------
+// ---- New music ----------------------------------------------------------------------------------------------
 
 @Composable
-private fun GenreArt(images: List<String>, label: String, style: MixStyle, stage: Stage, clock: State<Float>) {
-    val measurer = rememberTextMeasurer()
-    val word = label.ifBlank { "MIX" }.uppercase()
-    val rows = 5
-    val rowHeight = stage.height / rows
-    val type = TextStyle(
-        fontSize = (rowHeight.value * 0.82f).sp,
-        fontWeight = FontWeight.Black,
-        letterSpacing = (-0.5).sp,
-    )
-    val run = remember(word, type) { measurer.measure("$word · ", type) }
-    // The genre, running in rows, each its own way: the middle one solid in the accent, the rest drawn in outline.
-    Canvas(Modifier.fillMaxSize()) {
-        val runWidth = run.size.width.toFloat().coerceAtLeast(1f)
-        for (row in 0 until rows) {
-            val dir = if (row % 2 == 0) 1f else -1f
-            val speed = 22f + row * 6f
-            val shift = ((clock.value * speed * dir) % runWidth + runWidth) % runWidth
-            val y = row * rowHeight.toPx() + (rowHeight.toPx() - run.size.height) / 2
-            var x = -shift
-            while (x < size.width) {
-                if (row == rows / 2) {
-                    drawText(run, color = style.accent, topLeft = Offset(x, y))
-                } else {
-                    drawText(run, color = Color.White.copy(alpha = 0.22f), topLeft = Offset(x, y), drawStyle = Stroke(1.2.dp.toPx()))
-                }
-                x += runWidth
-            }
-        }
-    }
-    // The artists, in duotone, floating over it.
-    val slots = listOf(
-        Triple(0.30f, 0.40f, 0.42f),
-        Triple(0.72f, 0.30f, 0.30f),
-        Triple(0.70f, 0.70f, 0.26f),
-    )
-    slots.zip(images.take(3)).forEachIndexed { i, (slot, url) ->
-        val (fx, fy, fd) = slot
-        val d = minOf(stage.width, stage.height) * fd * 1.15f
-        Box(
-            Modifier
-                .offset(stage.width * fx - d / 2, stage.height * fy - d / 2)
-                .size(d)
-                .graphicsLayer { translationY = sin(clock.value * 0.9f + i * 2.1f) * 5.dp.toPx() }
-                .shadow(14.dp, CircleShape)
-                .clip(CircleShape)
-                .border(2.dp, Color.White.copy(alpha = 0.85f), CircleShape),
-        ) {
-            AsyncImage(
-                model = url,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                colorFilter = Greyscale,
-                modifier = Modifier.fillMaxSize().duotone(style.accent),
-            )
-        }
-    }
-}
-
-// ---- New music: the deck ------------------------------------------------------------------------------------
-
-@Composable
-private fun FreshArt(images: List<String>, style: MixStyle, stage: Stage, clock: State<Float>) {
+private fun DeckArt(images: List<String>, style: MixStyle, stage: Stage, clock: State<Float>) {
     val badge = stringResource(Res.string.mix_badge_new)
     val measurer = rememberTextMeasurer()
-    // Soft rays turning slowly behind the deck.
-    Canvas(Modifier.fillMaxSize()) {
-        val c = Offset(size.width / 2, stage.height.toPx() * 0.5f)
-        rotate(clock.value * 7f, c) {
-            drawCircle(
-                Brush.sweepGradient(
-                    listOf(
-                        Color.Transparent, Color.White.copy(alpha = 0.09f), Color.Transparent,
-                        Color.White.copy(alpha = 0.06f), Color.Transparent, Color.White.copy(alpha = 0.08f), Color.Transparent,
-                    ),
-                    c,
-                ),
-                radius = size.maxDimension,
-                center = c,
+    val card = stage.short * 0.52f
+    val cx = stage.width / 2
+    val cy = stage.height * 0.54f
+    val count = images.size.coerceAtLeast(1)
+    val period = 3.4f
+    val step by rememberStep(clock, period)
+    // Back to front: back right, back left, front. Every period the front sleeve slides off and the others move up.
+    for (slot in 2 downTo 0) {
+        Box(
+            Modifier
+                .offset(cx - card / 2, cy - card / 2)
+                .size(card)
+                .graphicsLayer {
+                    val phase = clock.value / period
+                    val frac = phase - floor(phase)
+                    val f = smooth((frac - 0.62f) / 0.38f)
+                    val rotations = floatArrayOf(0f, -10f, 10f)
+                    val xs = floatArrayOf(0f, -0.22f, 0.22f)
+                    val scales = floatArrayOf(1f, 0.86f, 0.86f)
+                    if (slot == 0) {
+                        translationX = f * card.toPx() * 1.2f
+                        rotationZ = f * 14f
+                        alpha = 1f - f
+                    } else {
+                        if (slot == 2) alpha = smooth(frac / 0.25f)
+                        val to = slot - 1
+                        rotationZ = lerp(rotations[slot], rotations[to], f)
+                        translationX = lerp(xs[slot], xs[to], f) * card.toPx()
+                        val s = lerp(scales[slot], scales[to], f)
+                        scaleX = s
+                        scaleY = s
+                    }
+                }
+                .shadow(6.dp, Sleeve)
+                .clip(Sleeve)
+                .background(Color.White.copy(alpha = 0.3f)),
+        ) {
+            AsyncImage(
+                model = images.getOrNull((step + slot) % count),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
             )
         }
-        drawCircle(
-            Brush.radialGradient(listOf(style.bottom.copy(alpha = 0.9f), Color.Transparent), c, stage.width.toPx() * 0.55f),
-            radius = stage.width.toPx() * 0.55f,
-            center = c,
-        )
     }
-    val card = minOf(stage.width * 0.50f, stage.height * 0.66f)
-    val cx = stage.width / 2
-    val cy = stage.height * 0.52f
-    val count = images.size.coerceAtLeast(1)
-    // Every few seconds the front sleeve slides off and goes to the back of the deck.
-    val period = 3.4f
-    Box(Modifier.fillMaxSize()) {
-        // Back to front: slot 2 (back right), slot 1 (back left), slot 0 (front).
-        for (slot in 2 downTo 0) {
-            Box(
-                Modifier
-                    .offset(cx - card / 2, cy - card / 2)
-                    .size(card)
-                    .graphicsLayer {
-                        val phase = clock.value / period
-                        val f = smooth(((phase - floor(phase)) - 0.62f) / 0.38f)
-                        val rotations = floatArrayOf(0f, -11f, 11f)
-                        val xs = floatArrayOf(0f, -0.20f, 0.20f)
-                        val scales = floatArrayOf(1f, 0.84f, 0.84f)
-                        // Where this card is going: the front goes out to the right, the others move one place up.
-                        if (slot == 0) {
-                            translationX = f * card.toPx() * 1.1f
-                            rotationZ = f * 16f
-                            alpha = 1f - f
-                        } else {
-                            // The card that joins the back of the deck fades in rather than appearing.
-                            if (slot == 2) alpha = smooth((phase - floor(phase)) / 0.25f)
-                            val to = slot - 1
-                            rotationZ = lerp(rotations[slot], rotations[to], f)
-                            translationX = lerp(xs[slot], xs[to], f) * card.toPx()
-                            val s = lerp(scales[slot], scales[to], f)
-                            scaleX = s
-                            scaleY = s
-                        }
-                    }
-                    .shadow(16.dp, RoundedCornerShape(12.dp))
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(style.bottom),
-            ) {
-                DeckSleeve(images, clock, period, slot, count)
-            }
-        }
-    }
-    // The sticker, turning on top.
-    val sticker = card * 0.56f
+    // The sticker: a flat scalloped disc, turning slowly.
+    val sticker = card * 0.50f
     Canvas(
         Modifier
-            .offset(cx + card * 0.30f, cy - card * 0.74f)
+            .offset(cx + card * 0.30f, cy - card * 0.78f)
             .size(sticker)
-            .graphicsLayer { rotationZ = (clock.value * 22f) % 360f },
+            .graphicsLayer { rotationZ = (clock.value * 18f) % 360f },
     ) {
         val c = center
         val outer = size.minDimension / 2
-        val inner = outer * 0.84f
-        val points = 16
+        val inner = outer * 0.86f
+        val points = 14
         val path = Path()
         for (i in 0 until points * 2) {
             val r = if (i % 2 == 0) outer else inner
@@ -398,98 +267,239 @@ private fun FreshArt(images: List<String>, style: MixStyle, stage: Stage, clock:
         drawPath(path, style.accent)
         val text = measurer.measure(
             badge.uppercase(),
-            TextStyle(fontSize = (sticker.value * 0.19f).sp, fontWeight = FontWeight.Black, color = Color(0xFF14052E)),
+            TextStyle(fontSize = (sticker.value * 0.20f).sp, fontWeight = FontWeight.Black, color = Color(0xFF1A0B33)),
         )
-        rotate(-18f, c) {
-            drawText(text, topLeft = Offset(c.x - text.size.width / 2, c.y - text.size.height / 2))
+        rotate(-16f, c) { drawText(text, topLeft = Offset(c.x - text.size.width / 2, c.y - text.size.height / 2)) }
+    }
+}
+
+// ---- Your likes ---------------------------------------------------------------------------------------------
+
+private val Heart = GenericShape { size, _ ->
+    val w = size.width
+    val h = size.height
+    moveTo(w / 2, h * 0.92f)
+    cubicTo(w * 0.10f, h * 0.62f, -w * 0.06f, h * 0.26f, w * 0.24f, h * 0.10f)
+    cubicTo(w * 0.38f, h * 0.02f, w * 0.48f, h * 0.10f, w / 2, h * 0.22f)
+    cubicTo(w * 0.52f, h * 0.10f, w * 0.62f, h * 0.02f, w * 0.76f, h * 0.10f)
+    cubicTo(w * 1.06f, h * 0.26f, w * 0.90f, h * 0.62f, w / 2, h * 0.92f)
+    close()
+}
+
+@Composable
+private fun HeartArt(images: List<String>, stage: Stage, clock: State<Float>) {
+    val size = stage.short * 0.70f
+    val cx = stage.width / 2
+    val cy = stage.height * 0.54f
+    val step by rememberStep(clock, 3.2f)
+    Box(
+        Modifier
+            .offset(cx - size / 2, cy - size / 2)
+            .size(size)
+            .graphicsLayer {
+                // A heartbeat: two quick swells, then rest.
+                val t = (clock.value % 1.6f) / 1.6f
+                val beat = (if (t < 0.12f) sin(t / 0.12f * PI.toFloat()) else if (t in 0.2f..0.34f) sin((t - 0.2f) / 0.14f * PI.toFloat()) * 0.6f else 0f)
+                val s = 1f + beat * 0.04f
+                scaleX = s
+                scaleY = s
+            }
+            .clip(Heart)
+            .background(Color.White),
+    ) {
+        if (images.isNotEmpty()) {
+            Crossfade(targetState = step % images.size, animationSpec = tween(900), label = "heart") { index ->
+                AsyncImage(
+                    model = images[index],
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().padding(size * 0.035f).clip(Heart),
+                )
+            }
         }
     }
 }
 
-/** The sleeve in [slot] of the deck: each slot moves one place a period, so its sleeve is the next one round. */
-@Composable
-private fun DeckSleeve(images: List<String>, clock: State<Float>, period: Float, slot: Int, count: Int) {
-    // Recomposed once a period, when the deck moves on, and not on every frame the clock ticks.
-    val step by remember(period) { androidx.compose.runtime.derivedStateOf { floor(clock.value / period).toInt() } }
-    AsyncImage(
-        model = images.getOrNull((step + slot) % count),
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier.fillMaxSize(),
-    )
-}
-
-// ---- Because you like: the echoes ---------------------------------------------------------------------------
+// ---- Because you like ---------------------------------------------------------------------------------------
 
 @Composable
-private fun EchoArt(images: List<String>, style: MixStyle, stage: Stage, clock: State<Float>) {
-    val cover = minOf(stage.width * 0.46f, stage.height * 0.60f)
+private fun EchoArt(images: List<String>, stage: Stage, clock: State<Float>) {
+    val cover = stage.short * 0.54f
     val cx = stage.width / 2
-    val cy = stage.height * 0.52f
-    // The song's colour spread soft behind it.
+    val cy = stage.height * 0.54f
+    // Two pale copies of the sleeve's frame behind it, drifting gently out and back: the songs it brings to mind.
+    for (layer in 2 downTo 1) {
+        Box(
+            Modifier
+                .offset(cx - cover / 2, cy - cover / 2)
+                .size(cover)
+                .graphicsLayer {
+                    val drift = (sin(clock.value * 0.7f + layer) + 1f) / 2f
+                    val d = cover.toPx() * (0.07f + 0.03f * drift) * layer
+                    translationX = d
+                    translationY = -d
+                    alpha = if (layer == 1) 0.45f else 0.22f
+                }
+                .clip(Sleeve)
+                .background(Color.White),
+        )
+    }
     AsyncImage(
         model = images.firstOrNull(),
         contentDescription = null,
         contentScale = ContentScale.Crop,
-        colorFilter = Greyscale,
         modifier = Modifier
-            .fillMaxSize()
-            .graphicsLayer { alpha = 0.28f }
-            .duotone(style.accent),
-    )
-    Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color.Transparent, style.top.copy(alpha = 0.85f)))))
-    // The echoes, widening out of the cover and fading as they go.
-    Canvas(Modifier.fillMaxSize()) {
-        val c = Offset(cx.toPx(), cy.toPx())
-        val base = cover.toPx()
-        for (i in 0 until 3) {
-            val p = ((clock.value / 2.6f) + i / 3f) % 1f
-            val s = base * (1f + p * 0.75f)
-            val corner = s * 0.12f
-            drawRoundRect(
-                color = style.accent.copy(alpha = (1f - p) * 0.7f),
-                topLeft = Offset(c.x - s / 2, c.y - s / 2),
-                size = Size(s, s),
-                cornerRadius = CornerRadius(corner, corner),
-                style = Stroke((2.5f - p * 1.5f).dp.toPx()),
-            )
-        }
-    }
-    // Songs like it, circling.
-    val satellite = cover * 0.32f
-    images.drop(1).take(3).forEachIndexed { i, url ->
-        Box(
-            Modifier
-                .offset(cx - satellite / 2, cy - satellite / 2)
-                .size(satellite)
-                .graphicsLayer {
-                    val a = ((clock.value * 18f) + i * 120f) * (PI / 180f).toFloat()
-                    val r = cover.toPx() * 0.86f
-                    translationX = r * cos(a)
-                    translationY = r * sin(a) * 0.82f
-                }
-                .shadow(10.dp, CircleShape)
-                .clip(CircleShape)
-                .border(1.5.dp, Color.White.copy(alpha = 0.9f), CircleShape),
-        ) {
-            AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-        }
-    }
-    // The song itself.
-    Box(
-        Modifier
             .offset(cx - cover / 2, cy - cover / 2)
             .size(cover)
-            .graphicsLayer {
-                val breath = 1f + sin(clock.value * 1.4f) * 0.015f
-                scaleX = breath
-                scaleY = breath
+            .shadow(6.dp, Sleeve)
+            .clip(Sleeve)
+            .background(Color.White.copy(alpha = 0.3f)),
+    )
+}
+
+// ---- Genre mix ----------------------------------------------------------------------------------------------
+
+@Composable
+private fun GenreArt(images: List<String>, label: String, stage: Stage, clock: State<Float>) {
+    val measurer = rememberTextMeasurer()
+    val word = label.ifBlank { "MIX" }.uppercase()
+    val rows = 3
+    val rowHeight = stage.height / rows
+    val type = TextStyle(fontSize = (rowHeight.value * 0.72f).sp, fontWeight = FontWeight.Black, letterSpacing = (-1).sp)
+    val run = remember(word, rowHeight) { measurer.measure("$word  ", type) }
+    // The genre in rows, the middle one solid, the others in outline, each running its own way.
+    Canvas(Modifier.fillMaxSize()) {
+        val runWidth = run.size.width.toFloat().coerceAtLeast(1f)
+        for (row in 0 until rows) {
+            val dir = if (row % 2 == 0) 1f else -1f
+            val shift = ((clock.value * 18f * dir) % runWidth + runWidth) % runWidth
+            val y = row * rowHeight.toPx() + (rowHeight.toPx() - run.size.height) / 2
+            var x = -shift
+            while (x < size.width) {
+                if (row == 1) {
+                    drawText(run, color = Color.White, topLeft = Offset(x, y))
+                } else {
+                    drawText(run, color = Color.White.copy(alpha = 0.5f), topLeft = Offset(x, y), drawStyle = Stroke(1.6.dp.toPx()))
+                }
+                x += runWidth
             }
-            .shadow(22.dp, RoundedCornerShape(cover * 0.12f))
-            .clip(RoundedCornerShape(cover * 0.12f))
-            .background(style.bottom),
+        }
+    }
+    // Two of its artists over the type.
+    val big = stage.short * 0.40f
+    val small = stage.short * 0.30f
+    listOf(
+        Triple(0.32f, 0.46f, big),
+        Triple(0.70f, 0.60f, small),
+    ).zip(images.take(2)).forEach { (slot, url) ->
+        val (fx, fy, d) = slot
+        AsyncImage(
+            model = url,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .offset(stage.width * fx - d / 2, stage.height * fy - d / 2)
+                .size(d)
+                .clip(CircleShape)
+                .border(3.dp, Color.White, CircleShape),
+        )
+    }
+}
+
+// ---- Deep cuts ----------------------------------------------------------------------------------------------
+
+@Composable
+private fun ArtistArt(images: List<String>, stage: Stage, clock: State<Float>) {
+    val face = stage.short * 0.66f
+    val cx = stage.width / 2
+    val cy = stage.height * 0.53f
+    Box(
+        Modifier
+            .offset(cx - face / 2, cy - face / 2)
+            .size(face)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.25f)),
     ) {
-        AsyncImage(model = images.firstOrNull(), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        // Slowly closer, and back.
+        AsyncImage(
+            model = images.firstOrNull(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    val s = 1.04f + (sin(clock.value * 0.35f) + 1f) * 0.04f
+                    scaleX = s
+                    scaleY = s
+                },
+        )
+    }
+    // A thin white ring a little way off the photo.
+    Canvas(Modifier.offset(cx - face * 0.58f, cy - face * 0.58f).size(face * 1.16f)) {
+        drawCircle(Color.White.copy(alpha = 0.7f), style = Stroke(2.dp.toPx()))
+    }
+}
+
+// ---- Rediscover ---------------------------------------------------------------------------------------------
+
+@Composable
+private fun GridArt(images: List<String>, stage: Stage, clock: State<Float>) {
+    val tile = stage.short * 0.34f
+    val gap = tile * 0.10f
+    val grid = tile * 2 + gap
+    val left = (stage.width - grid) / 2
+    val top = stage.height * 0.53f - grid / 2
+    val step by rememberStep(clock, 2.2f)
+    val count = images.size.coerceAtLeast(1)
+    for (slot in 0 until 4) {
+        // One tile changes each step, going round the grid.
+        val turn = if (step >= slot) (step - slot) / 4 + 1 else 0
+        Box(
+            Modifier
+                .offset(left + (tile + gap) * (slot % 2), top + (tile + gap) * (slot / 2))
+                .size(tile)
+                .clip(Sleeve)
+                .background(Color.White.copy(alpha = 0.3f)),
+        ) {
+            if (images.isNotEmpty()) {
+                Crossfade(targetState = (slot + turn * 4) % count, animationSpec = tween(800), label = "grid") { index ->
+                    AsyncImage(model = images[index], contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                }
+            }
+        }
+    }
+}
+
+// ---- One year ago -------------------------------------------------------------------------------------------
+
+@Composable
+private fun YearArt(images: List<String>, label: String, stage: Stage, clock: State<Float>) {
+    val measurer = rememberTextMeasurer()
+    val year = label.ifBlank { "" }
+    val type = TextStyle(fontSize = (stage.short.value * 0.30f).sp, fontWeight = FontWeight.Black, letterSpacing = (-2).sp, color = Color.White)
+    val text = remember(year, stage.short) { measurer.measure(year, type) }
+    Canvas(Modifier.fillMaxSize()) {
+        drawText(text, topLeft = Offset((size.width - text.size.width) / 2, stage.height.toPx() * 0.10f))
+    }
+    // Three sleeves of that week, pinned under the year like photos.
+    val card = stage.short * 0.32f
+    val rotations = floatArrayOf(-8f, 3f, 9f)
+    images.take(3).forEachIndexed { i, url ->
+        Box(
+            Modifier
+                .offset(stage.width / 2 - card / 2 + card * 0.78f * (i - 1), stage.height * 0.66f - card / 2)
+                .size(card)
+                .graphicsLayer {
+                    rotationZ = rotations[i] + sin(clock.value * 0.8f + i * 1.7f) * 1.5f
+                    translationY = sin(clock.value * 0.6f + i) * 3.dp.toPx()
+                }
+                .shadow(5.dp, RoundedCornerShape(6.dp))
+                .clip(RoundedCornerShape(6.dp))
+                .background(Color.White)
+                .padding(card * 0.05f),
+        ) {
+            AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(3.dp)))
+        }
     }
 }
 

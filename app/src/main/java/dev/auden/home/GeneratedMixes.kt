@@ -2,6 +2,8 @@ package dev.auden.home
 
 import android.content.Context
 import android.util.Log
+import com.music.bitchord.data.AppleArtistGenres
+import com.music.bitchord.data.OfflinePlaylists
 import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.TopPick
@@ -43,6 +45,9 @@ object GeneratedMixes {
 
     /** Fewer songs than this and the list is not worth showing. */
     private const val MIN_SONGS = 6
+    private const val LIKES_SIZE = 50
+    private const val REDISCOVER_AFTER_DAYS = 45L
+    private const val DAY_MS = 86_400_000L
 
     data class Mix(
         val id: String,
@@ -62,7 +67,10 @@ object GeneratedMixes {
     private val _mixes = MutableStateFlow<List<Mix>>(emptyList())
     val mixes: StateFlow<List<Mix>> = _mixes.asStateFlow()
 
-    private val order = listOf(TopPickKind.IN_LOOP, TopPickKind.GENRE_MIX, TopPickKind.NEW_FOR_YOU, TopPickKind.BECAUSE_YOU_LIKE)
+    private val order = listOf(
+        TopPickKind.IN_LOOP, TopPickKind.NEW_FOR_YOU, TopPickKind.LIKES_MIX, TopPickKind.BECAUSE_YOU_LIKE,
+        TopPickKind.GENRE_MIX, TopPickKind.DEEP_CUTS, TopPickKind.REDISCOVER, TopPickKind.ONE_YEAR_AGO,
+    )
     private val mutex = Mutex()
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -107,18 +115,23 @@ object GeneratedMixes {
         // Changes with the day, so a list picked among a few candidates is another one tomorrow.
         val daySeed = today.hashCode().toLong().let { if (it < 0) -it else it }
         val out = mutableListOf<Mix>()
+        val heardIds = heard.mapTo(HashSet()) { it.id }
         if (TopPickKind.IN_LOOP in wanted) inLoop(ranked, ::recent, today)?.let(out::add)
+        if (TopPickKind.LIKES_MIX in wanted) likesMix(daySeed, today)?.let(out::add)
+        if (TopPickKind.REDISCOVER in wanted) rediscover(heard, daySeed, today)?.let(out::add)
+        if (TopPickKind.ONE_YEAR_AGO in wanted) oneYearAgo(heard, today)?.let(out::add)
         if (TopPickKind.GENRE_MIX in wanted) {
             val tagged = runCatching { AudenDb.get(app).tracks().all() }.getOrDefault(emptyList())
-            genreMix(tagged, heard, daySeed, today)?.let(out::add)
+            genreMix(app, tagged, heard, daySeed, today)?.let(out::add)
         }
-        // Both of these ask YouTube Music's radio for songs like one the listener plays; the seeds are streamed songs.
+        // These ask YouTube Music, as nobody, for songs like the ones the listener plays; the seeds are streamed songs.
         val seeds = ranked.filter { isStream(it.id) && it.plays >= 2 }.take(8)
         val becauseSeed = seeds.getOrNull((daySeed % minOf(3, seeds.size).coerceAtLeast(1)).toInt())
         if (TopPickKind.BECAUSE_YOU_LIKE in wanted && becauseSeed != null) because(becauseSeed, today)?.let(out::add)
         if (TopPickKind.NEW_FOR_YOU in wanted) {
-            newForYou(seeds.filter { it.id != becauseSeed?.id }, heard.mapTo(HashSet()) { it.id }, daySeed, today)?.let(out::add)
+            newForYou(seeds.filter { it.id != becauseSeed?.id }, heardIds, daySeed, today)?.let(out::add)
         }
+        if (TopPickKind.DEEP_CUTS in wanted) deepCuts(ranked, heardIds, daySeed, today)?.let(out::add)
         out
     }
 
@@ -131,16 +144,23 @@ object GeneratedMixes {
         return Mix("loop", TopPickKind.IN_LOOP, "", "", covers(songs), songs, today)
     }
 
-    private fun genreMix(tagged: List<dev.auden.library.db.TrackEntity>, heard: List<TrackEntry>, daySeed: Long, today: String): Mix? {
+    private suspend fun genreMix(app: Context, tagged: List<dev.auden.library.db.TrackEntity>, heard: List<TrackEntry>, daySeed: Long, today: String): Mix? {
         val byArtist = heard.groupBy { it.artist.trim() }.filterKeys { it.isNotBlank() }
         val top = byArtist.entries.sortedByDescending { (_, tracks) -> tracks.sumOf { it.plays } }.take(16)
         // Genres from Last.fm when this build has its key, and from the tags of files in the library besides.
         val library = tagged.filter { !it.genre.isNullOrBlank() }.groupBy({ it.artist.trim().lowercase(Locale.ROOT) }, { it.genre!!.lowercase(Locale.ROOT) })
+        seedAppleGenres(app)
         val genresOf = top.associate { (artist, _) ->
             ArtistFacts.fetchForDj(artist)
-            artist to (ArtistFacts.genresForDj(artist) + library[artist.lowercase(Locale.ROOT)].orEmpty())
+            val lastFm = ArtistFacts.genresForDj(artist)
+            val files = library[artist.lowercase(Locale.ROOT)].orEmpty()
+            // Apple's catalogue files every artist under one main genre, with no key: what groups them when neither
+            // Last.fm (a key this build may not have) nor the files' own tags say anything.
+            val apple = if (lastFm.isEmpty() && files.isEmpty()) listOfNotNull(AppleArtistGenres.genreOf(artist)) else emptyList()
+            artist to (lastFm + files + apple)
                 .map { it.trim().lowercase(Locale.ROOT) }.filter { it.isNotBlank() && it !in IGNORED_TAGS }.distinct().take(3)
         }
+        saveAppleGenres(app)
         val weight = HashMap<String, Int>()
         val members = HashMap<String, MutableList<String>>()
         top.forEach { (artist, tracks) ->
@@ -192,6 +212,72 @@ object GeneratedMixes {
         }
         if (songs.size < MIN_SONGS) return null
         return Mix("new", TopPickKind.NEW_FOR_YOU, "", "", covers(songs), songs, today)
+    }
+
+    private fun likesMix(daySeed: Long, today: String): Mix? {
+        val liked = OfflinePlaylists.playlists.value.firstOrNull { it.isLiked }?.songs.orEmpty().filter { it.title.isNotBlank() }
+        if (liked.size < MIN_SONGS) return null
+        // Every like, in another order each day: the list people put on when they just want what they like.
+        val songs = liked.shuffled(Random(daySeed)).take(LIKES_SIZE)
+        return Mix("likes", TopPickKind.LIKES_MIX, "", "", covers(songs), songs, today)
+    }
+
+    private fun rediscover(heard: List<TrackEntry>, daySeed: Long, today: String): Mix? {
+        val since = System.currentTimeMillis() - REDISCOVER_AFTER_DAYS * DAY_MS
+        // Played a lot once, and not for a while; a different handful of them each day.
+        val pool = heard.filter { it.plays >= 4 && it.last in 1 until since }.sortedByDescending { it.plays }.take(SIZE * 2)
+        if (pool.size < MIN_SONGS) return null
+        val songs = pool.shuffled(Random(daySeed)).take(SIZE).map(::toSong)
+        return Mix("rediscover", TopPickKind.REDISCOVER, "", "", covers(songs), songs, today)
+    }
+
+    private fun oneYearAgo(heard: List<TrackEntry>, today: String): Mix? {
+        val then = LocalDate.parse(today).minusYears(1)
+        val from = then.minusDays(7).toString()
+        val to = then.plusDays(7).toString()
+        // What was played the fortnight around this day a year ago, the most played first.
+        val played = heard.map { e -> e to e.days.filterKeys { it in from..to }.values.sumOf { it.plays } }
+            .filter { (_, plays) -> plays > 0 }
+            .sortedByDescending { (_, plays) -> plays }
+            .take(SIZE)
+            .map { (e, _) -> toSong(e) }
+        if (played.size < MIN_SONGS) return null
+        return Mix("year", TopPickKind.ONE_YEAR_AGO, then.year.toString(), "", covers(played), played, today)
+    }
+
+    private suspend fun deepCuts(ranked: List<TrackEntry>, heardIds: Set<String>, daySeed: Long, today: String): Mix? {
+        // The artists played most lately with a page on YouTube Music; one of the first three, a different one daily.
+        val artists = ranked.mapNotNull { e -> e.artistId?.takeIf { it.startsWith("UC") }?.let { it to e.artist } }
+            .distinctBy { it.first }.take(3)
+        if (artists.isEmpty()) return null
+        val (artistId, name) = artists[(daySeed % artists.size).toInt()]
+        val page = YtMusicRepository.artistLanding(artistId).getOrNull() ?: return null
+        val more = page.moreSongsBrowseId?.removePrefix("VL")?.let { YtMusicRepository.playlistAsAudio(it).getOrNull() }.orEmpty()
+        // Their songs the listener has not played yet.
+        val songs = (page.songs + more).filter { it.videoId.isNotBlank() && it.videoId !in heardIds }
+            .distinctBy { it.videoId }.take(SIZE)
+        if (songs.size < MIN_SONGS) return null
+        val artist = page.name?.takeIf { it.isNotBlank() } ?: name
+        val images = (listOfNotNull(page.thumbnailUrl?.takeIf { it.isNotBlank() }) + covers(songs)).distinct().take(4)
+        return Mix("deep", TopPickKind.DEEP_CUTS, artist, "", images, songs, today)
+    }
+
+    // ---- Apple's genres, kept between launches --------------------------------------------------------------------
+
+    private const val GENRES_FILE = "artist_genres.json"
+    @Volatile private var genresSeeded = false
+
+    private fun seedAppleGenres(app: Context) {
+        if (genresSeeded) return
+        genresSeeded = true
+        runCatching {
+            val file = File(app.filesDir, GENRES_FILE)
+            if (file.exists()) AppleArtistGenres.seed(json.decodeFromString<Map<String, String>>(file.readText()))
+        }
+    }
+
+    private fun saveAppleGenres(app: Context) {
+        runCatching { File(app.filesDir, GENRES_FILE).writeText(json.encodeToString(AppleArtistGenres.snapshot())) }
     }
 
     // ---- Helpers -----------------------------------------------------------------------------------------------
