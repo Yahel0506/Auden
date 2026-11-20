@@ -2078,6 +2078,8 @@
     <string name="listen_together_as">Como %1$s</string>
     <string name="listen_together_as_where">Cámbialo en Cuenta e integraciones</string>
     <string name="other_functions">Otras funciones</string>
+    <string name="connections">Conexiones</string>
+    <string name="connected_as">Conectado como %1$s</string>
     <string name="auden_account">Cuenta de Auden</string>
     <string name="account_sheet_account_sub">Información de la cuenta, integraciones y ajustes</string>
     <string name="playback_statistics">Estadísticas de reproducción</string>

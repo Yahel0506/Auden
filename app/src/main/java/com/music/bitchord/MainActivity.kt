@@ -1162,6 +1162,8 @@ private fun BitChordApp(
         }
     }
     val account by viewModel.account.collectAsStateWithLifecycle()
+    // Who is listening is the Auden profile: its photo and name are what the app shows of the account, not a service's.
+    val audenProfile = dev.auden.profile.rememberProfileDisplay()
     val selectedChannelName by viewModel.selectedChannelName.collectAsStateWithLifecycle()
     val googleAccounts by viewModel.googleAccounts.collectAsStateWithLifecycle()
     val activeAccountId by viewModel.activeAccountId.collectAsStateWithLifecycle()
@@ -3016,7 +3018,7 @@ private fun BitChordApp(
         if (!djScreen || djRevealing) NowPlayingScreen(
             song = displayedSong,
             playedBy = playedBy,
-            accountName = account?.name,
+            accountName = audenProfile.name.takeIf { !audenProfile.isPlaceholder },
             windowWidth = windowWidth,
             windowHeight = windowHeight,
             // A canvas under the ⋯ menu holds still. Asked, not passed — see
@@ -4133,7 +4135,7 @@ private fun BitChordApp(
                                 recentlyPlayedLoading = homeRecentlyPlayedLoading && !hideRecents,
                                 topPicks = topPicks,
                                 topPicksLoading = topPicksLoading,
-                                listenerName = account?.name,
+                                listenerName = audenProfile.name.takeIf { !audenProfile.isPlaceholder },
                                 // Neither shelf is drawn without its callback.
                                 onTopPickClick = openTopPick.takeUnless { hideTopPicks },
                                 onTopPickPlay = playMix.takeUnless { hideTopPicks },
@@ -4983,7 +4985,8 @@ private fun BitChordApp(
                             // Nor on a list kept on this device: its pill is for the list's own options.
                             if (!(route == null && detail == null && selectedTab == TAB_LIBRARY) &&
                                 !isReleaseDetail && !isLocalDetail && !stackedOnSheet && !wasStacked) TopBarAccountButton(
-                                account = account,
+                                name = audenProfile.name.takeIf { !audenProfile.isPlaceholder },
+                                photo = audenProfile.photo,
                                 onClick = {
                                     sheetOwnerKey = destinationNow.key
                                     sheetOwnerDepth = navigator.entries.size
@@ -4997,7 +5000,8 @@ private fun BitChordApp(
                         LibraryEditing.mode == LibraryEditMode.NONE && !stackedOnSheet && !wasStacked) {
                         {
                             TopBarAccountButton(
-                                account = account,
+                                name = audenProfile.name.takeIf { !audenProfile.isPlaceholder },
+                                photo = audenProfile.photo,
                                 onClick = {
                                     sheetOwnerKey = destinationNow.key
                                     sheetOwnerDepth = navigator.entries.size
@@ -5872,7 +5876,7 @@ private fun BitChordApp(
                     ) {
                         AudioOutputMenu(
                             song = playerSong,
-                            accountName = account?.name,
+                            accountName = audenProfile.name.takeIf { !audenProfile.isPlaceholder },
                             onParty = { audioOutputMenu.request(AudioOutputAction.PARTY) },
                             onCast = { audioOutputMenu.request(AudioOutputAction.CAST) },
                             onPipeline = { audioOutputMenu.request(AudioOutputAction.PIPELINE) },

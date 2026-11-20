@@ -63,6 +63,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -531,17 +532,20 @@ private fun artworkPageSurface(
 /**
  * The account affordance at the right end of the bar.
  *
- * It is the signed-in Google account's own photo — the same one YouTube Music
- * shows there — and tapping it opens Settings, where the account lives. Signed
- * out, or before the account menu has come back, it falls back to a person
- * glyph on a filled circle so the tap target never disappears.
+ * It is the Auden profile's own photo — not a YouTube Music or Spotify account's —
+ * and tapping it opens the account sheet. Without a photo it falls back to the
+ * profile's initial on a filled circle, or a person glyph while the name is still
+ * the placeholder, so the tap target never disappears.
  *
  * The hairline ring is what keeps a photo with light edges from dissolving into
  * the bar's glass; it is the same one thumbnails elsewhere carry.
  */
 @Composable
 fun TopBarAccountButton(
-    account: Account?,
+    /** The Auden profile's name, for the initial drawn when there is no photo; null while it is still the placeholder. */
+    name: String?,
+    /** The Auden profile's photo: a saved file's path or an https URL. */
+    photo: String?,
     onClick: () -> Unit,
     onSwipeProfile: ((forward: Boolean) -> Boolean)? = null,
     modifier: Modifier = Modifier,
@@ -569,11 +573,12 @@ fun TopBarAccountButton(
                 )
             },
     ) {
-        val photo = account?.thumbnailUrl
-        if (photo != null) {
+        val model = dev.auden.profile.ProfilePhoto.model(photo)
+        val initial = name?.trim()?.take(1)?.uppercase().orEmpty()
+        if (model != null) {
             AsyncImage(
-                model = photo,
-                contentDescription = stringResource(R.string.switch_account),
+                model = model,
+                contentDescription = stringResource(R.string.auden_account),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(AVATAR_SIZE)
@@ -589,12 +594,21 @@ fun TopBarAccountButton(
                     .thumbnailBorder(CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    Icons.Rounded.Person,
-                    contentDescription = stringResource(R.string.switch_account),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp),
-                )
+                if (initial.isNotEmpty()) {
+                    Text(
+                        initial,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                } else {
+                    Icon(
+                        Icons.Rounded.Person,
+                        contentDescription = stringResource(R.string.auden_account),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
             }
         }
     }

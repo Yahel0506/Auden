@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.HorizontalDivider
 import com.music.bitchord.sharedui.resources.Res
 import com.music.bitchord.sharedui.resources.spotify_logo
+import com.music.bitchord.sharedui.resources.ytmusic_logo
 import org.jetbrains.compose.resources.painterResource
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -79,18 +80,25 @@ fun AccountAndScrobblingScreen(
     ) {
         SettingsPageTitle(stringResource(R.string.account_integrations))
 
-        // One card: who is signed in, which profile is listening, and the way
-        // out, with the explanation of profiles underneath.
+        // Who is listening, as Auden knows them: the account here is the Auden profile, not a service's.
+        AudenProfileCard()
+        ProfileEditGroup()
+
+        // Where music comes from: YouTube Music and Spotify, each one a connection like the other. What a connected
+        // one offers (the profile it listens as, signing out) is a row under it.
         SettingsGroup(
-            footer = if (signedIn) stringResource(R.string.account_profiles_help) else null,
-            topSpacing = 0.dp,
+            header = stringResource(R.string.connections),
+            footer = stringResource(R.string.spotify_connect_subtitle),
         ) {
-            AccountCard(
-                signedIn = signedIn,
-                account = account,
-                onSignIn = onSignIn,
-                onClick = onSwitchChannel,
-                grouped = true,
+            SettingsRow(
+                iconPainter = painterResource(Res.drawable.ytmusic_logo),
+                title = stringResource(R.string.transfer_yt_music),
+                subtitle = when {
+                    !signedIn -> stringResource(R.string.tap_to_connect)
+                    account?.name != null -> stringResource(R.string.connected_as, account.name)
+                    else -> stringResource(R.string.connected)
+                },
+                onClick = if (signedIn) onSwitchChannel else onSignIn,
             )
             if (signedIn) {
                 FullWidthDivider()
@@ -103,15 +111,7 @@ fun AccountAndScrobblingScreen(
                 FullWidthDivider()
                 DestructiveRow(label = stringResource(R.string.sign_out), onClick = onSignOut)
             }
-        }
-
-        // Who you are in Auden: the profile's name and photo. The party and Connect read them.
-        ProfileEditGroup()
-
-        SettingsGroup(
-            header = stringResource(R.string.spotify),
-            footer = stringResource(R.string.spotify_connect_subtitle),
-        ) {
+            FullWidthDivider()
             SettingsRow(
                 iconPainter = painterResource(Res.drawable.spotify_logo),
                 title = stringResource(R.string.spotify),

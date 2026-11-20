@@ -120,7 +120,7 @@ object ProfileStore {
 }
 
 /** What a screen shows of the profile: the name in the current language (the placeholder while none was picked) and the photo. */
-data class ProfileDisplay(val name: String, val photo: String?)
+data class ProfileDisplay(val name: String, val photo: String?, val isPlaceholder: Boolean = false)
 
 /** The profile as a screen shows it, following the store. */
 @androidx.compose.runtime.Composable
@@ -131,5 +131,6 @@ fun rememberProfileDisplay(): ProfileDisplay {
     return ProfileDisplay(
         name = if (p == null || p.nameIsDefault) placeholder else p.name,
         photo = p?.photo,
+        isPlaceholder = p == null || p.nameIsDefault,
     )
 }

@@ -9,6 +9,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -92,6 +98,57 @@ internal fun ProfileEditGroup() {
                 ProfilePhoto.clear(context)
                 ProfileStore.setPhoto(null)
             })
+        }
+    }
+}
+
+/**
+ * The head of the account page: the Auden profile as the app shows it everywhere (its photo, or its initial, and its
+ * name). Editing is the group under it; nothing here belongs to YouTube Music or Spotify.
+ */
+@Composable
+internal fun AudenProfileCard() {
+    val profile = dev.auden.profile.rememberProfileDisplay()
+    val photo = ProfilePhoto.model(profile.photo)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = GROUP_INSET)
+            .clip(GroupShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (photo != null) {
+            AsyncImage(model = photo, contentDescription = null, contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.size(64.dp).clip(CircleShape))
+        } else {
+            Box(Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.outline), contentAlignment = Alignment.Center) {
+                if (profile.isPlaceholder) {
+                    Icon(SfIcons.Person, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(30.dp))
+                } else {
+                    androidx.compose.material3.Text(
+                        profile.name.trim().take(1).uppercase(),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.headlineSmall,
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            androidx.compose.material3.Text(
+                profile.name,
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(2.dp))
+            androidx.compose.material3.Text(
+                stringResource(R.string.auden_account),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
