@@ -11,6 +11,7 @@ import com.composables.sfsymbols.monochrome.SFArchivebox
 import com.composables.sfsymbols.monochrome.SFArrowDownCircle
 import com.composables.sfsymbols.monochrome.SFArrowDownDocument
 import com.composables.sfsymbols.monochrome.SFArrowRightCircle
+import com.composables.sfsymbols.monochrome.SFArrowLeftArrowRight
 import com.composables.sfsymbols.monochrome.SFArrowTrianglehead2Clockwise
 import com.composables.sfsymbols.monochrome.SFArrowUpArrowDown
 import com.composables.sfsymbols.monochrome.SFArrowUpCircle
@@ -147,6 +148,8 @@ object SfIcons {
     val BlurOff: ImageVector by lazy { bold(SfSymbols.Monochrome.SFDrop) }
     val BlurOn: ImageVector by lazy { bold(SfSymbols.Monochrome.SFDropHalffull) }
     val Brightness: ImageVector by lazy { bold(SfSymbols.Monochrome.SFSunMax) }
+    /** Two arrows the opposite ways: moving what is on one service to another, as Transfer your music does. */
+    val Transfer: ImageVector by lazy { bold(SfSymbols.Monochrome.SFArrowLeftArrowRight) }
     val Cached: ImageVector by lazy { bold(SfSymbols.Monochrome.SFArrowTrianglehead2Clockwise) }
     val Check: ImageVector by lazy { bold(SfSymbols.Monochrome.SFCheckmark) }
     val ChevronRight: ImageVector by lazy { bold(SfSymbols.Monochrome.SFChevronRight) }

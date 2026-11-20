@@ -279,7 +279,7 @@ fun AccountSheet(
                 }
 
                 SheetCard(cardColor) {
-                    SheetTextRow(SfIcons.Download, stringResource(R.string.transfer_title), null, onSurface, secondary, onTransfer)
+                    SheetTextRow(SfIcons.Transfer, stringResource(R.string.transfer_title), null, onSurface, secondary, onTransfer)
                     Rule(rule, start = 56.dp)
                     SheetTextRow(SfIcons.ShowChart, stringResource(R.string.playback_statistics), null, onSurface, secondary, onStatistics)
                     Rule(rule, start = 56.dp)

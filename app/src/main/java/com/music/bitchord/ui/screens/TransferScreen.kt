@@ -70,6 +70,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.R
 import com.music.bitchord.sharedui.resources.Res
 import com.music.bitchord.sharedui.resources.spotify_logo
+import com.music.bitchord.sharedui.resources.ytmusic_logo
 import com.music.bitchord.ui.components.IosSwitch
 import com.music.bitchord.ui.icons.SfIcons
 import dev.auden.library.Service
@@ -160,7 +161,7 @@ private fun Sources(
         topSpacing = 0.dp,
     ) {
         SettingsRow(
-            icon = SfIcons.LibraryMusic,
+            iconPainter = painterResource(Res.drawable.ytmusic_logo),
             title = stringResource(R.string.transfer_yt_music),
             subtitle = if (ytConnected) connected else connect,
             onClick = { if (ytConnected) TransferSession.open(Service.YT_MUSIC) else onConnectYt() },
