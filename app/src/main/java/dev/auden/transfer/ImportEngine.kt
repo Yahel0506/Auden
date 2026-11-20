@@ -17,8 +17,11 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /** Where an import writes: Auden's likes, its playlists and its followed artists. See [AndroidImportLibrary]. */
 interface ImportLibrary {
-    /** Video ids un-liked here that an account still likes. An import never brings them back. */
+    /** Video ids un-liked here that an account still likes. The automatic move of an account's likes never brings them back. */
     fun hiddenLikes(): Set<String>
+
+    /** Takes [videoIds] off the un-liked set: they are liked here again, by the listener's own request. */
+    fun unhide(videoIds: Collection<String>) {}
 
     /** Adds [songs] after the likes already there, in order, skipping what is liked; returns how many went in. */
     fun appendLikes(songs: List<Song>): Int
@@ -120,19 +123,30 @@ class ImportEngine(
     private val matchParallelism: Int = 4,
 ) {
     /** Everything in [selection], likes first; a part that fails is reported and the rest still runs. */
-    suspend fun import(source: MusicSource, selection: ImportSelection, onProgress: (ImportProgress) -> Unit = {}): ImportReport {
+    suspend fun import(
+        source: MusicSource,
+        selection: ImportSelection,
+        onProgress: (ImportProgress) -> Unit = {},
+        honorHidden: Boolean = true,
+    ): ImportReport {
         var report = ImportReport()
-        if (selection.likes) report += importLikes(source, onProgress)
-        selection.collections.forEach { report += importCollection(source, it, onProgress) }
+        if (selection.likes) report += importLikes(source, onProgress, honorHidden)
+        selection.collections.forEach { report += importCollection(source, it, onProgress, honorHidden) }
         if (selection.artists.isNotEmpty()) report += importArtists(source, selection.artists, onProgress)
         return report
     }
 
-    /** The source's liked songs into Auden's likes. Pages already stored stay stored if a later one fails. */
-    suspend fun importLikes(source: MusicSource, onProgress: (ImportProgress) -> Unit = {}): ImportReport {
+    /**
+     * The source's liked songs into Auden's likes. Pages already stored stay stored if a later one fails.
+     *
+     * [honorHidden] keeps off the likes the listener took off here while an account still liked them: right for the
+     * automatic move, which must not resurrect them, and wrong for a transfer the listener asks for — asking again
+     * is asking for those too, and they are liked here again.
+     */
+    suspend fun importLikes(source: MusicSource, onProgress: (ImportProgress) -> Unit = {}, honorHidden: Boolean = true): ImportReport {
         var tally = Tally()
         val unmatched = mutableListOf<UnmatchedTrack>()
-        val hidden = library.hiddenLikes()
+        val hidden = if (honorHidden) library.hiddenLikes() else emptySet()
         var read = 0
         val failure = attempt {
             onProgress(ImportProgress(ImportStep.LIKES, ImportStage.READING, null, 0, 0))
@@ -144,6 +158,7 @@ class ImportEngine(
                 unmatched += missed
                 val wanted = songs.filter { it.videoId !in hidden }
                 val added = library.appendLikes(wanted)
+                if (!honorHidden) library.unhide(wanted.map { it.videoId })
                 tally += Tally(added = added, skipped = songs.size - added, unmatched = missed.size)
                 onProgress(ImportProgress(ImportStep.LIKES, ImportStage.STORING, null, read, 0))
             }
@@ -156,9 +171,14 @@ class ImportEngine(
     }
 
     /** A copy of one playlist or album. Already copied: skipped, and the copy left alone. */
-    suspend fun importCollection(source: MusicSource, collection: RemoteCollection, onProgress: (ImportProgress) -> Unit = {}): ImportReport {
+    suspend fun importCollection(
+        source: MusicSource,
+        collection: RemoteCollection,
+        onProgress: (ImportProgress) -> Unit = {},
+        honorHidden: Boolean = true,
+    ): ImportReport {
         if (PlaylistOrigin.of(collection.sourceId)?.isLikesList == true || collection.kind == OriginKind.LIKES) {
-            return importLikes(source, onProgress)
+            return importLikes(source, onProgress, honorHidden)
         }
         val step = if (collection.kind == OriginKind.ALBUM) ImportStep.ALBUM else ImportStep.PLAYLIST
         fun tally(t: Tally) = if (step == ImportStep.ALBUM) ImportReport(albums = t) else ImportReport(playlists = t)
@@ -245,9 +265,10 @@ class ImportEngine(
      * The songs of a library copy of a service's liked list (see `LocalPlaylists.likesListCopies`) into the likes.
      * The copy itself is left for the listener to delete.
      */
-    fun likesFromCopy(songs: List<Song>): ImportReport {
-        val wanted = songs.filter { it.videoId !in library.hiddenLikes() }
+    fun likesFromCopy(songs: List<Song>, honorHidden: Boolean = false): ImportReport {
+        val wanted = if (honorHidden) songs.filter { it.videoId !in library.hiddenLikes() } else songs
         val added = library.appendLikes(wanted)
+        if (!honorHidden) library.unhide(wanted.map { it.videoId })
         return ImportReport(likes = Tally(added = added, skipped = songs.size - added))
     }
 

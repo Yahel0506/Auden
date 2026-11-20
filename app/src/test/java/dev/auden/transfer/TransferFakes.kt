@@ -22,6 +22,10 @@ internal class FakeLibrary : ImportLibrary {
 
     override fun hiddenLikes(): Set<String> = hidden
 
+    override fun unhide(videoIds: Collection<String>) {
+        hidden -= videoIds.toSet()
+    }
+
     override fun appendLikes(songs: List<Song>): Int {
         appendCalls++
         val known = likes.mapTo(HashSet()) { it.videoId }

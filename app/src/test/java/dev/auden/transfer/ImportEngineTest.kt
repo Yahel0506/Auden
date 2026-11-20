@@ -45,6 +45,19 @@ class ImportEngineTest {
     }
 
     @Test
+    fun aTransferTheListenerAsksForBringsBackWhatTheyUnlikedHere() = runBlocking {
+        // They imported, un-liked "gone" by hand (it is now hidden), and import again: they asked for the likes.
+        library.hidden += "gone"
+        val source = FakeSource(Service.YT_MUSIC, likePages = listOf(yt("a", "gone", "b")))
+
+        val report = engine().importLikes(source, honorHidden = false)
+
+        assertEquals(listOf("a", "gone", "b"), library.likes.map { it.videoId })
+        assertEquals(Tally(added = 3), report.likes)
+        assertTrue("gone" !in library.hidden)
+    }
+
+    @Test
     fun importingTheSameLikesTwiceAddsNothingTheSecondTime() = runBlocking {
         val source = FakeSource(Service.YT_MUSIC, likePages = listOf(yt("a", "b"), yt("c")))
         engine().importLikes(source)
@@ -201,9 +214,18 @@ class ImportEngineTest {
     }
 
     @Test
-    fun aLikesListCopyTurnsIntoLikes() {
+    fun aLikesListCopyTurnsIntoLikesAndWhatWasUnlikedComesBackBecauseTheListenerAsked() {
         library.hidden += "x"
         val report = engine().likesFromCopy(listOf(song("a"), song("x"), song("b")))
+        assertEquals(listOf("a", "x", "b"), library.likes.map { it.videoId })
+        assertEquals(Tally(added = 3), report.likes)
+        assertTrue("x" !in library.hidden)
+    }
+
+    @Test
+    fun aLikesListCopyCanStillHonourWhatWasUnliked() {
+        library.hidden += "x"
+        val report = engine().likesFromCopy(listOf(song("a"), song("x"), song("b")), honorHidden = true)
         assertEquals(listOf("a", "b"), library.likes.map { it.videoId })
         assertEquals(Tally(added = 2, skipped = 1), report.likes)
     }

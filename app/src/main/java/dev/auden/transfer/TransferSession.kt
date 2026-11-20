@@ -160,7 +160,8 @@ object TransferSession {
             var finished = 0
             var best = 0f
             val report = runCatching {
-                TransferMigrations.engine(app).import(source(service), selection) { progress ->
+                // A transfer the listener asked for: what they un-liked here comes back with it, they asked for the likes.
+                TransferMigrations.engine(app).import(source(service), selection, honorHidden = false, onProgress = { progress ->
                     val key = "${progress.step}:${progress.title}"
                     if (lastKey != null && key != lastKey) finished = (finished + 1).coerceAtMost(units - 1)
                     lastKey = key
@@ -173,7 +174,7 @@ object TransferSession {
                     // Never backwards, and never full until it is: the last unit's tail is the report's.
                     best = maxOf(best, ((finished + within) / units).coerceIn(0f, 0.99f))
                     _state.value = State.Running(service, progress, best, finished + 1, units)
-                }
+                })
             }
             // Likes brought over by hand from YouTube Music are the likes the launch-time move was after: once the whole
             // read went through, that move has nothing left to do (and a give-up there is lifted).

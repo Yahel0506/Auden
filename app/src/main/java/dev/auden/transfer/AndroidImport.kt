@@ -28,6 +28,8 @@ class AndroidImportLibrary(context: Context) : ImportLibrary {
 
     override fun appendLikes(songs: List<Song>): Int = OfflinePlaylists.appendLikes(songs)
 
+    override fun unhide(videoIds: Collection<String>) = videoIds.forEach(OfflinePlaylists::showAccountLike)
+
     override fun copyOf(sourceId: String): String? = LocalPlaylists.bySource(sourceId)?.id
 
     override fun createCopy(sourceId: String, title: String, songs: List<Song>, coverUrl: String?, origin: ImportedOrigin): String =
