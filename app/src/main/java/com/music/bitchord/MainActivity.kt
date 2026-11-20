@@ -6953,6 +6953,7 @@ private fun BitChordApp(
 
         // Dialogs and alerts, in a scope of their own: BitChordApp had outgrown the JVM's method limit.
         Isolated {
+            com.music.bitchord.ui.components.TransferActionBar()
             com.music.bitchord.ui.components.TransferDialogsHost(hazeState)
             com.music.bitchord.ui.components.TransferNoticeHost(
                 signedIn = signedIn,

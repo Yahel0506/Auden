@@ -36,6 +36,50 @@ object TransferSession {
         data class Failed(val service: Service, val reason: String?) : State
     }
 
+    /** What is ticked on the chooser; kept here so the page and the bar pinned under it read the same thing. */
+    enum class Kind { PLAYLISTS, ALBUMS, ARTISTS, PODCASTS }
+
+    data class Selection(
+        val likes: Boolean = false,
+        val playlists: Set<String> = emptySet(),
+        val albums: Set<String> = emptySet(),
+        val artists: Set<String> = emptySet(),
+        val podcasts: Set<String> = emptySet(),
+    ) {
+        val count: Int get() = (if (likes) 1 else 0) + playlists.size + albums.size + artists.size + podcasts.size
+
+        fun of(kind: Kind): Set<String> = when (kind) {
+            Kind.PLAYLISTS -> playlists
+            Kind.ALBUMS -> albums
+            Kind.ARTISTS -> artists
+            Kind.PODCASTS -> podcasts
+        }
+
+        fun with(kind: Kind, ids: Set<String>): Selection = when (kind) {
+            Kind.PLAYLISTS -> copy(playlists = ids)
+            Kind.ALBUMS -> copy(albums = ids)
+            Kind.ARTISTS -> copy(artists = ids)
+            Kind.PODCASTS -> copy(podcasts = ids)
+        }
+    }
+
+    private val _selection = MutableStateFlow(Selection())
+    val selection: StateFlow<Selection> = _selection.asStateFlow()
+
+    /** Whether the Transfer page is on screen, for the bar that is drawn over the app while it is. */
+    val pageOpen = MutableStateFlow(false)
+
+    fun toggleLikes() { _selection.value = _selection.value.let { it.copy(likes = !it.likes) } }
+
+    fun toggle(kind: Kind, id: String) {
+        _selection.value = _selection.value.let { it.with(kind, it.of(kind).let { ids -> if (id in ids) ids - id else ids + id }) }
+    }
+
+    /** Ticks every id of [kind], or clears them when they are all ticked already. */
+    fun toggleAll(kind: Kind, ids: Collection<String>) {
+        _selection.value = _selection.value.let { it.with(kind, if (it.of(kind).size == ids.size) emptySet() else ids.toSet()) }
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var job: Job? = null
     private val _state = MutableStateFlow<State>(State.Idle)
@@ -48,6 +92,7 @@ object TransferSession {
     fun open(service: Service) {
         if (_state.value is State.Running) return
         job?.cancel()
+        _selection.value = Selection()
         _state.value = State.Loading(service)
         job = scope.launch {
             val src = source(service)
@@ -65,6 +110,29 @@ object TransferSession {
                 State.Choosing(Offer(service, playlists, albums, artists, podcasts, unreadable))
             }
         }
+    }
+
+    /** Brings over what is ticked, from the source whose offer is on the chooser. */
+    fun startSelected(context: Context) {
+        val offer = (_state.value as? State.Choosing)?.offer ?: return
+        val ticked = _selection.value
+        if (ticked.count == 0) return
+        start(
+            context, offer.service,
+            ImportSelection(
+                likes = ticked.likes,
+                collections = (offer.playlists + offer.albums).filter { it.sourceId in ticked.playlists || it.sourceId in ticked.albums },
+                // Podcast shows are followed the way artists are, and shelved apart by their page's id.
+                artists = offer.artists.filter { it.id in ticked.artists } + offer.podcasts.filter { it.id in ticked.podcasts },
+            ),
+        )
+    }
+
+    /** Stops a transfer in progress: what it had stored stays (a later one skips it), and the page starts over. */
+    fun cancel() {
+        if (_state.value !is State.Running) return
+        job?.cancel()
+        _state.value = State.Idle
     }
 
     /** Brings [selection] over from [service]. */

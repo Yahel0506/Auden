@@ -104,7 +104,13 @@ fun TransferScreen(
 ) {
     val state by TransferSession.state.collectAsStateWithLifecycle()
     // Leaving the page puts a finished or half-chosen session away; a running import goes on without it.
-    DisposableEffect(Unit) { onDispose { TransferSession.reset() } }
+    DisposableEffect(Unit) {
+        TransferSession.pageOpen.value = true
+        onDispose {
+            TransferSession.pageOpen.value = false
+            TransferSession.reset()
+        }
+    }
     (state as? TransferSession.State.Choosing)?.let { choosing ->
         // The grid scrolls on its own and the button stays under it, so this page is not the scrolling column below.
         Choose(choosing.offer, contentPadding, modifier)
@@ -117,14 +123,14 @@ fun TransferScreen(
         when (val s = state) {
             TransferSession.State.Idle -> Sources(ytConnected, spotifyConnected, onConnectYt, onConnectSpotify, onOpenImportFlow)
             is TransferSession.State.Loading -> Message(stringResource(R.string.transfer_loading), busy = true)
-            is TransferSession.State.Failed -> {
-                Message(stringResource(R.string.transfer_failed))
-                ActionButton(stringResource(R.string.transfer_retry)) { TransferSession.open(s.service) }
-            }
+            // Its message is here; the button to try again is the one pinned at the foot (see TransferActionBar).
+            is TransferSession.State.Failed -> Message(stringResource(R.string.transfer_failed))
             is TransferSession.State.Choosing -> Unit
             is TransferSession.State.Running -> Running(s)
             is TransferSession.State.Done -> Done(s)
         }
+        // Room for the bar pinned at the foot.
+        androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 140.dp))
     }
 }
 
@@ -180,84 +186,48 @@ private fun Sources(
  */
 @Composable
 private fun Choose(offer: TransferSession.Offer, contentPadding: PaddingValues, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    var likes by remember(offer) { mutableStateOf(false) }
-    val playlists = remember(offer) { mutableStateListOf<String>() }
-    val albums = remember(offer) { mutableStateListOf<String>() }
-    val artists = remember(offer) { mutableStateListOf<String>() }
-    val podcasts = remember(offer) { mutableStateListOf<String>() }
-    val count = (if (likes) 1 else 0) + playlists.size + albums.size + artists.size + podcasts.size
+    val ticked by TransferSession.selection.collectAsStateWithLifecycle()
     val serviceName = stringResource(if (offer.service == Service.SPOTIFY) R.string.spotify else R.string.transfer_yt_music)
-    val barHeight = 76.dp
-    Box(modifier.fillMaxSize()) {
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(104.dp),
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 16.dp,
-                end = 16.dp,
-                top = contentPadding.calculateTopPadding(),
-                // Clear of the pinned bar and of the system's own bar under it: this page hides the app's navigation.
-                bottom = androidx.compose.foundation.layout.WindowInsets.Companion.navigationBars.asPaddingValues().calculateBottomPadding() + barHeight,
-            ),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            item(key = "title", span = { GridItemSpan(maxLineSpan) }) {
-                Column {
-                    SettingsPageTitle(stringResource(R.string.transfer_title))
-                    Text(
-                        stringResource(R.string.transfer_choose_header, serviceName),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
-                    )
-                }
-            }
-            item(key = "likes") {
-                SelectTile(
-                    title = stringResource(R.string.transfer_likes),
-                    subtitle = null,
-                    imageUrl = null,
-                    icon = SfIcons.HeartFill,
-                    selected = likes,
-                    round = false,
-                    onClick = { likes = !likes },
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(104.dp),
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = 16.dp,
+            end = 16.dp,
+            top = contentPadding.calculateTopPadding(),
+            // Clear of the button pinned over the foot of the page (TransferActionBar) and of the system's bar.
+            bottom = androidx.compose.foundation.layout.WindowInsets.Companion.navigationBars.asPaddingValues().calculateBottomPadding() + 120.dp,
+        ),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        item(key = "title", span = { GridItemSpan(maxLineSpan) }) {
+            Column {
+                SettingsPageTitle(stringResource(R.string.transfer_title))
+                Text(
+                    stringResource(R.string.transfer_choose_header, serviceName),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
                 )
             }
-            collectionSection("playlists", R.string.transfer_playlists, offer.playlists, ImportStep.PLAYLIST in offer.unreadable, playlists)
-            collectionSection("albums", R.string.transfer_albums, offer.albums, ImportStep.ALBUM in offer.unreadable, albums)
-            artistSection("artists", R.string.transfer_artists, offer.artists, ImportStep.ARTISTS in offer.unreadable, artists)
-            if (offer.podcasts.isNotEmpty()) artistSection("podcasts", R.string.transfer_podcasts, offer.podcasts, false, podcasts)
         }
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                // Solid, so nothing of the grid shows through it, and carried under the system's bar.
-                .background(MaterialTheme.colorScheme.background)
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(onClick = { TransferSession.reset() }) { Text(stringResource(R.string.transfer_cancel)) }
-            Button(
-                onClick = {
-                    val chosen = (offer.playlists + offer.albums).filter { it.sourceId in playlists || it.sourceId in albums }
-                    TransferSession.start(
-                        context, offer.service,
-                        ImportSelection(
-                            likes = likes,
-                            collections = chosen,
-                            // Podcast shows are followed the way artists are, and shelved apart by their page's id.
-                            artists = offer.artists.filter { it.id in artists } + offer.podcasts.filter { it.id in podcasts },
-                        ),
-                    )
-                },
-                enabled = count > 0,
-                modifier = Modifier.weight(1f),
-            ) { Text(if (count > 0) stringResource(R.string.transfer_start_count, count) else stringResource(R.string.transfer_start)) }
+        item(key = "likes") {
+            SelectTile(
+                title = stringResource(R.string.transfer_likes),
+                subtitle = null,
+                imageUrl = null,
+                icon = SfIcons.HeartFill,
+                selected = ticked.likes,
+                round = false,
+                onClick = { TransferSession.toggleLikes() },
+            )
+        }
+        collectionSection("playlists", R.string.transfer_playlists, TransferSession.Kind.PLAYLISTS, offer.playlists, ImportStep.PLAYLIST in offer.unreadable, ticked.playlists)
+        collectionSection("albums", R.string.transfer_albums, TransferSession.Kind.ALBUMS, offer.albums, ImportStep.ALBUM in offer.unreadable, ticked.albums)
+        artistSection("artists", R.string.transfer_artists, TransferSession.Kind.ARTISTS, offer.artists, ImportStep.ARTISTS in offer.unreadable, ticked.artists)
+        if (offer.podcasts.isNotEmpty()) {
+            artistSection("podcasts", R.string.transfer_podcasts, TransferSession.Kind.PODCASTS, offer.podcasts, false, ticked.podcasts)
         }
     }
 }
@@ -283,16 +253,13 @@ private fun SectionHeader(title: Int, total: Int, chosen: Int, onToggleAll: () -
 private fun LazyGridScope.collectionSection(
     key: String,
     title: Int,
+    kind: TransferSession.Kind,
     items: List<RemoteCollection>,
     unreadable: Boolean,
-    chosen: MutableList<String>,
+    ticked: Set<String>,
 ) {
     item(key = "$key:header", span = { GridItemSpan(maxLineSpan) }) {
-        SectionHeader(title, items.size, chosen.size) {
-            val all = chosen.size == items.size
-            chosen.clear()
-            if (!all) chosen.addAll(items.map { it.sourceId })
-        }
+        SectionHeader(title, items.size, ticked.size) { TransferSession.toggleAll(kind, items.map { it.sourceId }) }
     }
     if (items.isEmpty()) {
         item(key = "$key:empty", span = { GridItemSpan(maxLineSpan) }) { EmptyNote(unreadable) }
@@ -304,9 +271,9 @@ private fun LazyGridScope.collectionSection(
             subtitle = item.subtitle.ifBlank { null },
             imageUrl = item.thumbnailUrl,
             icon = SfIcons.MusicNote,
-            selected = item.sourceId in chosen,
+            selected = item.sourceId in ticked,
             round = false,
-            onClick = { if (item.sourceId in chosen) chosen.remove(item.sourceId) else chosen.add(item.sourceId) },
+            onClick = { TransferSession.toggle(kind, item.sourceId) },
         )
     }
 }
@@ -314,16 +281,13 @@ private fun LazyGridScope.collectionSection(
 private fun LazyGridScope.artistSection(
     key: String,
     title: Int,
+    kind: TransferSession.Kind,
     items: List<RemoteArtist>,
     unreadable: Boolean,
-    chosen: MutableList<String>,
+    ticked: Set<String>,
 ) {
     item(key = "$key:header", span = { GridItemSpan(maxLineSpan) }) {
-        SectionHeader(title, items.size, chosen.size) {
-            val all = chosen.size == items.size
-            chosen.clear()
-            if (!all) chosen.addAll(items.map { it.id })
-        }
+        SectionHeader(title, items.size, ticked.size) { TransferSession.toggleAll(kind, items.map { it.id }) }
     }
     if (items.isEmpty()) {
         item(key = "$key:empty", span = { GridItemSpan(maxLineSpan) }) { EmptyNote(unreadable) }
@@ -335,9 +299,9 @@ private fun LazyGridScope.artistSection(
             subtitle = null,
             imageUrl = item.thumbnailUrl,
             icon = SfIcons.Person,
-            selected = item.id in chosen,
-            round = key == "artists",
-            onClick = { if (item.id in chosen) chosen.remove(item.id) else chosen.add(item.id) },
+            selected = item.id in ticked,
+            round = kind == TransferSession.Kind.ARTISTS,
+            onClick = { TransferSession.toggle(kind, item.id) },
         )
     }
 }
@@ -443,11 +407,6 @@ private fun Running(state: TransferSession.State.Running) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (p != null && p.total > 0) {
-            LinearProgressIndicator(progress = { (p.done.toFloat() / p.total).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
-        } else {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-        }
     }
 }
 
@@ -475,7 +434,6 @@ private fun Done(state: TransferSession.State.Done) {
         }
     }
     if (!r.complete) Message(stringResource(R.string.transfer_done_incomplete, r.failed.size))
-    ActionButton(stringResource(R.string.transfer_done_button)) { TransferSession.reset() }
 }
 
 @Composable
@@ -484,15 +442,4 @@ private fun Message(text: String, busy: Boolean = false) {
         Text(text, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (busy) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
     }
-}
-
-@Composable
-private fun ActionButton(label: String, enabled: Boolean = true, primary: Boolean = true, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        enabled = enabled,
-        colors = if (primary) androidx.compose.material3.ButtonDefaults.buttonColors()
-        else androidx.compose.material3.ButtonDefaults.filledTonalButtonColors(),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
-    ) { Text(label) }
 }
