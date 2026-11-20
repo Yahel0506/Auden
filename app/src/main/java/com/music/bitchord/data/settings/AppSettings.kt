@@ -426,7 +426,7 @@ object AppSettings {
     val equalizerPreset = MutableStateFlow(EqualizerPreset.FLAT)
 
     val playbackSpeed = MutableStateFlow(1.0f)
-    val themeMode = MutableStateFlow(ThemeMode.DARK)
+    val themeMode = MutableStateFlow(ThemeMode.SYSTEM)
     val appFont = MutableStateFlow(AppFont.DEFAULT)
 
     /** Keep playing similar music once the queue runs out. */
@@ -1088,8 +1088,8 @@ object AppSettings {
         equalizerPreset.value = EqualizerPreset.matching(equalizerBands.value)
         playbackSpeed.value = prefs.getFloat(KEY_SPEED, 1.0f)
         themeMode.value = runCatching {
-            ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: "DARK")
-        }.getOrDefault(ThemeMode.DARK)
+            ThemeMode.valueOf(prefs.getString(KEY_THEME, null) ?: "SYSTEM")
+        }.getOrDefault(ThemeMode.SYSTEM)
         appFont.value = runCatching {
             AppFont.valueOf(prefs.getString(KEY_APP_FONT, null) ?: AppFont.DEFAULT.name)
         }.getOrDefault(AppFont.DEFAULT)
