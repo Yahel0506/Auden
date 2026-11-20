@@ -91,6 +91,8 @@ jobs:
           echo "LISTEN_TOGETHER_SERVER=${{ secrets.LISTEN_TOGETHER_SERVER }}" >> local.properties
           echo "FISH_API_KEY=${{ secrets.FISH_API_KEY }}" >> local.properties
           echo "MONOCHROME_SERVER=${{ secrets.MONOCHROME_SERVER }}" >> local.properties
+          echo "DJ_INTERPRETER_URL=${{ secrets.DJ_INTERPRETER_URL }}" >> local.properties
+          echo "DJ_APP_SECRET=${{ secrets.DJ_APP_SECRET }}" >> local.properties
 
           echo "$KEYSTORE_BASE64" | base64 -d > auden-release.jks
           {

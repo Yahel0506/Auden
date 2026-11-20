@@ -375,7 +375,13 @@ object DjSession {
         private val found = ArrayDeque<DjTrack>()
         private var foundFor: String? = null
         private var foundTaste: String? = null
+        /** The interpreter's short name for what [found] was searched for, said and shown instead of the ask. */
+        private var foundName: String? = null
         private var searched = false
+        /** How many times a catalogue-only ask has been searched again once its results were used up. */
+        private var refills = 0
+        /** How many songs at the head of [found] were asked for by name: a set of them is made however few they are. */
+        private var pinnedFound = 0
         /** How many sets in a row opened with the DJ's voice. */
         private var spoken = 1
         private var listener: Player.Listener? = null
@@ -420,7 +426,9 @@ object DjSession {
             tracks.putAll(loaded.tracks.associateBy { it.id })
             songs.putAll(loaded.songs)
             val text = requestText
-            var parsed = structured ?: text.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, loaded.tracks, renderer.spokenAliases) }
+            val ruled = structured ?: text.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, loaded.tracks, renderer.spokenAliases) }
+            // The keyword reader's reading of the ask, and a language model's when the service is there: the model's wins.
+            var parsed = if (structured == null) understand(text, loaded.tracks, ruled) else ruled
             withContext(planning) {
                 planner = DjPlanner(loaded.tracks, now, seed = now, blockSize = blockSize, request = parsed, genresOf = ArtistFacts::genresForDj,
                     recently = DjHistory.recent(app), recentOrder = DjHistory.recentOrdered(app),
@@ -439,11 +447,10 @@ object DjSession {
             // for, not guessed at, as it is when the ask changes mid-session: the DJ answers with what was asked rather
             // than with the songs played most.
             // An artist the library holds too few songs of, or several artists at once, count as asks it could not answer.
-            val needsSearch = text.isNotBlank() &&
-                (parsed?.understood != true || planner.relaxed || DjRequestParser.artistNamesIn(text).size >= 2)
+            val needsSearch = text.isNotBlank() && needsSearching(text, parsed)
             if (structured == null && needsSearch) {
                 searched = true
-                withTimeoutOrNull(OPENING_SEARCH_MS) { searchFor(text.trim()) }
+                withTimeoutOrNull(OPENING_SEARCH_MS) { searchFor(text.trim(), parsed) }
                 ensureOpen()
             }
             val firstPlanned = takeFound() ?: withContext(planning) { planner.next() }
@@ -767,11 +774,20 @@ object DjSession {
          */
         private suspend fun chooseBlock(skipToIt: Boolean): DjBlock? {
             takeFound()?.let { return it }
+            // An ask the library cannot answer at all keeps being answered from the catalogue, with fresh searches,
+            // rather than turning into whatever the library has once the first search is used up.
+            val ask = planner.currentRequest
+            if (ask != null && ask.catalogueOnly && ask.needsCatalogue && refills < MAX_REFILLS && requestText.isNotBlank()) {
+                refills++
+                val more = ask.copy(songQueries = emptyList(), queries = ask.queries.map { if (refills == 1) "$it mix" else "best $it" })
+                searchFor(requestText.trim(), more)
+                takeFound()?.let { return it }
+            }
             val block = withContext(planning) { planner.next() } ?: return null
             if (skipToIt && !searched && planner.relaxed && requestText.isNotBlank()) {
                 searched = true
                 withContext(planning) { planner.release(block.tracks.map { it.id }) }
-                searchFor(requestText.trim())
+                searchFor(requestText.trim(), planner.currentRequest)
                 takeFound()?.let { return it }
                 return withContext(planning) { planner.next() }
             }
@@ -784,14 +800,42 @@ object DjSession {
          * songs that fit are welcome whatever their genre), unless the ask names a genre of its own, which
          * is searched as it is. See [DjTaste].
          */
-        private suspend fun searchFor(text: String) {
+        /**
+         * The ask as understood once a language model has read it, when the service is there and answers in time:
+         * what it names is held against the library, and what the keyword reader found fills in what it left. Otherwise
+         * [ruled], the keyword reader's own reading.
+         */
+        private suspend fun understand(text: String, known: Collection<DjTrack>, ruled: DjRequest?): DjRequest? {
+            if (text.isBlank() || !DjInterpreter.configured) return ruled
+            val plan = withTimeoutOrNull(INTERPRET_MS) {
+                DjInterpreter.interpret(text, DjInterpreter.contextFor(known, ArtistFacts::genresForDj, lang))
+            } ?: return ruled
+            val request = withContext(Dispatchers.Default) { plan.toRequest(text, known.toList(), renderer.spokenAliases, ruled) }
+            lap("interpreted understood=${request.understood} artists=${request.artists.size} songs=${request.songIds.size} queries=${request.queries.size}")
+            return request.takeIf { it.understood } ?: ruled
+        }
+
+        /** Whether the library alone cannot answer the ask: it was not understood, fell short, or names what the library lacks. */
+        private fun needsSearching(text: String, parsed: DjRequest?): Boolean =
+            parsed?.understood != true || planner.relaxed || DjRequestParser.artistNamesIn(text).size >= 2 ||
+                parsed.needsCatalogue || parsed.songIds.isNotEmpty()
+
+        private suspend fun searchFor(text: String, request: DjRequest? = null) {
+            // Songs of the library asked for by name open the set, in the order asked.
+            val pinned = request?.songIds.orEmpty().mapNotNull { tracks[it] }
+            val planned = request?.takeIf { it.needsCatalogue }
             val explicit = DjRequestParser.namesGenre(text)
             val profile = DjTaste.profile(tracks.values, ArtistFacts::genresForDj)
             // An ask that is only a name is searched as that name: not in each of the listener's genres and from each of
             // their artists, which turned a request for one artist into a mix of everyone else's.
             val nameAsks = DjRequestParser.artistNamesIn(text)
             // Each name on its own, and the ask whole (which finds one artist whose name has a joiner in it).
-            val plan = if (nameAsks.isNotEmpty()) {
+            val plan = if (planned != null) {
+                // An interpreter's searches, as it wrote them: each song by name, then what the ask would be searched as.
+                planned.songQueries.map { DjTaste.Query.Named(it) } + planned.queries.map { DjTaste.Query.Plain(it) }
+            } else if (pinned.isNotEmpty() && nameAsks.isEmpty()) {
+                emptyList()
+            } else if (nameAsks.isNotEmpty()) {
                 (nameAsks + nameAsks.joinToString(" ")).distinct().map { DjTaste.Query.Plain(it) }
             } else {
                 DjTaste.queries(text, profile, explicit)
@@ -818,7 +862,12 @@ object DjSession {
                     .map { DjTaste.Hit(it.videoId, it.artist) }
             }
             val known = tracks.values.filter { !it.discovery }.mapTo(HashSet()) { DjRequestParser.fold(it.leadArtist) }
-            (if (nameAsks.isNotEmpty()) DjTaste.mergeForArtists(hits, nameAsks, SEARCH_SONGS) else DjTaste.merge(hits, known, SEARCH_SONGS)).forEach { id ->
+            val merged = when {
+                planned != null -> DjTaste.mergePlanned(hits, planned.searchNames, planned.excludeArtists, if (planned.catalogueOnly) SEARCH_SONGS * 2 else SEARCH_SONGS)
+                nameAsks.isNotEmpty() -> DjTaste.mergeForArtists(hits, nameAsks, SEARCH_SONGS)
+                else -> DjTaste.merge(hits, known, SEARCH_SONGS)
+            }
+            merged.forEach { id ->
                 val song = byId[id] ?: return@forEach
                 val track = tracks.getOrPut(id) {
                     DjTrack(id = id, title = song.title, artist = song.artist, album = song.albumName, art = song.thumbnailUrl, discovery = true)
@@ -826,9 +875,13 @@ object DjSession {
                 songs.putIfAbsent(id, song)
                 this.found += track
             }
+            // The songs asked for by name from the library go first, ahead of anything the search found.
+            pinned.reversed().forEach { t -> this.found.remove(t); this.found.addFirst(t) }
+            pinnedFound = pinned.size
             foundFor = text.takeIf { this.found.isNotEmpty() }
+            foundName = request?.title
             // What the DJ says it went by: their genres, when the ask was bent towards them.
-            foundTaste = profile.genres.take(2).takeIf { !explicit && it.isNotEmpty() }
+            foundTaste = profile.genres.take(2).takeIf { planned == null && !explicit && it.isNotEmpty() }
                 ?.joinToString(if (lang == "es") " y " else " and ")
             lap("search plan=${plan.size} taste=$foundTaste")
         }
@@ -836,15 +889,16 @@ object DjSession {
         /** A set of what was found: [blockSize] songs, or all that is left when what would remain is too few to make another. */
         private fun takeFound(): DjBlock? {
             val text = foundFor ?: return null
-            if (found.size < DjPlanner.MIN_BLOCK) {
+            if (found.size < DjPlanner.MIN_BLOCK && pinnedFound == 0) {
                 found.clear()
                 foundFor = null
                 return null
             }
             val n = if (found.size - blockSize in 1 until DjPlanner.MIN_BLOCK) found.size else minOf(blockSize, found.size)
             val taken = List(n) { found.removeFirst() }
+            pinnedFound = (pinnedFound - taken.size).coerceAtLeast(0)
             if (found.isEmpty()) foundFor = null
-            return DjBlock(DjTheme.ByRequest(text, foundTaste), taken)
+            return DjBlock(DjTheme.ByRequest(text, foundTaste, foundName), taken)
         }
 
         /**
@@ -930,6 +984,7 @@ object DjSession {
                                 c.tracks.reversed().forEach { found.addFirst(it) }
                                 foundFor = request.text
                                 foundTaste = request.taste
+                                foundName = request.name
                             } else {
                                 scope.launch(planning) { planner.release(c.tracks.map { it.id }) }
                             }
@@ -983,7 +1038,8 @@ object DjSession {
             awaiting = Int.MAX_VALUE
             queueing += scope.launch(Dispatchers.Main) {
                 val known = tracks.values.toList()
-                val parsed = if (text.isBlank()) null else withContext(Dispatchers.Default) { DjRequestParser.parse(text, known, renderer.spokenAliases) }
+                val ruled = if (text.isBlank()) null else withContext(Dispatchers.Default) { DjRequestParser.parse(text, known, renderer.spokenAliases) }
+                val parsed = understand(text, known, ruled)
                 withContext(planning) { planner.setRequest(parsed) }
                 if (closed) return@launch
                 lap("steer parsed understood=${parsed?.understood}")
@@ -991,11 +1047,12 @@ object DjSession {
                 foundFor = null
                 foundTaste = null
                 searched = false
+                refills = 0
                 // What the library has no words for ("rock en español", a song, a mood of the listener's
                 // own) is looked for, not guessed at: the DJ answers with what was asked.
-                if (text.isNotBlank() && (parsed?.understood != true || planner.relaxed || DjRequestParser.artistNamesIn(text).size >= 2)) {
+                if (text.isNotBlank() && needsSearching(text, parsed)) {
                     searched = true
-                    searchFor(text.trim())
+                    searchFor(text.trim(), parsed)
                     if (closed) return@launch
                     lap("steer searched found=${found.size}")
                 }
@@ -1160,7 +1217,7 @@ object DjSession {
             DjTheme.Discover -> app.getString(R.string.dj_theme_discover)
             DjTheme.Mix -> app.getString(R.string.dj_theme_mix)
             is DjTheme.ByPlaylist -> theme.name
-            is DjTheme.ByRequest -> theme.text.replaceFirstChar { it.uppercase() }
+            is DjTheme.ByRequest -> theme.label.replaceFirstChar { it.uppercase() }
         }
     }
 
@@ -1169,6 +1226,9 @@ object DjSession {
 
 /** How long a set of discoveries is given to find them before the DJ gives the ask up and surprises instead. */
 private const val DISCOVER_WAIT_MS = 9_000L
+/** How long the opening waits for the language model's reading of an ask before the keyword reader's will do. */
+private const val INTERPRET_MS = 5_000L
+private const val MAX_REFILLS = 2
 
 /** The most plays a song has to be a seed for the discoveries further from the listener's usual. */
 private const val FAR_MAX_PLAYS = 6

@@ -123,7 +123,7 @@ class DjWriter(
                 pick("intro_discover", "seed" to seed, "opener" to opener) ?: pick("intro_discover_plain", "opener" to opener)
             }
             is DjTheme.ByPlaylist -> pick("intro_playlist", "playlist" to theme.name, "opener" to opener)
-            is DjTheme.ByRequest -> pick("intro_search", "what" to theme.text, "taste" to theme.taste, "opener" to opener)
+            is DjTheme.ByRequest -> pick("intro_search", "what" to theme.label, "what_cap" to theme.label.cap(), "taste" to theme.taste, "opener" to opener)
             is DjTheme.ByDecade, is DjTheme.ByGenre, is DjTheme.ByAlbum -> pick("intro_theme", "what" to what(theme), "opener" to opener)
         }
     }

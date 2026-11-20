@@ -65,6 +65,9 @@ class DjPlanner(
     private val hour: Int = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).hour
     private val weekend: Boolean = Instant.ofEpochMilli(now).atZone(ZoneId.systemDefault()).dayOfWeek.value >= 6
 
+    /** The ask the sets are being chosen for. */
+    val currentRequest: DjRequest? get() = request
+
     fun setRequest(next: DjRequest?) {
         request = next
         scope = scoped(pool, next)
@@ -354,7 +357,8 @@ class DjPlanner(
             DjTheme.Favorites -> if (r.favorites) 1.0 else 0.0
             DjTheme.Fresh -> if (r.fresh) 1.0 else 0.0
             DjTheme.Rediscover -> if (r.rediscover) 1.0 else 0.0
-            is DjTheme.ByArtist -> if (r.artist.equals(theme.artist, ignoreCase = true)) 1.0 else 0.0
+            is DjTheme.ByArtist ->
+                if (r.artist.equals(theme.artist, ignoreCase = true) || r.artists.any { it.equals(theme.artist, ignoreCase = true) }) 1.0 else 0.0
             is DjTheme.ByDecade -> if (theme.decade in r.allDecades) 1.0 else 0.0
             is DjTheme.ByGenre -> if (r.genre == theme.genre) 1.0 else 0.0
             is DjTheme.ByMood -> if (r.mood == theme.mood) 1.0 else 0.0
@@ -487,12 +491,22 @@ class DjPlanner(
         if (request == null || !request.understood) return pool
         // Hard filters in order of how much the listener would give up: the file requirement first,
         // then the mood, the genre, the decade. Each step relaxes one, and the DJ says so.
+        // What the interpreter marked strict is never given up: the ask then falls short and the catalogue is searched
+        // for the rest, instead of the DJ quietly playing something else.
+        val keepMood = "mood" in request.strict
+        val keepGenre = "genres" in request.strict || "genre" in request.strict
+        val keepDecades = "decades" in request.strict || "decade" in request.strict
         val steps: List<(DjRequest) -> DjRequest> = listOf(
             { it },
             { it.copy(localOnly = false) },
-            { it.copy(localOnly = false, mood = null) },
-            { it.copy(localOnly = false, mood = null, genre = null) },
-            { it.copy(localOnly = false, mood = null, genre = null, decade = null, decades = emptyList()) },
+            { it.copy(localOnly = false, mood = it.mood.takeIf { keepMood }) },
+            { it.copy(localOnly = false, mood = it.mood.takeIf { keepMood }, genre = it.genre.takeIf { keepGenre }) },
+            {
+                it.copy(
+                    localOnly = false, mood = it.mood.takeIf { keepMood }, genre = it.genre.takeIf { keepGenre },
+                    decade = it.decade.takeIf { keepDecades }, decades = it.decades.takeIf { keepDecades }.orEmpty(),
+                )
+            },
         )
         for ((i, step) in steps.withIndex()) {
             val r = step(request)
@@ -503,11 +517,28 @@ class DjPlanner(
             }
         }
         relaxed = true
-        return pool
+        // Whatever the ask rules out stays out even when nothing else can be kept.
+        val allowed = pool.filter { allowedBy(it, request) }
+        return if (allowed.size >= MIN_BLOCK) allowed else pool
+    }
+
+    /** What the ask leaves out, as a hard rule: the artists and genres it said no to. */
+    private fun allowedBy(t: DjTrack, r: DjRequest): Boolean {
+        if (r.excludeArtists.isNotEmpty() && r.excludeArtists.any {
+                t.leadArtist.equals(it, ignoreCase = true) || t.artist.contains(it, ignoreCase = true)
+            }) return false
+        if (r.excludeGenres.isNotEmpty()) {
+            val own = listOfNotNull(t.genreKey) + genresOf(t.leadArtist).mapNotNull { DjTrack.normalizeGenre(it) }
+            val folded = own.map { DjRequestParser.fold(it) }
+            if (r.excludeGenres.any { ex -> folded.any { it == ex || it.contains(ex) } }) return false
+        }
+        return true
     }
 
     private fun passes(t: DjTrack, r: DjRequest): Boolean =
-        (r.artist == null || t.leadArtist.equals(r.artist, ignoreCase = true)) &&
+        allowedBy(t, r) &&
+            (r.artist == null || t.leadArtist.equals(r.artist, ignoreCase = true)) &&
+            (r.artists.isEmpty() || r.artists.any { t.leadArtist.equals(it, ignoreCase = true) }) &&
             (r.allDecades.isEmpty() || t.decade in r.allDecades) &&
             (r.genre == null || t.genreKey == r.genre) &&
             (r.mood == null || moodOf(t, r.mood)) &&

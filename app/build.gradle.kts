@@ -91,6 +91,28 @@ val monochromeServer: String = (
         ?: ""
     ).trim().trimEnd('/')
 
+/*
+ * Where the DJ's language-model interpreter lives: the Cloudflare Worker in web/dj, which holds the model's API key.
+ * Blank (the default) leaves the DJ with its keyword reader alone. Set DJ_INTERPRETER_URL in local.properties or the
+ * environment once the Worker is deployed.
+ */
+val djInterpreterUrl: String = (
+    localProps.getProperty("DJ_INTERPRETER_URL")
+        ?: System.getenv("DJ_INTERPRETER_URL")
+        ?: ""
+    ).trim().trimEnd('/')
+
+/*
+ * The secret this app signs its DJ interpreter requests with; the Worker in web/dj refuses anything not signed with it.
+ * Like MONOCHROME_SERVER it is not in the source tree: CI writes it into local.properties from a secret. A build without
+ * it never asks the interpreter. It keeps casual use of the URL out, not a determined reader of the APK.
+ */
+val djAppSecret: String = (
+    localProps.getProperty("DJ_APP_SECRET")
+        ?: System.getenv("DJ_APP_SECRET")
+        ?: ""
+    ).trim()
+
 // See the root build.gradle.kts: one version for the phone and its watch app.
 val betaSuffix = rootProject.extra["bitchordBetaSuffix"] as String
 
@@ -125,6 +147,8 @@ android {
             "\"${listenTogetherServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
         )
         buildConfigField("String", "CONNECT_SERVER", "\"${connectServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+        buildConfigField("String", "DJ_INTERPRETER_URL", "\"${djInterpreterUrl.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+        buildConfigField("String", "DJ_APP_SECRET", "\"${djAppSecret.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         buildConfigField("String", "MONOCHROME_SERVER", "\"${monochromeServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         buildConfigField("String", "CONNECT_PLATFORM", "\"android\"")
         buildConfigField(

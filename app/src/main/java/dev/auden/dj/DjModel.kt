@@ -87,7 +87,12 @@ sealed interface DjTheme {
     data object Mix : DjTheme { override val key get() = "mix" }
 
     /** What the listener typed, as YouTube Music understood it: songs the DJ found by searching it, not chose from the library. */
-    data class ByRequest(val text: String, val taste: String? = null) : DjTheme { override val key get() = "request:${text.lowercase(Locale.ROOT)}" }
+    data class ByRequest(val text: String, val taste: String? = null, val name: String? = null) : DjTheme {
+        override val key get() = "request:${text.lowercase(Locale.ROOT)}"
+
+        /** What the set is called when said or shown: the interpreter's short name when it gave one, else the ask as typed. */
+        val label: String get() = name?.takeIf { it.isNotBlank() } ?: text
+    }
 
     /** The family a theme belongs to; two blocks in a row are never of the same one unless asked for. */
     val kind: String get() = key.substringBefore(':')
@@ -119,11 +124,34 @@ data class DjRequest(
     val discoverSeed: String? = null,
     /** For a discovery: follow the songs the listener has hardly played, further from their usual. */
     val discoverFar: Boolean = false,
+    /** Several of the library's artists at once ("Prey y Zombie de The Neighbourhood o Nsqk"): any of them passes. */
+    val artists: List<String> = emptyList(),
+    /** Artists left out whatever else is asked ("sin reggaetón", "nada de X"); never relaxed. */
+    val excludeArtists: List<String> = emptyList(),
+    val excludeGenres: List<String> = emptyList(),
+    /** Songs of the library asked for by name, in the order asked: they open the set. */
+    val songIds: List<String> = emptyList(),
+    /** Searches of the catalogue that would find what the library lacks, as a person would write them. */
+    val queries: List<String> = emptyList(),
+    /** Songs asked for by name that the library does not hold: each searched for, its first answer played. */
+    val songQueries: List<String> = emptyList(),
+    /** Artists asked for that the library does not hold: searched as their names. */
+    val searchNames: List<String> = emptyList(),
+    /** The parts of the ask that are not given up when the library falls short: "artists", "decades", "genres", "mood". */
+    val strict: Set<String> = emptySet(),
+    /** A short name for the session the interpreter chose ("Música clásica", "Rock de los 80"): what the DJ says and shows. */
+    val title: String? = null,
+    /** What was asked is not in the library at all (a genre or artist it has none of): the catalogue answers it, set after set. */
+    val catalogueOnly: Boolean = false,
 ) {
+    /** The ask names something the library cannot answer on its own, so the catalogue is searched too. */
+    val needsCatalogue: Boolean get() = queries.isNotEmpty() || songQueries.isNotEmpty() || searchNames.isNotEmpty()
+
     /** True when the text said something the DJ could act on. */
     val allDecades: List<Int> get() = decades.ifEmpty { listOfNotNull(decade) }
 
     val understood: Boolean
         get() = artist != null || allDecades.isNotEmpty() || genre != null || mood != null || favorites || fresh || rediscover ||
-            localOnly || album != null || playlist != null || discover
+            localOnly || album != null || playlist != null || discover ||
+            artists.isNotEmpty() || excludeArtists.isNotEmpty() || excludeGenres.isNotEmpty() || songIds.isNotEmpty() || queries.isNotEmpty() || songQueries.isNotEmpty()
 }

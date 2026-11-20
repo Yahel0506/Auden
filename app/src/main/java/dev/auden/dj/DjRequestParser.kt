@@ -62,7 +62,7 @@ object DjRequestParser {
             mood = mood,
             favorites = hasAny(q, "favorit", "mejores", "mas escuchad", "best of", "my best", "most played", "top "),
             fresh = hasAny(q, "nuev", "recient", "recien", "new ", "recent", "latest", "fresh"),
-            rediscover = hasAny(q, "olvidad", "clasic", "antigu", "forgotten", "throwback", "nostalg", "rediscover", "redescubr"),
+            rediscover = hasAny(q, "olvidad", "clasicos", "clasicas", "antigu", "forgotten", "throwback", "nostalg", "rediscover", "redescubr"),
             localOnly = hasAny(q, "sin conexion", "offline", "descargad", "downloaded", "sin internet", "no internet"),
         )
     }

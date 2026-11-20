@@ -175,12 +175,12 @@
         <item>Here’s yours: {what}. Starting with {opener}.</item>
         <item>For {what}, I’m starting with {opener}.</item>
         <item>You asked for {what}. Here’s what I found, starting with {opener}.</item>
-        <item>{what}. Here’s {opener}.</item>
+        <item>{what_cap}. Here’s {opener}.</item>
         <item>Here comes {what}, starting with {opener}.</item>
         <item>Good ask. For {what}, first up is {opener}.</item>
         <item>You asked for {what}, so I built it around what you listen to, {taste}. Up first: {opener}.</item>
         <item>For {what} I stayed on your side of things, {taste}. Starting with {opener}.</item>
-        <item>{what}, your way: {taste}. Here’s {opener}.</item>
+        <item>{what_cap}, your way: {taste}. Here’s {opener}.</item>
         <item>Looking for {what} in your world, {taste}. First, {opener}.</item>
         <item>That {what}, with the flavor of what you usually play: {taste}. Here’s {opener}.</item>
     </string-array>

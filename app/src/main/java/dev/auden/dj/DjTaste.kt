@@ -28,6 +28,9 @@ object DjTaste {
 
         /** The ask from one of the listener's artists: their songs count whatever the genre. */
         data class FromArtist(override val text: String, val artist: String) : Query
+
+        /** One song asked for by name: what the search ranks first is the one wanted. */
+        data class Named(override val text: String) : Query
     }
 
     /** A song a search returned. */
@@ -73,6 +76,41 @@ object DjTaste {
      */
     fun mergeForArtist(results: List<Pair<Query, List<Hit>>>, name: String, limit: Int): List<String> =
         mergeForArtists(results, listOf(name), limit)
+
+    /**
+     * The songs for an ask an interpreter turned into searches: each song asked for by name first (the search's first
+     * answer), then, when artists were named, theirs in turn (see [mergeForArtists]), otherwise one from each search
+     * in turn. [excluded] artists never appear, and none more than [perArtist] times.
+     */
+    fun mergePlanned(
+        results: List<Pair<Query, List<Hit>>>,
+        names: List<String>,
+        excluded: Collection<String>,
+        limit: Int,
+        perArtist: Int = PLANNED_PER_ARTIST,
+    ): List<String> {
+        val banned = excluded.map { fold(it).filter { c -> c.isLetterOrDigit() } }.filter { it.isNotEmpty() }
+        fun allowed(h: Hit): Boolean {
+            val a = fold(h.artist).filter { it.isLetterOrDigit() }
+            return banned.none { a.contains(it) }
+        }
+        val out = LinkedHashSet<String>()
+        val counts = HashMap<String, Int>()
+        fun take(h: Hit) {
+            if (out.size >= limit || !allowed(h) || h.id in out) return
+            val who = fold(DjTrack.leadOf(h.artist))
+            if ((counts[who] ?: 0) >= perArtist) return
+            counts.merge(who, 1, Int::plus)
+            out += h.id
+        }
+        results.filter { it.first is Query.Named }.forEach { (_, hits) -> hits.firstOrNull(::allowed)?.let(::take) }
+        val rest = results.filter { it.first !is Query.Named }.map { (q, hits) -> q to hits.filter(::allowed) }
+        if (names.isNotEmpty()) {
+            mergeForArtists(rest, names, limit).forEach { id -> rest.firstNotNullOfOrNull { (_, hs) -> hs.firstOrNull { it.id == id } }?.let(::take) }
+        }
+        interleave(rest.map { it.second }).forEach(::take)
+        return out.toList()
+    }
 
     /** The same for several artists asked for together ("SZA y Taylor Swift"): each one's songs in turn, then the fill. */
     fun mergeForArtists(results: List<Pair<Query, List<Hit>>>, names: List<String>, limit: Int): List<String> {
@@ -171,6 +209,7 @@ object DjTaste {
     private const val ARTIST_HITS = 2
     private const val ARTIST_EXTRAS = 6
     private const val PER_ARTIST = 2
+    private const val PLANNED_PER_ARTIST = 3
 
     /** Tags that are about the listener, not the music. */
     private val NOT_GENRES = setOf("seen live", "favorites", "favourites", "male vocalists", "female vocalists", "spotify", "all")

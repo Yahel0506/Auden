@@ -183,7 +183,7 @@
         <item>Vamos con algo de tu estilo: {what}. Abrimos con {opener}.</item>
         <item>Para {what}, encontré algo que podría gustarte. Va {opener}.</item>
         <item>Esto es lo que encontré para {what}. Empezamos con {opener}.</item>
-        <item>{what}. Vamos a ver qué tal suena {opener}.</item>
+        <item>{what_cap}. Vamos a ver qué tal suena {opener}.</item>
         <item>Te preparé algo de {what}. La primera es {opener}.</item>
         <item>Buena elección. Para {what}, empezamos con {opener}.</item>
         <item>Pediste {what}, así que armé algo tomando en cuenta lo que sueles escuchar: {taste}. Abrimos con {opener}.</item>
