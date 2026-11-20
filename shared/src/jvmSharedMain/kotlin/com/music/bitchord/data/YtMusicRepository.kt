@@ -204,9 +204,13 @@ object YtMusicRepository {
 
     /**
      * Recommended discovery tracks for Quick Picks, strictly excluding listening history and recents.
+     *
+     * Asked as nobody: the catalogue's home, not the account's. Signed out it
+     * may carry no "Quick picks" shelf at all, which is why the fallbacks below
+     * read any shelf with tracks and then New releases.
      */
     suspend fun quickPicks(excludeSongIds: Set<String> = emptySet()): Result<List<Song>> = call("quickPicks") {
-        val homeRaw = runCatching { Innertube.browse("FEmusic_home") }.getOrNull()
+        val homeRaw = runCatching { Innertube.browse("FEmusic_home", anonymous = true) }.getOrNull()
         val shelves = if (homeRaw != null) InnertubeParser.parseHome(homeRaw) else emptyList()
 
         // 1. Direct "Quick picks" or "Mix" or "Recommendations" shelf
@@ -318,12 +322,13 @@ object YtMusicRepository {
     /** Enough to scroll through, short of turning the shelf into the history page. */
     private const val RECENT_LIMIT = 20
 
+    /** A public browse page's shelves — charts, new releases, explore. Catalogue: asked as nobody. */
     private suspend fun shelvesOf(browseId: String): List<HomeShelf> =
-        InnertubeParser.parseHome(Innertube.browse(browseId))
+        InnertubeParser.parseHome(Innertube.browse(browseId, anonymous = true))
 
     /** The server-defined mood and genre categories used by Explore. */
     suspend fun moodAndGenres(): Result<List<MoodGenreSection>> = call("moods-and-genres") {
-        InnertubeParser.parseMoodAndGenres(Innertube.browse("FEmusic_moods_and_genres"))
+        InnertubeParser.parseMoodAndGenres(Innertube.browse("FEmusic_moods_and_genres", anonymous = true))
     }
 
     /**
@@ -335,7 +340,7 @@ object YtMusicRepository {
         val key = "$browseId:${params.orEmpty()}"
         moodGenreShelfCache[key]?.let { return Result.success(it) }
         return call("mood-genre:$browseId") {
-            InnertubeParser.parseHome(Innertube.browse(browseId, params))
+            InnertubeParser.parseHome(Innertube.browse(browseId, params, anonymous = true))
         }.also { result -> result.getOrNull()?.let { moodGenreShelfCache.putIfAbsent(key, it) } }
     }
 
@@ -368,10 +373,10 @@ object YtMusicRepository {
             }
         }
 
-    /** Fetches the next page of a search only when the result list needs it. */
+    /** Fetches the next page of a search only when the result list needs it. Anonymous, as the search is. */
     suspend fun searchContinuation(token: String, filter: SearchFilter): Result<SearchPage> = call("search:continuation") {
         InnertubeParser.parseSearchPage(
-            Innertube.searchContinuation(token),
+            Innertube.searchContinuation(token, anonymous = true),
             includeVideos = filter == SearchFilter.VIDEOS,
         ).let { page ->
             SearchPage(page.rows.distinctBy { it.identityKey() }, page.continuation)
@@ -409,9 +414,9 @@ object YtMusicRepository {
      *
      * Deliberately unauthenticated: [Innertube.searchTypeahead] strips the
      * session cookie so YouTube Music does not log each debounced keystroke
-     * to the account's server-side search history. Confirmed searches (Enter /
-     * IME Search / tapping a suggestion) still use the normal authenticated
-     * [searchPage] path and are recorded properly.
+     * to the account's server-side search history. Confirmed searches are
+     * anonymous too now — a search is a catalogue read, and writing it into
+     * the account's history was a write to YouTube nobody asked for.
      */
     suspend fun searchTypeahead(input: String): Result<SearchPage> =
         call("typeahead:$input") {
@@ -666,10 +671,15 @@ object YtMusicRepository {
      * seed track itself comes back first, so callers filter what they have.
      * [preferVideo] takes each song YouTube pairs with its music video as the
      * video — a station played on from a video stays videos.
+     *
+     * Asked as nobody: a station seeded by a song the listener chose, not by
+     * the account's history. Without an account YouTube may pair fewer songs
+     * with their videos (see [officialVersion]), so [preferVideo] can find
+     * fewer pairs than it did signed in; the rows themselves are the same.
      */
     suspend fun radio(videoId: String, preferVideo: Boolean = false): Result<List<Song>> =
         call("radio:$videoId:$preferVideo") {
-            InnertubeParser.parseWatchQueue(Innertube.next(videoId), preferVideo = preferVideo)
+            InnertubeParser.parseWatchQueue(Innertube.next(videoId, anonymous = true), preferVideo = preferVideo)
         }
 
     /**
@@ -704,9 +714,12 @@ object YtMusicRepository {
      * Search rows carry them, but home cards and anything already sitting in a
      * queue often don't — and the credits in the player have to lead somewhere
      * either way. A track's own watch queue entry always names both.
+     *
+     * Catalogue: asked as nobody. Also what the listening stats are filled
+     * in from (the app's `ListeningRecorder`), which must not depend on an account.
      */
     suspend fun trackLinks(videoId: String): Result<Song> = call("links:$videoId") {
-        InnertubeParser.parseWatchQueue(Innertube.next(videoId))
+        InnertubeParser.parseWatchQueue(Innertube.next(videoId, anonymous = true))
             .firstOrNull { it.videoId == videoId }
             ?: error("no watch entry for $videoId")
     }
@@ -1232,19 +1245,26 @@ object YtMusicRepository {
      * page out every song and release, which a Top Picks card has no use for:
      * it needs the header (photo, Mix and Shuffle) and the first card of each
      * shelf.
+     *
+     * Asked as nobody, unlike [artistPage]: nothing on a card depends on the
+     * account, so its [ArtistPage.subscription] is the signed-out one.
      */
     suspend fun artistLanding(browseId: String): Result<ArtistPage> = call("artistLanding:$browseId") {
-        InnertubeParser.parseArtistPage(Innertube.browse(browseId))
+        InnertubeParser.parseArtistPage(Innertube.browse(browseId, anonymous = true))
     }
 
     /**
      * The queue a watch target starts — a mix, a playlist radio, or an artist's
      * Mix or Shuffle button. Music videos are dropped, as everywhere a queue is
      * built for the listener rather than picked by them.
+     *
+     * Asked as nobody. A target only the account can open — My Supermix and
+     * the rest of the account's own mixes — fails here rather than being
+     * opened with the account behind the listener's back.
      */
     suspend fun watchQueue(target: WatchTarget): Result<List<Song>> = call("watch:${target.playlistId}") {
         InnertubeParser.parseWatchQueue(
-            Innertube.nextPlaylist(target.playlistId, target.videoId, target.params),
+            Innertube.nextPlaylist(target.playlistId, target.videoId, target.params, anonymous = true),
         ).filterNot { it.isVideo }
     }
 
@@ -1255,9 +1275,12 @@ object YtMusicRepository {
      * video of, so the song is taken directly instead of being searched for
      * when it comes to play. A row with no pair stays the video — the player's
      * own video-to-audio step still covers it.
+     *
+     * Asked as nobody, so it gets the pairs YouTube gives without an account,
+     * which can be fewer; the rows left as videos take the step above.
      */
     suspend fun playlistAsAudio(playlistId: String): Result<List<Song>> = call("watchAudio:$playlistId") {
-        val response = Innertube.nextPlaylist(playlistId)
+        val response = Innertube.nextPlaylist(playlistId, anonymous = true)
         val songs = InnertubeParser.parseWatchQueue(response, preferAudio = true)
         val (pairs, audioPairs) = InnertubeParser.watchQueuePairs(response)
         Log.d(TAG, "watchAudio $playlistId rows=${songs.size} pairs=$pairs audioPairs=$audioPairs videosLeft=${songs.count { it.isVideo }}")

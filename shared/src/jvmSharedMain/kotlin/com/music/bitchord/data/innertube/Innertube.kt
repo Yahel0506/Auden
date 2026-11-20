@@ -465,7 +465,8 @@ object Innertube {
 
     private val json = Json { ignoreUnknownKeys = true }
 
-    private val client = HttpClient(OkHttp) {
+    /** Internal rather than private for one reason: `AccountScopeTest` reads the requests it builds. */
+    internal val client = HttpClient(OkHttp) {
         // Same OkHttp instance ExoPlayer streams through — see Http.
         engine { preconfigured = com.music.bitchord.data.Http.client }
         install(ContentNegotiation) { json(json) }
@@ -525,9 +526,18 @@ object Innertube {
     }
 
     // ---- Public API ---------------------------------------------------------
+    //
+    // Who a request is made as is decided per call, never by flipping [cookie]:
+    // an import can be reading the account's library while the DJ asks for a
+    // radio in the same process. `anonymous = true` is a catalogue read — it
+    // carries no Cookie, no Authorization, no account or channel headers and
+    // no `onBehalfOfUser` — and is what Home, the DJ, AutoPlay, artist cards,
+    // search and lyrics ask for. The default stays signed so that a library
+    // read (import, the account's own lists) is never quietly answered for
+    // nobody; such a read coming back empty would look like an empty library.
 
-    suspend fun browse(browseId: String, params: String? = null): JsonObject =
-        postMusic("browse") {
+    suspend fun browse(browseId: String, params: String? = null, anonymous: Boolean = false): JsonObject =
+        postMusic("browse", anonymous = anonymous) {
             put("browseId", browseId)
             params?.let { put("params", it) }
         }
@@ -537,12 +547,15 @@ object Innertube {
      * come back roughly 100 rows at a time. YouTube Music takes the token as
      * query parameters rather than in the body, and answers with a bare
      * continuation envelope carrying the same row renderers.
+     *
+     * [anonymous] has to match the request the token came from.
      */
-    suspend fun browseContinuation(token: String): JsonObject = postMusic(
+    suspend fun browseContinuation(token: String, anonymous: Boolean = false): JsonObject = postMusic(
         endpoint = "browse",
         // The web client passes the token in the body and the older query-string
         // form is still honoured; both are sent so either is enough.
         query = mapOf("ctoken" to token, "continuation" to token, "type" to "next"),
+        anonymous = anonymous,
     ) {
         put("continuation", token)
     }
@@ -600,7 +613,7 @@ object Innertube {
      * The watch queue that YouTube Music would play after [videoId] — the
      * "RDAMVM" radio mix. Used to keep AutoPlay going past the last track.
      */
-    suspend fun next(videoId: String): JsonObject = postMusic("next") {
+    suspend fun next(videoId: String, anonymous: Boolean = false): JsonObject = postMusic("next", anonymous = anonymous) {
         put("videoId", videoId)
         put("playlistId", "RDAMVM$videoId")
         put("isAudioOnly", true)
@@ -611,39 +624,38 @@ object Innertube {
      * My Supermix, a playlist radio (`RDAMPL…`), or an artist's Mix / Shuffle
      * button, which also carry their own seed [videoId] and [params].
      */
-    suspend fun nextPlaylist(playlistId: String, videoId: String? = null, params: String? = null): JsonObject =
-        postMusic("next") {
+    suspend fun nextPlaylist(
+        playlistId: String,
+        videoId: String? = null,
+        params: String? = null,
+        anonymous: Boolean = false,
+    ): JsonObject =
+        postMusic("next", anonymous = anonymous) {
             videoId?.let { put("videoId", it) }
             put("playlistId", playlistId)
             params?.let { put("params", it) }
             put("isAudioOnly", true)
         }
 
-    /** Timed caption transcript used as a last-resort lyrics source. */
-    suspend fun transcript(videoId: String): JsonObject = postMusic("get_transcript") {
+    /** Timed caption transcript used as a last-resort lyrics source. Lyrics are catalogue: never signed. */
+    suspend fun transcript(videoId: String): JsonObject = postMusic("get_transcript", anonymous = true) {
         // get_transcript expects a tiny protobuf: field 1, length, video id.
         val bytes = byteArrayOf(10, videoId.toByteArray().size.toByte()) + videoId.toByteArray()
         put("params", Base64.getEncoder().encodeToString(bytes))
     }
 
     suspend fun search(query: String, params: String? = null, anonymous: Boolean = true): JsonObject =
-        if (anonymous) {
-            postMusicAnonymous("search", region = searchRegion) {
-                put("query", query)
-                params?.let { put("params", it) }
-            }
-        } else {
-            postMusic("search", region = searchRegion) {
-                put("query", query)
-                params?.let { put("params", it) }
-            }
+        postMusic("search", region = searchRegion, anonymous = anonymous) {
+            put("query", query)
+            params?.let { put("params", it) }
         }
 
-    /** The next page of a filtered search result. */
-    suspend fun searchContinuation(token: String): JsonObject = postMusic(
+    /** The next page of a filtered search result; [anonymous] as the search it continues. */
+    suspend fun searchContinuation(token: String, anonymous: Boolean = true): JsonObject = postMusic(
         endpoint = "search",
         query = mapOf("ctoken" to token, "continuation" to token, "type" to "next"),
         region = searchRegion,
+        anonymous = anonymous,
     ) {
         put("continuation", token)
     }
@@ -656,9 +668,12 @@ object Innertube {
      * far cheaper than one: the response is a few hundred bytes of text with
      * no shelves, thumbnails or playback endpoints in it, which is what makes
      * it affordable per keystroke where a search is not.
+     *
+     * Never signed: signed in, the list leads with the account's own past
+     * searches, and what Auden suggests is the catalogue's, not the account's.
      */
     suspend fun searchSuggestions(input: String): JsonObject =
-        postMusic("music/get_search_suggestions", region = searchRegion) {
+        postMusic("music/get_search_suggestions", region = searchRegion, anonymous = true) {
             put("input", input)
         }
 
@@ -674,7 +689,7 @@ object Innertube {
      * land as anonymous lookups that don't touch the user's account history.
      */
     suspend fun searchTypeahead(query: String): JsonObject =
-        postMusicAnonymous("search", region = searchRegion) {
+        postMusic("search", region = searchRegion, anonymous = true) {
             put("query", query)
         }
 
@@ -1117,16 +1132,28 @@ object Innertube {
         query: Map<String, String> = emptyMap(),
         /** The context's `gl`; null sends none. */
         region: String? = currentRegion,
+        /**
+         * A catalogue read, made as nobody: no session cookie, no SAPISID
+         * signature, no account or brand-channel headers, no `onBehalfOfUser`,
+         * and none of the session's visitor id either — see [anonymousVisitor].
+         * Decided here, for this one request, so a signed read running beside
+         * it in the same process is unaffected.
+         */
+        anonymous: Boolean = false,
         bodyExtras: JsonObjectBuilder.() -> Unit,
     ): JsonObject {
-        // This is the common authenticated request path: Home, Library,
-        // likes, playlists, account menus and all their continuations pass
-        // through it. Waiting here makes restoration process-wide rather than
-        // a special case implemented by whichever screen happened to open.
-        if (cookie != null) ensureSessionScope()
-        val session = scope
+        // Read once: every header below answers to the same session, even if
+        // the listener signs in or out while the request is being retried.
+        val account = if (anonymous) null else cookie
+        // The common authenticated request path: library, likes, playlists,
+        // account menus and their continuations pass through it. Waiting here
+        // makes restoration process-wide rather than a special case
+        // implemented by whichever screen happened to open.
+        if (account != null) ensureSessionScope()
+        val session = if (account != null) scope else null
         val clientVersion = webRemixVersion
         val response = withRetry {
+            val visitor = if (anonymous) anonymousVisitor() else visitorData
             client.post("$MUSIC_BASE/$endpoint") {
                 contentType(ContentType.Application.Json)
                 parameter("prettyPrint", "false")
@@ -1141,8 +1168,8 @@ object Innertube {
                 // id is minted on the first call and reused for the session.
                 header("X-YouTube-Client-Name", WEB_REMIX_CLIENT_ID)
                 header("X-YouTube-Client-Version", clientVersion)
-                visitorData?.let { header("X-Goog-Visitor-Id", it) }
-                cookie?.let { c ->
+                visitor?.let { header("X-Goog-Visitor-Id", it) }
+                account?.let { c ->
                     header("Cookie", c)
                     // Which account in the jar, and which brand channel of it.
                     // Both were fixed at "the first one" before — see
@@ -1159,7 +1186,7 @@ object Innertube {
                                 put("clientVersion", clientVersion)
                                 put("hl", currentLanguage)
                                 region?.let { put("gl", it) }
-                                visitorData?.let { put("visitorData", it) }
+                                visitor?.let { put("visitorData", it) }
                             }
                             putJsonObject("user") {
                                 put("lockedSafetyMode", false)
@@ -1168,7 +1195,10 @@ object Innertube {
                                 // `onBehalfOfUser` it cannot tie to the cookie
                                 // with 401, so a guess here would take the
                                 // whole app down rather than just history.
-                                dataSyncIdFor(session)?.let { put("onBehalfOfUser", it) }
+                                // Never on a request made as nobody — a chosen
+                                // channel answers [dataSyncIdFor] even with no
+                                // session, so this is gated on [account].
+                                if (account != null) dataSyncIdFor(session)?.let { put("onBehalfOfUser", it) }
                             }
                             putJsonObject("request") { put("useSsl", true) }
                         }
@@ -1178,62 +1208,34 @@ object Innertube {
             }.body<JsonObject>()
         }
 
-        if (visitorData == null) {
-            visitorData = response["responseContext"]?.jsonObject
-                ?.get("visitorData")?.jsonPrimitive?.content
+        val returned = ((response["responseContext"] as? JsonObject)?.get("visitorData") as? JsonPrimitive)
+            ?.contentOrNull
+        if (anonymous) {
+            if (anonymousVisitorData == null) anonymousVisitorData = returned
+            // Signed out, every visitor id is an anonymous one, so the player
+            // may start from it as it did before catalogue reads moved here.
+            if (cookie == null && visitorData == null) visitorData = returned
+        } else if (visitorData == null) {
+            visitorData = returned
         }
         return response
     }
 
     /**
-     * Like [postMusic] but deliberately strips the session cookie so YouTube
-     * Music does not record the call against any account.
+     * A visitor id that names no account, for [postMusic]'s anonymous reads.
      *
-     * Used for typeahead lookups where intermediate keystrokes must remain
-     * anonymous — see [searchTypeahead].
+     * Leaving off the cookie is not enough on its own. Signed in, [visitorData]
+     * is usually the one the signed-in shell issued, bound to the session, and
+     * sending it would tie a "nobody" request straight back to the account. So
+     * a signed-in process keeps a second id, taken from the first anonymous
+     * answer; the first anonymous request goes without one, which browse and
+     * next answer normally. Signed out, [visitorData] is itself anonymous.
      */
-    private suspend fun postMusicAnonymous(
-        endpoint: String,
-        /** The context's `gl`; null sends none. */
-        region: String? = currentRegion,
-        bodyExtras: JsonObjectBuilder.() -> Unit,
-    ): JsonObject {
-        val clientVersion = webRemixVersion
-        return withRetry {
-            client.post("$MUSIC_BASE/$endpoint") {
-                contentType(ContentType.Application.Json)
-                parameter("prettyPrint", "false")
-                header("X-Origin", MUSIC_ORIGIN)
-                header("Origin", MUSIC_ORIGIN)
-                header("Referer", "$MUSIC_ORIGIN/")
-                header("X-YouTube-Client-Name", WEB_REMIX_CLIENT_ID)
-                header("X-YouTube-Client-Version", clientVersion)
-                header("Accept-Language", acceptLanguageHeader)
-                parameter("hl", currentLanguage)
-                visitorData?.let { header("X-Goog-Visitor-Id", it) }
-                // No Cookie / Authorization headers — anonymous request.
-                setBody(
-                    buildJsonObject {
-                        putJsonObject("context") {
-                            putJsonObject("client") {
-                                put("clientName", "WEB_REMIX")
-                                put("clientVersion", clientVersion)
-                                put("hl", currentLanguage)
-                                region?.let { put("gl", it) }
-                                visitorData?.let { put("visitorData", it) }
-                            }
-                            putJsonObject("user") {
-                                put("lockedSafetyMode", false)
-                                // No onBehalfOfUser — no account context.
-                            }
-                            putJsonObject("request") { put("useSsl", true) }
-                        }
-                        bodyExtras()
-                    },
-                )
-            }.body<JsonObject>()
-        }
-    }
+    private fun anonymousVisitor(): String? =
+        if (cookie == null && !visitorDataIsSessionBound) visitorData ?: anonymousVisitorData else anonymousVisitorData
+
+    @Volatile
+    private var anonymousVisitorData: String? = null
 
     /** First string value under [key] anywhere in [element], depth-first. */
     private fun findString(element: JsonElement, key: String): String? = when (element) {

@@ -54,6 +54,7 @@
 - **A library of your own.** The Library no longer reads your YouTube Music or Spotify account live: it shows what is in Auden — your playlists, likes, downloads and what you have brought over. If you were signed in, a note tells you once where your library went.
 - **Update a playlist when you want.** A playlist brought over from YouTube Music or Spotify has "Update from its source" in its menu. It shows what changed there (+ added / − removed) and combines it with your copy — what you added stays, what you removed stays removed — or replaces your copy with the source. Nothing updates on its own any more.
 - **Export to YouTube Music, by choice.** Sending one of your playlists to YouTube Music is "Export to YouTube Music" in its menu, and asks first: it tells you what will be created or changed there, naming what would be removed.
+- **Nothing asks your account for what to play.** Search, radio, artist cards, lyrics and the DJ's and AutoPlay's suggestions are asked of YouTube Music as nobody — no sign-in behind them — and your searches are no longer written into your YouTube history. The DJ builds only from your library, your likes and what you have listened to, and says so when that is not enough yet.
 - **"Playlist" everywhere.** Spanish says "playlist" instead of "lista de reproducción".
 
 ## Auden DJ

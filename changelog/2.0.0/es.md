@@ -54,6 +54,7 @@
 - **Una biblioteca propia.** La biblioteca ya no lee en vivo tu cuenta de YouTube Music ni de Spotify: muestra lo que hay en Auden —tus playlists, Me gusta, descargas y lo que has traído—. Si tenías sesión iniciada, una nota te cuenta una vez adónde fue tu biblioteca.
 - **Actualiza una playlist cuando quieras.** Una playlist traída de YouTube Music o Spotify tiene «Actualizar desde su origen» en su menú. Muestra qué cambió allí (+ añadidas / − quitadas) y lo combina con tu copia —lo que añadiste se queda, lo que quitaste sigue quitado— o reemplaza tu copia por el origen. Nada se actualiza ya por sí solo.
 - **Exportar a YouTube Music, por elección.** Enviar una de tus playlists a YouTube Music es «Exportar a YouTube Music» en su menú, y pregunta antes: te dice qué se creará o cambiará allí, con nombre de lo que se quitaría.
+- **Nada le pide a tu cuenta qué reproducir.** La búsqueda, la radio, las fichas de artista, las letras y las sugerencias del DJ y del autoplay se piden a YouTube Music como nadie —sin tu sesión detrás— y tus búsquedas ya no se escriben en tu historial de YouTube. El DJ se construye solo con tu biblioteca, tus Me gusta y lo que has escuchado, y lo dice cuando todavía no es suficiente.
 - **"Playlist" en todas partes.** El español dice "playlist" en lugar de "lista de reproducción".
 
 ## Auden DJ

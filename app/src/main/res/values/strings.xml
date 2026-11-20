@@ -1499,7 +1499,7 @@
     <string name="dj_more_like_this">More like this</string>
     <string name="dj_less_like_this">Less like this</string>
     <string name="dj_starting">Choosing the first set…</string>
-    <string name="dj_too_few">Not enough music with tags yet. Play, download or add more songs and try again.</string>
+    <string name="dj_too_few">Not enough of your music for the DJ yet. Listen to a few songs, or bring yours over with Transfer your music, and try again.</string>
     <string name="dj_no_player">The DJ could not start the player. Try again.</string>
     <string name="dj_setting_voice">DJ voice</string>
     <string name="dj_setting_voice_subtitle">Speaks between sets, over the start of a song</string>

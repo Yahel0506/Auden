@@ -2615,7 +2615,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             runAddonSearch(q)
             return
         }
-        runSearch(anonymous = false)
+        // Anonymous like every other search: a search is a catalogue read, and
+        // the signed call existed only to write the term into the account's
+        // YouTube history.
+        runSearch(anonymous = true)
     }
 
     /**
@@ -2779,9 +2782,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 val exact = searchCache.get(key)
                 val cached = exact?.rows ?: prefixMatch(request.query, request.filter)
                 _results.value = cached?.let { UiState.Success(it) } ?: UiState.Loading
-                // An explicit submit still has to reach the server even when
-                // an anonymous lookup cached the same query: that call is what
-                // records it in the account's history.
+                // A signed search would still have to reach the server even
+                // when an anonymous lookup cached the same query. Every search
+                // is anonymous now, so a cached answer is the answer.
                 if (exact != null && request.anonymous) {
                     searchSession = SearchSession(key, request.requestId, request.filter, exact.continuation)
                     return@collectLatest

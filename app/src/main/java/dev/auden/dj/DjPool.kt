@@ -1,6 +1,7 @@
 package dev.auden.dj
 
 import android.content.Context
+import com.music.bitchord.data.OfflinePlaylists
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.stats.ListeningStats
 import dev.auden.library.db.AudenDb
@@ -8,7 +9,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
 
-/** The songs the DJ can choose from: the library, and everything ever heard. */
+/**
+ * The songs the DJ can choose from: the library, its playlists and likes, and everything ever heard. All of it
+ * on the device; nothing here asks YouTube Music or any account.
+ */
 object DjPool {
     /** Enough variety for any theme, and cheap enough to group on a phone in a few milliseconds. */
     const val CAP = 3_000
@@ -86,6 +90,22 @@ object DjPool {
                     songs.putIfAbsent(id, song)
                 }
             }
+        }
+        // The listener's likes: songs they chose to keep, and the first thing Transfer your music brings over.
+        // Theirs whether or not they have been played here yet, as a playlist's songs are; without them a
+        // listener who has just moved their likes in would be told there is nothing for the DJ to play.
+        OfflinePlaylists.playlists.value.firstOrNull { it.isLiked }?.songs.orEmpty().forEach { song ->
+            val id = song.videoId.takeIf { it.isNotBlank() } ?: song.localUri ?: return@forEach
+            if (id in byId || song.title.isBlank()) return@forEach
+            val entry = heard[id]
+            byId[id] = DjTrack(
+                id = id, title = song.title, artist = song.artist, album = song.albumName,
+                art = song.thumbnailUrl, localUri = song.localUri,
+                plays = entry?.plays ?: 0,
+                plays30 = entry?.days?.filterKeys { it >= cutoff }?.values?.sumOf { it.plays } ?: 0,
+                lastPlayedAt = entry?.last ?: 0L,
+            )
+            songs.putIfAbsent(id, song)
         }
         val capped = byId.values.sortedByDescending { it.plays * 2 + it.plays30 * 3 + (if (it.localUri != null) 1 else 0) }.take(CAP)
         Loaded(capped, songs)

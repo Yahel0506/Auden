@@ -1559,7 +1559,7 @@
     <string name="dj_more_like_this">Más así</string>
     <string name="dj_less_like_this">Menos así</string>
     <string name="dj_starting">Eligiendo el primer set…</string>
-    <string name="dj_too_few">Todavía no hay suficiente música con datos. Escucha, descarga o añade más canciones e inténtalo de nuevo.</string>
+    <string name="dj_too_few">Todavía no hay suficiente música tuya para el DJ. Escucha algunas canciones o trae la tuya con Transfiere tu música, e inténtalo de nuevo.</string>
     <string name="dj_no_player">El DJ no pudo iniciar el reproductor. Inténtalo de nuevo.</string>
     <string name="dj_setting_voice">Voz del DJ</string>
     <string name="dj_setting_voice_subtitle">Habla entre sets, sobre el inicio de una canción</string>

@@ -10,11 +10,11 @@ import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.longOrNull
 
-/** Lyrics exposed by YouTube Music's Lyrics tab for the exact playing video. */
+/** Lyrics exposed by YouTube Music's Lyrics tab for the exact playing video. Catalogue: asked as nobody. */
 object YouTubeMusicLyrics {
     suspend fun lyrics(videoId: String): List<LyricLine>? = withContext(Dispatchers.IO) {
         if (!YOUTUBE_ID.matches(videoId)) return@withContext null
-        val next = runCatching { Innertube.next(videoId) }.getOrNull() ?: return@withContext null
+        val next = runCatching { Innertube.next(videoId, anonymous = true) }.getOrNull() ?: return@withContext null
         val endpoint = next.objectsNamed("tabRenderer")
             .firstOrNull { it.youtubeStrings().any { text -> text.equals("Lyrics", ignoreCase = true) } }
             ?.objectsNamed("browseEndpoint")?.firstOrNull()
@@ -25,7 +25,7 @@ object YouTubeMusicLyrics {
         val browseId = (endpoint["browseId"] as? JsonPrimitive)?.contentOrNull
             ?: return@withContext null
         val params = (endpoint["params"] as? JsonPrimitive)?.contentOrNull
-        val page = runCatching { Innertube.browse(browseId, params) }.getOrNull() ?: return@withContext null
+        val page = runCatching { Innertube.browse(browseId, params, anonymous = true) }.getOrNull() ?: return@withContext null
         val shelf = page.objectsNamed("musicDescriptionShelfRenderer").firstOrNull()
             ?: return@withContext null
         val text = shelf["description"]?.youtubeStrings()?.joinToString("").orEmpty().trim()

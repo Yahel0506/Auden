@@ -84,7 +84,7 @@ object SongInfoRepository {
             } else song
             album = album ?: linked.albumName
             linked.albumId?.let { id ->
-                val header = InnertubeParser.parseBrowseHeader(Innertube.browse(id))
+                val header = InnertubeParser.parseBrowseHeader(Innertube.browse(id, anonymous = true))
                 album = album ?: header?.title
                 year = header?.subtitle?.split('•')?.map { it.trim() }
                     ?.firstOrNull { it.matches(Regex("(?:19|20)[0-9]{2}")) }
