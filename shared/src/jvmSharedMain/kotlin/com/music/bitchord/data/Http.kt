@@ -38,6 +38,34 @@ import java.util.concurrent.atomic.AtomicLong
  */
 object Http {
 
+    /**
+     * Hosts that answer a burst of requests with 429. A search, a probe, an audition and a
+     * download all landing on one of them at once is enough to be refused, and a refusal there
+     * costs a song its upgrade, so each of these is retried after the pause the server names
+     * (or a short one) instead of being handed up as a failure. Filled in at startup.
+     */
+    val politeHosts: MutableSet<String> = java.util.concurrent.CopyOnWriteArraySet()
+
+    private val politeInterceptor = okhttp3.Interceptor { chain ->
+        var response = chain.proceed(chain.request())
+        if (chain.request().url.host !in politeHosts) return@Interceptor response
+        var attempt = 0
+        while (response.code == 429 && attempt < 2) {
+            val pause = response.header("Retry-After")?.toLongOrNull()?.coerceIn(1L, 5L)?.times(1_000L)
+                ?: (1_500L * (attempt + 1))
+            response.close()
+            try {
+                Thread.sleep(pause)
+            } catch (e: InterruptedException) {
+                Thread.currentThread().interrupt()
+                throw java.io.InterruptedIOException("Interrupted while waiting out a 429")
+            }
+            attempt++
+            response = chain.proceed(chain.request())
+        }
+        response
+    }
+
     // ---- Temporary data-usage instrumentation --------------------------
     //
     // Added to answer, with real numbers instead of code-reading, which of
@@ -137,6 +165,7 @@ object Http {
         .dispatcher(Dispatcher().apply { maxRequestsPerHost = 16 })
         .connectionPool(ConnectionPool(16, 5, TimeUnit.MINUTES))
         .addInterceptor(webDavInterceptor)
+        .addInterceptor(politeInterceptor)
         .apply { if (USAGE_LOGGING_ENABLED) addNetworkInterceptor(usageInterceptor) }
         .build()
 }

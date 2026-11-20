@@ -54,6 +54,15 @@ enum class SourceKind(
      * nothing about what was actually asked first.
      */
     val rank: Int,
+    /**
+     * Whether this kind is still asked on the High rung although it [canServeLossless].
+     *
+     * High skips the sources that can serve a lossless file, since walking them costs seconds
+     * to land on a transcode JioSaavn already has. A source that answers in a single lookup and
+     * simply says what it has opts back in: the answer is then filtered by what High allows
+     * (see [SourceResolver.fitsHighRung]) instead of being left out wholesale.
+     */
+    val askedAtHigh: Boolean = false,
 ) {
     /**
      * An addon server the user pointed at themselves.
@@ -125,6 +134,25 @@ enum class SourceKind(
         needsServer = true,
         canServeLossless = true,
         rank = 1,
+    ),
+
+    /**
+     * The release build's own Monochrome server: lossless where it has it, a high-bitrate AAC
+     * where it does not.
+     *
+     * Not configurable and not addable. Its URL is [MonochromeServer], which the official
+     * release packages in and every other build lacks — a build without it has no such source,
+     * and [SourceRegistry] drops it rather than leave a row that can never answer.
+     */
+    MONOCHROME(
+        label = "Monochrome",
+        detail = "Lossless and high-bitrate streams for most of the catalogue, whichever the " +
+            "server holds. Whatever it cannot serve goes to the next source.",
+        labels = listOf("Lossless", "Hi-Res", "High bitrate"),
+        needsServer = false,
+        canServeLossless = true,
+        rank = 1,
+        askedAtHigh = true,
     ),
 
     JIOSAAVN(

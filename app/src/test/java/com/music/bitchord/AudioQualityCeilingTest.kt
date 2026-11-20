@@ -24,8 +24,8 @@ class AudioQualityCeilingTest {
     }
 
     @Test
-    fun `high skips every source that can serve lossless and keeps JioSaavn`() {
-        lossless.forEach { assertFalse(it.name, AudioQuality.HIGH.permits(it)) }
+    fun `high skips every source that can serve lossless except the ones that opt back in`() {
+        lossless.forEach { assertEquals(it.name, it == SourceKind.MONOCHROME, AudioQuality.HIGH.permits(it)) }
         assertTrue(AudioQuality.HIGH.permits(SourceKind.JIOSAAVN))
         assertTrue(AudioQuality.HIGH.permits(SourceKind.YOUTUBE))
     }
