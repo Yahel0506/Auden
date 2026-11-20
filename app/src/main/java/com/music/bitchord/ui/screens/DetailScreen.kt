@@ -458,7 +458,9 @@ fun DetailScreen(
     }
     val palette = rememberArtworkPalette(
         imageUrl = appleArt?.heroUrl ?: page.thumbnailUrl,
-        keyColors = appleArt?.keyColors(),
+        // One of the lists made each day has a cover that is drawn, not a picture: its own colours tint the page.
+        keyColors = appleArt?.keyColors() ?: com.music.bitchord.ui.screens.mixKindOf(page.browseId)?.mixStyle()
+            ?.let { com.music.bitchord.ui.theme.ArtworkKeyColors(it.bottom, it.accent) },
     )
 
     // Narrowing the running order in place — the release equivalent of the
@@ -598,6 +600,7 @@ fun DetailScreen(
                     CoverContinuation(
                         imageUrl = if (isArtist) appleArt?.heroUrl ?: page.thumbnailUrl else page.thumbnailUrl,
                         folderId = page.browseId.takeIf { page.thumbnailUrl == null && !isArtist },
+                        gradient = com.music.bitchord.ui.screens.mixKindOf(page.browseId)?.mixStyle()?.let { it.top to it.bottom },
                         seam = continuationSeam,
                         length = maxHeight * COVER_CONTINUATION_LENGTH,
                         pageColor = pageColor,
@@ -990,7 +993,11 @@ private fun ReleaseHeader(
     // to the page's width it would only tint the top of the screen.
     // A device folder has no picture but its generated cover, which runs the page's width the same way.
     val folderCover = page.thumbnailUrl == null && folderCoverStyle(page.browseId) != null
-    val bleed = fullBleed && ((page.thumbnailUrl != null && !artFailed) || folderCover)
+    // A list made each day: its moving cover runs the page's width and dissolves into the continuation, as a sleeve does.
+    val mixKind = com.music.bitchord.ui.screens.mixKindOf(page.browseId)
+    val mix = remember(page.browseId) { dev.auden.home.GeneratedMixes.get(page.browseId) }
+    val mixCover = mixKind != null && page.thumbnailUrl == null
+    val bleed = fullBleed && ((page.thumbnailUrl != null && !artFailed) || folderCover || mixCover)
 
     Column(
         modifier = Modifier
@@ -1035,7 +1042,11 @@ private fun ReleaseHeader(
                             blendMode = BlendMode.DstIn,
                         )
                     }
-                if (folderCover) {
+                if (mixCover && mixKind != null) {
+                    com.music.bitchord.ui.screens.MixCoverArt(
+                        mixKind, mix?.images.orEmpty(), modifier = dissolve, label = mix?.title.orEmpty(), motion = true, captionSpace = false,
+                    )
+                } else if (folderCover) {
                     FolderCover(browseId = page.browseId, modifier = dissolve)
                 } else {
                     AsyncImage(
@@ -1091,8 +1102,10 @@ private fun ReleaseHeader(
                 modifier = Modifier.matchParentSize(),
             )
             // One of the lists Auden makes each day: the same moving cover its card on Home has.
-            dev.auden.home.GeneratedMixes.get(page.browseId)?.let { mix ->
-                com.music.bitchord.ui.screens.MixCoverArt(mix.kind, mix.images, Modifier.matchParentSize(), captionSpace = false)
+            if (mixKind != null) {
+                com.music.bitchord.ui.screens.MixCoverArt(
+                    mixKind, mix?.images.orEmpty(), Modifier.matchParentSize(), label = mix?.title.orEmpty(), motion = true, captionSpace = false,
+                )
             }
             // Animated cover art, inside the same frame. Always running:
             // unlike the player's sleeve there is no transport here to follow,
@@ -1722,6 +1735,8 @@ private fun CoverContinuation(
     imageUrl: String?,
     /** A device folder, whose cover is generated: its colours stand in for the artwork's. */
     folderId: String? = null,
+    /** A cover drawn rather than pictured (a list made each day): its two colours, top and bottom, stand in. */
+    gradient: Pair<Color, Color>? = null,
     seam: Dp,
     length: Dp,
     pageColor: Color,
@@ -1730,17 +1745,18 @@ private fun CoverContinuation(
     modifier: Modifier = Modifier,
 ) {
     val folderStyle = if (imageUrl == null) folderCoverStyle(folderId) else null
-    if (imageUrl == null && folderStyle == null) return
-    // The folder's gradient, as the one picture the mesh is read from.
-    val folderPicture = remember(folderStyle) {
-        folderStyle?.let { style ->
+    val colors = if (imageUrl == null) gradient ?: folderStyle?.let { it.top to it.bottom } else null
+    if (imageUrl == null && colors == null) return
+    // The generated cover's gradient, as the one picture the mesh is read from.
+    val folderPicture = remember(colors) {
+        colors?.let { (top, bottom) ->
             val picture = ImageBitmap(FOLDER_MESH_PX, FOLDER_MESH_PX)
             androidx.compose.ui.graphics.Canvas(picture).also { canvas ->
                 val paint = androidx.compose.ui.graphics.Paint().apply {
                     shader = androidx.compose.ui.graphics.LinearGradientShader(
                         androidx.compose.ui.geometry.Offset.Zero,
                         androidx.compose.ui.geometry.Offset(0f, FOLDER_MESH_PX.toFloat()),
-                        listOf(style.top, style.bottom),
+                        listOf(top, bottom),
                     )
                 }
                 canvas.drawRect(0f, 0f, FOLDER_MESH_PX.toFloat(), FOLDER_MESH_PX.toFloat(), paint)

@@ -240,6 +240,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         if (played.isEmpty()) return null
         return HomeShelf(
             title = text(R.string.home_recents_title),
+            // Drawn as Trending is: columns of song rows, swiped through.
+            layout = com.music.bitchord.data.model.ShelfLayout.LIST,
             items = played.map { e ->
                 ShelfItem(
                     title = e.title,

@@ -354,7 +354,7 @@ private fun TopPickCard(
                 branded = false
             }
             TopPickKind.IN_LOOP, TopPickKind.GENRE_MIX, TopPickKind.NEW_FOR_YOU, TopPickKind.BECAUSE_YOU_LIKE -> {
-                MixCoverArt(pick.kind, pick.images, Modifier.fillMaxSize())
+                MixCoverArt(pick.kind, pick.images, Modifier.fillMaxSize(), label = pick.title)
                 eyebrowColor = pick.kind.mixEyebrow()
                 branded = true
             }

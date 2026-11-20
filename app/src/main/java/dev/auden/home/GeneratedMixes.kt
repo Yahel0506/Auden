@@ -169,7 +169,9 @@ object GeneratedMixes {
         val similar = YtMusicRepository.radio(seed.id).getOrNull().orEmpty()
             .filter { it.videoId != seed.id && it.videoId.isNotBlank() }.distinctBy { it.videoId }.take(SIZE)
         if (similar.size < MIN_SONGS) return null
-        return Mix("because", TopPickKind.BECAUSE_YOU_LIKE, seed.title, seed.artist, covers(similar), similar, today)
+        // The song itself first: its cover is the one the echoes widen out of; the songs like it circle round it.
+        val images = (listOfNotNull(seed.art?.takeIf { it.isNotBlank() }) + covers(similar)).distinct().take(4)
+        return Mix("because", TopPickKind.BECAUSE_YOU_LIKE, seed.title, seed.artist, images, similar, today)
     }
 
     private suspend fun newForYou(seeds: List<TrackEntry>, heardIds: Set<String>, daySeed: Long, today: String): Mix? {

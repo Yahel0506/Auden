@@ -3,6 +3,8 @@ package com.music.bitchord.ui.screens
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
@@ -1178,10 +1180,11 @@ internal fun ShelfCard(
 private const val LOGO_MARK = "\uFFFC"
 
 /**
- * "Your own personal DJ": the DJ's ring large and centred behind the banner, fading out toward the foot, and its
- * lines running above it the way a song's lyrics do — one at a time, the one before and the one after dimmed — with
- * nothing spoken until it is played. A big play button at the bottom right starts the DJ.
+ * "Your own personal DJ", on the DJ's own moving mesh: its ring large at the top, let go toward the foot, and at the
+ * foot what it would say — one line at a time, coming in word by word as the DJ's voice would, with nothing spoken
+ * until it is played. A big play button at the bottom right starts it.
  */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun DjSection(onClick: () -> Unit, motion: Boolean = true) {
     val interaction = remember { MutableInteractionSource() }
@@ -1195,12 +1198,28 @@ private fun DjSection(onClick: () -> Unit, motion: Boolean = true) {
         stringResource(Res.string.dj_line_5),
         stringResource(Res.string.dj_line_6),
     )
-    var current by remember { mutableIntStateOf(0) }
+    var line by remember { mutableIntStateOf(0) }
+    // How many words of the line are in, and whether the line is on its way out.
+    var shown by remember { mutableIntStateOf(Int.MAX_VALUE) }
+    var leaving by remember { mutableStateOf(false) }
     LaunchedEffect(motion) {
-        if (!motion) return@LaunchedEffect
+        if (!motion) {
+            shown = Int.MAX_VALUE
+            leaving = false
+            return@LaunchedEffect
+        }
         while (true) {
-            kotlinx.coroutines.delay(3_400)
-            current = (current + 1) % lines.size
+            val words = lines[line].split(' ').size
+            leaving = false
+            shown = 0
+            for (i in 1..words) {
+                kotlinx.coroutines.delay(170)
+                shown = i
+            }
+            kotlinx.coroutines.delay(2_600)
+            leaving = true
+            kotlinx.coroutines.delay(420)
+            line = (line + 1) % lines.size
         }
     }
     Column(Modifier.padding(bottom = 22.dp)) {
@@ -1209,12 +1228,12 @@ private fun DjSection(onClick: () -> Unit, motion: Boolean = true) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = PAGE_GUTTER)
-                .height(236.dp)
+                .height(196.dp)
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
                 }
-                .clip(RoundedCornerShape(31.dp))
+                .clip(RoundedCornerShape(28.dp))
                 .clickable(interactionSource = interaction, indication = null, onClick = onClick),
         ) {
             MeshGradientBackground(
@@ -1226,7 +1245,7 @@ private fun DjSection(onClick: () -> Unit, motion: Boolean = true) {
                 blurRadius = 36.dp,
                 colorFadeMillis = MESH_CYCLE_MILLIS,
             )
-            // The ring, large and centred, let go toward the foot of the banner.
+            // The ring, large at the top and centred, let go toward the foot of the banner.
             Box(
                 Modifier
                     .matchParentSize()
@@ -1234,68 +1253,72 @@ private fun DjSection(onClick: () -> Unit, motion: Boolean = true) {
                     .drawWithContent {
                         drawContent()
                         drawRect(
-                            Brush.verticalGradient(0.35f to Color.Black, 1f to Color.Transparent),
+                            Brush.verticalGradient(0.2f to Color.Black, 0.72f to Color.Transparent),
                             blendMode = BlendMode.DstIn,
                         )
                     },
-                contentAlignment = Alignment.Center,
             ) {
-                DjRing(level = { 0f }, modifier = Modifier.size(250.dp).graphicsLayer { alpha = 0.9f }, running = motion, talking = true)
+                DjRing(
+                    level = { 0f },
+                    modifier = Modifier.align(Alignment.TopCenter).offset(y = (-34).dp).size(210.dp),
+                    running = motion,
+                    talking = true,
+                )
             }
-            // The foot is darkened a little so the play button and the lines read on any colour of the mesh.
+            // A little shade at the foot, so the line and the button read on any colour of the mesh.
             Box(
                 Modifier
                     .matchParentSize()
-                    .background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.35f))),
+                    .background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.32f))),
             )
-            // The lines, as lyrics.
-            androidx.compose.animation.AnimatedContent(
-                targetState = current,
-                transitionSpec = {
-                    (androidx.compose.animation.slideInVertically(spring(dampingRatio = 1f, stiffness = 300f)) { it / 3 } +
-                        androidx.compose.animation.fadeIn()) togetherWith
-                        (androidx.compose.animation.slideOutVertically(spring(dampingRatio = 1f, stiffness = 300f)) { -it / 3 } +
-                            androidx.compose.animation.fadeOut())
-                },
-                label = "djLines",
-                modifier = Modifier.align(Alignment.TopStart).padding(start = 22.dp, end = 22.dp, top = 22.dp),
-            ) { index ->
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        lines[(index + lines.size - 1) % lines.size],
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.4f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        lines[index],
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.W800,
-                        color = Color.White,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        lines[(index + 1) % lines.size],
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.4f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+            Text(
+                stringResource(Res.string.dj_title),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.W700,
+                color = Color.White,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 16.dp, top = 16.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Black.copy(alpha = 0.28f))
+                    .padding(horizontal = 9.dp, vertical = 4.dp),
+            )
+            // What it would say, word by word.
+            val words = lines[line].split(' ')
+            androidx.compose.foundation.layout.FlowRow(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 20.dp, end = 92.dp, bottom = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                words.forEachIndexed { index, word ->
+                    androidx.compose.runtime.key(line, index) {
+                        val visible = index < shown && !leaving
+                        val alpha by animateFloatAsState(if (visible) 1f else 0f, spring(dampingRatio = 1f, stiffness = 300f), label = "djWord")
+                        Text(
+                            word,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.W800,
+                            color = Color.White,
+                            modifier = Modifier.graphicsLayer {
+                                this.alpha = alpha
+                                translationY = (1f - alpha) * 10.dp.toPx()
+                            },
+                        )
+                    }
                 }
             }
             Box(
                 Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 18.dp, bottom = 18.dp)
-                    .size(64.dp)
+                    .size(58.dp)
                     .clip(CircleShape)
                     .background(Color.White)
                     .clickable(onClick = onClick),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(Res.string.dj_listen), tint = Color.Black, modifier = Modifier.size(38.dp))
+                Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(Res.string.dj_listen), tint = Color.Black, modifier = Modifier.size(34.dp))
             }
         }
     }
