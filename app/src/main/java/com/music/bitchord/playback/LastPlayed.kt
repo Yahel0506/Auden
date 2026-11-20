@@ -24,6 +24,18 @@ object LastPlayed {
         prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
+    /**
+     * [songs] without the DJ's voice lines, and where the current one is in what is left. A line is the session's own
+     * audio: restored without the session it would only be a recording of a voice, playing between songs as if the
+     * queue were an ordinary one. When the current item is a line, the song after it is the one in hand.
+     */
+    fun withoutDjClips(songs: List<Song>, index: Int): Pair<List<Song>, Int> {
+        if (songs.none { it.isDjClip }) return songs to index
+        val kept = songs.filterNot { it.isDjClip }
+        val before = songs.take(index.coerceIn(0, songs.size)).count { !it.isDjClip }
+        return kept to before.coerceIn(0, (kept.size - 1).coerceAtLeast(0))
+    }
+
     internal fun window(size: Int, index: Int): IntRange {
         if (size <= 0) return IntRange.EMPTY
         val safeIndex = index.coerceIn(0, size - 1)

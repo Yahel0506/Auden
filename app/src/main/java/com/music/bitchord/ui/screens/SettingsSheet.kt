@@ -3762,13 +3762,13 @@ private fun WhatsNewSection(title: String?) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            // RichText draws with LocalContentColor, which this list does not set,
-            // so without this the notes render black whatever the theme.
-            CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface) {
-                RichText(style = RichTextStyle.Default) {
-                    Markdown(notes)
-                }
-            }
+            // One dropdown per module of the app, each closed until its row is pressed.
+            com.music.bitchord.ui.components.ChangelogDropdowns(
+                notes = notes,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ruleColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+            )
         }
     }
 }

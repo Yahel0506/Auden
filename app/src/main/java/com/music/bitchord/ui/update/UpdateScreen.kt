@@ -142,9 +142,13 @@ private fun ChangelogCard(notes: String?) {
         if (notes.isNullOrBlank()) {
             Text(stringResource(R.string.whats_new_none), color = p.fg.copy(alpha = 0.6f), fontSize = 16.sp)
         } else {
-            CompositionLocalProvider(LocalContentColor provides p.fg) {
-                RichText(style = RichTextStyle.Default) { Markdown(notes) }
-            }
+            // One dropdown per module of the app, each closed until its row is pressed.
+            com.music.bitchord.ui.components.ChangelogDropdowns(
+                notes = notes,
+                contentColor = p.fg,
+                secondaryColor = p.fg.copy(alpha = 0.6f),
+                ruleColor = p.fg.copy(alpha = 0.14f),
+            )
         }
     }
 }

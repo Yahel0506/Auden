@@ -103,6 +103,8 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         migrateScriptOnlyAppLocale()
         // The DJ reads its language and whether it has a voice; no network, no decoding.
         dev.auden.dj.DjSession.init(this)
+        // A DJ that was on when the app closed is taken up again, on the song the player is on.
+        dev.auden.dj.DjSession.resume(this)
         // The Samsung / Pixel / Clear icons are gone with the old mark; a phone still on one moves to the default.
         runCatching { AppIcon.migrateLegacy(this) }
         LyricsTranslation.cacheDir = cacheDir

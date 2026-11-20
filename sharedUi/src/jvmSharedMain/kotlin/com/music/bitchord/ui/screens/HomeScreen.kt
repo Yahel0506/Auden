@@ -261,7 +261,7 @@ fun HomeScreen(
             if (onOpenDj != null) {
                 item(key = "auden-dj") {
                     // Read in this item, so a scroll starting or ending recomposes the section alone.
-                    DjSection(onClick = onOpenDj, motion = LocalArtworkMotion.current && !listState.isScrollInProgress)
+                    DjSection(onClick = onOpenDj, motion = LocalArtworkMotion.current, scrolling = listState.isScrollInProgress)
                 }
             }
             when (state) {
@@ -1192,7 +1192,10 @@ private const val LOGO_MARK = "\uFFFC"
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun DjSection(onClick: () -> Unit, motion: Boolean = true) {
+private fun DjSection(onClick: () -> Unit, motion: Boolean = true, scrolling: Boolean = false) {
+    // The mesh and the ring rest while the page scrolls, to leave the frames to the scroll; what the DJ says does not:
+    // its lines go on at their own pace, the same on the page as off it.
+    val drawing = motion && !scrolling
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) 0.98f else 1f, spring(dampingRatio = 1f, stiffness = 300f), label = "djSectionScale")
@@ -1214,18 +1217,15 @@ private fun DjSection(onClick: () -> Unit, motion: Boolean = true) {
             leaving = false
             return@LaunchedEffect
         }
+        // Read off a clock that belongs to the app and not to this banner, so that scrolling it away and back, or
+        // anything else that makes it compose again, finds the line where it would have got to: it never starts over.
+        val words = lines.map { it.split(' ').size }
         while (true) {
-            val words = lines[line].split(' ').size
-            leaving = false
-            shown = 0
-            for (i in 1..words) {
-                kotlinx.coroutines.delay(170)
-                shown = i
-            }
-            kotlinx.coroutines.delay(2_600)
-            leaving = true
-            kotlinx.coroutines.delay(420)
-            line = (line + 1) % lines.size
+            val at = DjLineClock.at(words)
+            line = at.line
+            shown = at.wordsIn
+            leaving = at.leaving
+            kotlinx.coroutines.delay(DjLineClock.TICK_MS)
         }
     }
     Column(Modifier.padding(bottom = 22.dp)) {
@@ -1243,10 +1243,10 @@ private fun DjSection(onClick: () -> Unit, motion: Boolean = true) {
                 .clickable(interactionSource = interaction, indication = null, onClick = onClick),
         ) {
             MeshGradientBackground(
-                palette = cyclingMeshPalette(DjMeshPalettes, running = motion),
+                palette = cyclingMeshPalette(DjMeshPalettes, running = drawing),
                 modifier = Modifier.matchParentSize(),
                 continuous = true,
-                paused = !motion,
+                paused = !drawing,
                 driftMillis = 6_000,
                 blurRadius = 36.dp,
                 colorFadeMillis = MESH_CYCLE_MILLIS,
@@ -1267,7 +1267,7 @@ private fun DjSection(onClick: () -> Unit, motion: Boolean = true) {
                 DjRing(
                     level = { 0f },
                     modifier = Modifier.align(Alignment.TopCenter).offset(y = (-34).dp).size(210.dp),
-                    running = motion,
+                    running = drawing,
                     talking = true,
                 )
             }
@@ -1327,5 +1327,38 @@ private fun DjSection(onClick: () -> Unit, motion: Boolean = true) {
                 Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(Res.string.dj_listen), tint = Color.Black, modifier = Modifier.size(34.dp))
             }
         }
+    }
+}
+
+/**
+ * Where the DJ banner's lines are, from one clock for the whole app: each line comes in a word at a time, holds, and
+ * goes, then the next. Because it is a function of the time, and not of how long the banner has been composed, the line
+ * does not start over when the banner leaves the screen and comes back.
+ */
+object DjLineClock {
+    const val WORD_MS = 170L
+    const val HOLD_MS = 2_600L
+    const val LEAVE_MS = 420L
+    const val TICK_MS = 50L
+
+    private val start = System.currentTimeMillis()
+
+    class Position(val line: Int, val wordsIn: Int, val leaving: Boolean)
+
+    /** The position [elapsed] ms into the cycle of lines of [wordCounts] words each. */
+    fun at(wordCounts: List<Int>, elapsed: Long = System.currentTimeMillis() - start): Position {
+        if (wordCounts.isEmpty()) return Position(0, Int.MAX_VALUE, false)
+        val cycles = wordCounts.map { it * WORD_MS + HOLD_MS + LEAVE_MS }
+        var t = elapsed.coerceAtLeast(0L) % cycles.sum()
+        for ((line, cycle) in cycles.withIndex()) {
+            if (t >= cycle) { t -= cycle; continue }
+            val typing = wordCounts[line] * WORD_MS
+            return when {
+                t < typing -> Position(line, (t / WORD_MS).toInt(), false)
+                t < typing + HOLD_MS -> Position(line, wordCounts[line], false)
+                else -> Position(line, wordCounts[line], true)
+            }
+        }
+        return Position(0, 0, false)
     }
 }

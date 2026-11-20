@@ -6155,10 +6155,13 @@ class PlaybackService : MediaLibraryService() {
         val range = LastPlayed.window(player.mediaItemCount, player.currentMediaItemIndex)
         if (range.isEmpty()) return
         persistedQueueStart = range.first
-        LastPlayed.saveQueue(
-            songs = range.map { player.getMediaItemAt(it).toSong() },
-            index = player.currentMediaItemIndex - range.first,
+        // The DJ's voice lines are left out: see LastPlayed.withoutDjClips. (Its songs stay, and the DJ resumes on them.)
+        val (kept, keptIndex) = LastPlayed.withoutDjClips(
+            range.map { player.getMediaItemAt(it).toSong() },
+            player.currentMediaItemIndex - range.first,
         )
+        if (kept.isEmpty()) return
+        LastPlayed.saveQueue(songs = kept, index = keptIndex)
         saveBoundedContextSnapshot(player)
         savePlaybackState(player)
     }
@@ -6174,11 +6177,12 @@ class PlaybackService : MediaLibraryService() {
         }
         val range = LastPlayed.window(player.mediaItemCount, player.currentMediaItemIndex)
         persistedQueueStart = range.first
-        LastPlayed.saveQueueImmediately(
-            songs = (0 until player.mediaItemCount).map { player.getMediaItemAt(it).toSong() },
-            index = player.currentMediaItemIndex,
-            positionMs = player.currentPosition,
+        val (kept, keptIndex) = LastPlayed.withoutDjClips(
+            (0 until player.mediaItemCount).map { player.getMediaItemAt(it).toSong() },
+            player.currentMediaItemIndex,
         )
+        if (kept.isEmpty()) return
+        LastPlayed.saveQueueImmediately(songs = kept, index = keptIndex, positionMs = player.currentPosition)
         saveBoundedContextSnapshot(player, immediately = true)
     }
 

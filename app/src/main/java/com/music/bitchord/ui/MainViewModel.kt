@@ -167,6 +167,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private fun loadTasteShelves() {
         tasteJob?.cancel()
         tasteJob = viewModelScope.launch {
+            // How much has been heard decides how much of Home is the generic feed: read before the shelves are built.
+            runCatching { _listeningDepth.value = ListeningStats.heardTracks().size }
             val shelves = runCatching { dev.auden.home.TasteShelves.build(getApplication()) }.getOrNull().orEmpty()
             _tasteShelves.value = shelves
             // Without the catalogue's feed there is nothing else to wait for: Home is what was just built.
@@ -176,20 +178,26 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     /**
      * Whether Home reads YouTube Music's own feed ([home]) and its new releases and explore pages. Asked as nobody,
-     * they are the catalogue's generic charts and whatever is pushed at everyone — low-effort and AI-made uploads
-     * among them — so Home is built only from what the listener plays here: the taste and local shelves, and the
-     * lists of Top Picks.
+     * they are the catalogue's generic charts and whatever is pushed at everyone, so they are only the start of Home:
+     * how much of them shows follows how little the app has heard of the listener ([genericFeedShare]), and the taste
+     * and local shelves and the lists of Top Picks take over as the listening grows.
      */
     @Volatile
-    var remoteFeedEnabled = false
+    var remoteFeedEnabled = true
 
     /** False until the shelves built from the device have been read once, so an empty first frame is not "nothing yet". */
     private val _localHomeLoaded = MutableStateFlow(false)
 
-    private class HomeInputs(val feed: UiState<List<HomeShelf>>, val taste: List<HomeShelf>, val loaded: Boolean, val recents: HomeShelf?)
+    /**
+     * How much the app has heard of the listener, in songs played: what decides how much of Home is YouTube Music's own
+     * generic feed (all of it for a new listener, none of it once the listening has grown to be theirs).
+     */
+    private val _listeningDepth = MutableStateFlow(0)
+
+    private class HomeInputs(val feed: UiState<List<HomeShelf>>, val taste: List<HomeShelf>, val loaded: Boolean, val recents: HomeShelf?, val depth: Int)
 
     val homeComposed: StateFlow<UiState<List<HomeShelf>>> = combine(
-        combine(_home, _tasteShelves, _localHomeLoaded, _homeRecents) { feed, taste, loaded, recents -> HomeInputs(feed, taste, loaded, recents) },
+        combine(_home, _tasteShelves, _localHomeLoaded, _homeRecents, _listeningDepth) { feed, taste, loaded, recents, depth -> HomeInputs(feed, taste, loaded, recents, depth) },
         _localHomeShelves,
         AppSettings.homeLocalShelves,
         AppSettings.homeLocalWeight,
@@ -202,7 +210,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             localWeight = weight,
         )
         // YouTube Music's feed, with the shelves the listener's own plays seeded after its first shelf.
-        val feed = (remote as? UiState.Success)?.data.orEmpty()
+        // The generic feed gives way as the listener's own listening grows: all of it at first, none once it is theirs.
+        val whole = (remote as? UiState.Success)?.data.orEmpty()
+        val feed = whole.take(kotlin.math.ceil(whole.size * genericFeedShare(inputs.depth)).toInt())
         val feedAndTaste = if (inputs.taste.isEmpty()) feed else feed.take(1) + inputs.taste + feed.drop(1)
         val composed = dev.auden.home.HomeComposer.compose(
             remote = feedAndTaste,
@@ -4161,3 +4171,20 @@ internal fun lyricsLookupKey(
 /** A file on this device with no identity anywhere else: its id is its own uri. */
 internal val Song.isDeviceFile: Boolean
     get() = localUri != null && (videoId.startsWith("content://") || videoId.startsWith("file://"))
+
+/** Under this many songs heard, Home is YouTube Music's generic feed entire. */
+private const val FEED_BARE = 5
+
+/** From this many on, Home holds none of it: the listening is the listener's own. */
+private const val FEED_OWN = 60
+
+/**
+ * How much of YouTube Music's generic feed Home shows after [depth] songs heard: all of it for a new listener, none of it
+ * once there is enough listening to build Home from, and in between a share that shrinks with each song, so the first
+ * plays already start to change what is recommended.
+ */
+internal fun genericFeedShare(depth: Int): Double = when {
+    depth < FEED_BARE -> 1.0
+    depth >= FEED_OWN -> 0.0
+    else -> 1.0 - (depth - FEED_BARE).toDouble() / (FEED_OWN - FEED_BARE)
+}

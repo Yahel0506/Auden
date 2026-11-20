@@ -21,6 +21,7 @@ import com.music.bitchord.playback.QueueShuffle
 import com.music.bitchord.playback.playSongs
 import com.music.bitchord.playback.queueEntryId
 import com.music.bitchord.playback.toMediaItem
+import com.music.bitchord.playback.toSong
 import com.music.bitchord.playback.toggleAutoplayAndWait
 import com.music.bitchord.playback.toggleShuffleAndWait
 import dev.auden.dj.voice.DjClip
@@ -154,6 +155,53 @@ object DjSession {
 
     private var appContext: Context? = null
 
+    // ---- Surviving a closed app --------------------------------------------------------------------------------
+    //
+    // The DJ is on, in the settings file, for as long as a session has not been ended on purpose. A process that dies
+    // ends nothing, so the next start finds it on and takes the DJ up again where the player stands ([resume]); a Stop,
+    // or a screen taking the queue for something else, puts it out.
+    private const val RESUME_KEY = "dj_resume_v1"
+
+    private fun resumePrefs() = appContext?.getSharedPreferences("bitchord_settings", Context.MODE_PRIVATE)
+
+    /** The DJ is on, asking for [request] (blank for its own choice). */
+    private fun rememberResume(request: String) { resumePrefs()?.edit()?.putString(RESUME_KEY, "1|$request")?.apply() }
+
+    private fun forgetResume() { resumePrefs()?.edit()?.remove(RESUME_KEY)?.apply() }
+
+    /** The ask of the session that was on when the app closed, or null when the DJ was off (blank: its own choice). */
+    private fun savedResume(): String? = resumePrefs()?.getString(RESUME_KEY, null)?.takeIf { it.startsWith("1|") }?.removePrefix("1|")
+
+    /**
+     * Takes the DJ up again after the app was closed with it on, if it was: the song the player stands on stays as it
+     * is, the old session's remains in the queue (its voice lines, the songs it had lined up) go, and the DJ plans on
+     * from that song. Nothing starts playing and no loading screen shows: the player is as the listener left it, and
+     * is the DJ's again. Called once, at the process's start.
+     */
+    fun resume(context: Context) {
+        val app = context.applicationContext
+        if (appContext == null) appContext = app
+        val request = savedResume() ?: return
+        if (live != null) return
+        val session = Run(app, request, null, resuming = true)
+        live = session
+        queuedRequest = null
+        val previous = closing
+        session.startJob = scope.launch(Dispatchers.Main) {
+            previous?.join()
+            try {
+                session.begin()
+            } catch (error: Throwable) {
+                if (error is CancellationException && session.closed) throw error
+                Log.w(TAG, "could not resume", error)
+                if (live !== session) return@launch
+                live = null
+                forgetResume()
+                handBack(session, tidyQueue = false)
+            }
+        }
+    }
+
     fun init(context: Context) {
         val app = context.applicationContext
         appContext = app
@@ -271,6 +319,7 @@ object DjSession {
 
     /** Marks the session over, at once, and the state with it; the session, if there was one. */
     private fun endState(): Run? {
+        forgetResume()
         pendingTimeout?.cancel()
         queuedRequest = null
         val session = live
@@ -329,7 +378,13 @@ object DjSession {
      * its songs. The player's queue may hold the listener's songs between them: an index into the
      * player is always found by looking, never assumed from [order].
      */
-    private class Run(private val app: Context, requestText: String, private val structured: DjRequest? = null) {
+    private class Run(
+        private val app: Context,
+        requestText: String,
+        private val structured: DjRequest? = null,
+        /** Taking a session up again after a restart: it adopts the song the player stands on rather than opening a set. */
+        private val resuming: Boolean = false,
+    ) {
         private val lang = language(app)
         private val blockSize = AppSettings.djBlockSize.value
         // Asked each time, not once: a setting changed while the DJ is on takes effect at the next line.
@@ -417,27 +472,40 @@ object DjSession {
             coverUri = withContext(Dispatchers.IO) { DjCoverArt.ensure(app) }
             ensureOpen()
             val loaded = DjPool.load(app)
-            lap("begin pool tracks=${loaded.tracks.size}")
+            // A listener with little or nothing played has no taste to draw on: the DJ plays what YouTube Music's own
+            // charts and genre searches offer, as nobody's recommendations, and what they play from here on is the taste
+            // the sets then follow (the pool is read again at each start).
+            var poolTracks = loaded.tracks
+            if (poolTracks.size < GENERIC_BELOW) {
+                val generic = withTimeoutOrNull(GENERIC_WAIT_MS) { genericSongs(poolTracks) }.orEmpty()
+                generic.forEach { (track, song) ->
+                    tracks[track.id] = track
+                    songs[track.id] = song
+                }
+                poolTracks = poolTracks + generic.map { it.first }
+                ensureOpen()
+            }
+            lap("begin pool tracks=${poolTracks.size}")
             ensureOpen()
             // The DJ plays the listener's own music: the library and what they have listened to. A
             // pool too small for one set is said so — listen more, or bring music over — rather than
             // padded with YouTube's charts or the account's feed, which are nobody's taste here.
-            if (loaded.tracks.size < DjPlanner.MIN_BLOCK) throw NotEnoughMusic()
-            tracks.putAll(loaded.tracks.associateBy { it.id })
+            if (poolTracks.size < DjPlanner.MIN_BLOCK) throw NotEnoughMusic()
+            tracks.putAll(poolTracks.associateBy { it.id })
             songs.putAll(loaded.songs)
             val text = requestText
-            val ruled = structured ?: text.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, loaded.tracks, renderer.spokenAliases) }
+            val ruled = structured ?: text.takeIf { it.isNotBlank() }?.let { DjRequestParser.parse(it, poolTracks, renderer.spokenAliases) }
             // The keyword reader's reading of the ask, and a language model's when the service is there: the model's wins.
-            var parsed = if (structured == null) understand(text, loaded.tracks, ruled) else ruled
+            var parsed = if (structured == null) understand(text, poolTracks, ruled) else ruled
             withContext(planning) {
-                planner = DjPlanner(loaded.tracks, now, seed = now, blockSize = blockSize, request = parsed, genresOf = ArtistFacts::genresForDj,
+                planner = DjPlanner(poolTracks, now, seed = now, blockSize = blockSize, request = parsed, genresOf = ArtistFacts::genresForDj,
                     recently = DjHistory.recent(app), recentOrder = DjHistory.recentOrdered(app),
                     pastThemes = DjHistory.themes(app), pastOpeners = DjHistory.openers(app))
             }
             // A set of discoveries needs them found before the first set is chosen. When the radio gives none
             // (offline, nothing streamed), the ask is let go and the DJ surprises, rather than saying it found nothing.
             parsed?.takeIf { it.discover }?.let { ask ->
-                val found = withTimeoutOrNull(DISCOVER_WAIT_MS) { addDiscoveries(loaded.tracks, ask) } == true
+                val found = withTimeoutOrNull(DISCOVER_WAIT_MS) { addDiscoveries(poolTracks, ask) } == true
                 if (!found) {
                     parsed = ask.copy(discover = false, discoverSeed = null, discoverFar = false).takeIf { it.understood }
                     withContext(planning) { planner.setRequest(parsed) }
@@ -453,21 +521,21 @@ object DjSession {
                 withTimeoutOrNull(OPENING_SEARCH_MS) { searchFor(text.trim(), parsed) }
                 ensureOpen()
             }
-            val firstPlanned = takeFound() ?: withContext(planning) { planner.next() }
+            val firstPlanned = if (resuming) null else takeFound() ?: withContext(planning) { planner.next() }
             val relaxed = planner.relaxed
             lap("begin planned")
             ensureOpen()
             // The Last.fm genres of the artists the listener plays most, asked for once and kept: they
             // give a track its mood. Off the main thread, and the sets already chosen do not wait for it.
             background += scope.launch(Dispatchers.IO) {
-                loaded.tracks.groupBy { it.leadArtist }
+                poolTracks.groupBy { it.leadArtist }
                     .entries.sortedByDescending { e -> e.value.sumOf { it.plays } }
                     .take(GENRE_LOOKUPS)
                     .forEach { ArtistFacts.fetchForDj(it.key) }
             }
             // New to the listener but on the taste they show: the radio of what they know, fetched
             // once here and kept for the session. Surprises only; a request names its songs itself.
-            if (parsed == null) background += scope.launch(Dispatchers.Main) { addDiscoveries(loaded.tracks, null) }
+            if (parsed == null) background += scope.launch(Dispatchers.Main) { addDiscoveries(poolTracks, null) }
             val time = java.time.Instant.ofEpochMilli(now).atZone(java.time.ZoneId.systemDefault())
             val plays = loaded.tracks.groupBy { it.leadArtist.lowercase() }
                 .mapValues { (_, ts) -> ts.sumOf { it.plays30 } to ts.sumOf { it.plays } }
@@ -479,6 +547,10 @@ object DjSession {
                 artistPlays = { plays[it.lowercase()] },
             )
 
+            if (resuming) {
+                resumeInPlace()
+                return
+            }
             // Only the opening is waited for. The second set is planned once this one plays, so a
             // start costs one round trip to the voice, not two.
             val first = firstPlanned?.let(::playable)?.takeIf { it.tracks.isNotEmpty() } ?: throw NotEnoughMusic()
@@ -494,11 +566,27 @@ object DjSession {
             controller = connect()
             lap("begin connected")
             ensureOpen()
-            // The DJ's order is the whole point, and its queue is its own: shuffle, repeat and AutoPlay
-            // would reorder it, replay it or append to it, so the lines stop matching the songs. They go
-            // off for the session and come back as they were when it ends. Each is waited for, and not
-            // given up halfway: what is marked as turned off here is what the hand-back turns back on,
-            // so the two must agree even when the session is stopped in the middle of this.
+            takeOverPlayer()
+            ensureOpen()
+            controller.playSongs(pieces.map { it.song }, 0, shuffle = false)
+            lap("begin playing")
+            ensureOpen()
+            attachListener()
+            started = true
+            rememberResume(requestText)
+            publish { copy(running = true, starting = false, theme = label(first.theme), problem = null, voice = voiceFor(lang)) }
+            // The first item is current already, so the player will not announce it: it is entered by
+            // hand, which also plans the second set.
+            entered(controller.currentMediaItem)
+        }
+
+        /**
+         * The DJ's order is the whole point, and its queue is its own: shuffle, repeat and AutoPlay would reorder it,
+         * replay it or append to it, so the lines stop matching the songs. They go off for the session and come back as
+         * they were when it ends. Each is waited for, and not given up halfway: what is marked as turned off here is
+         * what the hand-back turns back on, so the two must agree even when the session is stopped in the middle of this.
+         */
+        private suspend fun takeOverPlayer() {
             wasShuffled = QueueShuffle.enabled.value
             wasAutoplay = AppSettings.autoplay.value
             wasRepeat = controller.repeatMode
@@ -516,10 +604,9 @@ object DjSession {
                     controller.repeatMode = Player.REPEAT_MODE_OFF
                 }
             }
-            ensureOpen()
-            controller.playSongs(pieces.map { it.song }, 0, shuffle = false)
-            lap("begin playing")
-            ensureOpen()
+        }
+
+        private fun attachListener() {
             listener = object : Player.Listener {
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) = entered(mediaItem)
                 // A line the player cannot play is not silent: the cause is shown, so it can be fixed.
@@ -530,10 +617,48 @@ object DjSession {
                     }
                 }
             }.also(controller::addListener)
+        }
+
+        /**
+         * Takes the session up again where the player stands after a restart. The queue restored from disk holds the
+         * old session's songs and none of its voice lines: the song in hand becomes the session's first set, whatever
+         * was lined up after it is taken out, and the next set is planned from it exactly as it is while a session runs.
+         */
+        private suspend fun resumeInPlace() {
+            controller = connect()
+            ensureOpen()
+            // The service puts the queue back a moment after it starts.
+            var waited = 0L
+            while (controller.mediaItemCount == 0 && waited < RESUME_QUEUE_WAIT_MS) {
+                delay(RESUME_POLL_MS)
+                waited += RESUME_POLL_MS
+                ensureOpen()
+            }
+            val count = controller.mediaItemCount
+            if (count == 0) throw NotEnoughMusic()
+            // A voice line that did get restored means nothing without its session.
+            for (i in controller.mediaItemCount - 1 downTo 0) {
+                if (controller.getMediaItemAt(i).mediaId.startsWith(DJ_CLIP_PREFIX)) controller.removeMediaItem(i)
+            }
+            if (controller.mediaItemCount == 0) throw NotEnoughMusic()
+            val current = controller.currentMediaItemIndex.coerceIn(0, controller.mediaItemCount - 1)
+            if (current + 1 < controller.mediaItemCount) controller.removeMediaItems(current + 1, controller.mediaItemCount)
+            val song = controller.getMediaItemAt(current).toSong()
+            val id = song.videoId
+            val track = tracks[id] ?: DjTrack(id = id, title = song.title, artist = song.artist, album = song.albumName, art = song.thumbnailUrl)
+            tracks[id] = track
+            songs[id] = songs[id] ?: song
+            val first = DjBlock(DjTheme.Mix, listOf(track))
+            sets += first
+            order += id
+            place[id] = 0 to 0
+            takeOverPlayer()
+            ensureOpen()
+            attachListener()
             started = true
-            publish { copy(running = true, starting = false, theme = label(first.theme), problem = null, voice = voiceFor(lang)) }
-            // The first item is current already, so the player will not announce it: it is entered by
-            // hand, which also plans the second set.
+            rememberResume(requestText)
+            publish { copy(running = true, starting = false, pending = false, theme = label(first.theme), problem = null, voice = voiceFor(lang)) }
+            // Entered by hand, as at a start: it plans the set after this song.
             entered(controller.currentMediaItem)
         }
 
@@ -643,6 +768,47 @@ object DjSession {
          * never announces a song or an artist that is then missing from the queue.
          */
         private fun playable(set: DjBlock): DjBlock = set.copy(tracks = set.tracks.filter { songs.containsKey(it.id) })
+
+        /**
+         * Songs for a listener with little in their library: what YouTube Music's own searches give for the charts and
+         * the main genres, asked as nobody, one search per query in parallel, no artist more than twice. They come as
+         * discoveries, new to the listener, which is what they are.
+         */
+        private suspend fun genericSongs(known: List<DjTrack>): List<Pair<DjTrack, Song>> {
+            val have = known.mapTo(HashSet()) { it.id }
+            val queries = if (lang == "es") GENERIC_QUERIES_ES else GENERIC_QUERIES
+            val results = withContext(Dispatchers.IO) {
+                coroutineScope {
+                    queries.map { q ->
+                        async {
+                            com.music.bitchord.data.YtMusicRepository.search(q, com.music.bitchord.data.model.SearchFilter.SONGS)
+                                .getOrNull().orEmpty().mapNotNull {
+                                    (it as? com.music.bitchord.data.model.SearchResult.Track)?.song
+                                        ?: (it as? com.music.bitchord.data.model.SearchResult.TopTrack)?.song
+                                }
+                        }
+                    }.awaitAll()
+                }
+            }
+            val perArtist = HashMap<String, Int>()
+            val out = ArrayList<Pair<DjTrack, Song>>()
+            // One from each search in turn, so the first sets are not all of one genre.
+            val longest = results.maxOfOrNull { it.size } ?: 0
+            for (round in 0 until longest) {
+                for (list in results) {
+                    val song = list.getOrNull(round) ?: continue
+                    if (song.videoId.isBlank() || song.isDjClip || song.isVideo || !have.add(song.videoId)) continue
+                    val lead = DjTrack.leadOf(song.artist).lowercase()
+                    if ((perArtist[lead] ?: 0) >= 2) continue
+                    perArtist.merge(lead, 1, Int::plus)
+                    out += DjTrack(
+                        id = song.videoId, title = song.title, artist = song.artist, album = song.albumName,
+                        art = song.thumbnailUrl, discovery = true,
+                    ) to song
+                }
+            }
+            return out
+        }
 
         /**
          * Asks YouTube Music's radio for songs like the listener's favourites, and offers them to the
@@ -1033,6 +1199,7 @@ object DjSession {
         fun steer(text: String) {
             lapStart = SystemClock.elapsedRealtime()
             requestText = text
+            rememberResume(text)
             queueing.forEach { it.cancel() }
             queueing.clear()
             awaiting = Int.MAX_VALUE
@@ -1228,6 +1395,19 @@ object DjSession {
 private const val DISCOVER_WAIT_MS = 9_000L
 /** How long the opening waits for the language model's reading of an ask before the keyword reader's will do. */
 private const val INTERPRET_MS = 5_000L
+/** How long a resumed session waits for the service to put the queue back, and how often it looks. */
+private const val RESUME_QUEUE_WAIT_MS = 8_000L
+private const val RESUME_POLL_MS = 200L
+/** A library with fewer songs than this is filled out with YouTube Music's own, and how long that is waited for. */
+private const val GENERIC_BELOW = 40
+private const val GENERIC_WAIT_MS = 9_000L
+private val GENERIC_QUERIES = listOf(
+    "top hits", "new music this week", "pop hits", "rock hits", "hip hop hits", "latin hits", "dance hits", "chill songs", "r&b hits",
+)
+private val GENERIC_QUERIES_ES = listOf(
+    "éxitos del momento", "música nueva esta semana", "pop en español", "rock en español", "reggaeton éxitos", "hip hop éxitos",
+    "música latina éxitos", "baladas románticas", "pop hits", "rock hits", "canciones para relajarse",
+)
 private const val MAX_REFILLS = 2
 
 /** The most plays a song has to be a seed for the discoveries further from the listener's usual. */
