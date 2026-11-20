@@ -46,6 +46,19 @@ data class LocalCopy(
 object LocalLinks {
     @Volatile private var index: LocalMatchIndex? = null
     private val cache = ConcurrentHashMap<String, List<LocalCopy>>()
+
+    /**
+     * Files that were found gone while the library index still listed them. Skipped by [copiesOf]
+     * until the process ends, so one deleted outside the app cannot keep being picked for playback.
+     */
+    private val gone = ConcurrentHashMap.newKeySet<String>()
+
+    /** [uri] is known not to exist any more: stop offering it, now. */
+    fun markGone(uri: String) {
+        if (!gone.add(uri)) return
+        cache.clear()
+        _revision.value += 1
+    }
     private val _revision = MutableStateFlow(0)
 
     /** Bumps whenever the library index is rebuilt, so lists can re-check their rows. */
@@ -81,7 +94,7 @@ object LocalLinks {
         // The indexer also sees files the app downloaded into shared storage; those are `own`, not a second copy.
         val ownUri = own?.uri
         val others = found.filter { it.uri != ownUri && !(own != null && it.path != null && it.path == own.path) }
-        val all = listOfNotNull(own) + others
+        val all = (listOfNotNull(own) + others).filterNot { it.uri in gone }
         // A song that is itself a file on the device is one of its own copies, even
         // if the index has not met it yet — this is what is playing, or listed, or held.
         val self = song.localUri?.takeIf { (it.startsWith("content:") || it.startsWith("file:")) && all.none { c -> c.uri == it } }
@@ -98,7 +111,7 @@ object LocalLinks {
                     downloadedByApp = false,
                 )
             }
-        return all + listOfNotNull(self)
+        return all + listOfNotNull(self?.takeUnless { it.uri in gone })
     }
 
     fun has(song: Song): Boolean = copiesOf(song).isNotEmpty()

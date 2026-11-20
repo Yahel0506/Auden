@@ -462,11 +462,23 @@ object Downloads {
             if (DownloadStore.exists(context, uriString.toUri())) continue
             gone++
             Log.d(TAG, "a downloaded file is gone; forgetting it")
+            // The library index and the song links still list a copy until the next scan; this is the
+            // one place that knows for certain it is gone, so playback must not be sent to it again.
+            dev.auden.library.links.LocalLinks.markGone(uriString)
             record(
                 saved = { map -> map.filterValues { it != uriString } },
                 meta = { map -> map.filterValues { it.uri != uriString } },
             )
         }
+        // A release whose every file is gone is no longer downloaded: its record would otherwise keep
+        // the album page saying so. One with a track still waiting or running is left alone.
+        val remaining = _saved.value.keys
+        val emptied = _collections.value.filterValues { release ->
+            release.videoIds.none { id ->
+                id in remaining || _active.value[id].let { it is DownloadState.Queued || it is DownloadState.Running }
+            }
+        }.keys
+        emptied.forEach(::forgetCollection)
         gone
     }
 

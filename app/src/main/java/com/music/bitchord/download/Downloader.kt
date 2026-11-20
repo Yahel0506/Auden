@@ -6,6 +6,7 @@ import com.music.bitchord.data.innertube.PlayerClient
 import com.music.bitchord.data.innertube.StreamResolver
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -53,6 +54,10 @@ object Downloader {
     private const val CHUNK_BYTES = 2L * 1024 * 1024
 
     private const val BUFFER_BYTES = 64 * 1024
+
+    /** How many times a download that broke part-way is resumed, and the pause (times the attempt) before each. */
+    private const val MAX_RESUMES = 10
+    private const val RESUME_PAUSE_MS = 2_000L
 
     /**
      * Fetch all of [stream] into [sink].
@@ -175,39 +180,84 @@ object Downloader {
         sink: OutputStream,
         onProgress: (written: Long, total: Long) -> Unit,
     ): Long = withContext(Dispatchers.IO) {
-        val request = Request.Builder().url(url)
-            .apply { headers.forEach { (name, value) -> header(name, value) } }
-            .build()
+        var written = 0L
+        var total: Long? = null
+        var resumes = 0
+        val buffer = ByteArray(BUFFER_BYTES)
 
-        Http.client.newCall(request).execute().use { response ->
-            if (response.code !in 200..299) error("Download failed (HTTP ${response.code})")
-            val body = response.body ?: error("Download failed: empty response")
-            val total = response.header("Content-Length")?.toLongOrNull()?.takeIf { it > 0 }
-            val source = body.byteStream()
-            val buffer = ByteArray(BUFFER_BYTES)
-            var written = 0L
-
-            while (true) {
-                coroutineContext.ensureActive()
-                val read = source.read(buffer)
-                if (read == -1) break
-                sink.write(buffer, 0, read)
-                written += read
-                if (total != null) onProgress(written, total)
+        while (true) {
+            val request = Request.Builder().url(url)
+                .apply { headers.forEach { (name, value) -> header(name, value) } }
+                // After a break the rest is asked for from where it stopped. Only accepted as a
+                // 206 that starts exactly there: a server that ignores Range answers 200 with the
+                // whole file, and writing that on after the opening would commit a file of the
+                // right length that cannot be played.
+                .apply { if (written > 0) header("Range", "bytes=$written-") }
+                .build()
+            try {
+                Http.client.newCall(request).execute().use { response ->
+                    var skip = 0L
+                    if (written > 0) {
+                        val from = response.header("Content-Range")
+                            ?.substringAfter("bytes ", "")?.substringBefore('-')?.trim()?.toLongOrNull()
+                        when {
+                            response.code == 206 && from == written -> Unit
+                            // Busy or briefly down: not a refusal, the next attempt asks again.
+                            response.code == 429 || response.code in 500..599 ->
+                                throw IOException("server busy (HTTP ${response.code})")
+                            // A server that ignores Range sends the whole file again; the part already
+                            // written is read past and dropped, and only the rest is appended. Only when
+                            // it is the same file, by length.
+                            response.code == 200 && total != null &&
+                                response.header("Content-Length")?.toLongOrNull() == total -> skip = written
+                            else -> error("Download failed: the server would not resume (HTTP ${response.code})")
+                        }
+                    } else if (response.code !in 200..299) {
+                        error("Download failed (HTTP ${response.code})")
+                    }
+                    val body = response.body ?: error("Download failed: empty response")
+                    if (total == null) total = response.header("Content-Length")?.toLongOrNull()?.takeIf { it > 0 }
+                    val source = body.byteStream()
+                    var toSkip = skip
+                    while (toSkip > 0) {
+                        coroutineContext.ensureActive()
+                        val dropped = source.read(buffer, 0, minOf(buffer.size.toLong(), toSkip).toInt())
+                        if (dropped == -1) throw IOException("stream ended while skipping ahead")
+                        toSkip -= dropped
+                    }
+                    while (true) {
+                        coroutineContext.ensureActive()
+                        val read = source.read(buffer)
+                        if (read == -1) break
+                        sink.write(buffer, 0, read)
+                        written += read
+                        total?.let { onProgress(written, it) }
+                    }
+                }
+                break
+            } catch (e: IOException) {
+                // A server that resets a long transfer (a stream reset mid-file) is not a refusal:
+                // the bytes already written are kept and the rest asked for. Nothing written yet is
+                // the caller's to handle, as it always was.
+                if (written == 0L || resumes >= MAX_RESUMES) throw e
+                resumes++
+                Log.w(TAG, "download broke at ${written}B (${e.message}); resuming, attempt $resumes")
+                delay(minOf(RESUME_PAUSE_MS * resumes, 8_000L))
             }
-            sink.flush()
-
-            // A stated length that didn't all arrive is the one failure the
-            // pending-row dance cannot catch on its own: nothing threw, so
-            // committing would publish a file that looks whole and stops
-            // halfway through the song.
-            if (total != null && written < total) {
-                error("Download stopped at ${written}B of $total — try again")
-            }
-            if (written == 0L) error("Download failed: nothing was sent")
-            Log.d(TAG, "fetched ${written}B directly")
-            written
         }
+        sink.flush()
+
+        // A stated length that didn't all arrive is the one failure the
+        // pending-row dance cannot catch on its own: nothing threw, so
+        // committing would publish a file that looks whole and stops
+        // halfway through the song.
+        val stated = total
+        if (stated != null && written < stated) {
+            error("Download stopped at ${written}B of $stated — try again")
+        }
+        if (written == 0L) error("Download failed: nothing was sent")
+        Log.d(TAG, "fetched ${written}B directly")
+        written
     }
 
     /**

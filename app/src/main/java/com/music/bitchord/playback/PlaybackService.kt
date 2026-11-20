@@ -4364,6 +4364,8 @@ class PlaybackService : MediaLibraryService() {
         val mediaId = item.mediaId
 
         Downloads.forgetMissing(mediaId)
+        // The library index may list the same file; without this it is picked again and the loop below never ends.
+        uri?.toString()?.let(dev.auden.library.links.LocalLinks::markGone)
         val restreamed = item.toSong().copy(localUri = null, localPath = null).toMediaItem()
         if (restreamed.localConfiguration?.uri == uri) {
             TrackLog.w(
