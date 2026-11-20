@@ -18,7 +18,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.Animatable
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.channels.Channel
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.VectorConverter
@@ -115,6 +114,8 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
@@ -1353,45 +1354,44 @@ fun NowPlayingScreen(
         ) { value, _ -> queueSlide.floatValue = value }
     }
 
-    // Horizontal fling anywhere on the player skips tracks; the artwork
-    // follows the finger so the gesture has something to hold on to.
-    val swipeThreshold = with(density) { 72.dp.toPx() }
-    // Where the finger has dragged the sleeve to, and the sleeve springing
-    // after it. What animateFloatAsState does inside — a conflated channel of
-    // targets, each chased from the current velocity — but fed straight from
-    // the gesture: as state read here, every pointer move recomposed the whole
-    // player just to hand the spring a new target, when the only readers are
-    // draw-phase layers.
-    val swipeSettle = remember { Animatable(0f) }
-    val swipeTargets = remember { Channel<Float>(Channel.CONFLATED) }
-    LaunchedEffect(swipeTargets) {
-        for (target in swipeTargets) {
-            val newest = swipeTargets.tryReceive().getOrNull() ?: target
-            launch {
-                if (newest != swipeSettle.targetValue) {
-                    swipeSettle.animateTo(newest, spring(stiffness = Spring.StiffnessMediumLow))
-                }
-            }
-        }
-    }
-    val setSwipeOffset: (Float) -> Unit = { swipeTargets.trySend(it) }
-    // The skip hint under the sleeve only needs composing while there is a
-    // drag to hint at, and which way it points; its fade is drawn, not composed.
-    val swipeHintShown by remember(swipeThreshold) {
-        derivedStateOf { abs(swipeSettle.value) / swipeThreshold > 0.01f }
-    }
-    // A leftward drag (negative offset) is the one that skips forward.
-    val swipeHintNext by remember { derivedStateOf { swipeSettle.value < 0f } }
+    // Horizontal swipes anywhere on the player slide the row of songs under the
+    // finger — the cover, the title and the artist travel with it — and a skip
+    // from anywhere else runs the same row along. Mochy Music's carousel; see
+    // [SongRow].
+    val songRow = rememberSongRow(song, queue, queueIndex)
+    SideEffect { songRow.skip = { forward -> if (forward) onNext() else onPrevious() } }
 
-    // Signature Apple Music touch: the sleeve shrinks back while paused.
+    // Paused, the sleeve shrinks back a little and loses some of its colour, as
+    // Mochy Music's cover does; the account sheet's critically damped spring.
     val artScale by animateFloatAsState(
-        targetValue = if (isPlaying) 1f else 0.86f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioLowBouncy,
-            stiffness = Spring.StiffnessLow,
-        ),
+        targetValue = if (isPlaying) 1f else 0.94f,
+        animationSpec = spring(dampingRatio = 1f, stiffness = 300f),
         label = "artScale",
     )
+    val pauseSaturation by animateFloatAsState(
+        targetValue = if (isPlaying) 1f else 0.8f,
+        animationSpec = spring(dampingRatio = 1f, stiffness = 300f),
+        label = "pauseSaturation",
+    )
+    SideEffect { songRow.saturation = { pauseSaturation } }
+    // 0 playing, 1 paused: what a full-bleed cover's zoom follows. A banner cannot shrink
+    // without opening bare backdrop down its edges, so playing it sits 5% closer and
+    // pausing lets it back to its frame, as Mochy Music's edge-to-edge cover does.
+    val pauseT = { ((1f - artScale) / 0.06f).coerceIn(0f, 1f) }
+    val pauseColour = Modifier.graphicsLayer {
+        colorFilter = if (pauseSaturation < 0.999f) {
+            ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(pauseSaturation) })
+        } else {
+            null
+        }
+    }
+    val pauseLook = Modifier
+        .graphicsLayer {
+            val zoom = 1f + 0.05f * (1f - pauseT())
+            scaleX = zoom
+            scaleY = zoom
+        }
+        .then(pauseColour)
 
     val volume = rememberPlayerVolume()
     // Present when you arrive, out of the way once you are actually reading.
@@ -1708,37 +1708,46 @@ fun NowPlayingScreen(
     // screen, the landscape one on the sleeve alone — the right column there is
     // full of horizontal sliders and a lyric list that should not be one stray
     // sideways drag away from changing the song.
+    val canGoPrevious by rememberUpdatedState(hasPrevious && !controlsLocked)
+    val canGoNext by rememberUpdatedState(hasNext && !controlsLocked)
     val skipSwipeGesture = Modifier.pointerInput(showAudioPipeline, showCast, panelScrolling, controlsLocked) {
         if (showAudioPipeline || showCast || panelScrolling) return@pointerInput
         var total = 0f
+        val velocity = VelocityTracker()
+        // How fast a flick has to be to carry a song over by itself.
+        val flingPx = 500.dp.toPx()
         detectHorizontalDragGestures(
-            onDragStart = { total = 0f },
-            onDragCancel = { setSwipeOffset(0f) },
-            onDragEnd = {
-                // The same two buzzes the transport glyphs give, so swiping the
-                // sleeve and tapping skip feel like one gesture with two
-                // spellings.
-                val crossed = total <= -swipeThreshold || total >= swipeThreshold
-                when {
-                    // Still tracks the finger and still springs back, so the
-                    // sleeve does not feel dead — it just says why it did not
-                    // move on.
-                    controlsLocked -> if (crossed) onBlockedControl()
-                    total <= -swipeThreshold -> {
-                        haptics.play(Haptic.SkipNext)
-                        onNext()
-                    }
-                    total >= swipeThreshold -> {
-                        haptics.play(Haptic.SkipPrevious)
-                        onPrevious()
-                    }
-                }
-                setSwipeOffset(0f)
+            onDragStart = {
+                total = 0f
+                velocity.resetTracking()
+                songRow.startDrag()
             },
-            onHorizontalDrag = { _, delta ->
+            onDragCancel = { songRow.cancelDrag() },
+            onDragEnd = {
+                val moved = total
+                // The row follows the finger one to one and carries the flick's
+                // own speed into the settle, so letting go never jolts. The two
+                // buzzes are the transport glyphs', so swiping the sleeve and
+                // tapping skip feel like one gesture with two spellings.
+                when (songRow.release(
+                    travelledPx = moved,
+                    velocityPx = velocity.calculateVelocity().x,
+                    spacingPx = size.width.toFloat(),
+                    flingPx = flingPx,
+                    hasPrevious = canGoPrevious,
+                    hasNext = canGoNext,
+                )) {
+                    1 -> haptics.play(Haptic.SkipNext)
+                    -1 -> haptics.play(Haptic.SkipPrevious)
+                    // With the controls taken away the row only gave a little and
+                    // came back: say why it did not move on.
+                    else -> if (controlsLocked && abs(moved) >= size.width * 0.15f) onBlockedControl()
+                }
+            },
+            onHorizontalDrag = { change, delta ->
                 total += delta
-                // Damped: it's a hint, not a drag-to-position.
-                setSwipeOffset(total * 0.35f)
+                velocity.addPointerInputChange(change)
+                songRow.dragTo(total, size.width.toFloat(), canGoPrevious, canGoNext)
             },
         )
     }
@@ -2257,7 +2266,6 @@ fun NowPlayingScreen(
                                     val scale = if (t >= 1f) landscapeArtScale else 1f + (landscapeArtScale - 1f) * t
                                     scaleX = scale
                                     scaleY = scale
-                                    translationX = if (t >= 1f) swipeSettle.value else swipeSettle.value * t
                                 }
                                 // With a panel up the sleeve is the way back to
                                 // the player, as the portrait thumbnail is.
@@ -2635,7 +2643,8 @@ fun NowPlayingScreen(
                                     if (clipFullscreen || clipPortrait) Modifier.fillMaxSize()
                                     else Modifier.fillMaxWidth().height(heroHeight),
                                 )
-                                .hazeSource(playerHaze),
+                                .hazeSource(playerHaze)
+                                .then(pauseLook),
                         )
                     }
                 }
@@ -3353,7 +3362,6 @@ fun NowPlayingScreen(
                                     val scale = if (t >= 1f) open else 1f + (open - 1f) * t
                                     scaleX = scale
                                     scaleY = scale
-                                    translationX = swipeSettle.value * (1f - p()) * (1f - share) * t
                                 }
                                 // Haze must observe the drawable layer itself, the
                                 // banner included — a source on the surrounding layout
@@ -3476,7 +3484,6 @@ fun NowPlayingScreen(
                                         }
                                         scaleX = scale
                                         scaleY = scale
-                                        translationX = swipeSettle.value * (1f - p()) * share * t
                                         // Its own corners only once it is smaller than
                                         // the sleeve; as the whole card it takes the
                                         // sleeve's clip, as it always did.
@@ -3500,6 +3507,16 @@ fun NowPlayingScreen(
                                             },
                                     )
                                 }
+                            }
+                            // Each song's cover is a page of the row, side by side and
+                            // clipped to the sleeve: the next one comes in as this one goes,
+                            // each drifting a little slower than its page. Mochy Music's carousel.
+                            SideEffect { songRow.zoom = { 1f + 0.05f * (1f - pauseT()) * bannerShare() } }
+                            for (slot in songRow.slots) key(slot.step) {
+                            RowPage(songRow, slot) { pictureModifier ->
+                            if (slot.step != songRow.step) {
+                                RowNeighbourArt(slot.song, pictureModifier)
+                                return@RowPage
                             }
                             AsyncImage(
                                 // Decode at the sleeve's *expanded* size, always.
@@ -3536,8 +3553,7 @@ fun NowPlayingScreen(
                                 // or otherwise; the request stays mounted so
                                 // loading still finishes in the background and
                                 // [PlayerArtwork.loaded] still flips the moment it does.
-                                modifier = Modifier
-                                    .fillMaxSize()
+                                modifier = pictureModifier
                                     .drawWithContent {
                                         val frame = still()
                                         if (frame == null) {
@@ -3558,6 +3574,8 @@ fun NowPlayingScreen(
                                     },
                             )
 
+                            }
+                            }
                             // Where the clip plays when it can't have the banner:
                             // inside the same clip as the still art, taking the
                             // sleeve's corners, shadow and paused shrink for free.
@@ -3594,7 +3612,11 @@ fun NowPlayingScreen(
                                         refreshFrameEveryMs = if (
                                             tabletArtworkBackdrop || lyricsOpen || queueOpen || dockMoving
                                         ) null else meshRefreshMs,
-                                        modifier = Modifier.fillMaxSize(),
+                                        // Rides its own song's page of the row.
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .graphicsLayer { translationX = songRow.playingOffset * size.width }
+                                            .then(pauseColour),
                                     )
                                 }
                             }
@@ -3635,7 +3657,6 @@ fun NowPlayingScreen(
                                     val idle = cardScale()
                                     scaleX = idle
                                     scaleY = idle
-                                    translationX = swipeSettle.value * (1f - p())
                                 }
                                 // Collapsed, the sleeve is the way back: tapping the
                                 // thumbnail puts the queue or the lyrics away again.
@@ -3703,8 +3724,7 @@ fun NowPlayingScreen(
                                         }
                                         .graphicsLayer {
                                             alpha = (1f - p() * 2f).coerceIn(0f, 1f)
-                                            translationX = swipeSettle.value * (1f - p())
-                                        },
+                                                },
                                 ) {
                                     // Black with a spinner under the picture until
                                     // its first frame lands.
@@ -3736,38 +3756,6 @@ fun NowPlayingScreen(
                                     )
                                 }
                             }
-                        }
-
-                        // Sits in the gap under the sleeve, clear of its rounded
-                        // corners and shadow — no box, no clip, nothing for the art
-                        // itself to be cropped by. Just a glyph that fades in with
-                        // the drag to hint which way a release would skip.
-                        //
-                        // Shown under the banner as well as under the card, and it is
-                        // the only feedback the drag has there: a card can slide with
-                        // the finger, but a full-bleed image sliding would open a strip
-                        // of bare backdrop down one edge of the screen. It lands where
-                        // the banner has all but dissolved, so it reads against the
-                        // backdrop rather than against the artwork.
-                        if (swipeHintShown) {
-                            val showNext = swipeHintNext
-                            val enabled = if (showNext) hasNext else hasPrevious
-                            val hintAlpha = if (enabled) 0.85f else 0.3f
-                            Icon(
-                                imageVector = if (showNext) Icons.Rounded.FastForward else Icons.Rounded.FastRewind,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier
-                                    .align(Alignment.TopCenter)
-                                    .offset {
-                                        IntOffset(0, (artTop() + artSize() + (ART_TITLE_GAP - 16.dp) / 2).roundToPx())
-                                    }
-                                    .size(16.dp)
-                                    .graphicsLayer {
-                                        alpha = (abs(swipeSettle.value) / swipeThreshold)
-                                            .coerceIn(0f, 1f) * (1f - p()) * hintAlpha
-                                    },
-                            )
                         }
 
                         // ---- Title + menu ----
@@ -3845,61 +3833,58 @@ fun NowPlayingScreen(
                                 val scrolls = {
                                     !(lyricsOpen || queueOpen || queueDragging) && !collapsePastSettling
                                 }
-                                // Targeted on the words rather than the videoId: two
-                                // cuts that share a title cross-fade into the exact
-                                // same text, which is nothing at all and leaves the
-                                // marquee where it was; a cut that renames the song
-                                // ("… (Live)") dissolves into the new one instead of
-                                // snapping while the rest of the switch moves around
-                                // it.
-                                Crossfade(
-                                    targetState = song.title to song.artist,
-                                    // Round the fade and the marquee's edge masks, whose
-                                    // layers would otherwise hide the backdrop from it. The
-                                    // title is in it too and stays white: see [additiveChrome].
-                                    modifier = Modifier.additiveChrome(LocalPlayerChrome.current),
-                                    animationSpec = tween(durationMillis = 300),
-                                    label = "playerCredits",
-                                ) {
-                                    val scrolling = scrolls()
-                                    val artistColor = chromeWhite(0.55f)
-                                    Column {
+                                // Each song's lines are a slot of the row: they travel part
+                                // of their own width per song and are gone by two thirds of
+                                // the way, so the leaving and the arriving never sit on top
+                                // of each other. The slot is the same composition before and
+                                // after the song changes, so a marquee in flight carries on.
+                                // Round the fade and the marquee's edge masks, whose layers
+                                // would otherwise hide the backdrop from it. The title is in
+                                // it too and stays white: see [additiveChrome].
+                                Box(Modifier.fillMaxWidth().additiveChrome(LocalPlayerChrome.current)) {
+                                    for (slot in rememberTextSlots(songRow)) key(slot.step) {
+                                        val rowSong = slot.song
+                                        val live = slot.step == songRow.step
+                                        val scrolling = scrolls()
+                                        val artistColor = chromeWhite(0.55f)
+                                        Column(Modifier.fillMaxWidth().rowText(songRow, slot)) {
                                         MarqueeText(
-                                            text = song.title,
+                                            text = rowSong.title,
                                             style = MaterialTheme.typography.titleLarge.copy(
                                                 fontSize = 20.sp,
                                             ),
                                             color = Color.White,
-                                            enabled = scrolling,
+                                            enabled = scrolling && live,
                                             // Before the title, in the artist line's
                                             // colour.
-                                            leading = if (song.isExplicit == true) {
+                                            leading = if (rowSong.isExplicit == true) {
                                                 { ExplicitBadge(color = artistColor) }
                                             } else {
                                                 null
                                             },
-                                            onOverflowChange = { titleOverflowing = it },
+                                            onOverflowChange = { if (live) titleOverflowing = it },
                                             // Only the tracks YouTube hands us a browse id for
                                             // lead anywhere; the rest stay plain text.
-                                            modifier = Modifier.opensPage(song.albumId, onOpenAlbum),
+                                            modifier = Modifier.opensPage(rowSong.albumId, onOpenAlbum),
                                         )
                                         ArtistCreditsMarquee(
-                                            text = song.artist,
-                                            credits = remember(song.artist, song.artists, song.artistId) {
-                                                artistCredits(song.artist, song.artists, song.artistId)
+                                            text = rowSong.artist,
+                                            credits = remember(rowSong.artist, rowSong.artists, rowSong.artistId) {
+                                                artistCredits(rowSong.artist, rowSong.artists, rowSong.artistId)
                                             },
                                             style = MaterialTheme.typography.titleLarge.copy(
                                                 fontWeight = FontWeight.W500,
                                                 fontSize = 20.sp,
                                             ),
                                             color = artistColor,
-                                            enabled = scrolling,
+                                            enabled = scrolling && live,
                                             // A title that's also scrolling gets to go first —
                                             // starting together reads as clutter, so the artist
                                             // waits a beat before it joins in.
                                             startDelayMillis = if (titleOverflowing) MARQUEE_ARTIST_STAGGER_MS else 0L,
                                             onOpenArtist = onOpenArtist,
                                         )
+                                        }
                                     }
                                 }
                             }
