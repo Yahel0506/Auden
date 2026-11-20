@@ -139,6 +139,7 @@
     <string name="card_songs_format">%1$s canciones</string>
     <string name="card_views_format">%1$s vistas</string>
     <string name="clear_search">Borrar búsqueda</string>
+    <string name="voice_search">Búsqueda por voz</string>
     <string name="downloaded">Descargada</string>
     <string name="explore">Explorar</string>
     <string name="library">Biblioteca</string>

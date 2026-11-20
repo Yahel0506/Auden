@@ -65,11 +65,15 @@
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
     </queries>
 
     <application
         android:name=".BitChordApplication"
         android:allowBackup="true"
+        android:enableOnBackInvokedCallback="true"
         android:appCategory="audio"
         android:usesCleartextTraffic="false"
         android:dataExtractionRules="@xml/data_extraction_rules"

@@ -1051,9 +1051,9 @@ internal fun ShelfCard(
             )
             .contextClick(onLongPress),
     ) {
-        when (item.browseId) {
-            // A device folder's own cover — see [FolderCover].
-            "local:downloads", "local:all", "local:cache", "local:webdav", "local:smb" -> FolderCover(
+        when {
+            // A device folder's own cover, and Mis favoritas' — see [FolderCover].
+            com.music.bitchord.ui.components.folderCoverStyle(item.browseId) != null -> FolderCover(
                 browseId = item.browseId,
                 modifier = Modifier
                     .cardCoverSharedElement(item.browseId, coverSection, coverToken)

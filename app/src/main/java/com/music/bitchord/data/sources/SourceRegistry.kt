@@ -38,8 +38,11 @@ data class SourceConfig(
     /** What the user called it. Blank falls back to the server's host, or the kind's own label. */
     val label: String = "",
     val baseUrl: String = "",
-    /** JioSaavn is opt-in because catalogue matches can select the wrong recording. */
-    val enabled: Boolean = kind != SourceKind.JIOSAAVN,
+    /**
+     * JioSaavn is opt-in because catalogue matches can select the wrong recording, and Monochrome
+     * because it leans on a server that is not ours: the listener turns it on on the Sources screen.
+     */
+    val enabled: Boolean = kind != SourceKind.JIOSAAVN && kind != SourceKind.MONOCHROME,
     /**
      * The addon's `allowDownloads`, as its manifest last said. Stored rather
      * than asked each time so the answer is there without a request — see

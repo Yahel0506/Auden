@@ -200,6 +200,8 @@ class BitChordApplication : Application(), SingletonImageLoader.Factory, Configu
         // What's already saved to Downloads, so the song menu can say so
         // without a media-store query per row.
         Downloads.init(this)
+        // The device folders' covers wear the SF Symbols their Library rows use, filled.
+        com.music.bitchord.ui.components.FolderCoverGlyphs.of = { id -> com.music.bitchord.ui.screens.deviceFolderCoverGlyph(id) }
         // What was still waiting when the process last stopped goes back in the queue.
         Downloads.restoreQueue(this)
         // After both of the things a check reads: the setting and the record.

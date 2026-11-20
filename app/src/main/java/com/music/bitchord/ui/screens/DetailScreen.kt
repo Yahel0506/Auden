@@ -62,6 +62,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import com.music.bitchord.data.model.LibraryState
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.MoreVert
@@ -1348,18 +1349,18 @@ private fun DetailSearchField(
             .fillMaxWidth()
             .padding(horizontal = HEADER_GUTTER)
             .padding(bottom = 10.dp)
-            .height(46.dp)
-            .clip(PILL_SHAPE)
+            .height(40.dp)
+            .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
-            .border(0.5.dp, Color.White.copy(alpha = 0.10f), PILL_SHAPE)
-            .padding(horizontal = 12.dp),
+            .border(0.5.dp, Color.White.copy(alpha = 0.10f), CircleShape)
+            .padding(start = 14.dp, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = BitChordIcons.Search,
             contentDescription = null,
-            tint = palette.onBackgroundVariant,
-            modifier = Modifier.size(18.dp),
+            tint = palette.onBackground,
+            modifier = Modifier.size(20.dp),
         )
         Spacer(Modifier.width(10.dp))
         Box(Modifier.weight(1f)) {
@@ -1401,6 +1402,23 @@ private fun DetailSearchField(
                 tint = palette.onBackgroundVariant,
                 modifier = Modifier.size(17.dp),
             )
+        }
+        val dictate = com.music.bitchord.ui.components.LocalVoiceDictation.current
+        if (dictate != null) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .clickable { dictate { heard -> onQueryChange(heard) } },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Mic,
+                    contentDescription = stringResource(R.string.voice_search),
+                    tint = palette.onBackground,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
 }

@@ -587,6 +587,14 @@ object Downloads {
         recordCollections { it - id }
     }
 
+    /** Delete every downloaded file and drop every record of one: the "remove all downloads" of Storage. */
+    suspend fun deleteAll(context: Context): Int {
+        var removed = 0
+        _saved.value.keys.toList().forEach { videoId -> if (delete(context, videoId)) removed++ }
+        _collections.value.keys.toList().forEach(::forgetCollection)
+        return removed
+    }
+
     /**
      * Delete every file downloaded for release [id] and drop the record of it.
      *

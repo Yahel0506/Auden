@@ -14,6 +14,14 @@ import android.view.KeyEvent
 import android.view.View
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import com.music.bitchord.ui.navigation.PredictivePageBack
+import com.music.bitchord.ui.navigation.PredictiveSlideBack
+import com.music.bitchord.ui.navigation.destinationAfterBack
+import com.music.bitchord.ui.navigation.rememberDestinationState
+import com.music.bitchord.ui.navigation.rememberShownState
+import androidx.compose.animation.core.ExperimentalTransitionApi
+import androidx.compose.animation.core.SeekableTransitionState
+import androidx.compose.animation.core.rememberTransition
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -149,6 +157,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.music.bitchord.auth.DiscordLoginScreen
 import com.music.bitchord.auth.SpotifyLoginScreen
+import com.music.bitchord.auth.CapturedSession
 import com.music.bitchord.auth.WebSessionMode
 import com.music.bitchord.auth.YtMusicLoginScreen
 import com.music.bitchord.data.AppUpdateChecker
@@ -495,6 +504,7 @@ class MainActivity : AppCompatActivity() {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
             }
+            com.music.bitchord.ui.components.VoiceDictationHost {
             BitChordTheme(darkTheme = darkTheme, font = appFont) {
                 // The glass surfaces sample this layer, and a layer records only
                 // what is drawn into it — which, for BitChord, is a page that
@@ -579,6 +589,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 }
             }
+            }
         }
     }
 
@@ -629,7 +640,7 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalTransitionApi::class)
 @Composable
 private fun BitChordApp(
     darkTheme: Boolean,
@@ -2589,6 +2600,17 @@ private fun BitChordApp(
         com.music.bitchord.ui.components.LongPressOrigin.consume()
         showNewPlaylistTypes = true
     }
+    // The device folder opened from its row on the Library page: its page is pushed over the page it came from
+    // instead of fading in, and slides back out the same way. Cleared once the folder has left the stack.
+    var pushedFolder by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(detailStack) {
+        val open = pushedFolder
+        if (open != null && detailStack.none { it.browseId == open }) {
+            // Not before the page has finished sliding out: it is still drawn, opaque, until then.
+            kotlinx.coroutines.delay(700)
+            if (detailStack.none { it.browseId == open }) pushedFolder = null
+        }
+    }
     val onLibraryItemClick: (ShelfItem) -> Unit = { item ->
         item.browseId?.let { id ->
             if (id == SPOTIFY_BROWSE_ID) {
@@ -3246,7 +3268,25 @@ private fun BitChordApp(
         // drawn over a page, then the alerts drawn over everything. Each sheet
         // and dialog further down registers its own handler as it opens, and
         // so outranks all of these while it is up.
-        BackHandler(enabled = canGoBack, onBack = goBack)
+        // What is on top of the back stack — see [AppNavigator].
+        val destinationNow: AppDestination = when {
+            visibleEntry != null -> AppDestination.Route(visibleEntry)
+            detail != null -> AppDestination.Release(detail.browseId)
+            else -> AppDestination.Tab(selectedTab)
+        }
+        // The page area is a transition that can be scrubbed, so a back gesture drags the page on top away and
+        // shows the one under it as it goes: see [PredictiveBackHandler] below.
+        val destinationState = rememberDestinationState(destinationNow)
+        val stackedPages = navigator.entries.isNotEmpty() || detailStack.isNotEmpty()
+        // A mood opened in Explore, or a tab that is not Home, is not a pushed page: those keep the plain back.
+        BackHandler(enabled = canGoBack && !stackedPages, onBack = goBack)
+        PredictivePageBack(
+            enabled = stackedPages,
+            state = destinationState,
+            current = destinationNow,
+            target = { destinationAfterBack(navigator.entries, detailStack.map { it.browseId }, selectedTab) },
+            onBack = goBack,
+        )
         // Back closes a selection before it leaves the page it was made on.
         BackHandler(enabled = songSelection.selecting) { songSelection.clear() }
         // Replay's stories and its share sheet are drawn over everything, and
@@ -3256,8 +3296,11 @@ private fun BitChordApp(
         val replayDrawable = replay.summary?.isEmpty == false
         BackHandler(enabled = replayDrawable && replayStory != null && !showReplayShare) { replayStory = null }
         BackHandler(enabled = replayDrawable && showReplayShare) { showReplayShare = false }
-        BackHandler(enabled = showUpdateDialog || showWhatsNew) {
-            if (showWhatsNew) showWhatsNew = false else showUpdateDialog = false
+        // What's new slides in over the account sheet; its back gesture scrubs that slide.
+        val whatsNewState = rememberShownState(showWhatsNew)
+        PredictiveSlideBack(enabled = showWhatsNew, state = whatsNewState) { showWhatsNew = false }
+        BackHandler(enabled = showUpdateDialog && !showWhatsNew) {
+            showUpdateDialog = false
         }
         BackHandler(enabled = showListenBrainzLogin) { showListenBrainzLogin = false }
         BackHandler(enabled = showLastfmLogin) { showLastfmLogin = false }
@@ -3268,12 +3311,6 @@ private fun BitChordApp(
         BackHandler(enabled = editingPartyServer) { editingPartyServer = false }
         BackHandler(enabled = editingSignatureApi) { editingSignatureApi = false }
 
-        // What is on top of the back stack — see [AppNavigator].
-        val destinationNow: AppDestination = when {
-            visibleEntry != null -> AppDestination.Route(visibleEntry)
-            detail != null -> AppDestination.Release(detail.browseId)
-            else -> AppDestination.Tab(selectedTab)
-        }
         // Settings' pages, in the light theme, are drawn as the account sheet is: the grouped grey of the page, and the
         // groups white on it. In the dark theme they are as they were.
         val lightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
@@ -3380,8 +3417,7 @@ private fun BitChordApp(
                             if (glassActive && glassSamplesBackdrop) Modifier.layerBackdrop(appBackdrop) else Modifier,
                         ),
                 ) {
-                AnimatedContent(
-                    targetState = destinationNow,
+                rememberTransition(destinationState, label = "content").AnimatedContent(
                     // A route's entry is copied when the release pages under it
                     // change, which is not a different page.
                     contentKey = { it.key },
@@ -3414,18 +3450,28 @@ private fun BitChordApp(
                             // The platform's push: the new screen in from the right, the one under it carried a third of
                             // the way off to the left at the same pace.
                             (slideInHorizontally(StackPushSpec) { it } togetherWith slideOutHorizontally(StackPushSpec) { -it / 3 })
-                                .apply { targetContentZIndex = 1f }
+                                .apply { targetContentZIndex = com.music.bitchord.ui.navigation.pushZ() }
                         } else if (showAccountSheet && owner != null && target.key == owner && initial.key != owner) {
                             (slideInHorizontally(StackPushSpec) { -it / 3 } togetherWith slideOutHorizontally(StackPushSpec) { it })
-                                .apply { targetContentZIndex = -1f }
+                                .apply { targetContentZIndex = com.music.bitchord.ui.navigation.backZ() }
+                        } else if (pushedFolder != null && (initial.isPushedFolder(pushedFolder) != target.isPushedFolder(pushedFolder))) {
+                            // A device folder opened from its row is a pushed screen: in from the right over the page it
+                            // came from, and back out the same way.
+                            if (target.isPushedFolder(pushedFolder)) {
+                                (slideInHorizontally(StackPushSpec) { it } togetherWith slideOutHorizontally(StackPushSpec) { -it / 3 })
+                                    .apply { targetContentZIndex = com.music.bitchord.ui.navigation.pushZ() }
+                            } else {
+                                (slideInHorizontally(StackPushSpec) { -it / 3 } togetherWith slideOutHorizontally(StackPushSpec) { it })
+                                    .apply { targetContentZIndex = com.music.bitchord.ui.navigation.backZ() }
+                            }
                         } else if (initial.isSettingsPage() || target.isSettingsPage()) {
                             // Every settings screen is stacked as one is on the platform, opened or left.
                             if (target.stackOrder() > initial.stackOrder()) {
                                 (slideInHorizontally(StackPushSpec) { it } togetherWith slideOutHorizontally(StackPushSpec) { -it / 3 })
-                                    .apply { targetContentZIndex = 1f }
+                                    .apply { targetContentZIndex = com.music.bitchord.ui.navigation.pushZ() }
                             } else {
                                 (slideInHorizontally(StackPushSpec) { -it / 3 } togetherWith slideOutHorizontally(StackPushSpec) { it })
-                                    .apply { targetContentZIndex = -1f }
+                                    .apply { targetContentZIndex = com.music.bitchord.ui.navigation.backZ() }
                             }
                         } else {
                         val tabSwap = initial is AppDestination.Tab && target is AppDestination.Tab
@@ -3434,8 +3480,18 @@ private fun BitChordApp(
                             (this as? AppDestination.Route)?.entry?.route is AppRoute.LibraryShowAll
                         val libraryShowAllSwap = (initial.isShowAll() && target == libraryTab) ||
                             (target.isShowAll() && initial == libraryTab)
-                        if (tabSwap || libraryShowAllSwap) {
+                        if (tabSwap && (initial as AppDestination.Tab).index != (target as AppDestination.Tab).index) {
+                            // The way Mochy Music moves between tabs: each page slides an eighth of the width in the
+                            // direction of the tab bar while the two fade across, 200 ms.
+                            val forward = target.index > initial.index
+                            (slideInHorizontally(tween(200)) { if (forward) it / 8 else -it / 8 } + fadeIn(tween(200))) togetherWith
+                                (slideOutHorizontally(tween(200)) { if (forward) -it / 8 else it / 8 } + fadeOut(tween(200)))
+                        } else if (tabSwap || libraryShowAllSwap) {
                             EnterTransition.None togetherWith ExitTransition.None
+                        } else if (com.music.bitchord.ui.navigation.predictiveBackInFlight) {
+                            // A back gesture scrubs this: the page on top slides off over the one under it.
+                            (slideInHorizontally(StackPushSpec) { -it / 3 } togetherWith slideOutHorizontally(StackPushSpec) { it })
+                                .apply { targetContentZIndex = com.music.bitchord.ui.navigation.backZ() }
                         } else {
                             fadeIn(tween(180)) togetherWith fadeOut(tween(180))
                         }
@@ -3448,7 +3504,6 @@ private fun BitChordApp(
                     } else {
                         Modifier
                     },
-                    label = "content",
                 ) { destination ->
                     // Every branch below reads `destination` rather than the
                     // stack that produced it. The two are the same thing only
@@ -3459,7 +3514,9 @@ private fun BitChordApp(
                     val key = destination.key
                     val pageRoute = (destination as? AppDestination.Route)?.entry?.route
                     val live = (destination as? AppDestination.Release)?.let { release ->
-                        detailStack.lastOrNull()?.takeIf { it.browseId == release.browseId }
+                        // Found anywhere on the stack, not only on top: while a back gesture is
+                        // dragged the page under the top one is already on screen.
+                        detailStack.lastOrNull { it.browseId == release.browseId }
                     }
                     // Held for the same reason, one step further on: a popped
                     // page is off the stack before it has finished animating
@@ -4250,7 +4307,7 @@ private fun BitChordApp(
                                 },
                             )
                             else -> {
-                                val deviceItemsNow = libraryDeviceItems(
+                                val deviceItemsBase = libraryDeviceItems(
                                     downloadedReleases.filterNot { release ->
                                         localPlaylists.any {
                                             // Downloaded from the page it was copied from, or from the copy itself.
@@ -4260,6 +4317,10 @@ private fun BitChordApp(
                                         }
                                     },
                                 ) + offlinePlaylistItems + localPlaylistItems
+                                // The account's Liked Music is a playlist like any other: it has its place in the
+                                // Playlists section, which is the only way in to it.
+                                val likedMusicItem = likedMusicShelfItem(signedIn, libraryState, stringResource(R.string.liked_music))
+                                val deviceItemsNow = deviceItemsBase + listOfNotNull(likedMusicItem)
                                 LibraryScreen(
                                 // Auden's library is its own: what YouTube Music and Spotify hold comes in from
                                 // "Transfer your music", never read live into this page.
@@ -4300,9 +4361,17 @@ private fun BitChordApp(
                                     shelves = emptyList(),
                                     deviceItems = deviceItemsNow,
                                     onOpenShelf = { shelf -> navigator.push(AppRoute.LibraryShowAll(shelf)) },
+                                    onOpenFolder = { item ->
+                                        // From its row a folder slides in over the Library like any pushed screen.
+                                        pushedFolder = item.browseId
+                                        // No card was touched: a Recents card of the same folder, touched earlier, must
+                                        // not fly its cover in — that is how it opens from Recents, and only from there.
+                                        com.music.bitchord.ui.components.CoverTransitionTarget.key = null
+                                        onLibraryItemClick(item)
+                                    },
                                 ),
                                 recents = AppSettings.recentSources.collectAsStateWithLifecycle().value.map { r ->
-                                    ShelfItem(title = r.title, subtitle = "", thumbnailUrl = r.thumbnailUrl, videoId = null, browseId = r.id)
+                                    ShelfItem(title = r.title, subtitle = "", thumbnailUrl = r.thumbnailUrl.takeUnless { com.music.bitchord.ui.components.folderCoverStyle(r.id) != null }, videoId = null, browseId = r.id)
                                 },
                                 spotifyTitle = stringResource(R.string.from_spotify),
                                 spotifyPlaylists = emptyList(),
@@ -4327,7 +4396,8 @@ private fun BitChordApp(
                         com.music.bitchord.ui.components.NowPlayingList(player.song?.playbackSourceId, player.isPlaying)
                     }
                     // A screen stacked on the account sheet's page is opaque: the sheet is under it.
-                    val slotStacked = showAccountSheet && sheetOwnerKey != null && key != sheetOwnerKey
+                    val slotStacked = (showAccountSheet && sheetOwnerKey != null && key != sheetOwnerKey) ||
+                        destination.isPushedFolder(pushedFolder)
                     val slotSettings = destination.isSettingsPage()
                     val slotGrouped = lightTheme && (pageRoute == AppRoute.Settings || pageRoute is AppRoute.SettingsSection ||
                         pageRoute == AppRoute.AccountScrobbling || pageRoute == AppRoute.Sources ||
@@ -6844,156 +6914,35 @@ private fun BitChordApp(
 
         // ---- Google sign-in (full screen WebView) ----
         webSession?.let { mode ->
-            BackHandler { webSession = null }
-            // Raised by "Use this channel", read by the browser as "take the
-            // session from the page as it now stands". A counter rather than a
-            // flag so a second tap, after a failed first one, is still a new
-            // request rather than a value that was already true.
-            var captureRequest by remember(mode) { mutableIntStateOf(0) }
-            var captureFailed by remember(mode) { mutableStateOf(false) }
-            var pageReady by remember(mode) { mutableStateOf(false) }
-            var confirmingProfile by remember(mode) { mutableStateOf(false) }
-            Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                Column(Modifier.fillMaxSize()) {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        IconButton(onClick = { webSession = null }) {
-                            Icon(
-                                Icons.Rounded.Close,
-                                contentDescription = stringResource(R.string.close),
-                                tint = MaterialTheme.colorScheme.onBackground,
-                            )
-                        }
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = when (mode) {
-                                    WebSessionMode.SIGN_IN -> stringResource(R.string.sign_in_youtube_music)
-                                    WebSessionMode.SWITCH_CHANNEL -> stringResource(R.string.choose_profile)
-                                },
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onBackground,
-                            )
-                            if (pageReady) {
-                                Text(
-                                    text = if (captureFailed) {
-                                         stringResource(R.string.profile_unavailable)
-                                     } else {
-                                         stringResource(R.string.switch_profile_hint)
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    maxLines = 2,
-                                )
+            WebSignInPage(
+                mode = mode,
+                initialCookie = if (mode == WebSessionMode.SWITCH_CHANNEL) {
+                    googleAccounts.firstOrNull { it.accountId == activeAccountId }?.cookie
+                } else null,
+                onClose = { webSession = null },
+                onSession = { session, done ->
+                    viewModel.onWebSession(session, mode) { accepted ->
+                        if (accepted) {
+                            webSession = null
+                            if (mode == WebSessionMode.SIGN_IN) {
+                                navigator.clear()
+                                selectedTab = TAB_LIBRARY
                             }
                         }
-                        if (pageReady) {
-                            TextButton(onClick = {
-                                captureFailed = false
-                                confirmingProfile = true
-                                captureRequest++
-                            }, enabled = !confirmingProfile) {
-                                Text(
-                                    if (confirmingProfile) stringResource(R.string.checking)
-                                    else stringResource(R.string.use_this_profile),
-                                )
-                            }
-                        }
+                        done(accepted)
                     }
-                    YtMusicLoginScreen(
-                        mode = mode,
-                        initialCookie = if (mode == WebSessionMode.SWITCH_CHANNEL) {
-                            googleAccounts.firstOrNull { it.accountId == activeAccountId }?.cookie
-                        } else null,
-                        captureRequest = captureRequest,
-                        onPageReady = { pageReady = it },
-                        onCaptureUnavailable = {
-                            confirmingProfile = false
-                            captureFailed = true
-                        },
-                        onCaptured = { session ->
-                            viewModel.onWebSession(session, mode) { accepted ->
-                                confirmingProfile = false
-                                if (accepted) {
-                                    webSession = null
-                                    if (mode == WebSessionMode.SIGN_IN) {
-                                        navigator.clear()
-                                        selectedTab = TAB_LIBRARY
-                                    }
-                                } else {
-                                    captureFailed = true
-                                }
-                            }
-                        },
-                    )
-                }
-            }
-        }
-
-        // ---- Diwali greeting ----
-        AnimatedVisibility(
-            visible = showDiwali,
-            enter = fadeIn(tween(400)),
-            exit = fadeOut(tween(300)),
-        ) {
-            val dismissDiwali = {
-                showDiwali = false
-                AppSettings.setDiwaliGreetingShown()
-            }
-            BackHandler(onBack = dismissDiwali)
-            DiwaliGreetingScreen(onDismiss = dismissDiwali)
-        }
-
-        // ---- Update available (once per launch; held until the welcome and Diwali greeting are done) ----
-        // A page, not an alert: the download button stays at its foot, and the download itself runs on the process's
-        // own scope, so closing the page keeps it going and reopening it shows where it got to.
-        AnimatedVisibility(
-            visible = showUpdateDialog && onboardingComplete && !showDiwali && updateNotice != null,
-            enter = fadeIn(tween(260)) + slideInVertically(tween(320)) { it / 12 },
-            exit = fadeOut(tween(200)),
-        ) {
-            updateNotice?.let { update ->
-                UpdateScreen(
-                    version = update.version,
-                    notes = update.notes,
-                    onBack = { showUpdateDialog = false },
-                    actions = UpdateActions(
-                        onDownload = {
-                            if (update.apkUrl != null) {
-                                AppUpdateChecker.resetDownload()
-                                AppUpdateChecker.startDownload(context)
-                            } else {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.releaseUrl)))
-                            }
-                        },
-                        onCancel = { AppUpdateChecker.cancelDownload() },
-                        onInstall = {
-                            val ready = AppUpdateChecker.download.value as? AppUpdateChecker.DownloadState.Ready
-                            ready?.let { AppUpdateChecker.installApk(context, it.file) }
-                        },
-                    ),
-                )
-            }
-        }
-
-        // ---- What's new in this update (Settings) ----
-        AnimatedVisibility(
-            visible = showWhatsNew,
-            // Stacked over what it was opened from — the account sheet — as a screen is: in from the right, out to it.
-            enter = slideInHorizontally(StackPushSpec) { it },
-            exit = slideOutHorizontally(StackPushSpec) { it },
-        ) {
-            val whatsNewContext = LocalContext.current
-            UpdateScreen(
-                version = BuildConfig.VERSION_NAME.substringBefore('-'),
-                notes = remember(whatsNewContext) { com.music.bitchord.data.ReleaseNotes.forInstalledVersion(whatsNewContext) },
-                onBack = { showWhatsNew = false },
+                },
             )
         }
+
+        // ---- Diwali greeting, the update page and What's new: full-screen pages over everything ----
+        DiwaliGreeting(visible = showDiwali, onDismiss = { showDiwali = false })
+        UpdateAvailablePage(
+            visible = showUpdateDialog && onboardingComplete && !showDiwali && updateNotice != null,
+            update = updateNotice,
+            onBack = { showUpdateDialog = false },
+        )
+        WhatsNewPage(whatsNewState, onBack = { showWhatsNew = false })
 
         // Dialogs and alerts, in a scope of their own: BitChordApp had outgrown the JVM's method limit.
         Isolated {
@@ -7769,6 +7718,10 @@ private fun SongSort.localizedLabel(): String = when (this) {
  * every other release page gets. See [Downloads.PLAYLIST_PREFIX] and
  * [LocalGroups.PREFIX] for why they share a namespace at all.
  */
+/** Whether this page is the device folder [folder], opened from its row. */
+private fun AppDestination.isPushedFolder(folder: String?): Boolean =
+    folder != null && (this as? AppDestination.Release)?.browseId == folder
+
 private fun String?.isDeviceFolder(): Boolean =
     this != null && startsWith("local:") &&
         !startsWith(Downloads.PLAYLIST_PREFIX) && !startsWith(LocalGroups.PREFIX) &&
@@ -7943,3 +7896,187 @@ internal fun morphCorner(barHeight: Float, sheetCorner: Float, t: Float): Float 
 }
 
 private const val MORPH_FLOOR_SPAN = 0.3f
+
+/**
+ * "Liked Music" as a row of its own for a signed-in Library whose playlists shelf does not list it, or null when it is
+ * listed already or nobody is signed in. Kept out of [BitChordApp], whose body is at the JVM's method-size limit.
+ */
+private fun likedMusicShelfItem(signedIn: Boolean, libraryState: UiState<*>, title: String): ShelfItem? {
+    if (!signedIn) return null
+    val page = (libraryState as? UiState.Success<*>)?.data as? com.music.bitchord.data.model.LibraryPage ?: return null
+    val shelf = page.shelves.firstOrNull { it.title == com.music.bitchord.data.YtMusicRepository.PLAYLISTS_SHELF }
+    val listed = shelf?.items?.any { it.browseId == com.music.bitchord.data.YtMusicRepository.LIKED_MUSIC } == true
+    if (listed) return null
+    return ShelfItem(
+        title = title,
+        subtitle = "",
+        thumbnailUrl = page.likedSongs.firstOrNull()?.thumbnailUrl,
+        videoId = null,
+        browseId = com.music.bitchord.data.YtMusicRepository.LIKED_MUSIC,
+        platform = ShelfItem.PLATFORM_YT_MUSIC,
+    )
+}
+
+/** The festival greeting, shown once. */
+@Composable
+private fun DiwaliGreeting(visible: Boolean, onDismiss: () -> Unit) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(tween(400)),
+        exit = fadeOut(tween(300)),
+    ) {
+        val dismissDiwali = {
+            onDismiss()
+            AppSettings.setDiwaliGreetingShown()
+        }
+        BackHandler(onBack = dismissDiwali)
+        DiwaliGreetingScreen(onDismiss = dismissDiwali)
+    }
+}
+
+/**
+ * Update available (once per launch; held until the welcome and Diwali greeting are done). A page, not an alert: the
+ * download button stays at its foot, and the download itself runs on the process's own scope, so closing the page keeps
+ * it going and reopening it shows where it got to.
+ */
+@Composable
+private fun UpdateAvailablePage(visible: Boolean, update: AppUpdateChecker.UpdateInfo?, onBack: () -> Unit) {
+    val context = LocalContext.current
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn(tween(260)) + slideInVertically(tween(320)) { it / 12 },
+        exit = fadeOut(tween(200)),
+    ) {
+        update?.let { update ->
+            UpdateScreen(
+                version = update.version,
+                notes = update.notes,
+                onBack = onBack,
+                actions = UpdateActions(
+                    onDownload = {
+                        if (update.apkUrl != null) {
+                            AppUpdateChecker.resetDownload()
+                            AppUpdateChecker.startDownload(context)
+                        } else {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.releaseUrl)))
+                        }
+                    },
+                    onCancel = { AppUpdateChecker.cancelDownload() },
+                    onInstall = {
+                        val ready = AppUpdateChecker.download.value as? AppUpdateChecker.DownloadState.Ready
+                        ready?.let { AppUpdateChecker.installApk(context, it.file) }
+                    },
+                ),
+            )
+        }
+    }
+}
+
+/** What's new in this update, stacked over what it was opened from — the account sheet — as a screen is: in from the right, out to it. */
+@OptIn(ExperimentalTransitionApi::class)
+@Composable
+private fun WhatsNewPage(state: SeekableTransitionState<Boolean>, onBack: () -> Unit) {
+    rememberTransition(state, label = "whatsNew").AnimatedVisibility(
+        visible = { it },
+        enter = slideInHorizontally(StackPushSpec) { it },
+        exit = slideOutHorizontally(StackPushSpec) { it },
+    ) {
+        val whatsNewContext = LocalContext.current
+        UpdateScreen(
+            version = BuildConfig.VERSION_NAME.substringBefore('-'),
+            notes = remember(whatsNewContext) { com.music.bitchord.data.ReleaseNotes.forInstalledVersion(whatsNewContext) },
+            onBack = onBack,
+        )
+    }
+}
+
+/**
+ * The Google sign-in, as a full screen over everything: a browser, and above it the button that takes the session from
+ * the page as it now stands. [onSession] answers through its second argument whether the session was accepted.
+ */
+@Composable
+private fun WebSignInPage(
+    mode: WebSessionMode,
+    initialCookie: String?,
+    onClose: () -> Unit,
+    onSession: (CapturedSession, (Boolean) -> Unit) -> Unit,
+) {
+    BackHandler(onBack = onClose)
+    // Raised by "Use this channel", read by the browser as "take the
+    // session from the page as it now stands". A counter rather than a
+    // flag so a second tap, after a failed first one, is still a new
+    // request rather than a value that was already true.
+    var captureRequest by remember(mode) { mutableIntStateOf(0) }
+    var captureFailed by remember(mode) { mutableStateOf(false) }
+    var pageReady by remember(mode) { mutableStateOf(false) }
+    var confirmingProfile by remember(mode) { mutableStateOf(false) }
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onClose) {
+                    Icon(
+                        Icons.Rounded.Close,
+                        contentDescription = stringResource(R.string.close),
+                        tint = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = when (mode) {
+                            WebSessionMode.SIGN_IN -> stringResource(R.string.sign_in_youtube_music)
+                            WebSessionMode.SWITCH_CHANNEL -> stringResource(R.string.choose_profile)
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onBackground,
+                    )
+                    if (pageReady) {
+                        Text(
+                            text = if (captureFailed) {
+                                stringResource(R.string.profile_unavailable)
+                            } else {
+                                stringResource(R.string.switch_profile_hint)
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 2,
+                        )
+                    }
+                }
+                if (pageReady) {
+                    TextButton(onClick = {
+                        captureFailed = false
+                        confirmingProfile = true
+                        captureRequest++
+                    }, enabled = !confirmingProfile) {
+                        Text(
+                            if (confirmingProfile) stringResource(R.string.checking)
+                            else stringResource(R.string.use_this_profile),
+                        )
+                    }
+                }
+            }
+            YtMusicLoginScreen(
+                mode = mode,
+                initialCookie = initialCookie,
+                captureRequest = captureRequest,
+                onPageReady = { pageReady = it },
+                onCaptureUnavailable = {
+                    confirmingProfile = false
+                    captureFailed = true
+                },
+                onCaptured = { session ->
+                    onSession(session) { accepted ->
+                        confirmingProfile = false
+                        if (!accepted) captureFailed = true
+                    }
+                },
+            )
+        }
+    }
+}

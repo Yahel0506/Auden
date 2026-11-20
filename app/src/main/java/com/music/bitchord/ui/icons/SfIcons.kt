@@ -41,6 +41,11 @@ import com.composables.sfsymbols.monochrome.SFExclamationmarkTriangle
 import com.composables.sfsymbols.monochrome.SFEyeSlash
 import com.composables.sfsymbols.monochrome.SFFigureWalkMotion
 import com.composables.sfsymbols.monochrome.SFFolder
+import com.composables.sfsymbols.monochrome.SFFolderFill
+import com.composables.sfsymbols.monochrome.SFArrowDownCircleFill
+import com.composables.sfsymbols.monochrome.SFInternaldriveFill
+import com.composables.sfsymbols.monochrome.SFIcloudFill
+import com.composables.sfsymbols.monochrome.SFNetwork
 import com.composables.sfsymbols.monochrome.SFGaugeWithDotsNeedle67percent
 import com.composables.sfsymbols.monochrome.SFGearshape
 import com.composables.sfsymbols.monochrome.SFGlobe
@@ -85,6 +90,7 @@ import com.composables.sfsymbols.monochrome.SFRectangleSlash
 import com.composables.sfsymbols.monochrome.SFServerRack
 import com.composables.sfsymbols.monochrome.SFShuffle
 import com.composables.sfsymbols.monochrome.SFSliderHorizontal3
+import com.composables.sfsymbols.monochrome.SFLightbulbFill
 import com.composables.sfsymbols.monochrome.SFSparkles
 import com.composables.sfsymbols.monochrome.SFSpeakerSlash
 import com.composables.sfsymbols.monochrome.SFSpeakerWave2
@@ -134,6 +140,8 @@ object SfIcons {
     val Apps: ImageVector by lazy { bold(SfSymbols.Monochrome.SFSquareGrid2x2) }
     val ArrowBack: ImageVector by lazy { bold(SfSymbols.Monochrome.SFChevronBackward) }
     val AutoAwesome: ImageVector by lazy { bold(SfSymbols.Monochrome.SFSparkles) }
+    /** The lit bulb, filled as Apple draws it. */
+    val Lightbulb: ImageVector by lazy { SfSymbols.Monochrome.SFLightbulbFill }
     val BarChart: ImageVector by lazy { bold(SfSymbols.Monochrome.SFChartBar) }
     val Bluetooth: ImageVector by lazy { bold(SfSymbols.Monochrome.SFHeadphones) }
     val BlurOff: ImageVector by lazy { bold(SfSymbols.Monochrome.SFDrop) }
@@ -159,6 +167,14 @@ object SfIcons {
     val FileUpload: ImageVector by lazy { bold(SfSymbols.Monochrome.SFArrowUpDocument) }
     val FilterAlt: ImageVector by lazy { bold(SfSymbols.Monochrome.SFLine3HorizontalDecreaseCircle) }
     val Folder: ImageVector by lazy { bold(SfSymbols.Monochrome.SFFolder) }
+    val Network: ImageVector by lazy { bold(SfSymbols.Monochrome.SFNetwork) }
+
+    // The filled glyphs the device folders' covers wear — the same symbols their Library rows draw in outline.
+    val DownloadFill: ImageVector by lazy { SfSymbols.Monochrome.SFArrowDownCircleFill }
+    val FolderFill: ImageVector by lazy { SfSymbols.Monochrome.SFFolderFill }
+    val StorageFill: ImageVector by lazy { SfSymbols.Monochrome.SFInternaldriveFill }
+    val CloudFill: ImageVector by lazy { SfSymbols.Monochrome.SFIcloudFill }
+    val NetworkGlyph: ImageVector by lazy { SfSymbols.Monochrome.SFNetwork }
     val Font: ImageVector by lazy { bold(SfSymbols.Monochrome.SFTextformat) }
     val FrameRate: ImageVector by lazy { bold(SfSymbols.Monochrome.SFStopwatch) }
     val Fullscreen: ImageVector by lazy { bold(SfSymbols.Monochrome.SFArrowUpLeftAndArrowDownRight) }

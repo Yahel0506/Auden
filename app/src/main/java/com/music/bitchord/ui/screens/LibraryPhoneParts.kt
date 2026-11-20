@@ -47,14 +47,21 @@ fun libraryLinks(
     /** What is kept on this device as lists of its own, for the Playlists section to hold with the others. */
     deviceItems: List<ShelfItem>,
     onOpenShelf: (com.music.bitchord.data.model.HomeShelf) -> Unit,
+    /** A device folder opened from its row — told apart from a card, which brings its own cover along. */
+    onOpenFolder: (ShelfItem) -> Unit = {},
 ): List<LibraryLink> {
     val webdavConfigured by AppSettings.webdavUrl.collectAsStateWithLifecycle()
     val smbHost by AppSettings.smbHost.collectAsStateWithLifecycle()
     val smbShare by AppSettings.smbShare.collectAsStateWithLifecycle()
-    fun link(title: String, browseId: String, icon: ImageVector = deviceFolderIcon(browseId) ?: Icons.Rounded.Cloud) = LibraryLink(
-        item = ShelfItem(title = title, subtitle = "", thumbnailUrl = null, videoId = null, browseId = browseId),
-        icon = icon,
-    )
+    fun link(title: String, browseId: String, icon: ImageVector = deviceFolderIcon(browseId) ?: Icons.Rounded.Cloud): LibraryLink {
+        // The folders are special playlists, each with a cover of its own (see FolderCover), so none rides along here.
+        val item = ShelfItem(title = title, subtitle = "", thumbnailUrl = null, videoId = null, browseId = browseId)
+        return LibraryLink(
+            item = item,
+            icon = icon,
+            onClick = if (com.music.bitchord.ui.components.folderCoverStyle(browseId) != null) ({ onOpenFolder(item) }) else null,
+        )
+    }
     fun action(id: String, title: String, icon: ImageVector, onClick: () -> Unit) = LibraryLink(
         item = ShelfItem(title = title, subtitle = "", thumbnailUrl = null, videoId = null, browseId = null),
         icon = icon,
@@ -73,8 +80,13 @@ fun libraryLinks(
             } else {
                 emptyList()
             }
+        // Liked Music stands first among the lists, as it does in the app it comes from.
+        // One row per list, however many sources hold it: Mis favoritas comes both as the device's liked list and as one
+        // of its offline playlists, and a list keyed twice is a crash the moment it scrolls into view.
+        val ordered = items.distinctBy { it.browseId ?: it.title }
+            .sortedBy { if (it.browseId == com.music.bitchord.data.YtMusicRepository.LIKED_MUSIC) 0 else 1 }
         if (items.isEmpty() && !(always && shelves.isNotEmpty())) return null
-        val merged = com.music.bitchord.data.model.HomeShelf(title, items)
+        val merged = com.music.bitchord.data.model.HomeShelf(title, ordered)
         return action(id, title, icon) { onOpenShelf(merged) }
     }
     val playlistsTitle = stringResource(R.string.playlists)
@@ -85,8 +97,8 @@ fun libraryLinks(
     val order by AppSettings.libraryLinkOrder.collectAsStateWithLifecycle()
     // Plain text rows into each section; the account's artists, albums and podcasts are behind "Other".
     return listOfNotNull(
-        link(stringResource(R.string.downloads), "local:downloads", SfIcons.Download),
-        link(stringResource(R.string.local_music), "local:all", SfIcons.MusicNote),
+        link(stringResource(R.string.downloads), "local:downloads"),
+        link(stringResource(R.string.local_music), "local:all"),
         link(stringResource(R.string.cached_songs), CACHE_FOLDER_BROWSE_ID),
         // Only once set up in Sources; unconfigured, they'd just be dead ends.
         link(stringResource(R.string.webdav), com.music.bitchord.data.webdav.WebDavConfig.BROWSE_ID)
@@ -121,7 +133,8 @@ fun libraryDeviceItems(downloadedReleases: List<SavedCollection>): List<ShelfIte
         ShelfItem(
             title = favoritesTitle,
             subtitle = "",
-            thumbnailUrl = androidx.compose.runtime.remember { com.music.bitchord.data.FavoritesCover.uri(context) },
+            // Drawn, not a picture: see FolderCover, which gives it the folders' look.
+            thumbnailUrl = null,
             videoId = null,
             browseId = com.music.bitchord.data.OfflinePlaylists.PREFIX + com.music.bitchord.data.OfflinePlaylists.LIKED_ID,
         ),
@@ -149,11 +162,22 @@ fun libraryDeviceItems(downloadedReleases: List<SavedCollection>): List<ShelfIte
  * one of the folders.
  */
 fun deviceFolderIcon(browseId: String): ImageVector? = when (browseId) {
-    "local:downloads" -> Icons.Rounded.Download
-    "local:all" -> Icons.Rounded.Folder
-    CACHE_FOLDER_BROWSE_ID -> Icons.Rounded.Storage
-    com.music.bitchord.data.webdav.WebDavConfig.BROWSE_ID -> Icons.Rounded.Cloud
-    com.music.bitchord.data.smb.SmbConfig.BROWSE_ID -> Icons.Rounded.Lan
+    "local:downloads" -> SfIcons.Download
+    "local:all" -> SfIcons.Folder
+    CACHE_FOLDER_BROWSE_ID -> SfIcons.Storage
+    com.music.bitchord.data.webdav.WebDavConfig.BROWSE_ID -> SfIcons.Cloud
+    com.music.bitchord.data.smb.SmbConfig.BROWSE_ID -> SfIcons.Network
+    else -> null
+}
+
+/** The filled counterpart of [deviceFolderIcon], for the folder's cover: the same symbol, solid. */
+fun deviceFolderCoverGlyph(browseId: String?): ImageVector? = when (browseId) {
+    "local:downloads" -> SfIcons.DownloadFill
+    "local:all" -> SfIcons.FolderFill
+    CACHE_FOLDER_BROWSE_ID -> SfIcons.StorageFill
+    com.music.bitchord.data.OfflinePlaylists.PREFIX + com.music.bitchord.data.OfflinePlaylists.LIKED_ID -> SfIcons.StarFill
+    com.music.bitchord.data.webdav.WebDavConfig.BROWSE_ID -> SfIcons.CloudFill
+    com.music.bitchord.data.smb.SmbConfig.BROWSE_ID -> SfIcons.NetworkGlyph
     else -> null
 }
 
