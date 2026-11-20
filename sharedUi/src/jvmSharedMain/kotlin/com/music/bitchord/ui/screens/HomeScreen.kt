@@ -1039,6 +1039,8 @@ internal fun ShelfCard(
     coverSection: String = "",
     /** The name centred under the cover, as the pinned lists have it. */
     centerTitle: Boolean = false,
+    /** The generated Top Pick cover, when a recent card links to one. */
+    topPick: TopPick? = null,
 ) {
     val nowPlaying = LocalNowPlayingList.current
     // The list the player is on, marked where cards ask for it (the Library): its name in the accent, bars beside it.
@@ -1086,12 +1088,16 @@ internal fun ShelfCard(
                         .thumbnailBorder(coverShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                 ) {
-                    AsyncImage(
-                        model = item.thumbnailUrl.artworkAt(CARD_ART_PX),
-                        contentDescription = null,
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+                    if (topPick != null) {
+                        MixCoverArt(topPick.kind, topPick.images, Modifier.fillMaxSize(), label = topPick.title)
+                    } else {
+                        AsyncImage(
+                            model = item.thumbnailUrl.artworkAt(CARD_ART_PX),
+                            contentDescription = null,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                     if (isCurrent && isPlaying) SearchPlayingBars(Modifier.align(Alignment.Center))
                 }
             }

@@ -1161,7 +1161,11 @@ private fun SharedTransitionScope.ExpandedTabs(
                         }
                 ) {
                   CompositionLocalProvider(
-                      com.music.bitchord.ui.components.LocalNavAccentWhitening provides { if (glassPill) pill.material else 0f },
+                      // While the drop travels, its lens paints whichever glyph it actually covers. Keep the
+                      // selected glyph's resting accent off until the drop has landed on the new selection.
+                      com.music.bitchord.ui.components.LocalNavAccentWhitening provides {
+                          if (glassPill && (!pill.isFlat || pill.index != selectedTabIndex)) 1f else 0f
+                      },
                   ) {
                     cells.forEach { tab ->
                         val isSelected = tab.key == selectedTabKey

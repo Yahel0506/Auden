@@ -79,6 +79,7 @@ import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.LibraryPage
 import com.music.bitchord.data.model.ShelfItem
+import com.music.bitchord.data.model.TopPick
 import com.music.bitchord.data.model.UiState
 import com.music.bitchord.data.settings.LibrarySort
 import com.music.bitchord.ui.AppUi
@@ -138,6 +139,8 @@ fun LibraryScreen(
     onUnpin: (String) -> Unit = {},
     /** What was played lately, by where it was played from, newest first. */
     recents: List<ShelfItem> = emptyList(),
+    /** Current Top Picks, used to draw their existing cover art in Recents. */
+    topPicks: List<TopPick> = emptyList(),
     onSignIn: () -> Unit,
     onRetry: () -> Unit,
     refreshing: Boolean,
@@ -256,6 +259,7 @@ fun LibraryScreen(
                     MyListsGrid(
                         title = stringResource(Res.string.library_recents),
                         items = recentCards,
+                        topPicks = topPicks,
                         onItemClick = onShelfItemClick,
                         onItemLongPress = onShelfItemLongPress,
                     )
@@ -809,6 +813,7 @@ private fun PinnedGrid(
 private fun MyListsGrid(
     title: String,
     items: List<ShelfItem>,
+    topPicks: List<TopPick>,
     onItemClick: (ShelfItem) -> Unit,
     onItemLongPress: (ShelfItem) -> Unit,
 ) {
@@ -824,6 +829,9 @@ private fun MyListsGrid(
                         ShelfCard(
                             coverSection = "recents",
                             item = item,
+                            topPick = topPicks.firstOrNull { pick ->
+                                pick.kind.isGeneratedList && pick.browseId == item.browseId
+                            },
                             onClick = { onItemClick(item) },
                             onLongPress = { onItemLongPress(item) },
                             modifier = Modifier.weight(1f),

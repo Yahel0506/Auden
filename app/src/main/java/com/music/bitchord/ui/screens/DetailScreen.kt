@@ -588,6 +588,9 @@ fun DetailScreen(
                 // A folder's grid view: the same column count the Library's
                 // "Show all" grids reach at this width.
                 val gridColumns = libraryGrid(maxWidth - PAGE_GUTTER * 2).columns
+                // A small copy of the artist clip's current frame feeds the continuation mesh below it.
+                // Keying by both page and clip keeps a prior artist's colours out of a new page.
+                var artistCanvasFrame by remember(page.browseId, canvas?.url) { mutableStateOf<ImageBitmap?>(null) }
 
                 // The cover's colours carrying on below it, fading down into the page's own colour: from
                 // where a full-bleed sleeve or an artist's photograph ends, or from under a framed sleeve.
@@ -599,6 +602,7 @@ fun DetailScreen(
                     }
                     CoverContinuation(
                         imageUrl = if (isArtist) appleArt?.heroUrl ?: page.thumbnailUrl else page.thumbnailUrl,
+                        canvasFrame = artistCanvasFrame,
                         folderId = page.browseId.takeIf { page.thumbnailUrl == null && !isArtist },
                         gradient = com.music.bitchord.ui.screens.mixKindOf(page.browseId)?.mixStyle(dev.auden.home.GeneratedMixes.get(page.browseId)?.title.orEmpty())?.let { it.top to it.bottom },
                         seam = continuationSeam,
@@ -622,6 +626,8 @@ fun DetailScreen(
                         artHeight = artHeight,
                         listState = listState,
                         heroUrl = appleArt?.heroUrl,
+                        onCanvasRenderedChanged = { if (!it) artistCanvasFrame = null },
+                        onCanvasFrameCaptured = { artistCanvasFrame = it },
                         modifier = Modifier.matchParentSize(),
                     )
                 }
@@ -996,7 +1002,8 @@ private fun ReleaseHeader(
     // A list made each day: its moving cover runs the page's width and dissolves into the continuation, as a sleeve does.
     val mixKind = com.music.bitchord.ui.screens.mixKindOf(page.browseId)
     val mix = remember(page.browseId) { dev.auden.home.GeneratedMixes.get(page.browseId) }
-    val mixCover = mixKind != null && page.thumbnailUrl == null
+    // A recent Top Pick can carry the song thumbnail it was last opened from; its generated cover still belongs to the list.
+    val mixCover = mixKind != null
     val bleed = fullBleed && ((page.thumbnailUrl != null && !artFailed) || folderCover || mixCover)
 
     Column(
@@ -1638,9 +1645,13 @@ private fun PageBackground(
     artHeight: Dp,
     listState: LazyListState,
     heroUrl: String? = null,
+    onCanvasRenderedChanged: (Boolean) -> Unit = {},
+    onCanvasFrameCaptured: (ImageBitmap) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val reduceDynamicBlur by AppSettings.reduceDynamicBlur.collectAsStateWithLifecycle()
+    val foreground = com.music.bitchord.ui.rememberIsForeground()
+    val headerVisible = listState.firstVisibleItemIndex == 0
     // Not under a canvas: a still blurred over the foot of a moving clip would
     // freeze the bottom of the video into the wrong picture.
     val softenFoot = canvas == null && !reduceDynamicBlur &&
@@ -1713,6 +1724,10 @@ private fun PageBackground(
                 CanvasArtworkPlayer(
                     canvas = clip,
                     isPlaying = true,
+                    onRenderedChanged = onCanvasRenderedChanged,
+                    onFrameCaptured = onCanvasFrameCaptured,
+                    refreshFrameEveryMs = 250L.takeIf { foreground && headerVisible && !reduceDynamicBlur },
+                    frameCapturePx = 64.takeIf { foreground && headerVisible } ?: 0,
                     bottomFade = FULL_BLEED_FADE_FRACTION,
                     modifier = Modifier.matchParentSize(),
                 )
@@ -1733,6 +1748,7 @@ private fun PageBackground(
 @Composable
 private fun CoverContinuation(
     imageUrl: String?,
+    canvasFrame: ImageBitmap? = null,
     /** A device folder, whose cover is generated: its colours stand in for the artwork's. */
     folderId: String? = null,
     /** A cover drawn rather than pictured (a list made each day): its two colours, top and bottom, stand in. */
@@ -1746,7 +1762,7 @@ private fun CoverContinuation(
 ) {
     val folderStyle = if (imageUrl == null) folderCoverStyle(folderId) else null
     val colors = if (imageUrl == null) gradient ?: folderStyle?.let { it.top to it.bottom } else null
-    if (imageUrl == null && colors == null) return
+    if (imageUrl == null && colors == null && canvasFrame == null) return
     // The generated cover's gradient, as the one picture the mesh is read from.
     val folderPicture = remember(colors) {
         colors?.let { (top, bottom) ->
@@ -1764,7 +1780,21 @@ private fun CoverContinuation(
             picture
         }
     }
-    val mesh = rememberArtworkMesh(imageUrl, folderPicture, HEADER_ART_PX)
+    val staticMesh = rememberArtworkMesh(
+        imageUrl = imageUrl,
+        canvasFrame = folderPicture,
+        artPx = HEADER_ART_PX,
+    )
+    val liveMesh = androidx.compose.runtime.key(imageUrl, canvasFrame != null) {
+        canvasFrame?.let {
+            rememberArtworkMesh(
+                imageUrl = null,
+                canvasFrame = it,
+                artPx = HEADER_ART_PX,
+            )
+        }
+    }
+    val mesh = liveMesh ?: staticMesh
     val total = seam + length
     val seamFraction = (seam / total).coerceIn(0f, 0.95f)
     Box(modifier.clipToBounds()) {
