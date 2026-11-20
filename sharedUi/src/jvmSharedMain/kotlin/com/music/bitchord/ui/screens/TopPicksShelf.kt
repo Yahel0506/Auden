@@ -1791,8 +1791,8 @@ private fun String?.croppedAt(width: Int, height: Int = width): String? {
 
 // ---- The lists Auden makes each day ----------------------------------------------------------------------------
 //
-// Drawn in the same hand as the stations and moods above — a flat colour, one pale emblem that moves, or the
-// discovery station's fan — with each list's emblem saying what it is, and its own songs' sleeves on it.
+// Drawn in the hand of the discovery station above: filled shapes in one family of colours, lit along their length,
+// moving slowly; each list its own composition, and its own songs' sleeves on it.
 
 /**
  * The colours one of the generated lists wears: its cover's flat colour, a lighter one, the emblem's stroke and the
@@ -1813,64 +1813,225 @@ fun mixKindOf(pageId: String?): TopPickKind? = when (pageId) {
     else -> null
 }
 
-/** Which emblem a list wears, and in what colours; [label] is the genre of a genre mix. */
-private fun mixMood(kind: TopPickKind, label: String): Pair<TopPickMood, MoodStyle> = when (kind) {
-    // A record spinning: what is played over and over.
-    TopPickKind.IN_LOOP -> TopPickMood.WEEKEND to MoodStyle(Color(0xFFFF5A3C), Color(0xFFFFD6CA), 2_400, Color(0xFFFFE3DA))
-    // The heart, beating.
-    TopPickKind.LIKES_MIX -> TopPickMood.LOVE to TopPickMood.LOVE.style()
-    // Rings drawn in toward the centre: songs closing in on the one it is about.
-    TopPickKind.BECAUSE_YOU_LIKE -> TopPickMood.FOCUS to MoodStyle(Color(0xFF2F7BEA), Color(0xFFC4DCFF), 3_600, Color(0xFFDCEAFF))
-    // The spiral, unwinding: further into one artist.
-    TopPickKind.DEEP_CUTS -> TopPickMood.FEELING_BLUE to MoodStyle(Color(0xFF0E9A8A), Color(0xFFA9F2E6), 3_700, Color(0xFFCFFAF2))
-    // The sun going down and coming back: old favourites, back again.
-    TopPickKind.REDISCOVER -> TopPickMood.EVENING to MoodStyle(Color(0xFFF2A900), Color(0xFFFFEBA8), 6_000, Color(0xFFFFF4C7))
-    // The season it was this week a year ago.
-    TopPickKind.ONE_YEAR_AGO -> seasonMood() to MoodStyle(Color(0xFF8C6CE0), Color(0xFFE6DAFF), 7_000, Color(0xFFF0E8FF))
-    // The genre's own emblem, in its own colours.
-    else -> genreMood(label).let { it to it.style() }
+/**
+ * The colours of a list's cover, darkest to lightest: what its shapes are cut from. A genre mix takes its genre's
+ * mood colour and builds the rest from it.
+ */
+private fun mixPalette(kind: TopPickKind, label: String): List<Color> = when (kind) {
+    TopPickKind.IN_LOOP -> listOf(Color(0xFFB8102E), Color(0xFFE2283A), Color(0xFFF5503C), Color(0xFFFF7C3D), Color(0xFFFFA548), Color(0xFFFFCB5C))
+    TopPickKind.LIKES_MIX -> listOf(Color(0xFFEE213D), Color(0xFFF7334F), Color(0xFFFA6094), Color(0xFFFE5E83))
+    TopPickKind.BECAUSE_YOU_LIKE -> listOf(Color(0xFF1B3FB8), Color(0xFF2456D6), Color(0xFF2F6FEA), Color(0xFF3E8BF2), Color(0xFF6FB0FA), Color(0xFFA8D2FF))
+    TopPickKind.DEEP_CUTS -> listOf(Color(0xFF0B5F66), Color(0xFF0E7A7A), Color(0xFF12968C), Color(0xFF1FB39A), Color(0xFF4CCDA8), Color(0xFF8BE6C4))
+    TopPickKind.REDISCOVER -> listOf(Color(0xFFD9480F), Color(0xFFEF6C12), Color(0xFFF7901E), Color(0xFFFBB12C), Color(0xFFFFD043), Color(0xFFFFE783))
+    TopPickKind.ONE_YEAR_AGO -> listOf(Color(0xFF4B2C9E), Color(0xFF6A40C9), Color(0xFF8C5FE0), Color(0xFFB07FEB), Color(0xFFD7A6F2), Color(0xFFF4C7F0))
+    TopPickKind.NEW_FOR_YOU -> listOf(Color(0xFF3A2496), Color(0xFF2F4FB0), Color(0xFF2E7FB8), Color(0xFF27988A))
+    else -> {
+        val base = genreMood(label).style().background
+        listOf(
+            lerp(base, Color.Black, 0.28f), lerp(base, Color.Black, 0.12f), base,
+            lerp(base, Color.White, 0.14f), lerp(base, Color.White, 0.28f), lerp(base, Color.White, 0.45f),
+        )
+    }
 }
 
-/** This week's season, which was the season a year ago too. */
-private fun seasonMood(): TopPickMood = when (java.time.LocalDate.now().monthValue) {
-    12, 1, 2 -> TopPickMood.HOLIDAY
-    3, 4, 5 -> TopPickMood.MORNING
-    6, 7, 8 -> TopPickMood.SUMMERTIME
-    else -> TopPickMood.OUTDOORS
-}
-
-/** An emblem for a genre, by the words its name is made of; pop and anything unknown get the star. */
+/** An emblem's mood for a genre, by the words its name is made of; its colour is what a genre mix is cut from. */
 private fun genreMood(genre: String): TopPickMood {
     val g = genre.lowercase()
     fun has(vararg words: String) = words.any { it in g }
     return when {
-        has("rock", "metal", "punk", "grunge") -> TopPickMood.ENERGY
+        has("rock", "metal", "punk", "grunge") -> TopPickMood.HEARTBREAK
         has("latin", "urban", "reggaeton", "salsa", "cumbia", "bachata", "regional", "mexican", "mexicana", "banda", "corrido") -> TopPickMood.PARTY
-        has("hip-hop", "hip hop", "rap", "trap", "drill") -> TopPickMood.MOTIVATION
-        has("electr", "dance", "house", "techno", "edm") -> TopPickMood.SOCIAL
+        has("hip-hop", "hip hop", "rap", "trap", "drill") -> TopPickMood.WEEKEND
+        has("electr", "dance", "house", "techno", "edm") -> TopPickMood.SPORTS
         has("jazz", "soul", "r&b", "blues", "funk") -> TopPickMood.AFTER_HOURS
-        has("indie", "altern", "folk", "acoust", "singer") -> TopPickMood.RELAX
-        has("chill", "lo-fi", "lofi", "ambient", "classical", "clásica", "instrumental", "piano") -> TopPickMood.CHILL
+        has("indie", "altern", "folk", "acoust", "singer") -> TopPickMood.CHILL
+        has("chill", "lo-fi", "lofi", "ambient", "classical", "clásica", "instrumental", "piano") -> TopPickMood.RELAX
         else -> TopPickMood.FEEL_GOOD
     }
 }
 
-/** The list's colours; [label] matters only to a genre mix, whose colour is its genre's. */
+/** The list's colours; [label] matters only to a genre mix, whose colours are its genre's. */
 fun TopPickKind.mixStyle(label: String = ""): MixStyle {
-    if (this == TopPickKind.NEW_FOR_YOU) {
-        return MixStyle(Color(0xFF2A869F), Color(0xFF3477BA), Color(0xFF502798), Color(0xFFCDBDFF))
-    }
-    val style = mixMood(this, label).second
-    return MixStyle(style.background, lerp(style.background, Color.White, 0.25f), style.stroke, style.eyebrow)
+    val p = mixPalette(this, label)
+    return MixStyle(top = p[p.size / 2], bottom = p.last(), accent = p.first(), eyebrow = lerp(p.last(), Color.White, 0.55f))
 }
 
 /** The small line above a generated list's title: its colour, matched to its cover. */
 fun TopPickKind.mixEyebrow(label: String = ""): Color = mixStyle(label).eyebrow
 
+/** A shape's fill: its colour lit a little at [from] and full at [to], as the discovery fan's shards are. */
+private fun shard(base: Color, from: Offset, to: Offset) = Brush.linearGradient(listOf(lerp(base, Color.White, 0.10f), base), start = from, end = to)
+
+/** In loop: discs one inside the other, lighter inward, their centres circling, so the stack seems to turn on itself. */
+@Composable
+private fun LoopDiscsArt(palette: List<Color>, focusY: Float, modifier: Modifier) {
+    val phase by loopPhase(STATION_PERIOD_MS)
+    Canvas(modifier.then(RetainedArt)) {
+        val w = size.width
+        val h = size.height
+        drawRect(Brush.linearGradient(listOf(palette[0], palette[1]), Offset.Zero, Offset(w, h)))
+        val c = Offset(w / 2f, h * focusY)
+        val outer = maxOf(w, h) * 0.78f
+        val n = palette.size
+        for (i in 0 until n) {
+            val r = outer * (1f - i / (n + 0.6f))
+            val swing = outer * 0.05f * i / n
+            val a = TAU * (phase + i * 0.11f)
+            val centre = Offset(c.x + cos(a) * swing, c.y + sin(a) * swing)
+            drawCircle(shard(palette[i], Offset(centre.x - r, centre.y - r), Offset(centre.x + r, centre.y + r)), radius = r, center = centre)
+        }
+    }
+}
+
+/** Because you like: a burst of rays out of one point, two tones turning slowly round a disc at its heart. */
+@Composable
+private fun BurstArt(palette: List<Color>, focusY: Float, modifier: Modifier) {
+    val phase by loopPhase(STATION_PERIOD_MS * 2)
+    val path = remember { Path() }
+    Canvas(modifier.then(RetainedArt)) {
+        val w = size.width
+        val h = size.height
+        val c = Offset(w / 2f, h * focusY)
+        drawRect(palette[1])
+        // Fifteen rays in three tones, turning three rays a loop: the loop comes back to where it began, seamless.
+        val rays = 15
+        val reach = maxOf(w, h) * 1.2f
+        val turn = phase * TAU / rays * 3f
+        for (i in 0 until rays) {
+            val a0 = turn + i * TAU / rays
+            val a1 = a0 + TAU / rays * (0.5f + 0.08f * wave(phase, i * 0.13f))
+            path.reset()
+            path.moveTo(c.x, c.y)
+            path.lineTo(c.x + cos(a0) * reach, c.y + sin(a0) * reach)
+            path.lineTo(c.x + cos(a1) * reach, c.y + sin(a1) * reach)
+            path.close()
+            val tone = palette[2 + i % 3]
+            drawPath(path, shard(tone, c, Offset(c.x + cos(a0) * reach, c.y + sin(a0) * reach)))
+        }
+        val core = minOf(w, h) * (0.20f + 0.015f * wave(phase, 0f))
+        drawCircle(palette.last(), radius = core * 1.35f, center = c)
+        drawCircle(palette[palette.size - 2], radius = core, center = c)
+    }
+}
+
+/** A genre mix: broad diagonal bands of its colours, sliding sideways at their own pace. */
+@Composable
+private fun BandsArt(palette: List<Color>, modifier: Modifier) {
+    val phase by loopPhase(STATION_PERIOD_MS * 2)
+    val path = remember { Path() }
+    val widths = floatArrayOf(0.22f, 0.12f, 0.30f, 0.16f, 0.10f, 0.26f, 0.14f)
+    Canvas(modifier.then(RetainedArt)) {
+        val w = size.width
+        val h = size.height
+        drawRect(palette[0])
+        val slant = h * 0.55f
+        val cycle = widths.sum() * w
+        var x = -slant - cycle + phase * cycle
+        var i = 0
+        while (x < w + slant) {
+            val band = widths[i % widths.size] * w
+            path.reset()
+            path.moveTo(x, h)
+            path.lineTo(x + slant, 0f)
+            path.lineTo(x + slant + band, 0f)
+            path.lineTo(x + band, h)
+            path.close()
+            val tone = palette[1 + (i % widths.size) % (palette.size - 1)]
+            drawPath(path, shard(tone, Offset(x, h), Offset(x + slant + band, 0f)))
+            x += band
+            i++
+        }
+    }
+}
+
+/** Deep cuts: triangles nested downward to one point, deeper and lighter inward, their tips breathing in and out. */
+@Composable
+private fun FunnelArt(palette: List<Color>, modifier: Modifier) {
+    val phase by loopPhase(STATION_PERIOD_MS)
+    val path = remember { Path() }
+    Canvas(modifier.then(RetainedArt)) {
+        val w = size.width
+        val h = size.height
+        drawRect(palette[0])
+        val n = palette.size - 1
+        for (i in 0 until n) {
+            val inset = i / n.toFloat()
+            val tip = h * (1.02f - inset * 0.42f + if (i == 0) 0f else 0.035f * wave(phase, i * 0.17f))
+            val half = w * (0.62f - inset * 0.42f)
+            path.reset()
+            path.moveTo(w / 2f - half, 0f)
+            path.lineTo(w / 2f + half, 0f)
+            path.lineTo(w / 2f, tip)
+            path.close()
+            drawPath(path, shard(palette[i + 1], Offset(w / 2f, 0f), Offset(w / 2f, tip)))
+        }
+    }
+}
+
+/** Rediscover: a setting sun behind bands of hills, the sun going down and coming back up. */
+@Composable
+private fun HorizonArt(palette: List<Color>, modifier: Modifier) {
+    val phase by loopPhase(STATION_PERIOD_MS)
+    Canvas(modifier.then(RetainedArt)) {
+        val w = size.width
+        val h = size.height
+        drawRect(Brush.verticalGradient(listOf(palette[4], palette[3])))
+        val sunY = h * (0.42f + 0.08f * (0.5f - 0.5f * cos(TAU * phase)))
+        val sunR = w * 0.26f
+        drawCircle(shard(palette.last(), Offset(w / 2f - sunR, sunY - sunR), Offset(w / 2f + sunR, sunY + sunR)), radius = sunR, center = Offset(w / 2f, sunY))
+        // The hills: wide arcs rising from below, nearest and darkest last.
+        for (i in 0 until 3) {
+            val r = w * (1.05f - i * 0.12f)
+            val top = h * (0.58f + i * 0.11f) + h * 0.012f * wave(phase, i * 0.23f)
+            val cx = w * (0.30f + 0.40f * (i % 2))
+            drawCircle(shard(palette[2 - i], Offset(cx, top), Offset(cx, top + r)), radius = r, center = Offset(cx, top + r))
+        }
+    }
+}
+
+/** A turn of the mosaic every second and a half or so, whatever its size. */
+private const val MOSAIC_PERIOD_MS = 72_000
+
+/** One year ago: a mosaic of quarter circles, like the squares of a calendar, one tile turning a quarter at a time. */
+@Composable
+private fun MosaicArt(palette: List<Color>, modifier: Modifier) {
+    val phase by loopPhase(MOSAIC_PERIOD_MS)
+    Canvas(modifier.then(RetainedArt)) {
+        val w = size.width
+        val h = size.height
+        val cols = 3
+        val side = w / cols
+        val rows = kotlin.math.ceil(h / side).toInt()
+        val tiles = cols * rows
+        // Which tile is turning now, and how far; each turns four quarters a loop, so the loop wraps seamless.
+        val clock = phase * tiles * 4
+        val step = clock.toInt()
+        val turning = step % tiles
+        val f = easeInOut(clock - step)
+        for (r in 0 until rows) for (cIdx in 0 until cols) {
+            val index = r * cols + cIdx
+            val left = cIdx * side
+            val top = r * side
+            val back = palette[(index * 3 + 1) % palette.size]
+            val front = palette[(index * 5 + 4) % palette.size]
+            drawRect(back, topLeft = Offset(left, top), size = Size(side, side))
+            val done = step / tiles + if (step % tiles > index) 1 else 0
+            val quarter = (index * 7) % 4 + done + if (index == turning) f else 0f
+            rotate(quarter * 90f, Offset(left + side / 2f, top + side / 2f)) {
+                clipRect(left, top, left + side, top + side) {
+                    drawCircle(shard(front, Offset(left, top), Offset(left + side, top + side)), radius = side, center = Offset(left, top))
+                }
+            }
+        }
+    }
+}
+
 /**
- * The cover of one of the lists Auden makes each day: the stations' and moods' own art — a flat colour and one pale
- * emblem that moves, or the discovery fan — with the emblem chosen for what the list is, and the sleeves of its first
- * songs set on it, so the cover says what is inside. The same on the big card on Home and at the head of the list's
+ * The cover of one of the lists Auden makes each day, in the hand of the discovery station: shapes cut from a few
+ * colours of one family, each lit along its length, moving slowly — discs circling for In loop, the personal station's
+ * folding arrows for your likes, a turning burst for "because you like", sliding bands in the genre's colours, a funnel
+ * for deep cuts, a sun setting and rising behind hills for Rediscover, a turning calendar mosaic for a year ago, the
+ * discovery fan itself for new music — with the sleeves of its first songs set on it, so the cover says what is inside. The same on the big card on Home and at the head of the list's
  * page; with [captionSpace] (the card) the emblem keeps above the caption, without it (the page) it is centred.
  * [label] is the genre of a genre mix.
  */
@@ -1885,11 +2046,23 @@ fun MixCoverArt(
 ) {
     CompositionLocalProvider(LocalArtworkMotion provides motion) {
         BoxWithConstraints(modifier) {
-            if (kind == TopPickKind.NEW_FOR_YOU) {
-                DiscoveryStationArt(Modifier.fillMaxSize())
-            } else {
-                val (mood, style) = mixMood(kind, label)
-                MoodArt(mood, style, Modifier.fillMaxSize(), square = !captionSpace)
+            val palette = mixPalette(kind, label)
+            // On the card the composition's heart keeps above the caption; on the page, at the middle.
+            val focus = if (captionSpace) 0.36f else 0.5f
+            val art = Modifier.fillMaxSize()
+            when (kind) {
+                TopPickKind.NEW_FOR_YOU -> DiscoveryStationArt(art)
+                TopPickKind.LIKES_MIX -> PersonalStationArt(art)
+                TopPickKind.IN_LOOP -> LoopDiscsArt(palette, focus, art)
+                TopPickKind.BECAUSE_YOU_LIKE -> BurstArt(palette, focus, art)
+                TopPickKind.DEEP_CUTS -> FunnelArt(palette, art)
+                TopPickKind.REDISCOVER -> HorizonArt(palette, art)
+                TopPickKind.ONE_YEAR_AGO -> MosaicArt(palette, art)
+                else -> BandsArt(palette, art)
+            }
+            // A light shade under the caption, so its white reads on the lighter shapes too.
+            if (captionSpace) {
+                Box(Modifier.matchParentSize().background(Brush.verticalGradient(0.6f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.28f))))
             }
             // What is in it: its first songs' sleeves, overlapping — at the top left of the card, and under the emblem
             // on the page, where the bar's buttons stand over the top corners.
