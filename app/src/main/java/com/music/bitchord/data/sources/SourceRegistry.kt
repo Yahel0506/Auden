@@ -141,6 +141,7 @@ object SourceRegistry {
     private var instances: Map<String, MusicSource> = emptyMap()
 
     fun init(context: Context) {
+        MonochromeServer.register()
         // Same repair and degradation as AuthStore; see EncryptedPrefs.
         prefs = EncryptedPrefs.open(context, "bitchord_sources", "bitchord_sources_plain")
 
@@ -172,13 +173,19 @@ object SourceRegistry {
     internal fun sourcesForInit(
         stored: List<SourceConfig>,
         forceJioSaavnOff: Boolean,
+        monochromeAvailable: Boolean = MonochromeServer.isAvailable,
     ): List<SourceConfig> {
         // Seeded rather than persisted-on-first-write, so a build adding a new
         // built-in kind picks it up for existing installs too. SourceConfig's
         // default is the policy: JioSaavn off, YouTube on.
-        val seeded = stored + BUILT_IN_KINDS
+        // Monochrome is the release build's own source: seeded only where the build carries its
+        // server, and dropped from a store written by a build that did, so a row that can never
+        // answer is not left behind.
+        val kinds = builtInKinds(monochromeAvailable)
+        val seeded = (stored + kinds
             .filter { kind -> stored.none { it.kind == kind } }
-            .map { SourceConfig(kind = it) }
+            .map { SourceConfig(kind = it) })
+            .filterNot { it.kind == SourceKind.MONOCHROME && !monochromeAvailable }
 
         // The retired built-in module is removed, while a custom module entered
         // by the user is preserved.
@@ -409,7 +416,7 @@ object SourceRegistry {
 
     fun remove(configId: String) {
         val target = config(configId) ?: return
-        if (target.kind in BUILT_IN_KINDS) return
+        if (target.kind in builtInKinds(true)) return
         publish(configs.value.filterNot { it.id == configId })
     }
 
@@ -586,6 +593,7 @@ object SourceRegistry {
         // Same protocol, same implementation — the kinds differ only in rank.
         SourceKind.CUSTOM_MODULE -> ModuleSource(config)
         SourceKind.MODULE -> ModuleSource(config)
+        SourceKind.MONOCHROME -> MonochromeSource(config)
         SourceKind.JIOSAAVN -> JioSaavnSource(config)
         SourceKind.YOUTUBE -> YouTubeSource(config)
     }
@@ -631,7 +639,8 @@ object SourceRegistry {
             .build()
             .toString()
 
-    private val BUILT_IN_KINDS = listOf(SourceKind.JIOSAAVN, SourceKind.YOUTUBE)
+    private fun builtInKinds(monochromeAvailable: Boolean): List<SourceKind> =
+        listOfNotNull(SourceKind.MONOCHROME.takeIf { monochromeAvailable }, SourceKind.JIOSAAVN, SourceKind.YOUTUBE)
 
     private const val KEY_SOURCES = "sources"
     /** One-shot migration: existing users must explicitly opt in again. */

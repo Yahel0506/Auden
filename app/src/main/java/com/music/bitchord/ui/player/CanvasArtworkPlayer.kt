@@ -344,8 +344,9 @@ internal fun AndroidCanvasArtworkPlayer(
     // a surface ready and `onRenderedFirstFrame()` fires naturally.
     val foreground = rememberIsForeground()
     val currentSyncTo by rememberUpdatedState(syncTo)
-    LaunchedEffect(foreground, pausedForTransition) {
-        val play = foreground && !pausedForTransition
+    // Held still while the song is paused: the cover stops with the music.
+    LaunchedEffect(foreground, pausedForTransition, isPlaying) {
+        val play = foreground && !pausedForTransition && isPlaying
         val afterTransition = gate.heldForTransition
         gate.heldForTransition = pausedForTransition
         // Held a moment longer on the way out of a transition, if asked: the

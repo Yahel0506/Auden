@@ -79,6 +79,18 @@ val addonAuthServer: String = (
         ?: "https://bitchord-auth.kushagrasingh.in"
     ).trim().trimEnd('/')
 
+/*
+ * The server Monochrome streams come from. Deliberately not in the source tree: only the
+ * official release carries it (CI writes MONOCHROME_SERVER into local.properties from a
+ * secret), and a build without it has no Monochrome source at all. The app renders this
+ * one URL as its default source and nothing else; it cannot be edited or added by hand.
+ */
+val monochromeServer: String = (
+    localProps.getProperty("MONOCHROME_SERVER")
+        ?: System.getenv("MONOCHROME_SERVER")
+        ?: ""
+    ).trim().trimEnd('/')
+
 // See the root build.gradle.kts: one version for the phone and its watch app.
 val betaSuffix = rootProject.extra["bitchordBetaSuffix"] as String
 
@@ -113,6 +125,7 @@ android {
             "\"${listenTogetherServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"",
         )
         buildConfigField("String", "CONNECT_SERVER", "\"${connectServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+        buildConfigField("String", "MONOCHROME_SERVER", "\"${monochromeServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         buildConfigField("String", "CONNECT_PLATFORM", "\"android\"")
         buildConfigField(
             "String",

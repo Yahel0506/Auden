@@ -732,12 +732,22 @@ object SourceResolver {
             ) { source, stream ->
                 val ok = wantsLossless || stream.format.isLossless != true
                 if (!ok) {
-                    TrackLog.d(
-                        TAG,
-                        "${source.displayName} offered ${stream.format.summary}; " +
-                            "more than this download asked for, kept in reserve",
-                    )
-                    if (losslessOverBudget == null) losslessOverBudget = source to stream
+                    if (fitsHighRung(stream.format)) {
+                        TrackLog.d(
+                            TAG,
+                            "${source.displayName} offered ${stream.format.summary}; " +
+                                "more than this download asked for, kept in reserve",
+                        )
+                        if (losslessOverBudget == null) losslessOverBudget = source to stream
+                    } else {
+                        // The High rung is the small file: a lossless copy heavier than CD
+                        // quality is not what it asked for, even as a last resort.
+                        TrackLog.d(
+                            TAG,
+                            "${source.displayName} offered ${stream.format.summary}; " +
+                                "too heavy for this download, passing",
+                        )
+                    }
                 }
                 ok
             }
@@ -837,6 +847,17 @@ object SourceResolver {
         )
         chosen
     }
+
+    /**
+     * Whether [format] is allowed on the High rung, which is the one that asks for the small
+     * file: anything that is not lossless, and a lossless copy only while it is no more than CD
+     * quality (16-bit, up to 48 kHz). A hi-res FLAC is several times the size of what High
+     * describes, so it is refused there — it belongs to the Lossless rung, which takes the best
+     * on offer whatever its codec.
+     */
+    internal fun fitsHighRung(format: StreamFormat): Boolean =
+        format.isLossless != true ||
+            ((format.bitDepth ?: CD_BIT_DEPTH) <= CD_BIT_DEPTH && (format.sampleRateHz ?: CD_RATE_HZ) <= MAX_HIGH_RATE_HZ)
 
     /**
      * Whether a lossy [candidate] is worth keeping as a file over whatever
@@ -1539,6 +1560,9 @@ object SourceResolver {
      * module's 128kbps MP3 settle-for.
      */
     private const val YOUTUBE_BEST_AAC_KBPS = 256
+    private const val CD_BIT_DEPTH = 16
+    private const val CD_RATE_HZ = 44_100
+    private const val MAX_HIGH_RATE_HZ = 48_000
 
     /**
      * How many kbps a lossy stream has to gain before it earns a seam in the
