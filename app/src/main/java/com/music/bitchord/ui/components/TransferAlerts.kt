@@ -84,16 +84,20 @@ private fun AlertBody(title: String, body: String) {
 private fun serviceName(service: Service): String =
     stringResource(if (service == Service.SPOTIFY) R.string.spotify else R.string.transfer_yt_music)
 
-@Composable
-private fun refreshErrorText(error: RefreshError): String = when (error) {
-    RefreshError.NotFound -> stringResource(R.string.refresh_error_gone)
-    RefreshError.NoOrigin -> stringResource(R.string.refresh_error_no_origin)
-    RefreshError.LikesList -> stringResource(R.string.refresh_error_likes_list)
-    RefreshError.NoListing -> stringResource(R.string.refresh_error_no_listing)
-    is RefreshError.NotConnected -> stringResource(R.string.refresh_error_not_connected, serviceName(error.service))
-    is RefreshError.Expired -> stringResource(R.string.refresh_error_expired, serviceName(error.service))
-    is RefreshError.EmptySource -> stringResource(R.string.refresh_error_empty, serviceName(error.service))
-    is RefreshError.Failed -> stringResource(R.string.refresh_error_failed, serviceName(error.service))
+private fun serviceName(context: android.content.Context, service: Service): String =
+    context.getString(if (service == Service.SPOTIFY) R.string.spotify else R.string.transfer_yt_music)
+
+/** Why a refresh could not be made, in words — for the alert and for the toast that follows a refresh that ran. */
+private fun refreshErrorText(context: android.content.Context, error: RefreshError?): String = when (error) {
+    null -> context.getString(R.string.refresh_error_generic)
+    RefreshError.NotFound -> context.getString(R.string.refresh_error_gone)
+    RefreshError.NoOrigin -> context.getString(R.string.refresh_error_no_origin)
+    RefreshError.LikesList -> context.getString(R.string.refresh_error_likes_list)
+    RefreshError.NoListing -> context.getString(R.string.refresh_error_no_listing)
+    is RefreshError.NotConnected -> context.getString(R.string.refresh_error_not_connected, serviceName(context, error.service))
+    is RefreshError.Expired -> context.getString(R.string.refresh_error_expired, serviceName(context, error.service))
+    is RefreshError.EmptySource -> context.getString(R.string.refresh_error_empty, serviceName(context, error.service))
+    is RefreshError.Failed -> context.getString(R.string.refresh_error_failed, serviceName(context, error.service))
 }
 
 /** "Update from origin": what the source holds now against the copy, with a button for each way to apply it. */
@@ -110,7 +114,7 @@ private fun RefreshAlert(hazeState: HazeState, request: TransferDialogs.Refresh,
             result == null -> AlertBody(request.title, stringResource(R.string.refresh_reading))
             result.isFailure -> {
                 val reason = (result.exceptionOrNull() as? RefreshException)?.reason
-                AlertBody(request.title, reason?.let { refreshErrorText(it) } ?: stringResource(R.string.refresh_error_failed, ""))
+                AlertBody(request.title, refreshErrorText(context, reason))
                 AlertGap()
                 AlertAction(label = stringResource(R.string.cancel), emphasised = false, onClick = animatedExit(onDismiss))
             }
@@ -127,10 +131,13 @@ private fun RefreshAlert(hazeState: HazeState, request: TransferDialogs.Refresh,
                     if (p.unmatched.isNotEmpty()) append("\n").append(stringResource(R.string.refresh_unmatched, p.unmatched.size))
                 }
                 AlertBody(request.title, body)
-                if (p.mergeChanges) {
+                // A first update with nothing to change is still offered: it is what records where the source stands,
+                // so what is removed here afterwards stays removed.
+                if (p.mergeChanges || p.firstRefresh) {
                     AlertGap()
                     AlertAction(
-                        label = stringResource(R.string.refresh_merge, p.merge.added, p.merge.removed),
+                        label = if (p.mergeChanges) stringResource(R.string.refresh_merge, p.merge.added, p.merge.removed)
+                        else stringResource(R.string.refresh_mark_synced),
                         emphasised = true,
                         onClick = animatedExit { start(context, refresher, request, PlaylistMerge.Mode.MERGE, onDismiss) },
                     )
@@ -161,7 +168,7 @@ private fun start(
     refresher.start(request.playlistId, mode) { result ->
         val message = result.fold(
             onSuccess = { context.getString(R.string.refresh_done, request.title) },
-            onFailure = { context.getString(R.string.refresh_error_failed, "") },
+            onFailure = { refreshErrorText(context, (it as? RefreshException)?.reason) },
         )
         android.os.Handler(android.os.Looper.getMainLooper()).post { Toast.makeText(context, message, Toast.LENGTH_SHORT).show() }
     }

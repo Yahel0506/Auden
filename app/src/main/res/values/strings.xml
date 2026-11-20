@@ -1984,7 +1984,7 @@
     <string name="refresh_error_not_connected">Connect %1$s in Transfer your music to update this playlist.</string>
     <string name="refresh_error_expired">The %1$s session expired. Connect it again in Transfer your music.</string>
     <string name="refresh_error_empty">%1$s returned no songs for this playlist, so nothing was changed. It may be private or deleted.</string>
-    <string name="refresh_error_failed">Could not read the source%1$s. Try again later.</string>
+    <string name="refresh_error_failed">Could not read %1$s. Try again later.</string>
     <string name="refresh_updated">Updated %1$s</string>
     <string name="refresh_never_updated">Not updated since it was brought over</string>
     <string name="refresh_first">First update: songs are added, none are removed.</string>
@@ -1999,4 +1999,6 @@
     <string name="export_yt_removes">These will be removed there:</string>
     <string name="export_yt_confirm">Export</string>
     <string name="export_yt_failed">Could not prepare the export.</string>
+    <string name="refresh_error_generic">Could not update the playlist. Try again later.</string>
+    <string name="refresh_mark_synced">Mark as up to date</string>
 </resources>

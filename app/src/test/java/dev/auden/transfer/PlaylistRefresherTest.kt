@@ -183,6 +183,26 @@ class PlaylistRefresherTest {
     }
 
     @Test
+    fun aFirstRefreshWithNothingToChangeStillRecordsASnapshotSoALocalRemovalStaysRemoved() = runBlocking {
+        // A copy from before snapshots, equal to its source.
+        store.put("p1", "PL1", songs("a", "b"))
+        yt.lists["PL1"] = yt("a", "b")
+        val refresher = refresher()
+        val first = refresher.preview("p1").getOrThrow()
+        assertTrue(first.firstRefresh)
+        assertFalse(first.mergeChanges)
+
+        refresher.refresh("p1").getOrThrow()
+        assertEquals(listOf("a", "b"), store.origins.getValue("p1").snapshot)
+
+        // The listener removes b, which the source still holds: it is not offered back.
+        store.playlists["p1"] = store.playlists.getValue("p1").copy(songs = songs("a"))
+        val second = refresher().preview("p1").getOrThrow()
+        assertFalse(second.mergeChanges)
+        assertEquals(1, second.merge.stayedRemoved)
+    }
+
+    @Test
     fun anEditMadeWhileTheSourceWasReadIsMergedNotLost() = runBlocking {
         store.put("p1", "PL1", songs("a"), snapshot = listOf("a"))
         yt.lists["PL1"] = yt("a", "b")

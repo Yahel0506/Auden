@@ -2098,7 +2098,7 @@
     <string name="refresh_error_not_connected">Conecta %1$s en Transfiere tu música para actualizar esta playlist.</string>
     <string name="refresh_error_expired">La sesión de %1$s caducó. Vuelve a conectarla en Transfiere tu música.</string>
     <string name="refresh_error_empty">%1$s no devolvió canciones para esta playlist, así que no se cambió nada. Puede ser privada o estar borrada.</string>
-    <string name="refresh_error_failed">No se pudo leer el origen%1$s. Inténtalo más tarde.</string>
+    <string name="refresh_error_failed">No se pudo leer %1$s. Inténtalo más tarde.</string>
     <string name="refresh_updated">Actualizada %1$s</string>
     <string name="refresh_never_updated">No se ha actualizado desde que se trajo</string>
     <string name="refresh_first">Primera actualización: se añaden canciones y no se quita ninguna.</string>
@@ -2113,4 +2113,6 @@
     <string name="export_yt_removes">Allí se quitarán:</string>
     <string name="export_yt_confirm">Exportar</string>
     <string name="export_yt_failed">No se pudo preparar la exportación.</string>
+    <string name="refresh_error_generic">No se pudo actualizar la playlist. Inténtalo más tarde.</string>
+    <string name="refresh_mark_synced">Marcar como al día</string>
 </resources>

@@ -1253,16 +1253,23 @@ private fun BitChordApp(
     // A pin whose list no longer shows anywhere (a deleted playlist, an old id form) is dropped once everything
     // it could be has loaded, so it cannot count against the limit unseen.
     val pinnedNow by AppSettings.pinnedPlaylists.collectAsStateWithLifecycle()
-    LaunchedEffect(pinnedNow, libraryState, downloadedReleases, localPlaylists, offlinePlaylists) {
-        val loaded = !signedIn || libraryState is UiState.Success
-        if (!loaded || pinnedNow.isEmpty()) return@LaunchedEffect
+    LaunchedEffect(pinnedNow, downloadedReleases, localPlaylists, offlinePlaylists) {
+        if (pinnedNow.isEmpty()) return@LaunchedEffect
+        // The library is Auden's own, all on the device: it is judged once the local store has loaded, so an empty
+        // list that has simply not arrived yet does not unpin everything.
+        dev.auden.library.LocalPlaylists.awaitLoaded()
         val known = HashSet<String>()
-        (libraryState as? UiState.Success)?.data?.shelves?.forEach { shelf -> shelf.items.forEach { it.browseId?.let(known::add) } }
         localPlaylists.forEach { known += it.browseId }
         offlinePlaylists.forEach { known += it.browseId }
         downloadedReleases.forEach { known += com.music.bitchord.download.Downloads.pageIdFor(it.id) }
-        // Spotify's are read from its own cache elsewhere; never judged here.
+        // A pin of a YouTube Music playlist the listener has brought over moves to its copy, which is what the
+        // library shows now; Spotify's are read from its own cache elsewhere and never judged here.
+        val moved = pinnedNow.filter { it !in known && !it.startsWith(SPOTIFY_PAGE_PREFIX) }.mapNotNull { pin ->
+            dev.auden.library.LocalPlaylists.bySource(pin.removePrefix("VL"))?.browseId
+                ?.takeIf { it in known && it !in pinnedNow }
+        }
         AppSettings.unpinAll(pinnedNow.filter { it !in known && !it.startsWith(SPOTIFY_PAGE_PREFIX) })
+        moved.forEach { AppSettings.togglePinnedPlaylist(it) }
     }
     val offlinePlaylistItems = offlinePlaylists.filter { it.songs.isNotEmpty() }.map { playlist ->
         ShelfItem(
