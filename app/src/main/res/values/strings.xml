@@ -2052,4 +2052,9 @@
     <string name="library_section_empty">Nothing here yet. Bring your music over from YouTube Music or Spotify with Transfer your music, in your account sheet.</string>
     <string name="transfer_running_percent">Transferring %1$d%%</string>
     <string name="transfer_unit_of">%1$d of %2$d</string>
+    <string name="home_recents_title">Recently played</string>
+    <string name="mix_in_loop">In loop</string>
+    <string name="mix_genre">%1$s Mix</string>
+    <string name="mix_new">New music for you</string>
+    <string name="mix_because">Because you like %1$s</string>
 </resources>

@@ -81,7 +81,8 @@ object YtMusicRepository {
      * it's empty and there's nothing more to fetch.
      */
     suspend fun home(): Result<HomeFeed> = call("home") {
-        val home = Innertube.browse("FEmusic_home")
+        // The catalogue's home, asked as nobody (see Innertube.postMusic): Auden makes it personal from what is played.
+        val home = Innertube.browse("FEmusic_home", anonymous = true)
         HomeFeed(InnertubeParser.parseHome(home), InnertubeParser.continuationToken(home))
     }
 
@@ -105,7 +106,7 @@ object YtMusicRepository {
      * FEmusic_new_releases are one-shot and don't participate.
      */
     suspend fun moreHome(token: String): Result<HomeFeed> = call("home:more") {
-        val response = Innertube.browseContinuation(token)
+        val response = Innertube.browseContinuation(token, anonymous = true)
         HomeFeed(
             shelves = InnertubeParser.parseHomeContinuation(response),
             continuation = InnertubeParser.continuationToken(response),

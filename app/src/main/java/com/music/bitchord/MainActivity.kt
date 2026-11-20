@@ -2095,9 +2095,34 @@ private fun BitChordApp(
      * current queue playing. It then replaces the queue the way [startRadio]
      * does, and AutoPlay carries it on past its last track.
      */
+    // What one of the lists made each day is called, in the listener's language.
+    val mixTitle: (TopPick) -> String = { pick ->
+        when (pick.kind) {
+            TopPickKind.IN_LOOP -> context.getString(R.string.mix_in_loop)
+            TopPickKind.GENRE_MIX -> context.getString(R.string.mix_genre, pick.title)
+            TopPickKind.NEW_FOR_YOU -> context.getString(R.string.mix_new)
+            else -> context.getString(R.string.mix_because, pick.title)
+        }
+    }
+    val playMix: (TopPick) -> Unit = { pick ->
+        val mix = pick.browseId?.let { dev.auden.home.GeneratedMixes.get(it) }
+        if (mix != null && mix.songs.isNotEmpty()) {
+            playFrom(mix.songs, 0, QueueSource(mixTitle(pick), PlaybackSourceType.BROWSE, mix.pageId))
+        }
+    }
     val openTopPick: (TopPick, String) -> Unit = { pick, label ->
         val browseId = pick.browseId
-        if (pick.kind == TopPickKind.LATEST_RELEASE && browseId != null) {
+        if (pick.kind.isGeneratedList && browseId != null) {
+            // A list made for the listener: its page, with its songs and the same moving cover; the play button on its
+            // card is what starts it without opening it.
+            viewModel.openDetail(
+                browseId = browseId,
+                title = mixTitle(pick),
+                subtitle = pick.subtitle,
+                thumbnailUrl = null,
+                type = BrowseType.PLAYLIST,
+            )
+        } else if (pick.kind == TopPickKind.LATEST_RELEASE && browseId != null) {
             viewModel.openDetail(
                 browseId = browseId,
                 title = pick.title,
@@ -4064,6 +4089,7 @@ private fun BitChordApp(
                                 listenerName = account?.name,
                                 // Neither shelf is drawn without its callback.
                                 onTopPickClick = openTopPick.takeUnless { hideTopPicks },
+                                onTopPickPlay = playMix.takeUnless { hideTopPicks },
                                 onMoodClick = playMood.takeUnless { hideHomeMoods },
                                 onMoodsShowAll = { navigator.push(AppRoute.Moods) },
                                 // Nothing on Home is seen while the greeting covers it.

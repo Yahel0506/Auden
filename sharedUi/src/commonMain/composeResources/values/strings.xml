@@ -311,4 +311,19 @@
     <string name="library_my_lists">My lists</string>
     <string name="library_recents">Recents</string>
     <string name="library_search">Search</string>
+    <string name="top_pick_updated_daily">Updated daily</string>
+    <string name="top_pick_in_loop">In loop</string>
+    <string name="top_pick_in_loop_sub">Your 30 most repeated songs</string>
+    <string name="top_pick_genre_mix">%1$s Mix</string>
+    <string name="top_pick_new_for_you">New music for you</string>
+    <string name="top_pick_new_for_you_sub">Nothing you have played yet</string>
+    <string name="top_pick_because">Because you like %1$s</string>
+    <string name="top_pick_play">Play</string>
+    <string name="dj_personal_title">Your own personal DJ</string>
+    <string name="dj_line_1">Ready to listen</string>
+    <string name="dj_line_2">Hey! I’ve got your mix ready</string>
+    <string name="dj_line_3">Today it’s what you love most</string>
+    <string name="dj_line_4">With a couple of surprises</string>
+    <string name="dj_line_5">Hit play whenever you like</string>
+    <string name="dj_line_6">I’ll take care of the rest</string>
 </resources>

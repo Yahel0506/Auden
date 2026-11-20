@@ -1090,6 +1090,10 @@ private fun ReleaseHeader(
                 onState = { artFailed = it is AsyncImagePainter.State.Error },
                 modifier = Modifier.matchParentSize(),
             )
+            // One of the lists Auden makes each day: the same moving cover its card on Home has.
+            dev.auden.home.GeneratedMixes.get(page.browseId)?.let { mix ->
+                com.music.bitchord.ui.screens.MixCoverArt(mix.kind, mix.images, Modifier.matchParentSize(), captionSpace = false)
+            }
             // Animated cover art, inside the same frame. Always running:
             // unlike the player's sleeve there is no transport here to follow,
             // and the page is only up while it's being read.

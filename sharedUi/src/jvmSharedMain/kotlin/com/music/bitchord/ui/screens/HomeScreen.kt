@@ -1,5 +1,12 @@
 package com.music.bitchord.ui.screens
 
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import com.music.bitchord.ui.components.trackArtSize
 import com.music.bitchord.ui.components.contextClick
 import com.music.bitchord.ui.AppUi
@@ -188,6 +195,8 @@ fun HomeScreen(
     listenerName: String? = null,
     onTopPickClick: ((TopPick, String) -> Unit)? = null,
     onTopPickLongPress: ((TopPick) -> Unit)? = null,
+    /** The play button on a generated list's card. */
+    onTopPickPlay: ((TopPick) -> Unit)? = null,
     /** A Find Your Mood tile, and its name. The shelf is only drawn when this is set. */
     onMoodClick: ((TopPickMood, String) -> Unit)? = null,
     /** Find Your Mood's Show all: every mood and activity. */
@@ -221,12 +230,6 @@ fun HomeScreen(
             if (title != null) {
                 item { HomeTitle(title, festiveLogo = festiveLogo, onFestiveLogoClick = onFestiveLogoClick) }
             }
-            if (onOpenDj != null) {
-                item(key = "auden-dj") {
-                    // Read in this item, so a scroll starting or ending recomposes the card alone.
-                    DjCard(onClick = onOpenDj, motion = LocalArtworkMotion.current && !listState.isScrollInProgress)
-                }
-            }
             if (!signedIn && onSignIn != null) {
                 item {
                     // Read in this item, so a scroll starting or ending
@@ -246,9 +249,17 @@ fun HomeScreen(
                             listenerName = listenerName,
                             onClick = onTopPickClick,
                             onLongPress = onTopPickLongPress,
+                            onPlay = onTopPickPlay,
                         )
                     }
                     topPicks == null && topPicksLoading -> topPicksSkeleton()
+                }
+            }
+            // Right under Top Picks: the DJ, with its voice running as lyrics, no sound until it is played.
+            if (onOpenDj != null) {
+                item(key = "auden-dj") {
+                    // Read in this item, so a scroll starting or ending recomposes the section alone.
+                    DjSection(onClick = onOpenDj, motion = LocalArtworkMotion.current && !listState.isScrollInProgress)
                 }
             }
             when (state) {
@@ -1167,73 +1178,125 @@ internal fun ShelfCard(
 private const val LOGO_MARK = "\uFFFC"
 
 /**
- * The way into the DJ: a big card at the top of Home, on the app's own moving mesh like the sign-in card,
- * with the DJ's ring moving on the right. Held still while the feed scrolls.
+ * "Your own personal DJ": the DJ's ring large and centred behind the banner, fading out toward the foot, and its
+ * lines running above it the way a song's lyrics do — one at a time, the one before and the one after dimmed — with
+ * nothing spoken until it is played. A big play button at the bottom right starts the DJ.
  */
 @Composable
-private fun DjCard(onClick: () -> Unit, motion: Boolean = true) {
+private fun DjSection(onClick: () -> Unit, motion: Boolean = true) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.98f else 1f, spring(stiffness = 900f), label = "djCardScale")
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = PAGE_GUTTER, vertical = 8.dp)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .clip(RoundedCornerShape(31.dp))
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
-    ) {
-        MeshGradientBackground(
-            palette = cyclingMeshPalette(DjMeshPalettes, running = motion),
-            modifier = Modifier.matchParentSize(),
-            continuous = true,
-            paused = !motion,
-            driftMillis = 6_000,
-            blurRadius = 36.dp,
-            colorFadeMillis = MESH_CYCLE_MILLIS,
-        )
-        Row(
-            Modifier.padding(start = 22.dp, end = 8.dp, top = 20.dp, bottom = 20.dp),
-            verticalAlignment = Alignment.CenterVertically,
+    val scale by animateFloatAsState(if (pressed) 0.98f else 1f, spring(dampingRatio = 1f, stiffness = 300f), label = "djSectionScale")
+    val lines = listOf(
+        stringResource(Res.string.dj_line_1),
+        stringResource(Res.string.dj_line_2),
+        stringResource(Res.string.dj_line_3),
+        stringResource(Res.string.dj_line_4),
+        stringResource(Res.string.dj_line_5),
+        stringResource(Res.string.dj_line_6),
+    )
+    var current by remember { mutableIntStateOf(0) }
+    LaunchedEffect(motion) {
+        if (!motion) return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(3_400)
+            current = (current + 1) % lines.size
+        }
+    }
+    Column(Modifier.padding(bottom = 22.dp)) {
+        SectionHeader(stringResource(Res.string.dj_personal_title))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = PAGE_GUTTER)
+                .height(236.dp)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                }
+                .clip(RoundedCornerShape(31.dp))
+                .clickable(interactionSource = interaction, indication = null, onClick = onClick),
         ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    stringResource(Res.string.dj_title),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.W800,
-                    color = Color.White,
-                )
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    stringResource(Res.string.dj_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.85f),
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(16.dp))
-                Row(
-                    Modifier
-                        .clip(CircleShape)
-                        .background(Color.White)
-                        .padding(start = 14.dp, end = 20.dp, top = 10.dp, bottom = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(Icons.Rounded.PlayArrow, contentDescription = null, tint = Color.Black, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(6.dp))
+            MeshGradientBackground(
+                palette = cyclingMeshPalette(DjMeshPalettes, running = motion),
+                modifier = Modifier.matchParentSize(),
+                continuous = true,
+                paused = !motion,
+                driftMillis = 6_000,
+                blurRadius = 36.dp,
+                colorFadeMillis = MESH_CYCLE_MILLIS,
+            )
+            // The ring, large and centred, let go toward the foot of the banner.
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(
+                            Brush.verticalGradient(0.35f to Color.Black, 1f to Color.Transparent),
+                            blendMode = BlendMode.DstIn,
+                        )
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                DjRing(level = { 0f }, modifier = Modifier.size(250.dp).graphicsLayer { alpha = 0.9f }, running = motion, talking = true)
+            }
+            // The foot is darkened a little so the play button and the lines read on any colour of the mesh.
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .background(Brush.verticalGradient(0.55f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.35f))),
+            )
+            // The lines, as lyrics.
+            androidx.compose.animation.AnimatedContent(
+                targetState = current,
+                transitionSpec = {
+                    (androidx.compose.animation.slideInVertically(spring(dampingRatio = 1f, stiffness = 300f)) { it / 3 } +
+                        androidx.compose.animation.fadeIn()) togetherWith
+                        (androidx.compose.animation.slideOutVertically(spring(dampingRatio = 1f, stiffness = 300f)) { -it / 3 } +
+                            androidx.compose.animation.fadeOut())
+                },
+                label = "djLines",
+                modifier = Modifier.align(Alignment.TopStart).padding(start = 22.dp, end = 22.dp, top = 22.dp),
+            ) { index ->
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        stringResource(Res.string.dj_listen),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.W700,
-                        color = Color.Black,
+                        lines[(index + lines.size - 1) % lines.size],
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.4f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        lines[index],
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.W800,
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        lines[(index + 1) % lines.size],
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.4f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
-            DjRing(level = { 0f }, modifier = Modifier.size(136.dp), running = motion, talking = true)
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 18.dp, bottom = 18.dp)
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .clickable(onClick = onClick),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Rounded.PlayArrow, contentDescription = stringResource(Res.string.dj_listen), tint = Color.Black, modifier = Modifier.size(38.dp))
+            }
         }
     }
 }

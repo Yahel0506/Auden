@@ -41,6 +41,25 @@ enum class TopPickKind {
 
     /** Music the listener hasn't played yet — YouTube's Discover Mix. */
     DISCOVERY_STATION,
+
+    // The lists Auden makes each day from what the listener plays (see the app's GeneratedMixes). Each is a real
+    // list, opened as a page with its songs, with a play button on its card.
+
+    /** The thirty songs played most over and over lately. */
+    IN_LOOP,
+
+    /** A mix of a genre, made only of artists the listener already plays. */
+    GENRE_MIX,
+
+    /** Music the listener has not played yet, along the lines of what they do. */
+    NEW_FOR_YOU,
+
+    /** Songs like one they play over and over; [TopPick.title] is that song. */
+    BECAUSE_YOU_LIKE,
+    ;
+
+    /** Whether this card is one of the generated lists: a page of songs, not a station that starts on a tap. */
+    val isGeneratedList: Boolean get() = this == IN_LOOP || this == GENRE_MIX || this == NEW_FOR_YOU || this == BECAUSE_YOU_LIKE
 }
 
 /**

@@ -22,6 +22,7 @@ import com.music.bitchord.data.model.ArtistRef
 import com.music.bitchord.data.model.TopPick
 import com.music.bitchord.data.stats.ListeningStats
 import com.music.bitchord.data.stats.ReplayPeriod
+import dev.auden.home.GeneratedMixes
 import android.util.Log
 import java.io.File
 import java.time.LocalDate
@@ -135,13 +136,19 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _home = MutableStateFlow<UiState<List<HomeShelf>>>(UiState.Loading)
     val home: StateFlow<UiState<List<HomeShelf>>> = _home.asStateFlow()
 
+    /**
+     * What was played lately, every song in the order it was played, newest first: Home's first shelf, and tapping
+     * a song plays the shelf on from it.
+     */
+    private val _homeRecents = MutableStateFlow<HomeShelf?>(null)
+
     /** Home's shelves built from the device: listening history, library and playlists. */
     private val _localHomeShelves = MutableStateFlow<List<dev.auden.home.LocalShelf>>(emptyList())
 
     /** The titles of the shelves above, so a tap on one of their songs plays the shelf. */
-    val localShelfTitles: StateFlow<Set<String>> = _localHomeShelves
-        .map { shelves -> shelves.map { it.title }.toSet() }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
+    val localShelfTitles: StateFlow<Set<String>> = combine(_localHomeShelves, _homeRecents) { shelves, recents ->
+        shelves.map { it.title }.toSet() + listOfNotNull(recents?.title)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
 
     /**
      * What Home shows: YouTube Music's feed and the local shelves merged by
@@ -166,37 +173,50 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /**
-     * Whether this surface shows YouTube Music's own home feed ([home], read with the account). The phone does not:
-     * its Home is local ([homeComposed]). The TV still does, and turns this on before it asks for the feed.
+     * Whether Home reads YouTube Music's own feed ([home]): its recommendations, videos and new releases, asked of the
+     * catalogue as nobody — the feed is the catalogue's, made personal by what the listener plays here (the taste and
+     * local shelves, and the lists of Top Picks), not by an account.
      */
     @Volatile
-    var remoteFeedEnabled = false
+    var remoteFeedEnabled = true
 
     /** False until the shelves built from the device have been read once, so an empty first frame is not "nothing yet". */
     private val _localHomeLoaded = MutableStateFlow(false)
 
+    private class HomeInputs(val feed: UiState<List<HomeShelf>>, val taste: List<HomeShelf>, val loaded: Boolean, val recents: HomeShelf?)
+
     val homeComposed: StateFlow<UiState<List<HomeShelf>>> = combine(
-        combine(_tasteShelves, _localHomeLoaded) { taste, loaded -> taste to loaded },
+        combine(_home, _tasteShelves, _localHomeLoaded, _homeRecents) { feed, taste, loaded, recents -> HomeInputs(feed, taste, loaded, recents) },
         _localHomeShelves,
         AppSettings.homeLocalShelves,
         AppSettings.homeLocalWeight,
         AppSettings.meteredConnection,
-    ) { (taste, loaded), local, kinds, weight, metered ->
-        if (!loaded) return@combine UiState.Loading
+    ) { inputs, local, kinds, weight, metered ->
+        val remote = inputs.feed
+        if (!inputs.loaded && remote is UiState.Loading) return@combine UiState.Loading
         val settings = dev.auden.home.HomeSettings(
             enabled = kinds.mapNotNull { runCatching { dev.auden.home.LocalShelfKind.valueOf(it) }.getOrNull() }.toSet(),
             localWeight = weight,
         )
+        // YouTube Music's feed, with the shelves the listener's own plays seeded after its first shelf.
+        val feed = (remote as? UiState.Success)?.data.orEmpty()
+        val feedAndTaste = if (inputs.taste.isEmpty()) feed else feed.take(1) + inputs.taste + feed.drop(1)
         val composed = dev.auden.home.HomeComposer.compose(
-            // The shelves the listener's own plays seeded (see [loadTasteShelves]); no feed of an account.
-            remote = taste,
+            remote = feedAndTaste,
             local = local,
             settings = settings,
             // No active network reads as null here; see AppSettings.meteredConnection.
             online = metered != null,
         )
-        // Nothing to show is a state of its own: Home says so and points at Transfer your music.
-        UiState.Success(composed)
+        // What was played lately leads, as it was played; then the feed and the device's own shelves.
+        val all = listOfNotNull(inputs.recents) + composed
+        when {
+            all.isNotEmpty() -> UiState.Success(all)
+            remote is UiState.Error -> remote
+            remote is UiState.Loading -> UiState.Loading
+            // Nothing to show is a state of its own: Home says so and points at Transfer your music.
+            else -> UiState.Success(emptyList())
+        }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, UiState.Loading)
 
     /** Rebuilds the local shelves; cheap, and run whenever Home comes into view. */
@@ -204,10 +224,33 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             runCatching { dev.auden.home.HomeLocal.load(getApplication()) }
                 .onSuccess { _localHomeShelves.value = it }
+            _homeRecents.value = runCatching { recentlyPlayedShelf() }.getOrNull()
             _localHomeLoaded.value = true
             // The taste shelves wait for the first look at the device's own listening.
             if (_tasteShelves.value.isEmpty() && tasteJob?.isActive != true) loadTasteShelves()
         }
+    }
+
+    /** The songs played lately, newest first — each once, in the order of its last play. */
+    private suspend fun recentlyPlayedShelf(): HomeShelf? {
+        val played = ListeningStats.heardTracks()
+            .filter { it.title.isNotBlank() && it.last > 0L }
+            .sortedByDescending { it.last }
+            .take(RECENTS_LIMIT)
+        if (played.isEmpty()) return null
+        return HomeShelf(
+            title = text(R.string.home_recents_title),
+            items = played.map { e ->
+                ShelfItem(
+                    title = e.title,
+                    subtitle = e.artist,
+                    thumbnailUrl = e.art,
+                    videoId = e.id,
+                    browseId = null,
+                    localUri = e.id.takeIf { it.startsWith("content://") || it.startsWith("file://") },
+                )
+            },
+        )
     }
 
     /**
@@ -2087,7 +2130,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         homeContinuation = null
         homeSeenTitles.clear()
         _homeLoadingMore.value = false
-        _homeRecentlyPlayedLoading.value = _signedIn.value
+        _homeRecentlyPlayedLoading.value = false
         // The core feed plus one browse per supplement. Recently played is left
         // out: it has its own skeleton at the head of the page rather than the
         // one at the tail.
@@ -2110,20 +2153,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         }
                 } finally {
                     homeShelfRequestSettled(identity, generation)
-                }
-            }
-            if (_signedIn.value) {
-                launch {
-                    YtMusicRepository.homeRecentlyPlayed()
-                        .onSuccess { shelf ->
-                            if (isCurrentHomeLoad(identity, generation)) {
-                                _homeRecentlyPlayedLoading.value = false
-                                shelf?.let { publishHomeShelves(listOf(it), prepend = true) }
-                            }
-                        }
-                        .onFailure {
-                            if (isCurrentHomeLoad(identity, generation)) _homeRecentlyPlayedLoading.value = false
-                        }
                 }
             }
             YtMusicRepository.HOME_SUPPLEMENT_BROWSE_IDS.forEach { browseId ->
@@ -2149,38 +2178,15 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
      */
     private fun loadTopPicks(identity: String?, rebuild: Boolean) {
         topPicksJob?.cancel()
-        val file = File(getApplication<Application>().filesDir, TOP_PICKS_FILE)
-        val slot = topPicksSlot()
         topPicksJob = viewModelScope.launch {
-            val stored = withContext(Dispatchers.IO) {
-                runCatching { file.takeIf { it.exists() }?.readText() }.getOrNull()?.let(TopPicks::decode)
-            }?.takeIf { it.listener == identity && it.picks.isNotEmpty() }
-            stored?.let { AppleArtistPhotos.seed(it.photos) }
-            if (stored != null) {
-                _topPicks.value = stored.picks
-                topPicksSlotShown = stored.day
-            } else if (!rebuild) {
-                _topPicks.value = null
-            }
-            if (!rebuild && stored?.day == slot) {
-                _topPicksLoading.value = false
-                return@launch
-            }
-            _topPicksLoading.value = _topPicks.value == null
-            val picks = buildTopPicks()?.takeIf { it.isNotEmpty() }
-            if (identity != listenerKey()) return@launch
+            // The lists Auden makes each day from what is played here: shown the moment they are known (yesterday's
+            // while today's are made), made again at most once a day.
+            _topPicksLoading.value = _topPicks.value == null && GeneratedMixes.mixes.value.isEmpty()
+            val kept = GeneratedMixes.picks()
+            if (kept.isNotEmpty()) _topPicks.value = kept
+            runCatching { GeneratedMixes.ensureToday(getApplication(), force = rebuild) }
+            _topPicks.value = GeneratedMixes.picks()
             _topPicksLoading.value = false
-            if (picks == null) {
-                if (_topPicks.value == null) _topPicks.value = emptyList()
-                return@launch
-            }
-            _topPicks.value = picks
-            topPicksSlotShown = slot
-            withContext(Dispatchers.IO) {
-                runCatching {
-                    file.writeText(TopPicks.encode(TopPicks.Stored(identity, slot, picks, AppleArtistPhotos.snapshot())))
-                }
-            }
         }
     }
 
@@ -2201,32 +2207,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     /** Which hour of the clock [now] falls in: the date and the hour, 00 to 23. */
     private fun topPicksSlot(now: LocalDateTime = LocalDateTime.now()): String =
         "${now.toLocalDate()}T%02d".format(now.hour)
-
-    private suspend fun buildTopPicks(): List<TopPick>? {
-        // Home's first page may already hold the account's mixes; give it a
-        // moment to land so the builder reads them off it instead of asking.
-        val shelves = withTimeoutOrNull(8_000L) { _home.first { it !is UiState.Loading } }
-            .let { (it as? UiState.Success)?.data.orEmpty() }
-        return try {
-            TopPicks.build(shelves, localTaste())
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w("BitChord", "topPicks failed: ${e.message}")
-            null
-        }
-    }
-
-    /** This app's own Replay chart for the month — Top Picks' second opinion, and all it has signed out. */
-    private suspend fun localTaste(): TopPicks.LocalTaste {
-        val month = runCatching { ListeningStats.summary(ReplayPeriod.THIS_MONTH) }.getOrNull()
-            ?: return TopPicks.LocalTaste()
-        return TopPicks.LocalTaste(
-            artists = month.artists.take(10).map { ArtistRef(name = it.title, browseId = it.browseId) },
-            songs = month.songs.take(5).map { it.song },
-            genres = month.genres.take(3).map { it.title },
-        )
-    }
 
     /**
      * One of the parallel first-page requests has finished. Ignored once a newer
@@ -2264,7 +2244,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             loadTasteShelves()
             return@coroutineScope
         }
-        val recent = if (_signedIn.value) async { YtMusicRepository.homeRecentlyPlayed() } else null
         // Top Picks keeps to its hour; a pull refreshes the feed, not the
         // picks, unless the hour has already turned over.
         if (topPicksJob?.isActive != true) loadTopPicks(identity, rebuild = false)
@@ -2276,9 +2255,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val shelves = feed.shelves.withoutRepeatsOf(emptyList())
                 .filter { homeSeenTitles.add(it.title.lowercase(Locale.ROOT)) }
             if (shelves.isNotEmpty()) _home.value = UiState.Success(shelves)
-        }
-        recent?.await()?.onSuccess { shelf ->
-            if (identity == listenerKey()) shelf?.let { publishHomeShelves(listOf(it), prepend = true) }
         }
     }
 
@@ -2962,6 +2938,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     companion object {
+        /** How many songs Home's Recently played shelf holds. */
+        private const val RECENTS_LIMIT = 24
+
         /** How many songs the History page lists: the most recently played of everything heard on this device. */
         private const val HISTORY_LIMIT = 300
 
@@ -3533,6 +3512,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         fun nonEmpty(songs: List<Song>, empty: () -> String): UiState<List<Song>> =
             if (songs.isEmpty()) UiState.Error(empty()) else UiState.Success(songs)
 
+        // One of the lists made each day from what is played here (see GeneratedMixes): its songs are kept with it.
+        if (browseId.startsWith(GeneratedMixes.PAGE_PREFIX)) {
+            val mix = GeneratedMixes.get(browseId) ?: return UiState.Error(text(R.string.no_tracks_here))
+            return nonEmpty(mix.songs) { text(R.string.no_tracks_here) }
+        }
         if (OfflinePlaylists.isOfflinePlaylist(browseId)) {
             // A playlist deleted while its page was still reachable — from
             // "Playing from", say — is an empty page, not a YouTube lookup.

@@ -74,6 +74,8 @@ import com.music.bitchord.ui.components.SHELF_CARD_WIDTH
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -151,6 +153,8 @@ internal fun TopPicksShelf(
     /** The card, and the title it was showing — the station's name for the queue. */
     onClick: (TopPick, String) -> Unit,
     onLongPress: ((TopPick) -> Unit)?,
+    /** The play button on the generated lists' cards: starts the list without opening it. Null leaves it out. */
+    onPlay: ((TopPick) -> Unit)? = null,
 ) {
     val rowState = rememberLazyListState()
     // Which cards turned out to have a clip, by index, and which one plays.
@@ -184,6 +188,7 @@ internal fun TopPicksShelf(
                                 listenerName = listenerName,
                                 onClick = onClick,
                                 onLongPress = onLongPress?.takeIf { pick.kind == TopPickKind.LATEST_RELEASE },
+                                onPlay = onPlay?.takeIf { pick.kind.isGeneratedList },
                                 modifier = Modifier.width(cardWidth),
                             )
                         }
@@ -265,6 +270,26 @@ private fun cardText(pick: TopPick, listenerName: String?): CardText {
             title = stringResource(Res.string.top_pick_discovery_station),
             subtitle = "",
         )
+        TopPickKind.IN_LOOP -> CardText(
+            eyebrow = stringResource(Res.string.top_pick_updated_daily),
+            title = stringResource(Res.string.top_pick_in_loop),
+            subtitle = stringResource(Res.string.top_pick_in_loop_sub),
+        )
+        TopPickKind.GENRE_MIX -> CardText(
+            eyebrow = stringResource(Res.string.top_pick_updated_daily),
+            title = stringResource(Res.string.top_pick_genre_mix, pick.title),
+            subtitle = pick.subtitle,
+        )
+        TopPickKind.NEW_FOR_YOU -> CardText(
+            eyebrow = stringResource(Res.string.top_pick_updated_daily),
+            title = stringResource(Res.string.top_pick_new_for_you),
+            subtitle = stringResource(Res.string.top_pick_new_for_you_sub),
+        )
+        TopPickKind.BECAUSE_YOU_LIKE -> CardText(
+            eyebrow = stringResource(Res.string.top_pick_updated_daily),
+            title = stringResource(Res.string.top_pick_because, pick.title),
+            subtitle = pick.subtitle,
+        )
     }
 }
 
@@ -275,6 +300,7 @@ private fun TopPickCard(
     listenerName: String?,
     onClick: (TopPick, String) -> Unit,
     onLongPress: ((TopPick) -> Unit)?,
+    onPlay: ((TopPick) -> Unit)? = null,
     modifier: Modifier,
 ) {
     val text = cardText(pick, listenerName)
@@ -327,6 +353,11 @@ private fun TopPickCard(
                 eyebrowColor = PhotoEyebrow
                 branded = false
             }
+            TopPickKind.IN_LOOP, TopPickKind.GENRE_MIX, TopPickKind.NEW_FOR_YOU, TopPickKind.BECAUSE_YOU_LIKE -> {
+                MixCoverArt(pick.kind, pick.images, Modifier.fillMaxSize())
+                eyebrowColor = pick.kind.mixEyebrow()
+                branded = true
+            }
             TopPickKind.FEATURED_ARTIST -> {
                 AsyncImage(
                     model = pick.images.firstOrNull().croppedAt(HEADER_ART_PX * 3 / 4, HEADER_ART_PX).whenArtworkReady(),
@@ -364,16 +395,36 @@ private fun TopPickCard(
                     .aspectRatio(1261f / 1435f),
             )
         }
-        CardCaption(text, eyebrowColor, Modifier.align(Alignment.BottomStart))
+        CardCaption(text, eyebrowColor, Modifier.align(Alignment.BottomStart), endInset = if (onPlay != null) 64.dp else 0.dp)
+        // A generated list is something to use: its own play button, apart from the tap that opens it.
+        onPlay?.let { play ->
+            Box(
+                Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 14.dp, bottom = 14.dp)
+                    .size(46.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .clickable { play(pick) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Rounded.PlayArrow,
+                    contentDescription = stringResource(Res.string.top_pick_play),
+                    tint = Color.Black,
+                    modifier = Modifier.size(28.dp),
+                )
+            }
+        }
     }
 }
 
 @Composable
-private fun CardCaption(text: CardText, eyebrowColor: Color, modifier: Modifier) {
+private fun CardCaption(text: CardText, eyebrowColor: Color, modifier: Modifier, endInset: androidx.compose.ui.unit.Dp = 0.dp) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+            .padding(start = 16.dp, end = 16.dp + endInset, bottom = 16.dp),
     ) {
         Text(
             text = text.eyebrow,

@@ -2166,4 +2166,9 @@
     <string name="library_section_empty">Aún no hay nada aquí. Trae tu música de YouTube Music o Spotify con Transfiere tu música, en la hoja de tu cuenta.</string>
     <string name="transfer_running_percent">Transfiriendo %1$d%%</string>
     <string name="transfer_unit_of">%1$d de %2$d</string>
+    <string name="home_recents_title">Reproducido recientemente</string>
+    <string name="mix_in_loop">En loop</string>
+    <string name="mix_genre">Mix de %1$s</string>
+    <string name="mix_new">Música nueva para ti</string>
+    <string name="mix_because">Porque te gusta %1$s</string>
 </resources>

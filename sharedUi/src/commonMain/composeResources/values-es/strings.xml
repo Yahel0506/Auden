@@ -231,4 +231,19 @@
     <string name="library_my_lists">Mis playlists</string>
     <string name="library_recents">Recientes</string>
     <string name="library_search">Buscar</string>
+    <string name="top_pick_updated_daily">Se actualiza a diario</string>
+    <string name="top_pick_in_loop">En loop</string>
+    <string name="top_pick_in_loop_sub">Tus 30 canciones más repetidas</string>
+    <string name="top_pick_genre_mix">Mix de %1$s</string>
+    <string name="top_pick_new_for_you">Música nueva para ti</string>
+    <string name="top_pick_new_for_you_sub">Nada que hayas escuchado aún</string>
+    <string name="top_pick_because">Porque te gusta %1$s</string>
+    <string name="top_pick_play">Reproducir</string>
+    <string name="dj_personal_title">Tu propio DJ personal</string>
+    <string name="dj_line_1">Listo para escuchar</string>
+    <string name="dj_line_2">¿Qué tal? Ya tengo tu mix listo</string>
+    <string name="dj_line_3">Hoy toca lo que más te gusta</string>
+    <string name="dj_line_4">Con un par de sorpresas</string>
+    <string name="dj_line_5">Dale play cuando quieras</string>
+    <string name="dj_line_6">Yo me encargo del resto</string>
 </resources>
