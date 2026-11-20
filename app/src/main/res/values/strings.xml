@@ -1247,11 +1247,11 @@
     <string name="clear_song_cache_warning">All cached songs will be deleted and the Cached songs folder will be emptied. They will stream again the next time you play them.</string>
     <string name="import_spotify">Import Spotify</string>
     <string name="import_spotify_subtitle">From a playlist link</string>
-    <string name="spotify_import_title">Import Spotify playlist</string>
+    <string name="spotify_import_title">Import a playlist from a link</string>
     <string name="spotify_import_description">Paste a public playlist link. Songs are matched on YouTube Music.</string>
     <string name="spotify_import_description_local">Paste a public playlist link. Songs are matched on YouTube Music and saved on this device.</string>
-    <string name="spotify_import_hint">open.spotify.com/playlist/…</string>
-    <string name="spotify_import_invalid">That isn\'t a Spotify playlist link.</string>
+    <string name="spotify_import_hint">Spotify or Deezer link…</string>
+    <string name="spotify_import_invalid">That isn\'t a Spotify or Deezer playlist link.</string>
     <string name="spotify_import_fetching">Reading the Spotify playlist…</string>
     <string name="spotify_import_matching">Matching songs %1$d of %2$d</string>
     <string name="spotify_import_none">None of those songs were found on YouTube Music.</string>
@@ -1963,6 +1963,11 @@
     <string name="listen_together_as">As %1$s</string>
     <string name="listen_together_as_where">Change it in Account and integrations</string>
     <string name="other_functions">Other functions</string>
+    <string name="apple_music">Apple Music</string>
+    <string name="tidal">Tidal</string>
+    <string name="sign_in_to">Sign in to %1$s</string>
+    <string name="sign_in_to_import_hint">Sign in as you would on their site. Auden reads your library from it.</string>
+    <string name="disconnect_service">Disconnect %1$s</string>
     <string name="connections">Connections</string>
     <string name="connected_as">Connected as %1$s</string>
     <string name="auden_account">Auden account</string>

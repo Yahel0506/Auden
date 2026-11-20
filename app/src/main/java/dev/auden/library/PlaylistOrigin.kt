@@ -5,7 +5,7 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 
 /** A service Auden can import from (and, on request, export to). */
-enum class Service { YT_MUSIC, SPOTIFY }
+enum class Service { YT_MUSIC, SPOTIFY, APPLE_MUSIC, TIDAL }
 
 /** What kind of remote list a playlist copy stands for. */
 enum class OriginKind {
@@ -37,7 +37,7 @@ data class PlaylistOrigin(
     /** What [CloudSaver] and the YouTube Music client are asked for: a YT playlist with its `VL`. */
     val browseId: String
         get() = when {
-            service == Service.SPOTIFY -> sourceId
+            service != Service.YT_MUSIC -> sourceId
             kind == OriginKind.ALBUM && remoteId.startsWith(YT_ALBUM) -> remoteId
             else -> "VL$remoteId"
         }
@@ -45,8 +45,15 @@ data class PlaylistOrigin(
     companion object {
         const val SPOTIFY_PLAYLIST = "spotify:playlist:"
         const val SPOTIFY_ALBUM = "spotify:album:"
+        const val APPLE_PLAYLIST = "apple:playlist:"
+        const val APPLE_ALBUM = "apple:album:"
+        const val TIDAL_PLAYLIST = "tidal:playlist:"
+        const val TIDAL_ALBUM = "tidal:album:"
         private const val YT_ALBUM = "MPREb"
         private const val YT_ALBUM_PLAYLIST = "OLAK5uy"
+
+        private fun fromOther(service: Service, kind: OriginKind, prefix: String, source: String): PlaylistOrigin? =
+            source.removePrefix(prefix).takeIf { it.isNotEmpty() }?.let { PlaylistOrigin(service, kind, it, source) }
 
         /** Null for a playlist made here (no source), or a source id of no known shape. */
         fun of(sourceId: String?): PlaylistOrigin? {
@@ -62,6 +69,10 @@ data class PlaylistOrigin(
                     val id = source.removePrefix(SPOTIFY_ALBUM).takeIf { it.isNotEmpty() } ?: return null
                     PlaylistOrigin(Service.SPOTIFY, OriginKind.ALBUM, id, source)
                 }
+                source.startsWith(APPLE_PLAYLIST) -> fromOther(Service.APPLE_MUSIC, OriginKind.PLAYLIST, APPLE_PLAYLIST, source)
+                source.startsWith(APPLE_ALBUM) -> fromOther(Service.APPLE_MUSIC, OriginKind.ALBUM, APPLE_ALBUM, source)
+                source.startsWith(TIDAL_PLAYLIST) -> fromOther(Service.TIDAL, OriginKind.PLAYLIST, TIDAL_PLAYLIST, source)
+                source.startsWith(TIDAL_ALBUM) -> fromOther(Service.TIDAL, OriginKind.ALBUM, TIDAL_ALBUM, source)
                 // Any other "scheme:" is not a YouTube Music browse id (those never hold a colon).
                 ':' in source -> null
                 else -> {
@@ -89,6 +100,8 @@ object LikeListClassifier {
         return when (service) {
             Service.YT_MUSIC -> raw.removePrefix("VL") == "LM"
             Service.SPOTIFY -> raw.removePrefix(PlaylistOrigin.SPOTIFY_PLAYLIST) == "liked"
+            // Their likes are read as likes (see the account sources), never listed among the playlists.
+            Service.APPLE_MUSIC, Service.TIDAL -> false
         }
     }
 }

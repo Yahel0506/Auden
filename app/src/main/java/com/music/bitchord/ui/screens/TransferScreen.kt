@@ -144,6 +144,12 @@ fun TransferScreen(
     }
 }
 
+/** Opens the chooser for a connected service, or asks for its sign-in first. */
+private fun openWebService(service: Service) {
+    if (dev.auden.transfer.services.ServiceConnect.isConnected(service)) TransferSession.open(service)
+    else dev.auden.transfer.services.ServiceConnect.request(service)
+}
+
 @Composable
 private fun Sources(
     ytConnected: Boolean,
@@ -173,6 +179,23 @@ private fun Sources(
             subtitle = if (spotifyConnected) connected else connect,
             onClick = { if (spotifyConnected) TransferSession.open(Service.SPOTIFY) else onConnectSpotify() },
         )
+        // The services read through their web players: signing in is a sheet over this page, and what it connects goes
+        // straight on to the chooser.
+        val webConnected by dev.auden.transfer.services.ServiceConnect.connected.collectAsStateWithLifecycle()
+        FullWidthDivider()
+        SettingsRow(
+            iconPainter = androidx.compose.ui.res.painterResource(R.drawable.apple_music_logo),
+            title = stringResource(R.string.apple_music),
+            subtitle = if (Service.APPLE_MUSIC in webConnected) connected else connect,
+            onClick = { openWebService(Service.APPLE_MUSIC) },
+        )
+        FullWidthDivider()
+        SettingsRow(
+            icon = com.music.bitchord.ui.icons.ServiceGlyphs.Tidal,
+            title = stringResource(R.string.tidal),
+            subtitle = if (Service.TIDAL in webConnected) connected else connect,
+            onClick = { openWebService(Service.TIDAL) },
+        )
     }
     when (val l = likes) {
         is TransferMigrations.LikesState.Running -> Message(stringResource(R.string.transfer_likes_running), busy = true)
@@ -197,7 +220,7 @@ private fun Sources(
 @Composable
 internal fun TransferChooser(offer: TransferSession.Offer, contentPadding: PaddingValues = PaddingValues(), modifier: Modifier = Modifier) {
     val ticked by TransferSession.selection.collectAsStateWithLifecycle()
-    val serviceName = stringResource(if (offer.service == Service.SPOTIFY) R.string.spotify else R.string.transfer_yt_music)
+    val serviceName = stringResource(com.music.bitchord.ui.components.serviceLabelRes(offer.service))
     LazyVerticalGrid(
         columns = GridCells.Adaptive(104.dp),
         modifier = modifier.fillMaxSize(),

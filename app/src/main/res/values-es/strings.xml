@@ -1298,12 +1298,12 @@
     <string name="spotify_import_empty_playlist">No hay canciones en esta playlist</string>
     <string name="spotify_import_failed">No se pudo importar la playlist: %1$s</string>
     <string name="spotify_import_fetching">Leyendo la playlist de Spotify…</string>
-    <string name="spotify_import_hint">open.spotify.com/playlist/…</string>
-    <string name="spotify_import_invalid">Ese no es un enlace de playlist de Spotify.</string>
+    <string name="spotify_import_hint">Enlace de Spotify o Deezer…</string>
+    <string name="spotify_import_invalid">Ese no es un enlace de playlist de Spotify ni de Deezer.</string>
     <string name="spotify_import_local_fallback">No se pudo crear en YouTube Music, así que «%1$s» se guardó en este dispositivo.</string>
     <string name="spotify_import_matching">Buscando canciones %1$d de %2$d</string>
     <string name="spotify_import_none">No se encontró ninguna de esas canciones en YouTube Music.</string>
-    <string name="spotify_import_title">Importar playlist de Spotify</string>
+    <string name="spotify_import_title">Importar playlist desde un enlace</string>
     <string name="spotify_import_unmatched">%1$d canciones no se encontraron en YouTube Music</string>
     <string name="spotify_library_subtitle">Tus playlists de Spotify</string>
     <string name="spotify_sign_in">Iniciar sesión con Spotify</string>
@@ -2078,6 +2078,11 @@
     <string name="listen_together_as">Como %1$s</string>
     <string name="listen_together_as_where">Cámbialo en Cuenta e integraciones</string>
     <string name="other_functions">Otras funciones</string>
+    <string name="apple_music">Apple Music</string>
+    <string name="tidal">Tidal</string>
+    <string name="sign_in_to">Inicia sesión en %1$s</string>
+    <string name="sign_in_to_import_hint">Inicia sesión como lo harías en su sitio. Auden lee tu biblioteca desde ahí.</string>
+    <string name="disconnect_service">Desconectar %1$s</string>
     <string name="connections">Conexiones</string>
     <string name="connected_as">Conectado como %1$s</string>
     <string name="auden_account">Cuenta de Auden</string>

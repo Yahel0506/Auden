@@ -17,6 +17,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -446,3 +451,66 @@ fun navGlassHazeStyle(): HazeStyle {
         HazeStyle(backgroundColor = surface, tints = listOf(HazeTint(tint)), blurRadius = 14.dp, noiseFactor = 0f)
     }
 }
+
+
+/**
+ * A liquid-glass button's answer to a finger: it swells and lights up the moment it is touched, and stays that way for as
+ * long as the touch lasts — a long press included — then settles back when the finger leaves. Put first in a
+ * modifier chain so the swell takes the glass and what is drawn on it together. Watches the touch without taking it, so
+ * the button's own click, hold or drag still work.
+ *
+ * Both the swell and the light are springs of the app's one curve (critically damped, no bounce); with "Reduce animation"
+ * on the button only lights.
+ */
+@Composable
+fun Modifier.glassPress(shape: androidx.compose.ui.graphics.Shape, grow: Float = GLASS_PRESS_GROW): Modifier {
+    var pressed by remember { mutableStateOf(false) }
+    val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (pressed && !reduceAnimation) grow else 1f,
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = 300f),
+        label = "glass press scale",
+    )
+    val light by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (pressed) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 1f, stiffness = 420f),
+        label = "glass press light",
+    )
+    return this
+        .pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    // Initial pass and never consumed: the touch is only watched, and goes on to whoever acts on it.
+                    val event = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                    pressed = event.changes.any { it.pressed }
+                }
+            }
+        }
+        .graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+        }
+        .drawWithContent {
+            drawContent()
+            if (light > 0.01f) {
+                val outline = shape.createOutline(size, layoutDirection, this)
+                // A white wash over the glass and what is on it, brightest at the top as light from above would be.
+                val path = androidx.compose.ui.graphics.Path().apply {
+                    when (outline) {
+                        is androidx.compose.ui.graphics.Outline.Rectangle -> addRect(outline.rect)
+                        is androidx.compose.ui.graphics.Outline.Rounded -> addRoundRect(outline.roundRect)
+                        is androidx.compose.ui.graphics.Outline.Generic -> addPath(outline.path)
+                    }
+                }
+                drawPath(
+                    path = path,
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        listOf(Color.White.copy(alpha = 0.34f * light), Color.White.copy(alpha = 0.16f * light)),
+                    ),
+                )
+            }
+        }
+}
+
+/** How much a pressed glass button swells. */
+const val GLASS_PRESS_GROW = 1.14f

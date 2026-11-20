@@ -41,6 +41,7 @@ internal fun androidRefresher(app: Context): PlaylistRefresher {
             when (service) {
                 Service.SPOTIFY -> SpotifyLibrary.isSignedIn()
                 Service.YT_MUSIC -> Innertube.cookie != null
+                Service.APPLE_MUSIC, Service.TIDAL -> false
             }
         },
     )

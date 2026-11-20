@@ -87,13 +87,25 @@ fun <T : Any> HeldContextMenu(
     onDismiss: () -> Unit,
     /** Tapping the lifted item — open what it stands for. Null leaves it inert. */
     onPreviewClick: ((T) -> Unit)?,
+    /**
+     * Draws what lifts instead of a picture of the held item: a card of the item's own, at its natural size, rising from
+     * where it was held to the top of the screen with the actions hung under it (the player's bar, whose lines are too
+     * few to make a card of). Null lifts the picture.
+     */
+    preview: (@Composable (T) -> Unit)? = null,
     actions: @Composable (T) -> Unit,
 ) {
     val requested = if (item != null && held != null) item to held else null
     var last by remember { mutableStateOf<Pair<T, HeldItem>?>(null) }
+    var lastPreview by remember { mutableStateOf<(@Composable (T) -> Unit)?>(null) }
     if (requested != null && requested != last) {
         SideEffect { last = requested }
     }
+    // Kept for the exit as the item is: a card that turned into a blank picture as it left would flash.
+    if (requested != null && preview != lastPreview) {
+        SideEffect { lastPreview = preview }
+    }
+    val shownPreview = if (requested != null) preview else lastPreview
     val shown = requested ?: last ?: return
     val (menuItem, heldItem) = shown
     val open = requested != null
@@ -218,7 +230,9 @@ fun <T : Any> HeldContextMenu(
                     )
                     .padding(platePadding),
             ) {
-                heldItem.image?.let { image ->
+                if (shownPreview != null) {
+                    shownPreview(menuItem)
+                } else heldItem.image?.let { image ->
                     Image(
                         bitmap = image,
                         contentDescription = null,
@@ -264,10 +278,18 @@ fun <T : Any> HeldContextMenu(
         // The plate at the item's own size, so at rest the picture on it is
         // pixel for pixel what was held; a full-width row is then scaled down
         // just enough for the plate to clear the screen edges.
-        val plateW = (itemBounds.width.roundToInt() + pad * 2).coerceAtLeast(1)
-        val plateH = (itemBounds.height.roundToInt() + pad * 2).coerceAtLeast(1)
-        val card = measurables[1].measure(Constraints.fixed(plateW, plateH))
-        val liftScale = ((width - margin * 2f) / plateW).coerceAtMost(1f)
+        val asCard = shownPreview != null
+        // A card of its own is as wide as the screen allows and as tall as what it holds; a picture is the item's size.
+        val card = if (asCard) {
+            measurables[1].measure(Constraints(minWidth = width - margin * 2, maxWidth = width - margin * 2, maxHeight = (height / 3)))
+        } else {
+            measurables[1].measure(
+                Constraints.fixed((itemBounds.width.roundToInt() + pad * 2).coerceAtLeast(1), (itemBounds.height.roundToInt() + pad * 2).coerceAtLeast(1)),
+            )
+        }
+        val plateW = card.width.coerceAtLeast(1)
+        val plateH = card.height.coerceAtLeast(1)
+        val liftScale = if (asCard) 1f else ((width - margin * 2f) / plateW).coerceAtMost(1f)
         val visualW = plateW * liftScale
         val visualH = plateH * liftScale
 
@@ -281,12 +303,20 @@ fun <T : Any> HeldContextMenu(
         // menu fits beside it; the menu goes below by preference and above
         // when the item is low on screen, and only when neither fits does the
         // item climb to make room.
-        val visualLeft = (itemBounds.center.x - visualW / 2f)
-            .coerceIn(margin.toFloat(), (width - margin - visualW).coerceAtLeast(margin.toFloat()))
-        var visualTop = (itemBounds.center.y - visualH / 2f)
-            .coerceIn(top.toFloat(), (bottom - visualH).coerceAtLeast(top.toFloat()))
+        val visualLeft = if (asCard) {
+            (width - visualW) / 2f
+        } else {
+            (itemBounds.center.x - visualW / 2f).coerceIn(margin.toFloat(), (width - margin - visualW).coerceAtLeast(margin.toFloat()))
+        }
+        var visualTop = if (asCard) {
+            // The card goes up under the status bar and the menu hangs below it; it travels there from the bar it was held on.
+            (top + 36.dp.roundToPx()).toFloat().coerceAtMost((bottom - visualH - gap - menu.height).coerceAtLeast(top.toFloat()))
+        } else {
+            (itemBounds.center.y - visualH / 2f).coerceIn(top.toFloat(), (bottom - visualH).coerceAtLeast(top.toFloat()))
+        }
         val menuBelow: Boolean
         when {
+            asCard -> menuBelow = true
             visualTop + visualH + gap + menu.height <= bottom -> menuBelow = true
             visualTop - gap - menu.height >= top -> menuBelow = false
             else -> {

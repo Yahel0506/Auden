@@ -242,6 +242,8 @@ class ImportEngine(
                     Service.YT_MUSIC -> artist.id
                     // Kept under its Spotify id when no YouTube Music page was found: still followed, by name.
                     Service.SPOTIFY -> resolver.ytArtistId(artist) ?: "spotify:artist:${artist.id}"
+                    Service.APPLE_MUSIC -> resolver.ytArtistId(artist) ?: "apple:artist:${artist.id}"
+                    Service.TIDAL -> resolver.ytArtistId(artist) ?: "tidal:artist:${artist.id}"
                 }
                 if (!followed.add(id)) return@forEachIndexed
                 rows += FollowedArtistEntity(

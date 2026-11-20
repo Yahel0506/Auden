@@ -1,5 +1,10 @@
 package com.music.bitchord.ui.components
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.foundation.combinedClickable
 import com.music.bitchord.R
 
 import androidx.compose.foundation.background
@@ -387,6 +392,8 @@ fun MiniPlayer(
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onExpand: () -> Unit,
+    /** A long press on the bar, with where it is in the window: the song's menu opens from it. */
+    onLongPress: (androidx.compose.ui.geometry.Rect) -> Unit = {},
     /** @see com.music.bitchord.data.listentogether.ListenTogether.State.controlsLocked */
     controlsLocked: Boolean = false,
     onBlockedControl: () -> Unit = {},
@@ -403,9 +410,11 @@ fun MiniPlayer(
     // a pill instead of a rounded rectangle. Same idiom as [FloatingBottomBar]
     // directly below it, so the two shapes are the same family.
     val shape = RoundedCornerShape(percent = 50)
+    var barBounds by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
     Box(
         modifier = modifier
             .padding(horizontal = BAR_GUTTER)
+            .glassPress(shape, grow = 1.06f)
             // Ahead of the surface, so a pull lifts the whole of it, frost and all.
             .miniPlayerGestures(
                 pull = pull,
@@ -436,7 +445,8 @@ fun MiniPlayer(
             // Deliberately silent: the whole bar is the target, so it catches
             // stray taps meant for the page behind it, and the sheet rising is
             // its own confirmation. The glyphs on it still buzz.
-            .clickable(onClick = onExpand),
+            .onGloballyPositioned { barBounds = it.boundsInWindow() }
+            .combinedClickable(onClick = onExpand, onLongClick = { onLongPress(barBounds) }),
     ) {
         Row(
             modifier = Modifier

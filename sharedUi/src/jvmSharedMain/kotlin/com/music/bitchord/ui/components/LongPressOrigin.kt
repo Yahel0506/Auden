@@ -70,6 +70,9 @@ object LongPressOrigin {
      */
     internal var capturing: Rect? by mutableStateOf(null)
 
+    /** An item that has no picture of its own: only where the hold began, for a menu that draws the thing it lifts itself. */
+    fun heldAt(bounds: Rect): HeldItem = HeldItem(bounds)
+
     internal fun record(item: HeldItem) {
         held = item
         recordedAt = System.nanoTime()

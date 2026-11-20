@@ -522,6 +522,18 @@ private fun ImportStep(
                         SourceRow(p, stringResource(R.string.setup_youtube), if (youtubeConnected) connected else connect, youtubeConnected, onYoutube) {
                             LogoTile(org.jetbrains.compose.resources.painterResource(Res.drawable.ytmusic_logo), listOf(Color(0xFFFF4E45), Color(0xFFD5001C)))
                         }
+                        // Read through their web players: the sign-in is a sheet over this page, and what it connects goes on to the chooser.
+                        val webConnected by dev.auden.transfer.services.ServiceConnect.connected.collectAsState()
+                        GroupDivider(p)
+                        SourceRow(
+                            p, stringResource(R.string.apple_music), if (Service.APPLE_MUSIC in webConnected) connected else connect, Service.APPLE_MUSIC in webConnected,
+                            { webService(Service.APPLE_MUSIC) },
+                        ) { LogoTile(androidx.compose.ui.res.painterResource(R.drawable.apple_music_logo), listOf(Color(0xFFFF6B81), Color(0xFFFA233B))) }
+                        GroupDivider(p)
+                        SourceRow(
+                            p, stringResource(R.string.tidal), if (Service.TIDAL in webConnected) connected else connect, Service.TIDAL in webConnected,
+                            { webService(Service.TIDAL) },
+                        ) { IconTile(com.music.bitchord.ui.icons.ServiceGlyphs.Tidal, listOf(Color(0xFF3A3A40), Color(0xFF0B0B0D))) }
                     }
                     Spacer(Modifier.height(12.dp))
                     GlassGroup(p) {
@@ -542,6 +554,12 @@ private fun ImportStep(
             )
         }
     }
+}
+
+/** Opens the chooser for a connected service, or asks for its sign-in first. */
+private fun webService(service: Service) {
+    if (dev.auden.transfer.services.ServiceConnect.isConnected(service)) TransferSession.open(service)
+    else dev.auden.transfer.services.ServiceConnect.request(service)
 }
 
 // ---- Pieces ----

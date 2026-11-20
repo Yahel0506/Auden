@@ -375,6 +375,8 @@ class PlaylistRefresher(
         /** Whether a copy of [sourceId] has a source a refresh can read (connection aside): for showing the action. */
         fun canRefresh(sourceId: String?): Boolean {
             val origin = PlaylistOrigin.of(sourceId) ?: return false
+            // Apple Music and Tidal copies are not refreshed: their sessions last only while the listener is signed in.
+            if (origin.service == Service.APPLE_MUSIC || origin.service == Service.TIDAL) return false
             return !origin.isLikesList && !(origin.service == Service.SPOTIFY && origin.kind == OriginKind.ALBUM)
         }
 
@@ -382,6 +384,7 @@ class PlaylistRefresher(
         internal fun localKey(origin: PlaylistOrigin, song: Song): String? = when (origin.service) {
             Service.YT_MUSIC -> song.videoId.takeIf { it.isNotBlank() }
             Service.SPOTIFY -> song.spotifyId
+            Service.APPLE_MUSIC, Service.TIDAL -> null
         }
 
         @Volatile private var instance: PlaylistRefresher? = null

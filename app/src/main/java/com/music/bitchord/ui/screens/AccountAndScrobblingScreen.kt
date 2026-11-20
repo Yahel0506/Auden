@@ -130,6 +130,32 @@ fun AccountAndScrobblingScreen(
                     },
                 )
             }
+            // Apple Music and Tidal, read through their web players: the session lasts while the app runs.
+            val webConnected by dev.auden.transfer.services.ServiceConnect.connected.collectAsStateWithLifecycle()
+            listOf(
+                Triple(dev.auden.library.Service.APPLE_MUSIC, R.string.apple_music, null),
+                Triple(dev.auden.library.Service.TIDAL, R.string.tidal, com.music.bitchord.ui.icons.ServiceGlyphs.Tidal),
+            ).forEach { (service, label, glyph) ->
+                val on = service in webConnected
+                FullWidthDivider()
+                SettingsRow(
+                    // Apple Music's own mark, in white like the other services' logos; Tidal's is drawn as a glyph.
+                    icon = glyph,
+                    iconPainter = if (glyph == null) androidx.compose.ui.res.painterResource(R.drawable.apple_music_logo) else null,
+                    title = stringResource(label),
+                    subtitle = stringResource(if (on) R.string.connected else R.string.tap_to_connect),
+                    onClick = {
+                        if (!on) dev.auden.transfer.services.ServiceConnect.request(service, thenTransfer = false)
+                    },
+                )
+                if (on) {
+                    FullWidthDivider()
+                    DestructiveRow(
+                        label = stringResource(R.string.disconnect_service, stringResource(label)),
+                        onClick = { dev.auden.transfer.services.ServiceConnect.disconnect(service) },
+                    )
+                }
+            }
         }
 
         SettingsGroup(

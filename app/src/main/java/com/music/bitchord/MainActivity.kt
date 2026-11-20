@@ -879,6 +879,14 @@ private fun BitChordApp(
         songMenuAnchor = MenuAnchor.consume()
         songActions = song
     }
+    /** Holding the navigation bar's player: the song's menu, with the song's card lifted on top of it. */
+    val openPlayerBarMenu: (Song, Rect) -> Unit = { song, bounds ->
+        menuFromPlayer = false
+        songMenuOrigin = LongPressOrigin.heldAt(bounds)
+        songMenuAnchor = null
+        com.music.bitchord.ui.components.PlayerMenuPreview.fromPlayerBar = true
+        songActions = song
+    }
     // Whether the player's album/artist lookup (below, for the current track)
     // is still in flight — read by the long-press sheet so it can show a
     // loading row instead of the two just being absent while it waits.
@@ -5156,6 +5164,7 @@ private fun BitChordApp(
                         } else {
                             playerSheetMotion::open
                         },
+                        onLongPress = { bounds -> player.song?.let { openPlayerBarMenu(it, bounds) } },
                         controlsLocked = controlsLocked,
                         onBlockedControl = showHostOnlyNotice,
                         dock = activeDock,
@@ -5193,6 +5202,7 @@ private fun BitChordApp(
                             } else {
                                 playerSheetMotion::open
                             },
+                            onLongPress = { bounds -> openPlayerBarMenu(song, bounds) },
                             controlsLocked = controlsLocked,
                             onBlockedControl = showHostOnlyNotice,
                             dock = activeDock,
@@ -5974,6 +5984,7 @@ private fun BitChordApp(
                 held = songMenuOrigin,
                 hazeState = hazeState,
                 onDismiss = { songActions = null },
+                preview = com.music.bitchord.ui.components.PlayerMenuPreview.preview,
                 // Tapping the lifted track opens its album, as Apple Music's does.
                 onPreviewClick = { song ->
                     song.albumId?.let { id ->
@@ -6012,6 +6023,7 @@ private fun BitChordApp(
                     songMenuOrigin = null
                     songMenuAnchor = null
                     menuFromHistory = false
+                    com.music.bitchord.ui.components.PlayerMenuPreview.fromPlayerBar = false
                 }
             }
         }
@@ -7025,6 +7037,9 @@ private fun BitChordApp(
                 onFinish = { selectedTab = TAB_HOME; AppSettings.setOnboardingComplete() },
             )
         }
+
+        // ---- Apple Music and Tidal sign-in: a sheet over the app, shown while a screen asks for it ----
+        com.music.bitchord.ui.components.ServiceCaptureHost()
 
         // ---- Google sign-in WebView ----
         webSession?.let { mode ->

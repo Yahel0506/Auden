@@ -82,10 +82,10 @@ private fun AlertBody(title: String, body: String) {
 
 @Composable
 private fun serviceName(service: Service): String =
-    stringResource(if (service == Service.SPOTIFY) R.string.spotify else R.string.transfer_yt_music)
+    stringResource(serviceLabelRes(service))
 
 private fun serviceName(context: android.content.Context, service: Service): String =
-    context.getString(if (service == Service.SPOTIFY) R.string.spotify else R.string.transfer_yt_music)
+    context.getString(serviceLabelRes(service))
 
 /** Why a refresh could not be made, in words — for the alert and for the toast that follows a refresh that ran. */
 private fun refreshErrorText(context: android.content.Context, error: RefreshError?): String = when (error) {

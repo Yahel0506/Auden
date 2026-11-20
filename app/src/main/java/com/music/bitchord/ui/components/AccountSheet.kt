@@ -330,6 +330,7 @@ fun AccountSheet(
                   .padding(top = 30.dp, end = 16.dp)
                   .offset(sheetOffset)
                   .size(46.dp)
+                  .glassPress(CircleShape)
                   .navGlass(CircleShape)
                   .clip(CircleShape)
                   .clickable(onClick = onDismiss),

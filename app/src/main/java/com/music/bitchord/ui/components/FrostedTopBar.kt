@@ -511,6 +511,8 @@ private fun artworkPageSurface(
     val useLiquidGlass = isGlassSupported()
 
     return Modifier
+        // The first of the chain, so the swell of a pressed control takes its glass and its glyph together.
+        .glassPress(shape)
         .then(
             when {
                 // Not clipped first: the glass draws its own drop shadow outside its bounds, the navbar's exactly,

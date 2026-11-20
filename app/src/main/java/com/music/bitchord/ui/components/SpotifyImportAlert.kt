@@ -96,7 +96,8 @@ fun SpotifyImportAlert(
     var unmatched by remember { mutableStateOf<List<SpotifyImportTrack>?>(null) }
 
     fun start() {
-        val id = SpotifyImporter.extractPlaylistId(link)
+        val deezer = com.music.bitchord.data.deezer.DeezerImporter.parse(link)
+        val id = if (deezer != null) deezer.second else SpotifyImporter.extractPlaylistId(link)
         if (id == null) {
             status = context.getString(R.string.spotify_import_invalid)
             failed = true
@@ -112,12 +113,16 @@ fun SpotifyImportAlert(
         status = context.getString(R.string.spotify_import_fetching)
         scope.launch {
             try {
-                val (name, tracks) = SpotifyImporter.fetchPlaylistTracks(id)
+                val (name, tracks) = if (deezer != null) {
+                    com.music.bitchord.data.deezer.DeezerImporter.fetch(deezer.first, id)
+                } else {
+                    SpotifyImporter.fetchPlaylistTracks(id)
+                }
                 val (songs, missed) = SpotifyImporter.resolveToSongs(tracks, effectiveLanguage) { done, total ->
                     status = context.getString(R.string.spotify_import_matching, done, total)
                 }
                 if (songs.isEmpty()) error(context.getString(R.string.spotify_import_none))
-                onImported(name, privacy, songs, dev.auden.library.PlaylistOrigin.SPOTIFY_PLAYLIST + id)
+                onImported(name, privacy, songs, if (deezer != null) "deezer:${deezer.first}:$id" else dev.auden.library.PlaylistOrigin.SPOTIFY_PLAYLIST + id)
                 if (missed.isEmpty()) onDismiss() else unmatched = missed
             } catch (e: CancellationException) {
                 throw e

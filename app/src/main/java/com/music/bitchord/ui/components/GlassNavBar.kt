@@ -9,6 +9,9 @@
 
 package com.music.bitchord.ui.components
 
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.foundation.layout.offset
@@ -138,6 +141,8 @@ fun GlassNavBar(
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onExpand: () -> Unit,
+    /** A long press on the bar's player, with where the bar is in the window: the song's menu opens from it. */
+    onLongPress: (androidx.compose.ui.geometry.Rect) -> Unit = {},
     /** @see com.music.bitchord.data.listentogether.ListenTogether.State.controlsLocked */
     controlsLocked: Boolean = false,
     onBlockedControl: () -> Unit = {},
@@ -429,6 +434,7 @@ fun GlassNavBar(
                     lerp(Rect(g.searchCircle.center, 0f), g.searchCircle, g.searchGlass)
                 }
                 .graphicsLayer { alpha = now().searchGlass.coerceIn(0f, 1f) }
+                .glassPress(pillShape)
                 .then(glassSurface())
                 .clickable(
                     enabled = compact,
@@ -485,6 +491,7 @@ fun GlassNavBar(
                     onNext = onNext,
                     onPrevious = onPrevious,
                     onExpand = onExpand,
+                    onLongPress = onLongPress,
                     controlsLocked = controlsLocked,
                     onBlockedControl = onBlockedControl,
                     dock = dock,
@@ -523,6 +530,7 @@ private fun GlassNowPlaying(
     onNext: () -> Unit,
     onPrevious: () -> Unit,
     onExpand: () -> Unit,
+    onLongPress: (androidx.compose.ui.geometry.Rect) -> Unit,
     controlsLocked: Boolean,
     onBlockedControl: () -> Unit,
     dock: PlayerDock?,
@@ -533,12 +541,7 @@ private fun GlassNowPlaying(
 ) {
     val haptics = rememberHaptics()
     val pressSource = remember { MutableInteractionSource() }
-    val isPressed by pressSource.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 1.04f else 1f,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "accessoryPressScale",
-    )
+    var barBounds by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
 
     val titleStyle = MaterialTheme.typography.titleMedium.copy(
         fontSize = ACCESSORY_TITLE_SIZE,
@@ -602,16 +605,16 @@ private fun GlassNowPlaying(
                 locked = controlsLocked,
                 onBlocked = onBlockedControl,
             )
-            .graphicsLayer {
-                scaleX = pressScale
-                scaleY = pressScale
-            }
+            // Swells and lights while touched, and stays so through a long press, like every glass button.
+            .glassPress(androidx.compose.foundation.shape.RoundedCornerShape(percent = 50), grow = 1.06f)
             .then(modifier)
             .playerDockContainer(dock)
-            .clickable(
+            .onGloballyPositioned { barBounds = it.boundsInWindow() }
+            .combinedClickable(
                 interactionSource = pressSource,
                 indication = null,
                 onClick = onExpand,
+                onLongClick = { onLongPress(barBounds) },
             ),
     ) {
         // The mini player's own glass: its pill at rest, and in the morph stretched to the card the player grows

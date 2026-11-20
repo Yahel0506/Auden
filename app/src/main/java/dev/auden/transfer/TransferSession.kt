@@ -97,7 +97,12 @@ object TransferSession {
     val state: StateFlow<State> = _state.asStateFlow()
 
     private fun source(service: Service): MusicSource =
-        if (service == Service.SPOTIFY) SpotifySource() else YtMusicSource()
+        when (service) {
+            Service.SPOTIFY -> SpotifySource()
+            Service.YT_MUSIC -> YtMusicSource()
+            Service.APPLE_MUSIC, Service.TIDAL ->
+                dev.auden.transfer.services.ServiceConnect.source(service) ?: throw IncompleteReadException("${service.name} is not connected")
+        }
 
     /** Looks at what [service] has: its playlists, albums and followed artists. The likes need no listing. */
     fun open(service: Service) {
