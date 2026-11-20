@@ -1,5 +1,37 @@
 package com.music.bitchord.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridScope
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
+import com.music.bitchord.ui.components.accentColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -70,6 +102,11 @@ fun TransferScreen(
     val state by TransferSession.state.collectAsStateWithLifecycle()
     // Leaving the page puts a finished or half-chosen session away; a running import goes on without it.
     DisposableEffect(Unit) { onDispose { TransferSession.reset() } }
+    (state as? TransferSession.State.Choosing)?.let { choosing ->
+        // The grid scrolls on its own and the button stays under it, so this page is not the scrolling column below.
+        Choose(choosing.offer, contentPadding, modifier)
+        return
+    }
     Column(
         modifier = modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(contentPadding),
     ) {
@@ -81,7 +118,7 @@ fun TransferScreen(
                 Message(stringResource(R.string.transfer_failed))
                 ActionButton(stringResource(R.string.transfer_retry)) { TransferSession.open(s.service) }
             }
-            is TransferSession.State.Choosing -> Choose(s.offer)
+            is TransferSession.State.Choosing -> Unit
             is TransferSession.State.Running -> Running(s)
             is TransferSession.State.Done -> Done(s)
         }
@@ -133,95 +170,246 @@ private fun Sources(
     }
 }
 
+/**
+ * What a service holds, as a grid of covers to tick: each playlist, album, artist and show is a tile with a check
+ * in its corner, grouped by kind. The button that starts the transfer is pinned under the grid — in view however
+ * far it is scrolled, and counting what is ticked.
+ */
 @Composable
-private fun Choose(offer: TransferSession.Offer) {
+private fun Choose(offer: TransferSession.Offer, contentPadding: PaddingValues, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     var likes by remember(offer) { mutableStateOf(false) }
     val playlists = remember(offer) { mutableStateListOf<String>() }
     val albums = remember(offer) { mutableStateListOf<String>() }
     val artists = remember(offer) { mutableStateListOf<String>() }
     val podcasts = remember(offer) { mutableStateListOf<String>() }
+    val count = (if (likes) 1 else 0) + playlists.size + albums.size + artists.size + podcasts.size
     val serviceName = stringResource(if (offer.service == Service.SPOTIFY) R.string.spotify else R.string.transfer_yt_music)
-    SettingsGroup(header = stringResource(R.string.transfer_choose_header, serviceName), topSpacing = 0.dp) {
-        SettingsRow(
-            title = stringResource(R.string.transfer_likes),
-            subtitle = stringResource(R.string.transfer_likes_sub),
-            onClick = { likes = !likes },
-            trailing = { IosSwitch(checked = likes, onCheckedChange = null) },
-        )
-    }
-    CollectionGroup(R.string.transfer_playlists, offer.playlists, ImportStep.PLAYLIST in offer.unreadable, playlists)
-    CollectionGroup(R.string.transfer_albums, offer.albums, ImportStep.ALBUM in offer.unreadable, albums)
-    ArtistGroup(R.string.transfer_artists, offer.artists, ImportStep.ARTISTS in offer.unreadable, artists)
-    if (offer.podcasts.isNotEmpty()) ArtistGroup(R.string.transfer_podcasts, offer.podcasts, false, podcasts)
-    val any = likes || playlists.isNotEmpty() || albums.isNotEmpty() || artists.isNotEmpty() || podcasts.isNotEmpty()
-    ActionButton(stringResource(R.string.transfer_start), enabled = any) {
-        val chosen = (offer.playlists + offer.albums).filter { it.sourceId in playlists || it.sourceId in albums }
-        TransferSession.start(
-            context, offer.service,
-            ImportSelection(
-                likes = likes,
-                collections = chosen,
-                // Podcast shows are followed the way artists are, and shelved apart by their page's id.
-                artists = (offer.artists.filter { it.id in artists } + offer.podcasts.filter { it.id in podcasts }),
+    val barHeight = 76.dp
+    Box(modifier.fillMaxSize()) {
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(104.dp),
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = contentPadding.calculateTopPadding(),
+                bottom = contentPadding.calculateBottomPadding() + barHeight,
             ),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            item(key = "title", span = { GridItemSpan(maxLineSpan) }) {
+                Column {
+                    SettingsPageTitle(stringResource(R.string.transfer_title))
+                    Text(
+                        stringResource(R.string.transfer_choose_header, serviceName),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
+                    )
+                }
+            }
+            item(key = "likes") {
+                SelectTile(
+                    title = stringResource(R.string.transfer_likes),
+                    subtitle = null,
+                    imageUrl = null,
+                    icon = SfIcons.HeartFill,
+                    selected = likes,
+                    round = false,
+                    onClick = { likes = !likes },
+                )
+            }
+            collectionSection("playlists", R.string.transfer_playlists, offer.playlists, ImportStep.PLAYLIST in offer.unreadable, playlists)
+            collectionSection("albums", R.string.transfer_albums, offer.albums, ImportStep.ALBUM in offer.unreadable, albums)
+            artistSection("artists", R.string.transfer_artists, offer.artists, ImportStep.ARTISTS in offer.unreadable, artists)
+            if (offer.podcasts.isNotEmpty()) artistSection("podcasts", R.string.transfer_podcasts, offer.podcasts, false, podcasts)
+        }
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .padding(bottom = contentPadding.calculateBottomPadding())
+                .background(MaterialTheme.colorScheme.background.copy(alpha = 0.94f))
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TextButton(onClick = { TransferSession.reset() }) { Text(stringResource(R.string.transfer_cancel)) }
+            Button(
+                onClick = {
+                    val chosen = (offer.playlists + offer.albums).filter { it.sourceId in playlists || it.sourceId in albums }
+                    TransferSession.start(
+                        context, offer.service,
+                        ImportSelection(
+                            likes = likes,
+                            collections = chosen,
+                            // Podcast shows are followed the way artists are, and shelved apart by their page's id.
+                            artists = offer.artists.filter { it.id in artists } + offer.podcasts.filter { it.id in podcasts },
+                        ),
+                    )
+                },
+                enabled = count > 0,
+                modifier = Modifier.weight(1f),
+            ) { Text(if (count > 0) stringResource(R.string.transfer_start_count, count) else stringResource(R.string.transfer_start)) }
+        }
+    }
+}
+
+/** A section's heading, with the one tap that ticks everything in it or clears it. */
+@Composable
+private fun SectionHeader(title: Int, total: Int, chosen: Int, onToggleAll: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            stringResource(title),
+            modifier = Modifier.weight(1f),
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        if (total > 0) {
+            TextButton(onClick = onToggleAll) {
+                Text(stringResource(if (chosen == total) R.string.transfer_select_none else R.string.transfer_select_all))
+            }
+        }
+    }
+}
+
+private fun LazyGridScope.collectionSection(
+    key: String,
+    title: Int,
+    items: List<RemoteCollection>,
+    unreadable: Boolean,
+    chosen: MutableList<String>,
+) {
+    item(key = "$key:header", span = { GridItemSpan(maxLineSpan) }) {
+        SectionHeader(title, items.size, chosen.size) {
+            val all = chosen.size == items.size
+            chosen.clear()
+            if (!all) chosen.addAll(items.map { it.sourceId })
+        }
+    }
+    if (items.isEmpty()) {
+        item(key = "$key:empty", span = { GridItemSpan(maxLineSpan) }) { EmptyNote(unreadable) }
+        return
+    }
+    items(items, key = { "$key:${it.sourceId}" }) { item ->
+        SelectTile(
+            title = item.title,
+            subtitle = item.subtitle.ifBlank { null },
+            imageUrl = item.thumbnailUrl,
+            icon = SfIcons.MusicNote,
+            selected = item.sourceId in chosen,
+            round = false,
+            onClick = { if (item.sourceId in chosen) chosen.remove(item.sourceId) else chosen.add(item.sourceId) },
         )
     }
-    ActionButton(stringResource(R.string.transfer_cancel), primary = false) { TransferSession.reset() }
+}
+
+private fun LazyGridScope.artistSection(
+    key: String,
+    title: Int,
+    items: List<RemoteArtist>,
+    unreadable: Boolean,
+    chosen: MutableList<String>,
+) {
+    item(key = "$key:header", span = { GridItemSpan(maxLineSpan) }) {
+        SectionHeader(title, items.size, chosen.size) {
+            val all = chosen.size == items.size
+            chosen.clear()
+            if (!all) chosen.addAll(items.map { it.id })
+        }
+    }
+    if (items.isEmpty()) {
+        item(key = "$key:empty", span = { GridItemSpan(maxLineSpan) }) { EmptyNote(unreadable) }
+        return
+    }
+    items(items, key = { "$key:${it.id}" }) { item ->
+        SelectTile(
+            title = item.name,
+            subtitle = null,
+            imageUrl = item.thumbnailUrl,
+            icon = SfIcons.Person,
+            selected = item.id in chosen,
+            round = key == "artists",
+            onClick = { if (item.id in chosen) chosen.remove(item.id) else chosen.add(item.id) },
+        )
+    }
 }
 
 @Composable
-private fun CollectionGroup(title: Int, items: List<RemoteCollection>, unreadable: Boolean, chosen: MutableList<String>) {
-    SettingsGroup(header = stringResource(title)) {
-        if (items.isEmpty()) {
-            Text(
-                stringResource(if (unreadable) R.string.transfer_unreadable else R.string.transfer_none),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            )
-            return@SettingsGroup
-        }
-        val all = chosen.size == items.size
-        SettingsRow(
-            title = stringResource(if (all) R.string.transfer_select_none else R.string.transfer_select_all),
-            onClick = { chosen.clear(); if (!all) chosen.addAll(items.map { it.sourceId }) },
-        )
-        items.forEach { item ->
-            FullWidthDivider()
-            SettingsRow(
-                title = item.title,
-                subtitle = item.subtitle.ifBlank { null },
-                onClick = { if (item.sourceId in chosen) chosen.remove(item.sourceId) else chosen.add(item.sourceId) },
-                trailing = { IosSwitch(checked = item.sourceId in chosen, onCheckedChange = null) },
-            )
-        }
-    }
+private fun EmptyNote(unreadable: Boolean) {
+    Text(
+        stringResource(if (unreadable) R.string.transfer_unreadable else R.string.transfer_none),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
+    )
 }
 
+/** One thing to bring over: its cover, its name, and a check in the corner that fills when it is ticked. */
 @Composable
-private fun ArtistGroup(title: Int, items: List<RemoteArtist>, unreadable: Boolean, chosen: MutableList<String>) {
-    SettingsGroup(header = stringResource(title)) {
-        if (items.isEmpty()) {
-            Text(
-                stringResource(if (unreadable) R.string.transfer_unreadable else R.string.transfer_none),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            )
-            return@SettingsGroup
+private fun SelectTile(
+    title: String,
+    subtitle: String?,
+    imageUrl: String?,
+    icon: ImageVector,
+    selected: Boolean,
+    round: Boolean,
+    onClick: () -> Unit,
+) {
+    val accent = accentColor()
+    val shape = if (round) CircleShape else RoundedCornerShape(10.dp)
+    val mark by animateFloatAsState(if (selected) 1f else 0f, spring(dampingRatio = 1f, stiffness = 300f), label = "tile-check")
+    Column(
+        Modifier.clickable(indication = null, interactionSource = remember { MutableInteractionSource() }, onClick = onClick),
+    ) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
+            Box(
+                Modifier.fillMaxSize().clip(shape).background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (imageUrl != null) {
+                    AsyncImage(model = imageUrl, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                } else {
+                    Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(34.dp))
+                }
+            }
+            Box(Modifier.fillMaxSize().graphicsLayer { alpha = mark }.border(3.dp, accent, shape))
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(6.dp)
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(if (selected) accent else Color.Black.copy(alpha = 0.35f))
+                    .border(1.5.dp, Color.White, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    SfIcons.Check, null, tint = Color.White,
+                    modifier = Modifier.size(14.dp).graphicsLayer { alpha = mark; scaleX = 0.6f + 0.4f * mark; scaleY = 0.6f + 0.4f * mark },
+                )
+            }
         }
-        val all = chosen.size == items.size
-        SettingsRow(
-            title = stringResource(if (all) R.string.transfer_select_none else R.string.transfer_select_all),
-            onClick = { chosen.clear(); if (!all) chosen.addAll(items.map { it.id }) },
+        Text(
+            title,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            fontSize = 12.5.sp,
+            lineHeight = 15.sp,
+            color = MaterialTheme.colorScheme.onSurface,
+            textAlign = if (round) TextAlign.Center else TextAlign.Start,
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
         )
-        items.forEach { item ->
-            FullWidthDivider()
-            SettingsRow(
-                title = item.name,
-                onClick = { if (item.id in chosen) chosen.remove(item.id) else chosen.add(item.id) },
-                trailing = { IosSwitch(checked = item.id in chosen, onCheckedChange = null) },
+        subtitle?.let {
+            Text(
+                it,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

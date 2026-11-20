@@ -2048,4 +2048,5 @@
     <string name="home_empty_body">Home is made from what you listen to in Auden. Play a few songs, or bring your music over from YouTube Music or Spotify.</string>
     <string name="liked_music">Liked Music</string>
     <string name="transfer_podcasts">Podcasts</string>
+    <string name="transfer_start_count">Transfer (%1$d)</string>
 </resources>
