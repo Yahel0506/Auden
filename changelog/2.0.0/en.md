@@ -129,3 +129,4 @@
 - The DJ banner's lines keep their place while you scroll instead of starting over.
 - A transfer you ask for brings back the likes you had taken off here.
 - The Liquid Glass launcher icons keep their corners inside Samsung's mask.
+- A song you add to a playlist is no longer swapped for a file on your device with a similar name: a live, acoustic, remixed or sped-up version, or an artist whose name is only part of another's, is no longer taken for the same song.

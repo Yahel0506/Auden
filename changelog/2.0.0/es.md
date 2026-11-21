@@ -129,3 +129,4 @@
 - Las frases del banner del DJ conservan su sitio al hacer scroll en lugar de empezar de nuevo.
 - Una transferencia que pides recupera los Me gusta que habías quitado aquí.
 - Los iconos de lanzador Liquid Glass mantienen sus esquinas dentro de la máscara de Samsung.
+- Una canción que agregas a una playlist ya no se cambia por un archivo de tu dispositivo de nombre parecido: una versión en vivo, acústica, remix o acelerada, o un artista cuyo nombre es solo parte del de otro, ya no se toma por la misma canción.
