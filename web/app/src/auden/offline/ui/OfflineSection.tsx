@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { Link } from 'react-router';
 import { Toggle } from '@/pages/IntegrationSettings';
 import { settingsUi } from '@/pages/settingsStyles';
@@ -11,36 +12,32 @@ export function OfflineSection() {
   const supported = getOfflineRuntime().supported;
   return (
     <>
-      <h2 className={settingsUi.sectionHeader}>Offline copies</h2>
+      <h2 className={settingsUi.sectionHeader}>{translateUi("offline_section.offline_copies")}</h2>
       <section className={settingsUi.group}>
         <Toggle
-          label="Save songs for offline listening"
-          detail={supported ? 'Offers “Save for Offline” on songs, albums and playlists.' : 'This browser can’t store files for it.'}
+          label={translateUi("offline_section.save_songs_for_offline_listening")}
+          detail={supported ? translateUi("offline_ui_offlinesection_offers_save_for_offline_on") : translateUi("offline_ui_offlinesection_this_browser_can_t_store")}
           checked={enabled && supported}
           onChange={(on) => supported && setEnabled(on)}
         />
         {enabled && supported && (
           <>
-            <Toggle label="Find lyrics for them" detail="Saved with each song, so they show offline too." checked={withLyrics} onChange={setWithLyrics} />
+            <Toggle label={translateUi("offline_section.find_lyrics_for_them")} detail={translateUi("offline_section.saved_with_each_song_so")} checked={withLyrics} onChange={setWithLyrics} />
             <Toggle
-              label="Keep playlists updated"
-              detail="A playlist you saved whole fetches its new songs too, and writes them to your folder if you saved it there. Not on Save-Data or a cellular link, and it asks first when more than 50 songs are new."
+              label={translateUi("offline_section.keep_playlists_updated")}
+              detail={translateUi("offline_section.a_playlist_you_saved_whole")}
               checked={keepUpdated}
               onChange={setKeepUpdated}
             />
             <Link className={`${settingsUi.integrationPlain} ${settingsUi.linkRow}`} to="/offline">
-              <span className={settingsUi.integrationName}>Manage offline copies</span>
-              <span className={settingsUi.value}>Progress, failures, space used</span>
+              <span className={settingsUi.integrationName}>{translateUi("offline_section.manage_offline_copies")}</span>
+              <span className={settingsUi.value}>{translateUi("offline_section.progress_failures_space_used")}</span>
             </Link>
             <FolderSettings />
           </>
         )}
       </section>
-      <p className={settingsUi.footer}>
-        Fetches the same audio YouTube Music plays for you, into this browser only, so you can listen without a connection. Needs the
-        extension to download (not to play). It keeps playing in an open tab but the site itself still needs a connection to load, and
-        copying audio may go against YouTube’s terms of service; it is your choice. Experimental.
-      </p>
+      <p className={settingsUi.footer}>{translateUi("offline_section.fetches_the_same_audio_youtube")}</p>
     </>
   );
 }

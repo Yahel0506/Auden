@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import type { Track } from '@/data/music/types';
 import { EmptySourceError, saveFromSource, type SaveResult } from './store';
 
@@ -56,7 +57,8 @@ export async function saveYouTubeList(deps: Pick<CloudDeps, 'youtube'>, browseId
     });
     return { ...r, unmatched: 0 };
   } catch (error) {
-    return { failed: error instanceof EmptySourceError ? 'There was nothing to save.' : error instanceof Error ? error.message : String(error) };
+    console.error('Auden playlist save failed', error);
+    return { failed: error instanceof EmptySourceError ? translateUi('playlists_cloud_saver.nothing_to_save') : translateUi('playlists_cloud_saver.save_failed') };
   }
 }
 
@@ -80,7 +82,8 @@ export async function saveSpotifyPlaylist<S extends { id: string }>(deps: CloudD
     });
     return { ...r, unmatched: matches.length - found.length };
   } catch (error) {
-    return { failed: error instanceof EmptySourceError ? 'None of the songs could be matched.' : error instanceof Error ? error.message : String(error) };
+    console.error('Auden Spotify playlist save failed', error);
+    return { failed: error instanceof EmptySourceError ? translateUi('playlists_cloud_saver.no_songs_matched') : translateUi('playlists_cloud_saver.save_failed') };
   }
 }
 

@@ -22,7 +22,6 @@ export interface LocalHome {
 
 const EMPTY: LocalHome = { shelves: [], tracks: new Map(), loading: true };
 const FAILED: LocalHome = { shelves: [], tracks: new Map(), loading: false };
-const lang = (): 'en' | 'es' => (typeof navigator !== 'undefined' && navigator.language?.toLowerCase().startsWith('es') ? 'es' : 'en');
 
 /**
  * The listener's own shelves. Recomputed when Home opens and when the library, a playlist, the covers or the
@@ -72,7 +71,7 @@ export function useLocalHome(): LocalHome {
         },
         { now, online },
       );
-      return { shelves: buildLocalShelves(inputs.played, inputs.library, inputs.playlists, now, textFor(lang())), tracks: inputs.tracks, loading: false };
+      return { shelves: buildLocalShelves(inputs.played, inputs.library, inputs.playlists, now, textFor()), tracks: inputs.tracks, loading: false };
     },
   });
   if (query.isError) {

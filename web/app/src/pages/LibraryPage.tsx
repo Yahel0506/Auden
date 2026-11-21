@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useEffect, useRef } from 'react';
 import { Navigate, useParams } from 'react-router';
 import { PageHeader } from '@/components/PageHeader';
@@ -39,15 +40,15 @@ export default function LibraryPage() {
   );
 
   if (!isLibrarySection(section)) return <Navigate to="/home" replace />;
-  const title = LIBRARY_SECTIONS[section].title;
+  const title = translateUi(`library_section_${section.replaceAll('-', '_')}` as keyof typeof import('@/i18n.en.json'));
   if (missing) return <NeedsExtension what="your library" />;
   if (auth.state === 'ready' && !signedIn) {
     return (
       <>
         <PageHeader title={title} />
         <EmptyState
-          title="Sign in to see your library"
-          detail="Auden uses the YouTube Music account this browser is signed in to. Sign in on music.youtube.com, then come back."
+          title={translateUi("library_page.sign_in_to_see_your")}
+          detail={translateUi("library_page.auden_uses_the_youtube_music")}
         />
       </>
     );
@@ -60,7 +61,7 @@ export default function LibraryPage() {
   return (
     <>
       <PageHeader title={title} />
-      {!grid.length && !tracks.length && <EmptyState title="Nothing here yet" />}
+      {!grid.length && !tracks.length && <EmptyState title={translateUi("library_page.nothing_here_yet")} />}
       {grid.length > 0 && (
         <ul className={seeAllGrid} data-wide={grid.every((i) => i.wide) || undefined}>
           {grid.map((item, i) => (

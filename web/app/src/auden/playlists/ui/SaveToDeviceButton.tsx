@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useState } from 'react';
 import { detailButton } from '@/components/music/DetailHeader';
 
@@ -8,13 +9,13 @@ export function SaveToDeviceButton({ onSave }: { onSave: () => Promise<unknown> 
     <button
       className={detailButton.pill}
       disabled={busy}
-      title="Keeps a copy on this device. New songs from the original are added automatically; nothing changes on the original."
+      title={translateUi("save_to_device_button.keeps_a_copy_on_this")}
       onClick={() => {
         setBusy(true);
         void onSave().finally(() => setBusy(false));
       }}
     >
-      {busy ? 'Saving…' : 'Save to Device'}
+      {busy ? translateUi("playlists_ui_savetodevicebutton_saving") : translateUi("playlists_ui_savetodevicebutton_save_to_device")}
     </button>
   );
 }

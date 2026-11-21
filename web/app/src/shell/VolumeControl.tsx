@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useEffect, useRef } from 'react';
 import { VolumeIcon } from '@/components/icons/Transport';
 import { usePlayer } from '@/state/player';
@@ -88,14 +89,14 @@ export function VolumeControl({ open, onOpen, className, iconSize = 20 }: Volume
         max={1}
         step={0.01}
         value={level}
-        aria-label="Volume"
+        aria-label={translateUi("volume_control.volume")}
         tabIndex={open ? 0 : -1}
         style={{ '--fill': `${level * 100}%` } as React.CSSProperties}
         onChange={(e) => setVolume(Number(e.currentTarget.value))}
       />
       <button
         className={className}
-        aria-label={muted ? 'Unmute' : 'Mute'}
+        aria-label={muted ? translateUi('music.unmute') : translateUi('music.mute')}
         aria-pressed={muted}
         onClick={toggleMute}
         onPointerEnter={onOpen}

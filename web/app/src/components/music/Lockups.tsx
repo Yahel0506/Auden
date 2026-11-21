@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useHomeSettings } from '@/auden/home/settings';
 import { PrefetchLink } from '@/components/PrefetchLink';
 import { PlayIcon } from '@/components/icons/Transport';
@@ -46,7 +47,7 @@ function PlayPlatter({ item }: { item: MusicItem }) {
   return (
     <button
       className="pointer-events-auto absolute bottom-2.5 left-2.5 grid size-[30px] place-items-center rounded-full bg-thin-material text-white [backdrop-filter:saturate(180%)_blur(60px)] hover:bg-key-bg"
-      aria-label={`Play ${item.title}`}
+      aria-label={translateUi('music.play_track', { title: item.title })}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -67,7 +68,7 @@ function LockupArtwork({ item, width, aspect }: { item: MusicItem; width: number
       {href ? (
         <PrefetchLink to={href} className={overlayLink} aria-label={item.title} />
       ) : (
-        <button className={overlayLink} aria-label={`Play ${item.title}`} onClick={() => playTrack(item)} />
+        <button className={overlayLink} aria-label={translateUi('music.play_track', { title: item.title })} onClick={() => playTrack(item)} />
       )}
       {/* Hover scrim and platter (report §2: --lockupHoverBGColor, opacity .1s ease-in). */}
       <div className="pointer-events-none absolute inset-0 z-2 rounded-[inherit] bg-lockup-hover opacity-0 transition-opacity duration-100 ease-in group-focus-visible/art:opacity-100 group-hover/art:opacity-100">{isPlayable(item) && <PlayPlatter item={item} />}</div>

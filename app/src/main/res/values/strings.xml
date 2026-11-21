@@ -179,6 +179,20 @@
     <string name="source_setup_required">Tap to finish setting up</string>
     <string name="source_skipped_by_quality">Not used on %1$s · quality is set to %2$s</string>
     <string name="source_unreachable">Can’t reach it right now · %1$s</string>
+    <string name="source_not_available_in_build">Not available in this build</string>
+    <string name="source_server_no_response">The server didn’t answer</string>
+    <string name="source_server_answered">The server answered %1$s</string>
+    <string name="source_addon_url_required">An addon URL is required</string>
+    <string name="source_no_manifest_search_works">No manifest · search works</string>
+    <string name="source_module_url_required">A module index URL is required</string>
+    <string name="source_module_index_empty">The index answered but listed no modules — check the URL</string>
+    <string name="source_auth_unavailable">BitChord couldn’t verify this device</string>
+    <string name="source_addon_unreachable">Could not reach the addon</string>
+    <string name="source_module_index_unreachable">Could not reach the module index</string>
+    <plurals name="source_module_count">
+        <item quantity="one">%1$d module</item>
+        <item quantity="other">%1$d modules</item>
+    </plurals>
     <string name="checking">Checking…</string>
     <string name="failed">Failed</string>
     <string name="widget_square_label">Now playing 2×2</string>
@@ -228,12 +242,12 @@
     <string name="app_language">App language</string>
     <string name="app_language_description">Choose the language used by Auden.</string>
     <!-- Hidden tester-code field: tap the App language title 10 times. Not translated: testers only. -->
-    <string name="tester_code_title" translatable="false">Tester code</string>
-    <string name="tester_code_message" translatable="false">For BitChord testers. Lets addon verification work on this phone with an unlocked bootloader.</string>
-    <string name="tester_code_message_saved" translatable="false">A tester code is saved on this phone. Enter a new one to replace it, or remove it.</string>
+    <string name="tester_code_title">Tester code</string>
+    <string name="tester_code_message">For BitChord testers. Lets addon verification work on this phone with an unlocked bootloader.</string>
+    <string name="tester_code_message_saved">A tester code is saved on this phone. Enter a new one to replace it, or remove it.</string>
     <string name="tester_code_placeholder" translatable="false">XXXXX-XXXXX-XXXXX-XXXXX-XXXXX</string>
-    <string name="tester_code_saved" translatable="false">Tester code saved</string>
-    <string name="tester_code_removed" translatable="false">Tester code removed</string>
+    <string name="tester_code_saved">Tester code saved</string>
+    <string name="tester_code_removed">Tester code removed</string>
     <string name="english">English</string>
     <string name="spanish">Spanish</string>
     <string name="french">French</string>
@@ -344,18 +358,18 @@
     <string name="show_listen_together_button_subtitle">Off, the player shows only the audio output button between lyrics and the queue</string>
     <string name="app_icon">App icon</string>
     <string name="app_icon_default">Default</string>
-    <string name="app_icon_liquid_glass" translatable="false">Liquid Glass</string>
-    <string name="app_icon_liquid_glass_dark" translatable="false">Liquid Glass Dark</string>
-    <string name="app_icon_liquid_glass_clear" translatable="false">Liquid Glass Clear</string>
-    <string name="app_icon_liquid_glass_clear_dark" translatable="false">Liquid Glass Clear Dark</string>
-    <string name="app_icon_samsung_glass" translatable="false">Samsung Glass</string>
-    <string name="app_icon_samsung_glass_dark" translatable="false">Samsung Glass Dark</string>
-    <string name="app_icon_samsung_glass_clear" translatable="false">Samsung Glass Clear</string>
-    <string name="app_icon_samsung_glass_clear_dark" translatable="false">Samsung Glass Clear Dark</string>
-    <string name="app_icon_pixel_glass" translatable="false">Pixel Glass</string>
-    <string name="app_icon_pixel_glass_dark" translatable="false">Pixel Glass Dark</string>
-    <string name="app_icon_pixel_glass_clear" translatable="false">Pixel Glass Clear</string>
-    <string name="app_icon_pixel_glass_clear_dark" translatable="false">Pixel Glass Clear Dark</string>
+    <string name="app_icon_liquid_glass">Liquid Glass</string>
+    <string name="app_icon_liquid_glass_dark">Liquid Glass Dark</string>
+    <string name="app_icon_liquid_glass_clear">Liquid Glass Clear</string>
+    <string name="app_icon_liquid_glass_clear_dark">Liquid Glass Clear Dark</string>
+    <string name="app_icon_samsung_glass">Samsung Glass</string>
+    <string name="app_icon_samsung_glass_dark">Samsung Glass Dark</string>
+    <string name="app_icon_samsung_glass_clear">Samsung Glass Clear</string>
+    <string name="app_icon_samsung_glass_clear_dark">Samsung Glass Clear Dark</string>
+    <string name="app_icon_pixel_glass">Pixel Glass</string>
+    <string name="app_icon_pixel_glass_dark">Pixel Glass Dark</string>
+    <string name="app_icon_pixel_glass_clear">Pixel Glass Clear</string>
+    <string name="app_icon_pixel_glass_clear_dark">Pixel Glass Clear Dark</string>
     <string name="theme">Theme</string>
     <string name="font">Font</string>
     <string name="font_default">Default</string>
@@ -521,7 +535,7 @@
     <string name="pipeline_bit_depth">Bit Depth</string>
     <string name="pipeline_sample_rate">Sample Rate</string>
     <string name="pipeline_bitrate">Bitrate</string>
-    <string name="pipeline_pcm_data_rate" translatable="false">PCM Data Rate</string>
+    <string name="pipeline_pcm_data_rate">PCM Data Rate</string>
     <string name="pipeline_channels">Channels</string>
     <string name="pipeline_decoder_name">Decoder Name</string>
     <string name="pipeline_io_rate">I/O Rate</string>
@@ -1279,8 +1293,29 @@
     <string name="yt_sync_sign_in">Sign in to YouTube Music to export</string>
     <string name="saved_on_this_device">Saved on this device</string>
     <string name="spotify_import_empty_playlist">No songs in this playlist</string>
-    <string name="spotify_import_language_preference" translatable="false">Language preference</string>
-    <string name="spotify_import_language_hint" translatable="false">e.g. Punjabi, Marathi, Korean…</string>
+    <string name="spotify_import_language_preference">Language preference</string>
+    <string name="spotify_import_language_hint">e.g. Punjabi, Marathi, Korean…</string>
+    <string name="account_channel_listen_as">Listen as</string>
+    <string name="account_channel_looking_up">Looking up your channels…</string>
+    <string name="account_channel_list_failed">Couldn\'t list this account\'s channels. You can still pick one in YouTube Music itself.</string>
+    <string name="account_channel_description">Your library, likes and history come from the channel you pick here.</string>
+    <string name="account_channel_choose_in_youtube">Choose in YouTube Music</string>
+    <string name="settings_developer">Developer</string>
+    <string name="settings_credit_services">YouTube Music &amp; Listen Together backend</string>
+    <string name="source_addon">Addon</string>
+    <string name="source_custom_module">Custom module</string>
+    <string name="source_module">Module source</string>
+    <string name="source_quality_lossless">Lossless</string>
+    <string name="source_quality_hi_res">Hi-Res</string>
+    <string name="source_plugins">Plugins</string>
+    <string name="source_quality_high">High Quality</string>
+    <string name="source_high_bitrate">High bitrate</string>
+    <string name="source_full_catalogue">Full catalogue</string>
+    <string name="source_radio">Radio</string>
+    <string name="source_lossy">Lossy</string>
+    <string name="source_monochrome" translatable="false">Monochrome</string>
+    <string name="source_jiosaavn" translatable="false">JioSaavn</string>
+    <string name="source_youtube_music" translatable="false">YouTube Music</string>
     <string name="spotify_library_subtitle">Your Spotify playlists</string>
     <string name="onboarding_title">Millions of songs, stream on Auden</string>
     <string name="onboarding_name_prompt">What should we call you?</string>
@@ -2144,4 +2179,222 @@
     <string name="replay_play_playlist">Play</string>
     <string name="replay_save_playlist">Save as playlist</string>
     <string name="replay_playlist_saved">Saved “%1$s” to your library</string>
+    <string name="tv_account">Account</string>
+    <string name="tv_couldn_t_load">Couldn\'t Load</string>
+    <string name="tv_account_settings">Account Settings</string>
+    <string name="tv_sign_in_to_youtube_music">Sign In to YouTube Music</string>
+    <string name="tv_press_back_for_done_or_cancel">Press Back for Done or Cancel</string>
+    <string name="tv_ok">OK</string>
+    <string name="tv_free_software_under_the_gnu_gpl">Free software under the GNU GPL v3. Not affiliated with YouTube or Google.</string>
+    <string name="tv_reset_to_default">Reset to Default</string>
+    <string name="tv_up_and_down_set_a_band">Up and down set a band. Select resets it.</string>
+    <string name="tv_reset_all">Reset All</string>
+    <string name="tv_create">Create</string>
+    <string name="tv_download_and_install">Download and Install</string>
+    <string name="tv_not_now">Not Now</string>
+    <string name="tv_hide">Hide</string>
+    <string name="tv_cancel_download">Cancel Download</string>
+    <string name="tv_up_next">Up Next</string>
+    <string name="tv_autoplay">Autoplay</string>
+    <string name="tv_not_playing">Not Playing</string>
+    <string name="tv_choose_something_from_home_explore_or">Choose something from Home, Explore or your Library.</string>
+    <string name="tv_browse_music">Browse Music</string>
+    <string name="tv_allow_access">Allow Access</string>
+    <string name="tv_reload_library">Reload Library</string>
+    <string name="tv_empty_home_title">Nothing Here Yet</string>
+    <string name="tv_home_sign_in_for_recommendations">Sign in from Settings, or check your connection, to see your recommendations.</string>
+    <string name="tv_nothing_played_yet">Nothing Played Yet</string>
+    <string name="tv_played_songs_appear_here">Songs you play show up here.</string>
+    <string name="tv_empty_library_message">There\'s nothing here yet.</string>
+    <string name="tv_welcome_to_bit_chord">Welcome to BitChord</string>
+    <string name="tv_music_for_the_big_screen">Your music, made for the big screen.</string>
+    <string name="tv_continue">Continue</string>
+    <string name="tv_set_up_later">Set Up Later</string>
+    <string name="tv_choose_a_look">Choose a Look</string>
+    <string name="tv_change_look_later">You can change this later in Settings.</string>
+    <string name="tv_you_are_all_set">You\'re All Set</string>
+    <string name="tv_find_music_everything_saved">Find music in Home and Explore. Everything you save is in Library.</string>
+    <string name="tv_start_listening">Start Listening</string>
+    <string name="tv_signed_in">Signed In</string>
+    <string name="tv_account_library_recommendations">Bring your library, playlists and recommendations. You can also do this later in Settings.</string>
+    <string name="tv_sign_in">Sign In</string>
+    <string name="tv_listening">Listening</string>
+    <string name="tv_select_a_row_to_toggle">Select a row to turn it on or off.</string>
+    <string name="tv_synced_lyrics">Synced Lyrics</string>
+    <string name="tv_motion_artwork">Motion Artwork</string>
+    <string name="tv_spatial_audio">Spatial Audio</string>
+    <string name="tv_on">On</string>
+    <string name="tv_off">Off</string>
+    <string name="tv_recommendations_account">Your library, playlists and recommendations come from this account.</string>
+    <string name="tv_automix_blurb">Blends one song into the next, matched to their tempo.</string>
+    <string name="tv_fades_song_in_and_out">Fades each song out as the next one fades in. Select to change the length.</string>
+    <string name="tv_autoplay_blurb">When the queue ends, keeps playing music similar to what you were listening to.</string>
+    <string name="tv_skip_silence_blurb">Skips over silent stretches at the start and end of songs.</string>
+    <string name="tv_shape_sound_with_presets">Shape the sound with presets or seven bands of your own.</string>
+    <string name="tv_widens_stereo_music">Widens stereo music using the TV\'s audio virtualizer, where it has one.</string>
+    <string name="tv_plays_each_song_at_loudness">Plays every song at the same perceived loudness.</string>
+    <string name="tv_sends_audio_to_usb_dac">Sends audio straight to a connected USB DAC, unchanged, when one is attached.</string>
+    <string name="tv_lyrics_follow_along">Lyrics that follow along with the song, line by line.</string>
+    <string name="tv_choose_lyric_databases">Choose which lyric databases to ask, and in what order.</string>
+    <string name="tv_song_looping_video_artwork">Plays a song\'s looping video artwork behind the player, when it has one.</string>
+    <string name="tv_fullscreen_lyrics_video_artwork">Keeps the video artwork playing behind full-screen lyrics.</string>
+    <string name="tv_shows_codec_bitrate_sample_rate">Shows the codec, bitrate and sample rate of what\'s playing.</string>
+    <string name="tv_background_behind_pages">The background behind BitChord\'s pages.</string>
+    <string name="tv_now_playing_background">What Now Playing shows behind the song: the artwork\'s colours, or AMOLED\'s pure black.</string>
+    <string name="tv_interface_size_blurb">Makes everything larger or smaller. Select to step through sizes.</string>
+    <string name="tv_screen_redraw_rate">How often the screen redraws while you browse.</string>
+    <string name="tv_calms_decorative_animation">Calms the moving background and other decorative animation.</string>
+    <string name="tv_solid_backgrounds_help_slower_tvs">Replaces blurred backgrounds with solid ones. Helps on slower TVs.</string>
+    <string name="tv_last_fm_and_listenbrainz">Last.fm and ListenBrainz.</string>
+    <string name="tv_download_install_new_version">Download and install the new version of BitChord for TV.</string>
+    <string name="tv_first_time_setup_again">Go through the first-time setup again.</string>
+    <string name="tv_settings_default_blurb">Playback, sound and display preferences for BitChord on this TV.</string>
+    <string name="tv_account_section">Account</string>
+    <string name="tv_playback_section">Playback</string>
+    <string name="tv_sound_section">Sound</string>
+    <string name="tv_display_section">Display</string>
+    <string name="tv_connections_section">Connections</string>
+    <string name="tv_general_section">General</string>
+    <string name="tv_crossfade">Crossfade</string>
+    <string name="tv_skip_silence">Skip Silence</string>
+    <string name="tv_sound_check">Sound Check</string>
+    <string name="tv_usb_dac">USB DAC</string>
+    <string name="tv_lyrics_sources">Lyrics Sources</string>
+    <string name="tv_motion_artwork_in_lyrics">Motion Artwork in Lyrics</string>
+    <string name="tv_stats_for_nerds">Stats for Nerds</string>
+    <string name="tv_appearance">Appearance</string>
+    <string name="tv_player_background">Player Background</string>
+    <string name="tv_interface_size">Interface Size</string>
+    <string name="tv_refresh_rate">Refresh Rate</string>
+    <string name="tv_reduce_motion">Reduce Motion</string>
+    <string name="tv_reduce_transparency">Reduce Transparency</string>
+    <string name="tv_scrobbling">Scrobbling</string>
+    <string name="tv_software_update">Software Update</string>
+    <string name="tv_set_up_again">Set Up Again</string>
+    <string name="tv_about">About</string>
+    <string name="tv_available">Available</string>
+    <string name="tv_sign_in_bring_library">Bring your library, playlists and recommendations. You can also do this later in Settings.</string>
+    <string name="tv_automix">Automix</string>
+    <string name="tv_crossfade_duration">%1$d s</string>
+    <string name="tv_version_available">%1$s Available</string>
+    <string name="tv_account_library_message">BitChord will use %1$s\'s library and recommendations.</string>
+    <string name="tv_no_songs">No Songs</string>
+    <string name="tv_recently_played">Recently Played</string>
+    <string name="tv_liked_songs">Liked Songs</string>
+    <string name="tv_sign_in_ellipsis">Sign In…</string>
+    <string name="tv_auto_recommended">Auto (Recommended)</string>
+    <string name="tv_refresh_auto_description">Allows the TV and Android system to manage the display refresh rate dynamically.</string>
+    <string name="tv_smooth_60">Smooth 60 Hz</string>
+    <string name="tv_refresh_60_description">Requests standard 60 Hz interface motion at native resolution.</string>
+    <string name="tv_ultra_120">Ultra 120 Hz</string>
+    <string name="tv_refresh_120_description">Requests up to 120 fps for interface motion on compatible displays. Canvas video maintains native source frame rate.</string>
+    <string name="tv_artwork">Artwork</string>
+    <string name="tv_artwork_theme_description">Dark, softly tinted by the artwork of what\'s playing.</string>
+    <string name="tv_midnight">Midnight</string>
+    <string name="tv_midnight_theme_description">A deep navy background.</string>
+    <string name="tv_pure_black">Pure Black</string>
+    <string name="tv_pure_black_theme_description">True black, for OLED screens.</string>
+    <string name="tv_default">Default</string>
+    <string name="tv_amoled">AMOLED</string>
+    <string name="tv_update_version_available">BitChord %1$s Is Available</string>
+    <string name="tv_scan_phone_for_update">Scan the code with your phone to get this update from GitHub.</string>
+    <string name="tv_downloaded_select_install">Downloaded. Select Install Now to update.</string>
+    <string name="tv_download_progress">Downloading… %1$d%%</string>
+    <plurals name="tv_minutes">
+        <item quantity="one">%1$d Minute</item>
+        <item quantity="other">%1$d Minutes</item>
+    </plurals>
+    <string name="tv_profile_locked">Profile is locked. Enter PIN for %1$s</string>
+    <string name="tv_create_profile_pin">Create a 4-digit PIN for %1$s</string>
+    <string name="tv_sign_out_profile_pin">Enter 4-digit PIN to sign out %1$s</string>
+    <string name="tv_artist_about">About %1$s</string>
+    <string name="tv_sign_in_with_your_phone">Sign In with Your Phone</string>
+    <string name="tv_enter_4_digit_pin">Enter 4-Digit PIN</string>
+    <string name="tv_sign_out">Sign Out</string>
+    <string name="tv_equalizer_2">Equalizer</string>
+    <string name="tv_sleep_timer">Sleep Timer</string>
+    <string name="tv_auth_remote_page_title">BitChord TV • Mobile Remote</string>
+    <string name="tv_auth_remote_heading">BitChord TV Remote</string>
+    <string name="tv_auth_loading_tv">Loading TV…</string>
+    <string name="tv_auth_connecting_tv">Connecting to BitChord TV</string>
+    <string name="tv_auth_remote_search">Search song to play on TV…</string>
+    <string name="tv_auth_playing_on_tv">Playing {title} on TV!</string>
+    <string name="tv_auth_sign_in_page_title">BitChord TV • 1-Tap Sign In</string>
+    <string name="tv_auth_sign_in_title">Sign In to BitChord TV</string>
+    <string name="tv_auth_fast_login_description">Fast &amp; easy login from your mobile phone</string>
+    <string name="tv_auth_fastest_option">Option 1 (Fastest):</string>
+    <string name="tv_auth_open_youtube_music_step">Tap the button below to open YouTube Music in your browser.</string>
+    <string name="tv_auth_sign_in_google_step">Sign in with your Google Account if not already logged in.</string>
+    <string name="tv_auth_submit_session_step">Return here and paste your cookie, or use the 1-click script to log in automatically!</string>
+    <string name="tv_auth_open_youtube_music">Open YouTube Music on Phone</string>
+    <string name="tv_auth_direct_session_submission">Direct Session Submission</string>
+    <string name="tv_auth_submit_session_description">Paste your YouTube Music session cookie / headers to immediately log in on TV:</string>
+    <string name="tv_auth_cookie_placeholder">Paste SAPISID / Session Cookie here…</string>
+    <string name="tv_auth_connect_account">Connect Account to TV</string>
+    <string name="tv_auth_no_cookie">No cookie detected. Please follow the instructions.</string>
+    <string name="tv_auth_connected_page_title">BitChord TV • Connected</string>
+    <string name="tv_auth_paired_successfully">Paired Successfully!</string>
+    <string name="tv_auth_connected_description">Your BitChord TV is now connected. You can now use the mobile remote to control playback.</string>
+    <string name="tv_auth_open_remote">📱 Open TV Remote</string>
+    <string name="tv_auth_no_song_playing">No Song Playing</string>
+    <string name="tv_search_placeholder">Artists, Songs, Albums and More</string>
+    <string name="tv_no_results">No Results</string>
+    <string name="tv_search_nothing_matched">Nothing matched “%1$s”. Check the spelling or try other words.</string>
+    <string name="tv_search_bit_chord">Search BitChord</string>
+    <string name="tv_search_songs_albums_artists_playlists">Find songs, albums, artists and playlists.</string>
+    <string name="tv_recent_searches">Recent Searches</string>
+    <string name="tv_top_results">Top Results</string>
+    <string name="tv_allow_access_to_music">Allow Access to Music</string>
+    <string name="tv_music_read_permission">BitChord needs permission to read music on this TV and on connected USB drives.</string>
+    <string name="tv_nothing_to_play_here">There\'s nothing to play here yet.</string>
+    <string name="tv_suggestions">Suggestions</string>
+    <string name="tv_search_song_to_play_on_tv">Search song to play on TV...</string>
+    <string name="tv_paste_sapisid_session_cookie_here">Paste SAPISID / Session Cookie here...</string>
+    <string name="tv_equalizer">Equalizer</string>
+    <string name="tv_sign_in_to_youtube_music_2">Sign In to YouTube Music</string>
+    <string name="tv_your_library_playlists_and_recommendations_follow_your">Your library, playlists and recommendations follow your account.</string>
+    <string name="tv_sign_in_on_this_tv">Sign In on This TV</string>
+    <string name="tv_use_the_remote_to_sign_in_to">Use the remote to sign in to Google.</string>
+    <string name="tv_sign_in_with_your_phone_2">Sign In with Your Phone</string>
+    <string name="tv_scan_a_code_with_a_phone_on">Scan a code with a phone on the same Wi-Fi.</string>
+    <string name="tv_enter_4_digit_pin_2">Enter 4-Digit PIN</string>
+    <string name="tv_set_4_digit_pin">Set 4-Digit PIN</string>
+    <string name="tv_confirm_4_digit_pin">Confirm 4-Digit PIN</string>
+    <string name="tv_re_enter_your_4_digit_pin">Re-enter your 4-digit PIN</string>
+    <string name="tv_turn_off_app_lock">Turn Off App Lock</string>
+    <string name="tv_enter_current_4_digit_pin_to_remove">Enter current 4-digit PIN to remove lock</string>
+    <string name="tv_sign_out_2">Sign Out</string>
+    <string name="tv_app_lock_4_digit_pin">App Lock (4-Digit PIN)</string>
+    <string name="tv_remove_this_account_from_tv">Remove this account from TV</string>
+    <string name="tv_show_what_you_re_listening_to_in">Show what you\'re listening to in your Discord status.</string>
+    <string name="tv_discord_token">Discord Token</string>
+    <string name="tv_scrobbling_2">Scrobbling</string>
+    <string name="tv_connect_these_on_the_bitchord_phone_app">Connect these on the BitChord phone app; the TV uses the same accounts.</string>
+    <string name="tv_kushagra_singh">Kushagra Singh</string>
+    <string name="tv_nithyanantha">Nithyanantha</string>
+    <string name="tv_refresh_rate_2">Refresh Rate</string>
+    <string name="tv_appearance_2">Appearance</string>
+    <string name="tv_lyrics_sources_2">Lyrics Sources</string>
+    <string name="tv_select_to_turn_a_source_on_or">Select to turn a source on or off. Press Left or Right to move it up or down; the first is asked first.</string>
+    <string name="tv_prefer_word_synced">Prefer Word-Synced</string>
+    <string name="tv_hold_out_for_word_by_word_lyrics">Hold out for word-by-word lyrics before settling for line-by-line.</string>
+    <string name="tv_play_next">Play Next</string>
+    <string name="tv_play_last">Play Last</string>
+    <string name="tv_start_station">Start Station</string>
+    <string name="tv_add_to_playlist">Add to Playlist…</string>
+    <string name="tv_go_to_album">Go to Album</string>
+    <string name="tv_go_to_artist">Go to Artist</string>
+    <string name="tv_sleep_timer_2">Sleep Timer</string>
+    <string name="tv_stats_for_nerds_2">Stats for Nerds</string>
+    <string name="tv_new_playlist">New Playlist</string>
+    <string name="tv_it_will_be_private_with_this_song">It will be private, with this song in it.</string>
+    <string name="tv_playlist_name">Playlist Name</string>
+    <string name="tv_add_to_playlist_2">Add to Playlist</string>
+    <string name="tv_new_playlist_2">New Playlist…</string>
+    <string name="tv_stop_playing_music_after">Stop playing music after</string>
+    <string name="tv_end_of_current_song">End of Current Song</string>
+    <string name="tv_turn_off_timer">Turn Off Timer</string>
+    <string name="tv_latest_release">Latest Release</string>
+    <string name="tv_top_songs">Top Songs</string>
+    <string name="tv_songs">Songs</string>
 </resources>

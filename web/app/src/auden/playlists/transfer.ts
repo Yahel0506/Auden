@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import type { Track } from '@/data/music/types';
 import { openAudenDb, type TrackRow } from '../db/schema';
 import { parseDurationText } from '../library/identity';
@@ -156,5 +157,7 @@ export function uniqueTitle(base: string, taken: ReadonlySet<string>): string {
 export function describeImport(s: ImportSummary): string {
   const found = s.local + s.online;
   const miss = s.unresolved.length;
-  return miss ? `“${s.name}”: ${found} of ${s.total} songs found, ${miss} not found.` : `“${s.name}”: ${found} songs imported.`;
+  return miss
+    ? translateUi('playlists_transfer.import_with_unmatched', { name: s.name, found, total: s.total, missing: miss })
+    : translateUi('playlists_transfer.import_complete', { name: s.name, count: found });
 }

@@ -17,9 +17,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.music.bitchord.R
 
 /** The foot of the main Settings page: the app's name and version, where to find it, and whose servers it stands on. */
 @Composable
@@ -46,11 +48,11 @@ internal fun SettingsCredits(version: String) {
         Spacer(Modifier.height(18.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             CreditLink("GitHub") { links.openUri("https://github.com/Yahel0506/Auden") }
-            CreditLink("Developer") { links.openUri("https://github.com/Yahel0506") }
+            CreditLink(stringResource(R.string.settings_developer)) { links.openUri("https://github.com/Yahel0506") }
         }
         Spacer(Modifier.height(18.dp))
         Text(
-            text = "YouTube Music & Listen Together backend",
+            text = stringResource(R.string.settings_credit_services),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
             textAlign = TextAlign.Center,

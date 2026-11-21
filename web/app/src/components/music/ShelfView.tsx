@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useHomeSettings } from '@/auden/home/settings';
@@ -61,7 +62,7 @@ export function ShelfScroller({ kind, children }: { kind: ShelfKind; children: R
     <div className="group/shelf relative">
       <button
         className={`${arrow} left-1.5`}
-        aria-label="Previous Page"
+        aria-label={translateUi("shelf_view.previous_page")}
         disabled={edges.start}
         onClick={() => page(-1)}
       >
@@ -72,7 +73,7 @@ export function ShelfScroller({ kind, children }: { kind: ShelfKind; children: R
       </ul>
       <button
         className={`${arrow} right-1.5`}
-        aria-label="Next Page"
+        aria-label={translateUi("shelf_view.next_page")}
         disabled={edges.end}
         onClick={() => page(1)}
       >

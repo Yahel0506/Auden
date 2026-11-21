@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useEffect, useState } from 'react';
 import { searchSongs } from '@/data/music/api';
 import type { Track } from '@/data/music/types';
@@ -42,14 +43,14 @@ function MatchDialog({ row, onClose }: { row: Track; onClose: () => void }) {
   };
 
   return (
-    <Modal title="Fix Spotify match" onClose={onClose}>
+    <Modal title={translateUi("spotify_match_dialog.fix_spotify_match")} onClose={onClose}>
       <p className="mb-2 type-callout text-secondary">
         Which YouTube Music song is “{row.title}”{artistsOf(row) ? ` by ${artistsOf(row)}` : ''}?
       </p>
-      <input className={field} value={query} onChange={(e) => setQuery(e.currentTarget.value)} placeholder="Search YouTube Music" autoFocus />
+      <input className={field} value={query} onChange={(e) => setQuery(e.currentTarget.value)} placeholder={translateUi("spotify_match_dialog.search_youtube_music")} autoFocus />
       <ul className="mt-3 overflow-hidden rounded-[10px] bg-quinary">
-        {results === null && <li className="px-3 py-3 type-callout text-secondary">Searching…</li>}
-        {results?.length === 0 && <li className="px-3 py-3 type-callout text-secondary">{failed ? 'Couldn’t search YouTube Music.' : 'Nothing found.'}</li>}
+        {results === null && <li className="px-3 py-3 type-callout text-secondary">{translateUi("spotify_match_dialog.searching")}</li>}
+        {results?.length === 0 && <li className="px-3 py-3 type-callout text-secondary">{failed ? translateUi("shell_spotifymatchdialog_couldn_t_search_youtube_music") : translateUi("shell_spotifymatchdialog_nothing_found")}</li>}
         {results?.map((track) => (
           <li key={track.videoId} className="[&+&]:border-t-[0.5px] [&+&]:border-t-divider">
             <button className="flex w-full flex-col items-start px-3 py-2 text-start hover:bg-quaternary" onClick={() => choose(track)}>

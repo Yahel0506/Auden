@@ -1,3 +1,5 @@
+import { t as translateUi } from '@/i18n';
+
 /** A small modal asking for a name (new playlist, rename). Resolves null when cancelled. Plain DOM, so any handler can await it. */
 export function askName(title: string, initial = '', confirm = 'Save'): Promise<string | null> {
   return new Promise((resolve) => {
@@ -14,13 +16,13 @@ export function askName(title: string, initial = '', confirm = 'Save'): Promise<
     input.className = 'h-9 rounded-lg bg-quinary px-3 type-body text-primary outline-none';
     input.value = initial;
     input.maxLength = 120;
-    input.setAttribute('aria-label', 'Name');
+    input.setAttribute('aria-label', translateUi('playlists_actions.name'));
     const row = document.createElement('div');
     row.className = 'flex justify-end gap-4';
     const cancel = document.createElement('button');
     cancel.type = 'button';
     cancel.className = 'type-callout text-secondary';
-    cancel.textContent = 'Cancel';
+    cancel.textContent = translateUi('playlists_actions.cancel');
     const ok = document.createElement('button');
     ok.type = 'submit';
     ok.className = 'type-callout-emphasized text-key';

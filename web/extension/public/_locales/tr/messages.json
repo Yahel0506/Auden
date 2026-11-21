@@ -1,0 +1,145 @@
+{
+  "extensionName": {
+    "message": "Auden"
+  },
+  "extensionDescription": {
+    "message": "Auden web oynatıcısını YouTube Music, Spotify ve Discord'a bağlar."
+  },
+  "openAuden": {
+    "message": "Auden'i aç"
+  },
+  "checking": {
+    "message": "Kontrol ediliyor…"
+  },
+  "notSignedIn": {
+    "message": "Bu tarayıcıda oturum açılmamış"
+  },
+  "signIn": {
+    "message": "Oturum aç"
+  },
+  "couldNotReadAccount": {
+    "message": "Hesap bilgileri okunamadı"
+  },
+  "youtubeSessionRejected": {
+    "message": "YouTube bu tarayıcı oturumunu kabul etmedi. Yeniden oturum aç."
+  },
+  "youtubeAccountMissing": {
+    "message": "Oturum açılmış bir Google hesabı bulunamadı."
+  },
+  "youtubeAccountUnavailable": {
+    "message": "YouTube bu tarayıcı oturumunda hesap bulamadı."
+  },
+  "disconnected": {
+    "message": "Bağlantı kesildi"
+  },
+  "retry": {
+    "message": "Yeniden dene"
+  },
+  "connect": {
+    "message": "Bağlan"
+  },
+  "disconnect": {
+    "message": "Bağlantıyı kes"
+  },
+  "spotifySignInExpired": {
+    "message": "Spotify oturumunun süresi doldu. Yeniden oturum aç."
+  },
+  "spotifyRateLimited": {
+    "message": "Spotify istekleri geçici olarak sınırlandırıyor. Birazdan tekrar dene."
+  },
+  "spotifyConnectionFailed": {
+    "message": "Spotify'a ulaşılamadı. Bağlantını kontrol edip tekrar dene."
+  },
+  "spotifySignInFailed": {
+    "message": "Spotify oturum açamadı. Tekrar dene."
+  },
+  "stopUsingAccountYouTube": {
+    "message": "Bu hesabı Auden'de kullanmayı bırak. YouTube oturumun açık kalır."
+  },
+  "stopUsingAccountSpotify": {
+    "message": "Bu hesabı Auden'de kullanmayı bırak. Spotify oturumun açık kalır."
+  },
+  "notConnected": {
+    "message": "Bağlı değil"
+  },
+  "showingWhatYouPlay": {
+    "message": "Çaldığın müzik gösteriliyor"
+  },
+  "connecting": {
+    "message": "Bağlanıyor…"
+  },
+  "couldNotConnect": {
+    "message": "Bağlanılamadı"
+  },
+  "onWaitingForSong": {
+    "message": "Açık, şarkı bekleniyor"
+  },
+  "presenceOff": {
+    "message": "Durum paylaşımı kapalı"
+  },
+  "forgetDiscordAccount": {
+    "message": "Bu Discord hesabını unut."
+  },
+  "couldNotReadSession": {
+    "message": "Oturum okunamadı"
+  },
+  "allowLyricSourcesTitle": {
+    "message": "Auden: şarkı sözü kaynakları"
+  },
+  "allowLyricSourcesHeading": {
+    "message": "Şarkı sözü kaynaklarına izin ver"
+  },
+  "allowLyricSourcesExplanation": {
+    "message": "Bu şarkı sözü sağlayıcıları web sayfalarının kendilerine doğrudan istek göndermesine izin vermiyor. Bu yüzden Auden istekleri eklenti üzerinden gönderiyor. Tarayıcın onaylamanı isteyecek."
+  },
+  "allow": {
+    "message": "İzin ver"
+  },
+  "permissionDone": {
+    "message": "Tamamlandı. Bu sekmeyi kapatıp Auden'e dönebilirsin."
+  },
+  "permissionDenied": {
+    "message": "İzin verilmedi. Bu kaynaklar kapalı kalacak."
+  },
+  "discordConnectTitle": {
+    "message": "Auden: Discord'u bağla"
+  },
+  "discordConnectHeading": {
+    "message": "Discord'da ne dinlediğini göster"
+  },
+  "discordConnectExplanation": {
+    "message": "Auden Discord oturumunu discord.com sekmesinden okur ve bu eklentide saklar. Web oynatıcı oturum bilgilerini görmez."
+  },
+  "discordTokenWarning": {
+    "message": "Bu işlem hesabının kendi belirtecini kullanır; Discord koşulları buna izin vermiyor. Riski kendin üstlenerek kullan."
+  },
+  "connectDiscord": {
+    "message": "Discord'u bağla"
+  },
+  "discordPermissionDenied": {
+    "message": "İzin verilmedi. Discord kapalı kalacak."
+  },
+  "discordConnected": {
+    "message": "$USER$ olarak bağlandın. Bu sekmeyi kapatabilirsin.",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "discordSignInProgress": {
+    "message": "Açılan sekmede Discord'a giriş yap. Bu sayfa giriş yaptığını anlayacak."
+  },
+  "discordReadProgress": {
+    "message": "Discord oturumun okunuyor…"
+  },
+  "discordSessionMissing": {
+    "message": "Discord oturumu bulunamadı. discord.com'da oturum açıp tekrar dene."
+  },
+  "discordTokenRejected": {
+    "message": "Discord belirteci reddetti. Hesabı yeniden bağla."
+  },
+  "discordConnectionError": {
+    "message": "Discord'a bağlanılamadı. Tekrar dene."
+  }
+}

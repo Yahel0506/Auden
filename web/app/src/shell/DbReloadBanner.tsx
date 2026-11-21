@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useEffect, useState } from 'react';
 import { onDbBlocked } from '@/auden/db';
 
@@ -8,10 +9,8 @@ export function DbReloadBanner() {
   if (!stale) return null;
   return (
     <div role="alert" className="fixed inset-x-0 top-0 z-50 flex items-center justify-center gap-3 bg-key-bg px-4 py-2 type-callout text-white">
-      <span>Auden was updated in another tab.</span>
-      <button className="type-callout-emphasized underline" onClick={() => location.reload()}>
-        Reload
-      </button>
+      <span>{translateUi("db_reload_banner.auden_was_updated_in_another")}</span>
+      <button className="type-callout-emphasized underline" onClick={() => location.reload()}>{translateUi("db_reload_banner.reload")}</button>
     </div>
   );
 }

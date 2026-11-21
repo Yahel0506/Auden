@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 // Registers <am-lyrics>.
 import '@uimaxbai/am-lyrics/am-lyrics.js';
 import { Check, ChevronDown, Loader2, Minus, Settings2 } from 'lucide-react';
@@ -307,18 +308,16 @@ function ProviderPicker({
       </button>
       <button
         className="grid size-7 place-items-center rounded-[8px] text-secondary hover:bg-quinary"
-        aria-label="Lyric settings"
+        aria-label={translateUi("lyrics_panel.lyric_settings")}
         onClick={() => setSettings(true)}
       >
         <Settings2 size={16} />
       </button>
       {anchor && (
-        <Menu anchor={anchor} placement="below-end" onClose={close} label="Lyrics provider">
-          <MenuItem checked={!chosen} onSelect={() => (close(), void chooseProvider(videoId, null))}>
-            Best available
-          </MenuItem>
+        <Menu anchor={anchor} placement="below-end" onClose={close} label={translateUi("lyrics_panel.lyrics_provider")}>
+          <MenuItem checked={!chosen} onSelect={() => (close(), void chooseProvider(videoId, null))}>{translateUi("lyrics_panel.best_available")}</MenuItem>
           <MenuSeparator />
-          <MenuHeader>Providers</MenuHeader>
+          <MenuHeader>{translateUi("lyrics_panel.providers")}</MenuHeader>
           {enabledSources().map((id) => {
             const state = states[id];
             return (
@@ -350,17 +349,13 @@ function ProviderPicker({
               void saveLyrics(track(), result).finally(() => setSaving(false));
             }}
           >
-            {saved ? 'Saved for this song' : 'Save these lyrics'}
+            {saved ? translateUi("shell_lyricspanel_saved_for_this_song") : translateUi("shell_lyricspanel_save_these_lyrics")}
           </MenuItem>
-          <MenuItem disabled={!songKey} onSelect={() => (close(), setManage(true))}>
-            Saved lyrics…
-          </MenuItem>
-          <MenuItem disabled={!result} onSelect={() => (close(), result && exportLrc(result, { title, artist }, offset.effective))}>
-            Export as .lrc
-          </MenuItem>
-          <MenuItem onSelect={() => (close(), setTiming(true))}>Timing…</MenuItem>
+          <MenuItem disabled={!songKey} onSelect={() => (close(), setManage(true))}>{translateUi("lyrics_panel.saved_lyrics")}</MenuItem>
+          <MenuItem disabled={!result} onSelect={() => (close(), result && exportLrc(result, { title, artist }, offset.effective))}>{translateUi("lyrics_panel.export_as_lrc")}</MenuItem>
+          <MenuItem onSelect={() => (close(), setTiming(true))}>{translateUi("lyrics_panel.timing")}</MenuItem>
           <MenuSeparator />
-          <MenuItem onSelect={() => (close(), setSettings(true))}>Lyric Settings…</MenuItem>
+          <MenuItem onSelect={() => (close(), setSettings(true))}>{translateUi("lyrics_panel.lyric_settings_2")}</MenuItem>
         </Menu>
       )}
       {settings && <LyricsSettings onClose={() => setSettings(false)} />}
@@ -375,16 +370,16 @@ function PermissionNotice({ origins }: { origins: string[] }) {
   return (
     <div className="mx-4 my-1.5 flex items-center gap-2.5 rounded-[10px] bg-quinary px-2.5 py-2 type-callout text-secondary">
       <span>
-        {names.slice(0, 2).join(', ')}
-        {names.length > 2 ? ` and ${names.length - 2} more` : ''} need the extension’s permission.
+        {translateUi('lyrics_panel.providers_need_extension_permission', {
+          providers: names.slice(0, 2).join(', '),
+          additional: names.length > 2 ? translateUi('lyrics_panel.and_more', { count: names.length - 2 }) : '',
+        })}
       </span>
       <button
         className="flex-none type-callout-emphasized text-key"
         // The notice stays until the extension confirms the grant (checked when this tab comes back).
         onClick={() => void getBridge()?.call('lyrics.requestPermissions', { origins })}
-      >
-        Allow
-      </button>
+      >{translateUi("lyrics_panel.allow")}</button>
     </div>
   );
 }
@@ -471,8 +466,8 @@ export function LyricsPanel({ variant = 'panel' }: { variant?: 'panel' | 'full' 
       {ungranted.length > 0 && !result && !lyrics.isFetching && <PermissionNotice origins={ungranted} />}
       {!hasTrack ? (
         <div className={empty}>
-          <p className={emptyTitle}>No lyrics available</p>
-          <p>Play a song to see its lyrics here.</p>
+          <p className={emptyTitle}>{translateUi("lyrics_panel.no_lyrics_available")}</p>
+          <p>{translateUi("lyrics_panel.play_a_song_to_see")}</p>
         </div>
       ) : (lyrics.isPending && lyrics.fetchStatus !== 'idle') || (result && !fontReady) ? (
         <div className={empty}>
@@ -482,13 +477,13 @@ export function LyricsPanel({ variant = 'panel' }: { variant?: 'panel' | 'full' 
         <LyricsView ttml={result.ttml} full={full} offsetMs={offset.effective} />
       ) : picked ? (
         <div className={empty}>
-          <p className={emptyTitle}>Not on {sourceById(picked)?.label ?? 'this provider'}</p>
-          <p>This provider hasn’t got this song. Pick another, or Best available, in the list above.</p>
+          <p className={emptyTitle}>{translateUi('lyrics_panel.not_on_provider', { provider: sourceById(picked)?.label ?? translateUi("shell_lyricspanel_this_provider") })}</p>
+          <p>{translateUi("lyrics_panel.this_provider_hasn_t_got")}</p>
         </div>
       ) : (
         <div className={empty}>
-          <p className={emptyTitle}>No lyrics available</p>
-          <p>None of the lyric providers has this song. Try another in the list above.</p>
+          <p className={emptyTitle}>{translateUi("lyrics_panel.no_lyrics_available")}</p>
+          <p>{translateUi("lyrics_panel.none_of_the_lyric_providers")}</p>
         </div>
       )}
     </div>

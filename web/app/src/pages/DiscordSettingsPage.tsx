@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { PageHeader } from '@/components/PageHeader';
 import { useDiscord } from '@/extension/useDiscord';
 import { DiscordIntegration, DiscordSettings } from './IntegrationSettings';
@@ -12,19 +13,16 @@ export default function DiscordSettingsPage() {
       <div className={settingsUi.body}>
         <section className={settingsUi.group}>
           <div className={settingsUi.integrationPlain}>
-            <span className={settingsUi.integrationName}>Account</span>
+            <span className={settingsUi.integrationName}>{translateUi("discord_settings_page.account")}</span>
             <DiscordIntegration />
           </div>
         </section>
         {status.state === 'ready' && !status.discord.connected && (
-          <p className={settingsUi.footer}>
-            Connect opens a page from the extension that reads your Discord session from a discord.com tab. The web player never
-            sees it. This uses your account’s own token, which Discord’s terms don’t allow.
-          </p>
+          <p className={settingsUi.footer}>{translateUi("discord_settings_page.connect_opens_a_page_from")}</p>
         )}
         {status.state === 'ready' && status.discord.connected && (
           <>
-            <h2 className={settingsUi.sectionHeader}>Presence</h2>
+            <h2 className={settingsUi.sectionHeader}>{translateUi("discord_settings_page.presence")}</h2>
             <DiscordSettings />
           </>
         )}

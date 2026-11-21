@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useState } from 'react';
 import { detailButton } from '@/components/music/DetailHeader';
 import type { Track } from '@/data/music/types';
@@ -29,7 +30,7 @@ export function OfflineButton({ tracks, collection, loadAll }: { tracks: readonl
     <>
     <button
       className={detailButton.pill}
-      title="Fetches these songs into this browser so they play without a connection. Watch progress under Offline."
+      title={translateUi("offline_button.fetches_these_songs_into_this")}
       onClick={() => {
         void (async () => {
           const all = loadAll ? await loadAll() : tracks;
@@ -40,12 +41,12 @@ export function OfflineButton({ tracks, collection, loadAll }: { tracks: readonl
         })();
       }}
     >
-      {note ?? 'Save for Offline'}
+      {note ?? translateUi("offline_ui_offlinebutton_save_for_offline")}
     </button>
     {folder && (
       <button
         className={detailButton.pill}
-        title="Saves these songs as files into your chosen folder (downloading first when needed)."
+        title={translateUi("offline_button.saves_these_songs_as_files")}
         onClick={() =>
           void (async () => {
             const all = loadAll ? await loadAll() : tracks;
@@ -55,9 +56,7 @@ export function OfflineButton({ tracks, collection, loadAll }: { tracks: readonl
             announce(outcome);
           })()
         }
-      >
-        Save to Folder
-      </button>
+      >{translateUi("offline_button.save_to_folder")}</button>
     )}
     </>
   );

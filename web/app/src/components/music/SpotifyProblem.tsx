@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { needsSignIn, spotifyFailureText, toSpotifyFailure } from '@/data/spotify/failure';
 import { openSpotifySignIn } from '@/extension/useSpotifyAuth';
 import { stateStyles } from './States';
@@ -10,10 +11,10 @@ export function SpotifyProblem({ error, onRetry }: { error: unknown; onRetry: ()
     <div className={stateStyles.state}>
       <p className={stateStyles.title}>{spotifyFailureText(failure.kind)}</p>
       {failure.kind === 'rate_limited' && failure.retryAfterSec ? (
-        <p className={stateStyles.detail}>Spotify asked to wait about {failure.retryAfterSec} seconds.</p>
+        <p className={stateStyles.detail}>{translateUi("spotify_problem.wait_seconds", { seconds: failure.retryAfterSec })}</p>
       ) : null}
       <button className={stateStyles.button} onClick={signIn ? openSpotifySignIn : onRetry}>
-        {signIn ? 'Sign in with Spotify' : 'Try Again'}
+        {signIn ? translateUi("components_music_spotifyproblem_sign_in_with_spotify") : translateUi("components_music_spotifyproblem_try_again")}
       </button>
     </div>
   );

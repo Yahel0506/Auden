@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useEffect, useRef } from 'react';
 import { acceptSuggestion, rejectSuggestion } from '../identify/identifier';
 import { useReviewRows } from './data';
@@ -15,19 +16,15 @@ export function ReviewSheet({ onClose }: { onClose: () => void }) {
       ref={dialog}
       onClose={onClose}
       className="m-auto w-[min(560px,calc(100vw-32px))] rounded-2xl bg-[var(--systemQuaternary,#222)] p-0 text-primary backdrop:bg-black/50"
-      aria-label="Review matches"
+      aria-label={translateUi("review_sheet.review_matches")}
     >
       <div className="flex items-center justify-between px-5 pt-4">
-        <h2 className="type-title-3-emphasized">Review matches</h2>
-        <button className="type-callout-emphasized text-key" onClick={() => dialog.current?.close()}>
-          Done
-        </button>
+        <h2 className="type-title-3-emphasized">{translateUi("review_sheet.review_matches")}</h2>
+        <button className="type-callout-emphasized text-key" onClick={() => dialog.current?.close()}>{translateUi("review_sheet.done")}</button>
       </div>
-      <p className="px-5 pt-1 pb-3 type-callout text-secondary">
-        Auden wasn’t sure about these. Accepting links the file to the YouTube Music song, so it shows “On This Device” when you stream it.
-      </p>
+      <p className="px-5 pt-1 pb-3 type-callout text-secondary">{translateUi("review_sheet.auden_wasn_t_sure_about")}</p>
       <ul className="max-h-[60vh] overflow-y-auto px-2 pb-3">
-        {rows.length === 0 && <li className="px-3 py-6 text-center type-callout text-secondary">Nothing left to review.</li>}
+        {rows.length === 0 && <li className="px-3 py-6 text-center type-callout text-secondary">{translateUi("review_sheet.nothing_left_to_review")}</li>}
         {rows.map((row) => (
           <li key={row.id} className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-quinary">
             <div className="min-w-0 flex-1">
@@ -37,12 +34,8 @@ export function ReviewSheet({ onClose }: { onClose: () => void }) {
                 → {row.suggestedTitle} · {row.suggestedArtist}
               </div>
             </div>
-            <button className="type-callout-emphasized text-key" onClick={() => void acceptSuggestion(row.id!)}>
-              Accept
-            </button>
-            <button className="type-callout text-secondary" onClick={() => void rejectSuggestion(row.id!)}>
-              Not this
-            </button>
+            <button className="type-callout-emphasized text-key" onClick={() => void acceptSuggestion(row.id!)}>{translateUi("review_sheet.accept")}</button>
+            <button className="type-callout text-secondary" onClick={() => void rejectSuggestion(row.id!)}>{translateUi("review_sheet.not_this")}</button>
           </li>
         ))}
       </ul>

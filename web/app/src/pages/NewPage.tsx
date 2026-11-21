@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { PageHeader } from '@/components/PageHeader';
 import { Shelves } from '@/components/music/ShelfView';
 import { LoadError, NeedsExtension } from '@/components/music/States';
@@ -12,7 +13,7 @@ export default function NewPage() {
   if (missing) {
     return (
       <>
-        <PageHeader title="New" />
+        <PageHeader title={translateUi("new_page.new")} />
         <NeedsExtension />
       </>
     );
@@ -20,7 +21,7 @@ export default function NewPage() {
   if (explore.isError) {
     return (
       <>
-        <PageHeader title="New" />
+        <PageHeader title={translateUi("new_page.new")} />
         <LoadError error={explore.error} onRetry={() => void explore.refetch()} />
       </>
     );
@@ -28,7 +29,7 @@ export default function NewPage() {
   if (!explore.data) return <NewSkeleton />;
   return (
     <>
-      <PageHeader title="New" />
+      <PageHeader title={translateUi("new_page.new")} />
       <Shelves shelves={explore.data} />
     </>
   );

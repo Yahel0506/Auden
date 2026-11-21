@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { SkeletonBlock, SkeletonLine } from '@/components/Skeleton';
 
 const row = 'grid items-center border-t-[0.5px] border-t-divider last:border-b-[0.5px] last:border-b-divider';
@@ -5,7 +6,7 @@ const row = 'grid items-center border-t-[0.5px] border-t-divider last:border-b-[
 /** Album and playlist pages: artwork header, then the track list. */
 export function DetailSkeleton({ rows = 12, rowArtwork = false }: { rows?: number; rowArtwork?: boolean }) {
   return (
-    <div aria-busy="true" aria-label="Loading">
+    <div aria-busy="true" aria-label={translateUi("detail_skeleton.loading")}>
       <div
         className="mx-(--body-gutter) mb-10 grid grid-cols-[auto_1fr] items-end gap-x-[34px] pt-[52px] max-sm:grid-cols-[1fr] max-sm:justify-items-center max-sm:gap-y-4 max-sm:pt-4"
         aria-hidden="true"

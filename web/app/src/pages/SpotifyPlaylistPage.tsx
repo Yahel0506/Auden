@@ -1,3 +1,4 @@
+import { number, t as translateUi } from '@/i18n';
 import { SaveToDeviceButton } from '@/auden/playlists/ui/SaveToDeviceButton';
 import { saveSpotifyToDevice, saveYouTubeToDevice } from '@/auden/playlists/actions';
 import { useMutation } from '@tanstack/react-query';
@@ -35,7 +36,7 @@ export default function SpotifyPlaylistPage() {
   usePageTint(useArtworkColor(info.data?.imageUrl));
 
   if (extension.state === 'missing') return <NeedsExtension what="your Spotify playlists" />;
-  if (!signedIn) return <EmptyState title="Sign in to Spotify" detail="Open Spotify in the sidebar to connect your account." />;
+  if (!signedIn) return <EmptyState title={translateUi("spotify_playlist_page.sign_in_to_spotify")} detail={translateUi("spotify_playlist_page.open_spotify_in_the_sidebar")} />;
   if (rows.status === 'error' && !rows.rows.length) return <SpotifyProblem error={rows.error} onRetry={rows.retry} />;
   if (!info.data || (rows.status === 'loading' && !rows.rows.length)) return <PlaylistSkeleton />;
 
@@ -43,15 +44,15 @@ export default function SpotifyPlaylistPage() {
   const missing = rows.rows.filter((t) => t.unavailable === 'missing');
   const total = Math.max(rows.total, info.data.total);
   const meta = [
-    `${total} ${total === 1 ? 'song' : 'songs'}`,
-    rows.matching > 0 ? `finding on YouTube Music, ${rows.rows.length - rows.matching} of ${rows.rows.length}` : null,
-    rows.matching === 0 && missing.length > 0 ? `${missing.length} not on YouTube Music` : null,
+    translateUi('spotify_playlist_page.song_count', { count: total }),
+    rows.matching > 0 ? translateUi('spotify_playlist_page.finding_matches', { loaded: rows.rows.length - rows.matching, total: rows.rows.length }) : null,
+    rows.matching === 0 && missing.length > 0 ? translateUi('spotify_playlist_page.not_on_youtube', { count: missing.length }) : null,
   ]
     .filter(Boolean)
     .join(' • ');
   const headerInfo: HeaderInfo = {
     title: info.data.name,
-    subtitle: 'Spotify Playlist',
+    subtitle: translateUi('spotify_playlist_page.spotify_playlist'),
     meta,
     description: null,
     thumbnail: info.data.imageUrl,
@@ -77,15 +78,13 @@ export default function SpotifyPlaylistPage() {
       />
       {rows.partial && (
         <p className="mx-[var(--page-gutter,20px)] my-3 flex items-center gap-3 type-callout text-secondary">
-          <span>Couldn’t load the whole playlist: {rows.rows.length} of {total} songs so far.</span>
-          <button className="type-callout-emphasized text-key" onClick={rows.retry}>
-            Load the rest
-          </button>
+          <span>{translateUi('spotify_playlist_page.partial_playlist', { loaded: number(rows.rows.length), total: number(total) })}</span>
+          <button className="type-callout-emphasized text-key" onClick={rows.retry}>{translateUi("spotify_playlist_page.load_the_rest")}</button>
         </p>
       )}
       <TrackList tracks={rows.rows} variant="playlist" source={context.source} />
       <footer className={detailFooter}>
-        <p>From Spotify. Songs are matched to YouTube Music by title, artist and length.</p>
+        <p>{translateUi("spotify_playlist_page.from_spotify_songs_are_matched")}</p>
       </footer>
     </>
   );
@@ -97,19 +96,19 @@ function ImportButton({ title, videoIds, ready }: { title: string; videoIds: str
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
   const create = useMutation({
-    mutationFn: () => createPlaylist(title, videoIds, 'Imported from Spotify with Auden'),
+    mutationFn: () => createPlaylist(title, videoIds, translateUi('spotify_playlist_page.imported_from_spotify_with_auden')),
     onSuccess: (playlistId) => navigate(`/playlist/${encodeURIComponent(`VL${playlistId}`)}`),
   });
   if (!ytSignedIn) return null;
   const label = !ready
-    ? 'Import to YouTube Music (matching…)'
+    ? translateUi('spotify_playlist_page.import_to_youtube_matching')
     : create.isPending
-      ? 'Importing…'
+      ? translateUi('spotify_playlist_page.importing')
       : create.isError
-        ? 'Import failed. Try again'
+        ? translateUi('spotify_playlist_page.import_failed_try_again')
         : confirming
-          ? `Make a private playlist of ${videoIds.length} songs?`
-          : 'Import to YouTube Music';
+          ? translateUi('spotify_playlist_page.confirm_private_playlist', { count: number(videoIds.length) })
+          : translateUi('spotify_playlist_page.import_to_youtube_music');
   return (
     <button
       className={confirming ? detailButton.pill : detailButton.circle}
@@ -120,7 +119,7 @@ function ImportButton({ title, videoIds, ready }: { title: string; videoIds: str
       onBlur={() => setConfirming(false)}
     >
       <ListPlus size={18} strokeWidth={2.2} />
-      {confirming && <span>Make Playlist</span>}
+      {confirming && <span>{translateUi("spotify_playlist_page.make_playlist")}</span>}
     </button>
   );
 }

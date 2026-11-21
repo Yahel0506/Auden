@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { searchSongs } from '@/data/music/api';
 import { best } from '@/data/match/trackMatcher';
 import type { Track } from '@/data/music/types';
@@ -13,7 +14,7 @@ import { askName } from './ui/askName';
 /** The UI's entry points: each does the store call, then refreshes the mosaic (once, off the critical path). */
 
 export async function newPlaylist(tracks: Array<Track | number> = []): Promise<string | null> {
-  const name = await askName('New Playlist', '', 'Create');
+  const name = await askName(translateUi('playlists_actions.new_playlist'), '', translateUi('playlists_actions.create'));
   if (!name) return null;
   const { id } = await createPlaylist(name, tracks);
   void refreshCoverFor(id);
@@ -38,7 +39,7 @@ export async function moveInPlaylist(playlistId: string, entryId: number, before
 }
 
 export async function renameWithPrompt(playlistId: string, current: string): Promise<void> {
-  const name = await askName('Rename Playlist', current);
+  const name = await askName(translateUi('playlists_actions.rename_playlist'), current);
   if (name && name !== current) await renamePlaylist(playlistId, name);
 }
 
@@ -80,20 +81,21 @@ export async function importFiles(files: File[], opts: { online?: boolean } = {}
   let last: string | null = null;
   for (const file of files) {
     const jobId = `import:${file.name}:${file.lastModified}`;
-    useJobs.getState().start({ id: jobId, title: `Importing ${file.name}`, total: 1, cancel: () => controllers.get(jobId)?.abort() });
+    useJobs.getState().start({ id: jobId, title: translateUi('playlists_actions.importing_file', { name: file.name }), total: 1, cancel: () => controllers.get(jobId)?.abort() });
     const controller = new AbortController();
     controllers.set(jobId, controller);
     try {
       const summary = await importPlaylistFile(file, {
         ...(opts.online ? { search: searchOnline } : {}),
         signal: controller.signal,
-        onProgress: (done, total) => useJobs.getState().update(jobId, { done, total, detail: `${done} of ${total}` }),
+        onProgress: (done, total) => useJobs.getState().update(jobId, { done, total, detail: translateUi('job_banner.progress', { done, total }) }),
       });
       void refreshCoverFor(summary.playlistId);
       last = summary.playlistId;
       useJobs.getState().finish(jobId, describeImport(summary));
     } catch (error) {
-      useJobs.getState().finish(jobId, error instanceof Error ? error.message : String(error));
+      console.error('Auden playlist import failed', error);
+      useJobs.getState().finish(jobId, translateUi('playlists_actions.import_failed'));
     } finally {
       controllers.delete(jobId);
     }
@@ -110,7 +112,7 @@ function describeSave(outcome: SaveOutcome, what: string): string {
 /** Saves a YouTube Music playlist or album as a copy on this device. */
 export async function saveYouTubeToDevice(browseId: string, title: string, thumbnail: string | null): Promise<SaveOutcome> {
   const jobId = `save:${browseId}`;
-  useJobs.getState().start({ id: jobId, title: `Saving “${title}”`, total: 1 });
+  useJobs.getState().start({ id: jobId, title: translateUi('playlists_actions.saving', { title }), total: 1 });
   const outcome = await saveYouTubeList(cloudDeps, browseId, { title, thumbnail });
   if (!('failed' in outcome)) void refreshCoverFor(outcome.playlistId);
   useJobs.getState().finish(jobId, describeSave(outcome, title));
@@ -120,7 +122,7 @@ export async function saveYouTubeToDevice(browseId: string, title: string, thumb
 /** Saves a Spotify playlist as a copy on this device (every song looked up on YouTube Music). */
 export async function saveSpotifyToDevice(playlistId: string, title: string, cover: string | null): Promise<SaveOutcome> {
   const jobId = `save:spotify:${playlistId}`;
-  useJobs.getState().start({ id: jobId, title: `Saving “${title}”`, total: 1 });
+  useJobs.getState().start({ id: jobId, title: translateUi('playlists_actions.saving', { title }), total: 1 });
   const outcome = await saveSpotifyPlaylist(cloudDeps, playlistId, { title, cover });
   if (!('failed' in outcome)) void refreshCoverFor(outcome.playlistId);
   useJobs.getState().finish(jobId, describeSave(outcome, title));

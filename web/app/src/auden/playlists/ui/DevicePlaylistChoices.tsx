@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { ChevronLeft } from 'lucide-react';
 import { MenuHeader, MenuItem, MenuSeparator } from '@/components/Menu';
 import type { Track } from '@/data/music/types';
@@ -10,19 +11,15 @@ export function DevicePlaylistChoices({ track, onDone, onBack }: { track: Track;
   const has = useMembership(track).data;
   return (
     <>
-      <MenuItem icon={<ChevronLeft size={14} />} onSelect={onBack}>
-        Back
-      </MenuItem>
+      <MenuItem icon={<ChevronLeft size={14} />} onSelect={onBack}>{translateUi("device_playlist_choices.back")}</MenuItem>
       <MenuSeparator />
-      <MenuHeader>Playlists on This Device</MenuHeader>
+      <MenuHeader>{translateUi("device_playlist_choices.playlists_on_this_device")}</MenuHeader>
       <MenuItem
         onSelect={() => {
           onDone();
           void newPlaylist([track]);
         }}
-      >
-        New Playlist…
-      </MenuItem>
+      >{translateUi("device_playlist_choices.new_playlist")}</MenuItem>
       {lists.data?.map(({ playlist }) => {
         const holds = has?.has(playlist.id) ?? false;
         return (

@@ -1,3 +1,4 @@
+import { number, t as translateUi } from '@/i18n';
 import { useEffect, useReducer, useState } from 'react';
 import { useParty } from '@/party/listenTogether';
 import type { AutoDJSnapshot } from '@/playback/automix';
@@ -18,7 +19,7 @@ export function NerdStats() {
   return (
     // The phone's shadow: free on the dark mesh, and what keeps it legible over a bright music video.
     <div className="mt-1 flex min-w-0 flex-col gap-px type-[500_11px/14px] tabular-nums [text-shadow:0_1px_4px_rgb(0_0_0/0.55)]">
-      <span className="truncate text-secondary">{describeStream(nowPlaying) ?? 'Measuring the stream…'}</span>
+      <span className="truncate text-secondary">{describeStream(nowPlaying) ?? translateUi("shell_nerdstats_measuring_the_stream")}</span>
       {automix && <AutomixLine videoId={nowPlaying.videoId} />}
     </div>
   );
@@ -30,11 +31,11 @@ function describeStream(np: NowPlaying): string | null {
   if (!s) return null;
   const parts = [
     s.codec,
-    s.sampleRateHz ? `${+(s.sampleRateHz / 1000).toFixed(1)} kHz` : null,
-    s.bitrateKbps ? `${s.bitrateKbps} kbps` : null,
-    s.channels ? ({ 1: 'Mono', 2: 'Stereo' } as Record<number, string>)[s.channels] ?? `${s.channels} channels` : null,
+    s.sampleRateHz ? `${number(s.sampleRateHz / 1000, { maximumFractionDigits: 1 })} kHz` : null,
+    s.bitrateKbps ? `${number(s.bitrateKbps)} kbps` : null,
+    s.channels ? s.channels === 1 ? translateUi('nerd_stats.mono') : s.channels === 2 ? translateUi('nerd_stats.stereo') : translateUi('nerd_stats.channels', { count: s.channels }) : null,
     s.itag ? `itag ${s.itag}` : null,
-    `${s.client} ${s.mode}`,
+    `${s.client} ${translateUi(({ direct: 'nerd_stats.mode_direct', SABR: 'nerd_stats.mode_sabr', file: 'nerd_stats.mode_file' } as const)[s.mode])}`,
   ];
   return parts.filter(Boolean).join(' · ');
 }
@@ -47,27 +48,27 @@ function AutomixLine({ videoId }: { videoId: string }) {
   const analyzer = useAnalyzer();
 
   let text: string;
-  if (inParty) text = 'Automix: stopped in Listen Together';
+  if (inParty) text = translateUi('nerd_stats.stopped_in_party');
   else if (state?.state === 'scheduled' && state.plan) text = describeBlend(state);
-  else if (state?.loop) text = `Automix · loop mix ready · ${describeLoop(state)}`;
+  else if (state?.loop) text = translateUi('nerd_stats.loop_mix_ready', { loop: describeLoop(state) });
   else {
     // This song is read where it will be mixed out (its ending's grid), the next where it comes in (its opening's).
     const label = (id: string | null, outgoing: boolean) => {
-      if (!id || !analyzer) return 'waiting';
+      if (!id || !analyzer) return translateUi('nerd_stats.waiting');
       const a = analyzer.get(id);
       if (a) {
         const g = outgoing && a.tailGrid !== undefined ? a.tailGrid : a.bpm ? { bpm: a.bpm, gridConfidence: a.gridConfidence } : null;
-        const key = a.camelot ? ` ${a.camelot.num}${a.camelot.letter}` : '';
-        const video = a.musicVideo ? ', music video: no loop' : '';
-        if (!g) return `analysed (no beat${key}${video})`;
-        const grid = g.gridConfidence >= 0.2 ? `grid ${g.gridConfidence.toFixed(2)}` : `weak grid ${g.gridConfidence.toFixed(2)}`;
-        return `analysed (${Math.round(g.bpm)} BPM${key}, ${grid}${video})`;
+        const key = a.camelot ? `${a.camelot.num}${a.camelot.letter}` : '';
+        const video = a.musicVideo ? translateUi('nerd_stats.music_video_no_loop_suffix') : '';
+        if (!g) return translateUi('nerd_stats.analysis_without_beat', { key: key ? ` ${key}` : '', video });
+        const grid = translateUi(g.gridConfidence >= 0.2 ? 'nerd_stats.grid_confidence' : 'nerd_stats.weak_grid_confidence', { confidence: number(g.gridConfidence, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) });
+        return translateUi('nerd_stats.analysis_with_grid', { bpm: number(Math.round(g.bpm)), key: key ? ` ${key}` : '', grid, video });
       }
       const status = analyzer.statusOf(id);
-      return status === 'analyzing' ? 'analysing…' : status === 'error' ? 'failed' : 'waiting';
+      return status === 'analyzing' ? translateUi('nerd_stats.analysing') : status === 'error' ? translateUi('nerd_stats.failed') : translateUi('nerd_stats.waiting');
     };
     const next = state?.nextKey ?? nextInQueue;
-    text = `Automix · this song: ${label(videoId, true)} · next: ${next ? label(next, false) : 'none'}`;
+    text = translateUi('nerd_stats.this_song_next', { thisSong: label(videoId, true), next: next ? label(next, false) : translateUi('nerd_stats.none') });
   }
   // Dimmer than the stream line: that one describes the audio, this one the app.
   return <span className="truncate text-tertiary">{text}</span>;
@@ -76,26 +77,36 @@ function AutomixLine({ videoId }: { videoId: string }) {
 /** "out 4-bar loop, clear by lyrics · in 2-bar, clear by mask · 111 → 85 BPM over 11 bars". */
 function describeLoop(state: AutoDJSnapshot): string {
   const l = state.loop!;
-  const from = Math.round(l.out.bpm);
-  const to = Math.round(l.in.bpm / l.fold);
-  const tempo = from === to ? `${from} BPM` : `${from} → ${to} BPM over ${l.rampBars} bars`;
-  const fold = l.fold === 1 ? '' : l.fold > 1 ? ' (next in double time)' : ' (next in half time)';
-  const side = (p: typeof l.out) => `${p.bars}-bar, clear by ${p.checkedBy}`;
-  return `out ${side(l.out)} · in ${side(l.in)} · ${tempo}${fold}`;
+  const from = number(Math.round(l.out.bpm));
+  const to = number(Math.round(l.in.bpm / l.fold));
+  const tempo = from === to ? translateUi('nerd_stats.same_tempo', { bpm: from }) : translateUi('nerd_stats.ramped_tempo', { from, to, bars: translateUi('nerd_stats.bar_count', { count: l.rampBars }) });
+  const fold = l.fold === 1 ? '' : l.fold > 1 ? ` ${translateUi('nerd_stats.next_double_time')}` : ` ${translateUi('nerd_stats.next_half_time')}`;
+  const side = (p: typeof l.out) => translateUi('nerd_stats.loop_side', { bars: translateUi('nerd_stats.bar_count', { count: p.bars }), clearBy: translateUi(({ lyrics: 'nerd_stats.lyrics', mask: 'nerd_stats.mask', 'lyrics+mask': 'nerd_stats.lyrics_and_mask' } as const)[p.checkedBy]) });
+  return translateUi('nerd_stats.loop_description', { out: side(l.out), in: side(l.in), tempo, fold });
 }
 
 function describeBlend(state: AutoDJSnapshot): string {
   const plan = state.plan!;
-  const when =
-    state.startsInSec !== null && state.startsInSec > 0 ? `in ${Math.ceil(state.startsInSec)} s` : 'now';
+  const when = state.startsInSec !== null && state.startsInSec > 0
+    ? translateUi('nerd_stats.in_seconds', { seconds: translateUi('nerd_stats.seconds_count', { count: Math.ceil(state.startsInSec) }) })
+    : translateUi('nerd_stats.now');
   if (plan.style === 'loop' && state.loop) {
-    return `Automix · ${state.startsInSec !== null && state.startsInSec > 0 ? `loop mix ${when}` : 'looping'} · ${describeLoop(state)}`;
+    return translateUi('nerd_stats.loop_blend', { action: state.startsInSec !== null && state.startsInSec > 0 ? translateUi('nerd_stats.loop_mix_when', { when }) : translateUi('nerd_stats.looping'), loop: describeLoop(state) });
   }
-  if (plan.style === 'crossfade') return `Automix · crossfading ${when} · ${Math.round(plan.durationSec)} s · ${plan.reason ?? 'no beat match'}`;
+  const reason = plan.reason ? localizedReason(plan.reason) : translateUi('nerd_stats.no_beat_match');
+  if (plan.style === 'crossfade') return translateUi('nerd_stats.crossfading', { when, seconds: number(Math.round(plan.durationSec)), reason });
   const bars = state.beatSec ? Math.round(plan.durationSec / (4 * state.beatSec)) : null;
-  if (plan.style === 'filter') return `Automix · filter mix ${when} · ${bars ? `${bars} bars` : `${plan.durationSec.toFixed(1)} s`} · ${plan.reason}`;
-  const stretch = Math.abs(plan.rate - 1) < 0.0005 ? 'same tempo' : `next at ${plan.rate.toFixed(3)}×`;
-  return `Automix · mixing ${when} · ${bars ? `${bars} bars` : `${plan.durationSec.toFixed(1)} s`} · ${stretch}`;
+  const duration = bars ? translateUi('nerd_stats.bar_count', { count: bars }) : translateUi('nerd_stats.seconds_decimal', { seconds: number(plan.durationSec, { maximumFractionDigits: 1 }) });
+  if (plan.style === 'filter') return translateUi('nerd_stats.filter_mix', { when, duration, reason });
+  const stretch = Math.abs(plan.rate - 1) < 0.0005 ? translateUi('nerd_stats.same_tempo_label') : translateUi('nerd_stats.next_at_rate', { rate: number(plan.rate, { minimumFractionDigits: 3, maximumFractionDigits: 3 }) });
+  return translateUi('nerd_stats.mixing', { when, duration, stretch });
+}
+
+function localizedReason(reason: string): string {
+  if (reason === 'this song has no beat grid at its end') return translateUi('nerd_stats.reason_no_outgoing_grid');
+  if (reason === 'next song has no beat grid') return translateUi('nerd_stats.reason_no_incoming_grid');
+  const tempos = /^tempos (\d+)% apart$/.exec(reason);
+  return tempos ? translateUi('nerd_stats.reason_tempos_apart', { percent: number(Number(tempos[1])) }) : reason;
 }
 
 /** The analysis queue, once the Automix code is loaded; re-renders as its statuses change. */

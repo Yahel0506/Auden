@@ -1,0 +1,145 @@
+{
+  "extensionName": {
+    "message": "Auden"
+  },
+  "extensionDescription": {
+    "message": "Collega il player web Auden a YouTube Music, Spotify e Discord."
+  },
+  "openAuden": {
+    "message": "Apri Auden"
+  },
+  "checking": {
+    "message": "Verifica in corso…"
+  },
+  "notSignedIn": {
+    "message": "Nessun accesso effettuato in questo browser"
+  },
+  "signIn": {
+    "message": "Accedi"
+  },
+  "couldNotReadAccount": {
+    "message": "Impossibile leggere il tuo account"
+  },
+  "youtubeSessionRejected": {
+    "message": "YouTube non ha accettato la sessione del browser. Accedi di nuovo."
+  },
+  "youtubeAccountMissing": {
+    "message": "Non è stato trovato alcun account Google connesso."
+  },
+  "youtubeAccountUnavailable": {
+    "message": "YouTube non ha trovato un account in questa sessione del browser."
+  },
+  "disconnected": {
+    "message": "Disconnesso"
+  },
+  "retry": {
+    "message": "Riprova"
+  },
+  "connect": {
+    "message": "Connetti"
+  },
+  "disconnect": {
+    "message": "Disconnetti"
+  },
+  "spotifySignInExpired": {
+    "message": "La sessione Spotify è scaduta. Accedi di nuovo."
+  },
+  "spotifyRateLimited": {
+    "message": "Spotify sta limitando temporaneamente le richieste. Riprova tra poco."
+  },
+  "spotifyConnectionFailed": {
+    "message": "Impossibile raggiungere Spotify. Controlla la connessione e riprova."
+  },
+  "spotifySignInFailed": {
+    "message": "Accesso a Spotify non riuscito. Riprova."
+  },
+  "stopUsingAccountYouTube": {
+    "message": "Smetti di usare questo account in Auden. Rimarrai connesso a YouTube."
+  },
+  "stopUsingAccountSpotify": {
+    "message": "Smetti di usare questo account in Auden. Rimarrai connesso a Spotify."
+  },
+  "notConnected": {
+    "message": "Non connesso"
+  },
+  "showingWhatYouPlay": {
+    "message": "Mostra ciò che ascolti"
+  },
+  "connecting": {
+    "message": "Connessione in corso…"
+  },
+  "couldNotConnect": {
+    "message": "Impossibile connettersi"
+  },
+  "onWaitingForSong": {
+    "message": "Attivo, in attesa di un brano"
+  },
+  "presenceOff": {
+    "message": "Presenza disattivata"
+  },
+  "forgetDiscordAccount": {
+    "message": "Dimentica questo account Discord."
+  },
+  "couldNotReadSession": {
+    "message": "Impossibile leggere la sessione"
+  },
+  "allowLyricSourcesTitle": {
+    "message": "Auden: fonti dei testi"
+  },
+  "allowLyricSourcesHeading": {
+    "message": "Consenti fonti dei testi"
+  },
+  "allowLyricSourcesExplanation": {
+    "message": "Questi fornitori di testi non consentono alle pagine web di contattarli direttamente, quindi Auden li raggiunge tramite l’estensione. Il browser ti chiederà di confermare."
+  },
+  "allow": {
+    "message": "Consenti"
+  },
+  "permissionDone": {
+    "message": "Fatto. Puoi chiudere questa scheda e tornare ad Auden."
+  },
+  "permissionDenied": {
+    "message": "Operazione non consentita. Queste fonti rimangono disattivate."
+  },
+  "discordConnectTitle": {
+    "message": "Auden: connetti Discord"
+  },
+  "discordConnectHeading": {
+    "message": "Mostra su Discord cosa stai ascoltando"
+  },
+  "discordConnectExplanation": {
+    "message": "Auden legge la tua sessione Discord da una scheda discord.com e la conserva in questa estensione. Il player web non può visualizzarla."
+  },
+  "discordTokenWarning": {
+    "message": "Questa funzione usa il token del tuo account, non consentito dai termini di Discord. Usalo a tuo rischio."
+  },
+  "connectDiscord": {
+    "message": "Connetti Discord"
+  },
+  "discordPermissionDenied": {
+    "message": "Operazione non consentita. Discord rimane disattivato."
+  },
+  "discordConnected": {
+    "message": "Connesso come $USER$. Puoi chiudere questa scheda.",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "discordSignInProgress": {
+    "message": "Accedi a Discord nella scheda che si è aperta. Questa pagina se ne accorgerà."
+  },
+  "discordReadProgress": {
+    "message": "Lettura della sessione Discord…"
+  },
+  "discordSessionMissing": {
+    "message": "Nessuna sessione Discord. Accedi su discord.com e riprova."
+  },
+  "discordTokenRejected": {
+    "message": "Discord ha rifiutato il token. Riconnetti l’account."
+  },
+  "discordConnectionError": {
+    "message": "Impossibile connettersi a Discord. Riprova."
+  }
+}

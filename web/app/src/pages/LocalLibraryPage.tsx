@@ -1,3 +1,4 @@
+import { date, number, t as translateUi } from '@/i18n';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
@@ -17,24 +18,25 @@ import { tracks as trackDao } from '@/auden/db/dao';
 import type { LibraryRootRow } from '@/auden/db/schema';
 
 const TABS = [
-  { id: 'songs', label: 'Songs' },
-  { id: 'artists', label: 'Artists' },
-  { id: 'albums', label: 'Albums' },
-  { id: 'genres', label: 'Genres' },
-  { id: 'folders', label: 'Folders' },
-  { id: 'playlists', label: 'Playlists' },
+  { id: 'songs', key: 'local_library_page.tab_songs' },
+  { id: 'artists', key: 'local_library_page.tab_artists' },
+  { id: 'albums', key: 'local_library_page.tab_albums' },
+  { id: 'genres', key: 'local_library_page.tab_genres' },
+  { id: 'folders', key: 'local_library_page.tab_folders' },
+  { id: 'playlists', key: 'local_library_page.tab_playlists' },
 ] as const;
 type TabId = (typeof TABS)[number]['id'];
+const tabLabel = (tab: TabId) => translateUi(TABS.find((item) => item.id === tab)!.key as keyof typeof import('@/i18n.en.json'));
 
 const button = 'type-callout-emphasized text-key hover:underline disabled:opacity-50';
 const card = 'mx-(--body-gutter) mb-3 flex items-center gap-3 rounded-[12px] bg-quinary px-4 py-3 type-callout';
 
-const ACCESS_TEXT: Record<RootAccess, string> = {
-  granted: 'Connected',
-  files: 'Connected for this visit',
-  prompt: 'Needs your permission',
-  offline: 'Not connected',
-};
+const accessText = (access: RootAccess) => translateUi(({
+  granted: 'local_library_page.access_connected',
+  files: 'local_library_page.access_connected_for_visit',
+  prompt: 'local_library_page.access_permission_needed',
+  offline: 'local_library_page.access_not_connected',
+})[access] as keyof typeof import('@/i18n.en.json'));
 
 function FolderRow({ root, access, onPick }: { root: LibraryRootRow; access: RootAccess; onPick: (rootId: string) => void }) {
   const scanning = useScan((s) => s.scanning && s.rootId === root.id);
@@ -44,13 +46,13 @@ function FolderRow({ root, access, onPick }: { root: LibraryRootRow; access: Roo
       <div className="min-w-0 flex-1">
         <div className="truncate type-body-emphasized text-primary">{root.name}</div>
         <div className="truncate type-callout text-secondary">
-          {ACCESS_TEXT[access]}
-          {root.scannedAt ? ` · indexed ${new Date(root.scannedAt).toLocaleDateString()}` : ''}
+          {accessText(access)}
+          {root.scannedAt ? ` · ${translateUi('local_library_page.indexed_date', { date: date(new Date(root.scannedAt)) })}` : ''}
         </div>
       </div>
       {connected ? (
         <button className={button} disabled={scanning} onClick={() => void scanRoot(root.id)}>
-          {scanning ? 'Indexing…' : 'Rescan'}
+          {scanning ? translateUi("pages_locallibrarypage_indexing") : translateUi('local_library_page.rescan')}
         </button>
       ) : root.kind === 'fsa' ? (
         <button
@@ -61,17 +63,11 @@ function FolderRow({ root, access, onPick }: { root: LibraryRootRow; access: Roo
               if (ok) void scanRoot(root.id);
             })
           }
-        >
-          Reconnect folder
-        </button>
+        >{translateUi("local_library_page.reconnect_folder")}</button>
       ) : (
-        <button className={button} onClick={() => onPick(root.id)}>
-          Reconnect folder
-        </button>
+        <button className={button} onClick={() => onPick(root.id)}>{translateUi("local_library_page.reconnect_folder")}</button>
       )}
-      <button className="type-callout text-secondary hover:underline disabled:opacity-50" disabled={scanning} onClick={() => void removeFolder(root.id)}>
-        Remove
-      </button>
+      <button className="type-callout text-secondary hover:underline disabled:opacity-50" disabled={scanning} onClick={() => void removeFolder(root.id)}>{translateUi("local_library_page.remove")}</button>
     </li>
   );
 }
@@ -92,6 +88,11 @@ export default function LocalLibraryPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const reconnectFor = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (scan.error) console.error('Auden local library scan failed', scan.error);
+    if (identify.error) console.error('Auden YouTube Music identification failed', identify.error);
+  }, [identify.error, scan.error]);
 
   // Refresh what each folder allows, then bring connected folders up to date (incremental: unchanged files aren't read).
   useEffect(() => {
@@ -131,55 +132,53 @@ export default function LocalLibraryPage() {
     }
     const added = await addFolder();
     if (!added) return;
-    if ('duplicate' in added) setNotice(`That folder is already part of “${added.duplicate}”.`);
+    if ('duplicate' in added) setNotice(translateUi('local_library_page.folder_already_added', { name: added.duplicate }));
     else void scanRoot(added.id);
   };
   const onFiles = async (files: File[]) => {
     const root = await adoptPickedFiles(files, reconnectFor.current);
     reconnectFor.current = undefined;
-    if (!root) setNotice('That isn’t the folder that was added. Pick the same folder again.');
-    else if ('duplicate' in root) setNotice(`“${root.duplicate}” is already added. Use Reconnect folder on it to pick it again.`);
+    if (!root) setNotice(translateUi('local_library_page.pick_the_same_folder_again'));
+    else if ('duplicate' in root) setNotice(translateUi('local_library_page.folder_already_added_reconnect', { name: root.duplicate }));
     else void scanRoot(root.id);
   };
 
   const pendingReview = review.data?.length ?? 0;
   const body = tab === 'playlists' ? <PlaylistsTab /> : !loaded || loading ? null : items.length === 0 ? (
     <div className={stateStyles.state}>
-      <p className={stateStyles.title}>{roots.length ? 'No songs found yet' : 'Add your music'}</p>
+      <p className={stateStyles.title}>{roots.length ? translateUi("pages_locallibrarypage_no_songs_found_yet") : translateUi("pages_locallibrarypage_add_your_music")}</p>
       <p className={stateStyles.detail}>
         {roots.length
-          ? 'Connect your folders and rescan, or add another folder.'
-          : 'Pick a folder with your music files. Songs stay on this device and play without an account.'}
+          ? translateUi("pages_locallibrarypage_connect_your_folders_and_rescan")
+          : translateUi("pages_locallibrarypage_pick_a_folder_with_your")}
       </p>
-      <button className={stateStyles.button} onClick={() => void onAdd()}>
-        Add Folder
-      </button>
+      <button className={stateStyles.button} onClick={() => void onAdd()}>{translateUi("local_library_page.add_folder")}</button>
     </div>
   ) : tab === 'songs' ? (
-    <TrackList tracks={items.map((i) => i.track)} variant="playlist" source={{ title: 'On This Device', type: 'library', id: 'local' }} />
+    <TrackList tracks={items.map((i) => i.track)} variant="playlist" source={{ title: translateUi('local_library_page.on_this_device'), type: 'library', id: 'local' }} />
   ) : openGroup ? (
     <>
       <div className="mx-(--body-gutter) mb-2 flex items-center gap-3">
         <button className={button} onClick={() => setParams({ tab })}>
-          ‹ {TABS.find((t) => t.id === tab)!.label}
+          ‹ {tabLabel(tab)}
         </button>
-        <h2 className="type-title-3-emphasized">{openGroup.title || 'Unknown'}</h2>
+        <h2 className="type-title-3-emphasized">{openGroup.title || translateUi('group_list.unknown')}</h2>
       </div>
       <TrackList
         tracks={openGroup.songs.map((i) => i.track)}
         variant="playlist"
-        source={{ title: openGroup.title || 'On This Device', type: 'library', id: `local:${tab}:${openGroup.key}` }}
+        source={{ title: openGroup.title || translateUi('local_library_page.on_this_device'), type: 'library', id: `local:${tab}:${openGroup.key}` }}
       />
     </>
   ) : groups && groups.length ? (
     <GroupList groups={groups} round={tab === 'artists'} onOpen={(key) => setParams({ tab, group: key })} />
   ) : (
-    <EmptyState title="Nothing here yet" />
+    <EmptyState title={translateUi("local_library_page.nothing_here_yet")} />
   );
 
   return (
     <>
-      <PageHeader title="On This Device" />
+      <PageHeader title={translateUi("local_library_page.on_this_device")} />
       <input
         ref={input}
         type="file"
@@ -196,40 +195,40 @@ export default function LocalLibraryPage() {
       {notice && (
         <div className={card} role="status">
           <span className="flex-1">{notice}</span>
-          <button className={button} onClick={() => setNotice(null)}>Dismiss</button>
+          <button className={button} onClick={() => setNotice(null)}>{translateUi("local_library_page.dismiss")}</button>
         </div>
       )}
       {scan.scanning && (
         <div className={card} role="status">
-          <span className="flex-1">Indexing your music… {scan.seen} files seen{scan.parsed ? `, ${scan.parsed} read` : ''}.</span>
+          <span className="flex-1">{translateUi(scan.parsed ? 'local_library_page.index_progress_parsed' : 'local_library_page.index_progress', { seen: number(scan.seen), parsed: number(scan.parsed) })}</span>
         </div>
       )}
       {scan.error && !scan.scanning && (
         <div className={card} role="alert">
-          <span className="flex-1">{scan.error}</span>
+          <span className="flex-1">{translateUi('local_library_page.scan_failed')}</span>
         </div>
       )}
       {identify.running && (
         <div className={card} role="status">
-          <span className="flex-1">Finding these songs on YouTube Music… {identify.done} of {identify.total}</span>
-          <button className={button} onClick={cancelIdentify}>Stop</button>
+          <span className="flex-1">{translateUi('local_library_page.identification_progress', { done: number(identify.done), total: number(identify.total) })}</span>
+          <button className={button} onClick={cancelIdentify}>{translateUi("local_library_page.stop")}</button>
         </div>
       )}
       {identify.error && !identify.running && (
         <div className={card} role="alert">
-          <span className="flex-1">Couldn’t reach YouTube Music to identify songs: {identify.error}</span>
-          <button className={button} onClick={() => void startIdentify(searchSongs)}>Try Again</button>
+          <span className="flex-1">{translateUi('local_library_page.identification_failed')}</span>
+          <button className={button} onClick={() => void startIdentify(searchSongs)}>{translateUi("local_library_page.try_again")}</button>
         </div>
       )}
       {pendingReview > 0 && (
         <div className={card}>
-          <span className="flex-1">{pendingReview} {pendingReview === 1 ? 'song needs' : 'songs need'} a look.</span>
-          <button className={button} onClick={() => setReviewOpen(true)}>Review</button>
+          <span className="flex-1">{translateUi('local_library_page.pending_review_count', { count: pendingReview })}</span>
+          <button className={button} onClick={() => setReviewOpen(true)}>{translateUi("local_library_page.review")}</button>
         </div>
       )}
       {reviewOpen && <ReviewSheet onClose={() => setReviewOpen(false)} />}
 
-      <nav className="mx-(--body-gutter) mb-3 flex flex-wrap gap-1" aria-label="Library sections">
+      <nav className="mx-(--body-gutter) mb-3 flex flex-wrap gap-1" aria-label={translateUi("local_library_page.library_sections")}>
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -237,15 +236,15 @@ export default function LocalLibraryPage() {
             onClick={() => setParams({ tab: t.id })}
             className="h-8 rounded-pill px-3.5 type-callout-emphasized text-secondary hover:bg-quinary aria-pressed:bg-nav-selected aria-pressed:text-primary"
           >
-            {t.label}
+            {translateUi(t.key as keyof typeof import('@/i18n.en.json'))}
           </button>
         ))}
         <span className="flex-1" />
-        <button className={button} onClick={() => void onAdd()}>Add Folder</button>
+        <button className={button} onClick={() => void onAdd()}>{translateUi("local_library_page.add_folder")}</button>
       </nav>
 
       {roots.length > 0 && tab === 'folders' && !openGroup && (
-        <ul className="mx-(--body-gutter) mb-4 divide-y divide-divider rounded-[12px] bg-quinary px-4" aria-label="Your folders">
+        <ul className="mx-(--body-gutter) mb-4 divide-y divide-divider rounded-[12px] bg-quinary px-4" aria-label={translateUi("local_library_page.your_folders")}>
           {roots.map((r) => (
             <FolderRow
               key={r.id}

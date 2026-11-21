@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Text
+import androidx.compose.ui.res.stringResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.music.bitchord.BuildConfig
+import com.music.bitchord.R
 import com.music.bitchord.data.AppUpdateChecker
 import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.TvSettings
@@ -53,7 +55,7 @@ import com.music.bitchord.ui.tv.theme.TvType
 // Discord Rich Presence is hidden on TV for now; TvDiscordDialog is kept for when it returns.
 private enum class SettingsSheet { Theme, RefreshRate, Equalizer, Scrobbling, LyricsSources, Update, About }
 
-private const val DefaultBlurb = "Playback, sound and display preferences for BitChord on this TV."
+private val DefaultBlurb = R.string.tv_settings_default_blurb
 
 /**
  * Settings, as tvOS lays it out: the app on the left with a plain description of
@@ -116,7 +118,7 @@ fun TvSettingsScreen(
                 label = "settingsBlurb",
             ) { text ->
                 Text(
-                    text = text,
+                    text = stringResource(text),
                     style = TvType.Callout,
                     color = TvGlass.TextSecondary,
                     textAlign = TextAlign.Center,
@@ -132,30 +134,30 @@ fun TvSettingsScreen(
             contentPadding = PaddingValues(end = TvDimensions.SafeMarginHorizontal, bottom = 38.dp),
             verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            item { TvListHeader("Account") }
+            item { TvListHeader(stringResource(R.string.tv_account_section)) }
             item {
                 TvListRow(
                     title = "YouTube Music",
-                    value = if (signedIn) account?.name ?: "Signed In" else "Sign In",
-                    onFocused = { blurb = "Your library, playlists and recommendations come from this account." },
+                    value = if (signedIn) account?.name ?: stringResource(R.string.tv_signed_in) else stringResource(R.string.tv_sign_in),
+                    onFocused = { blurb = R.string.tv_recommendations_account },
                     onClick = onOpenAccount,
                 )
             }
 
-            item { TvListHeader("Playback") }
+            item { TvListHeader(stringResource(R.string.tv_playback_section)) }
             item {
                 TvListRow(
-                    title = "Automix",
-                    value = onOff(automix),
-                    onFocused = { blurb = "Blends one song into the next, matched to their tempo." },
+                    title = stringResource(R.string.tv_automix),
+                    value = stringResource(onOff(automix)),
+                    onFocused = { blurb = R.string.tv_automix_blurb },
                     onClick = { AppSettings.setSmartFadeEnabled(!automix) },
                 )
             }
             item {
                 TvListRow(
-                    title = "Crossfade",
-                    value = if (crossfade > 0) "$crossfade s" else "Off",
-                    onFocused = { blurb = "Fades each song out as the next one fades in. Select to change the length." },
+                    title = stringResource(R.string.tv_crossfade),
+                    value = if (crossfade > 0) stringResource(R.string.tv_crossfade_duration, crossfade) else stringResource(R.string.tv_off),
+                    onFocused = { blurb = R.string.tv_fades_song_in_and_out },
                     onClick = {
                         AppSettings.setCrossfadeSeconds(
                             when (crossfade) {
@@ -170,35 +172,35 @@ fun TvSettingsScreen(
             }
             item {
                 TvListRow(
-                    title = "Autoplay",
-                    value = onOff(autoplay),
-                    onFocused = { blurb = "When the queue ends, keeps playing music similar to what you were listening to." },
+                    title = stringResource(R.string.tv_autoplay),
+                    value = stringResource(onOff(autoplay)),
+                    onFocused = { blurb = R.string.tv_autoplay_blurb },
                     onClick = { AppSettings.setAutoplay(!autoplay) },
                 )
             }
             item {
                 TvListRow(
-                    title = "Skip Silence",
-                    value = onOff(skipSilence),
-                    onFocused = { blurb = "Skips over silent stretches at the start and end of songs." },
+                    title = stringResource(R.string.tv_skip_silence),
+                    value = stringResource(onOff(skipSilence)),
+                    onFocused = { blurb = R.string.tv_skip_silence_blurb },
                     onClick = { AppSettings.setSkipSilence(!skipSilence) },
                 )
             }
 
-            item { TvListHeader("Sound") }
+            item { TvListHeader(stringResource(R.string.tv_sound_section)) }
             item {
                 TvListRow(
-                    title = "Equalizer",
-                    value = onOff(eqEnabled),
-                    onFocused = { blurb = "Shape the sound with presets or seven bands of your own." },
+                    title = stringResource(R.string.equalizer),
+                    value = stringResource(onOff(eqEnabled)),
+                    onFocused = { blurb = R.string.tv_shape_sound_with_presets },
                     onClick = { sheet = SettingsSheet.Equalizer },
                 )
             }
             item {
                 TvListRow(
-                    title = "Spatial Audio",
-                    value = onOff(spatial),
-                    onFocused = { blurb = "Widens stereo music using the TV's audio virtualizer, where it has one." },
+                    title = stringResource(R.string.tv_spatial_audio),
+                    value = stringResource(onOff(spatial)),
+                    onFocused = { blurb = R.string.tv_widens_stereo_music },
                     onClick = {
                         TvSettings.setSpatialAudioEnabled(!spatial)
                         TvSpatialAudioEngine.setEnabled(!spatial)
@@ -207,77 +209,77 @@ fun TvSettingsScreen(
             }
             item {
                 TvListRow(
-                    title = "Sound Check",
-                    value = onOff(loudness),
-                    onFocused = { blurb = "Plays every song at the same perceived loudness." },
+                    title = stringResource(R.string.tv_sound_check),
+                    value = stringResource(onOff(loudness)),
+                    onFocused = { blurb = R.string.tv_plays_each_song_at_loudness },
                     onClick = { AppSettings.setLoudnessNormalization(!loudness) },
                 )
             }
             item {
                 TvListRow(
-                    title = "USB DAC",
-                    value = onOff(usbDac),
-                    onFocused = { blurb = "Sends audio straight to a connected USB DAC, unchanged, when one is attached." },
+                    title = stringResource(R.string.tv_usb_dac),
+                    value = stringResource(onOff(usbDac)),
+                    onFocused = { blurb = R.string.tv_sends_audio_to_usb_dac },
                     onClick = { AppSettings.setPreferUsbDac(!usbDac) },
                 )
             }
 
-            item { TvListHeader("Now Playing") }
+            item { TvListHeader(stringResource(R.string.now_playing)) }
             item {
                 TvListRow(
-                    title = "Synced Lyrics",
-                    value = onOff(syncedLyrics),
-                    onFocused = { blurb = "Lyrics that follow along with the song, line by line." },
+                    title = stringResource(R.string.tv_synced_lyrics),
+                    value = stringResource(onOff(syncedLyrics)),
+                    onFocused = { blurb = R.string.tv_lyrics_follow_along },
                     onClick = { AppSettings.setSyncedLyrics(!syncedLyrics) },
                 )
             }
             item {
                 TvListRow(
-                    title = "Lyrics Sources",
+                    title = stringResource(R.string.tv_lyrics_sources),
                     value = "${lyricsSources.size} On",
-                    onFocused = { blurb = "Choose which lyric databases to ask, and in what order." },
+                    onFocused = { blurb = R.string.tv_choose_lyric_databases },
                     onClick = { sheet = SettingsSheet.LyricsSources },
                 )
             }
             item {
                 TvListRow(
-                    title = "Motion Artwork",
-                    value = onOff(canvas),
-                    onFocused = { blurb = "Plays a song's looping video artwork behind the player, when it has one." },
+                    title = stringResource(R.string.tv_motion_artwork),
+                    value = stringResource(onOff(canvas)),
+                    onFocused = { blurb = R.string.tv_song_looping_video_artwork },
                     onClick = { AppSettings.setAnimatedCanvas(!canvas) },
                 )
             }
             item {
                 TvListRow(
-                    title = "Motion Artwork in Lyrics",
-                    value = onOff(lyricsCanvas),
-                    onFocused = { blurb = "Keeps the video artwork playing behind full-screen lyrics." },
+                    title = stringResource(R.string.tv_motion_artwork_in_lyrics),
+                    value = stringResource(onOff(lyricsCanvas)),
+                    onFocused = { blurb = R.string.tv_fullscreen_lyrics_video_artwork },
                     onClick = { TvSettings.setTvLyricsCanvasEnabled(!lyricsCanvas) },
                 )
             }
             item {
                 TvListRow(
-                    title = "Stats for Nerds",
-                    value = onOff(nerdStats),
-                    onFocused = { blurb = "Shows the codec, bitrate and sample rate of what's playing." },
+                    title = stringResource(R.string.tv_stats_for_nerds),
+                    value = stringResource(onOff(nerdStats)),
+                    onFocused = { blurb = R.string.tv_shows_codec_bitrate_sample_rate },
                     onClick = { AppSettings.setShowNerdStats(!nerdStats) },
                 )
             }
 
-            item { TvListHeader("Display") }
+            item { TvListHeader(stringResource(R.string.tv_display_section)) }
             item {
                 TvListRow(
-                    title = "Appearance",
-                    value = AppThemeOption.fromId(themeId).title,
-                    onFocused = { blurb = "The background behind BitChord's pages." },
+                    title = stringResource(R.string.tv_appearance),
+                    value = stringResource(AppThemeOption.fromId(themeId).title),
+                    onFocused = { blurb = R.string.tv_background_behind_pages },
                     onClick = { sheet = SettingsSheet.Theme },
                 )
             }
             item {
                 TvListRow(
-                    title = "Player Background",
-                    value = playerStyle.label,
-                    onFocused = { blurb = "What Now Playing shows behind the song: the artwork's colours, or AMOLED's pure black." },
+                    title = stringResource(R.string.tv_player_background),
+                    value = stringResource(playerStyle.label),
+                    onFocused = { blurb = R.string.tv_now_playing_background },
                     onClick = {
                         val styles = TvPlayerStyle.entries
                         TvSettings.setTvPlayerStyle(styles[(playerStyle.ordinal + 1) % styles.size])
@@ -286,9 +288,9 @@ fun TvSettingsScreen(
             }
             item {
                 TvListRow(
-                    title = "Interface Size",
+                    title = stringResource(R.string.tv_interface_size),
                     value = "${(uiScale * 100).toInt()}%",
-                    onFocused = { blurb = "Makes everything larger or smaller. Select to step through sizes." },
+                    onFocused = { blurb = R.string.tv_interface_size_blurb },
                     onClick = {
                         val steps = listOf(0.8f, 0.9f, 1f, 1.1f, 1.2f, 1.3f)
                         val next = steps.firstOrNull { it > uiScale + 0.01f } ?: steps.first()
@@ -298,59 +300,59 @@ fun TvSettingsScreen(
             }
             item {
                 TvListRow(
-                    title = "Refresh Rate",
-                    value = refreshRate.label.substringBefore(" ("),
-                    onFocused = { blurb = "How often the screen redraws while you browse." },
+                    title = stringResource(R.string.tv_refresh_rate),
+                    value = stringResource(refreshRate.label).substringBefore(" ("),
+                    onFocused = { blurb = R.string.tv_screen_redraw_rate },
                     onClick = { sheet = SettingsSheet.RefreshRate },
                 )
             }
             item {
                 TvListRow(
-                    title = "Reduce Motion",
-                    value = onOff(reduceMotion),
-                    onFocused = { blurb = "Calms the moving background and other decorative animation." },
+                    title = stringResource(R.string.tv_reduce_motion),
+                    value = stringResource(onOff(reduceMotion)),
+                    onFocused = { blurb = R.string.tv_calms_decorative_animation },
                     onClick = { AppSettings.setReduceAnimation(!reduceMotion) },
                 )
             }
             item {
                 TvListRow(
-                    title = "Reduce Transparency",
-                    value = onOff(reduceTransparency),
-                    onFocused = { blurb = "Replaces blurred backgrounds with solid ones. Helps on slower TVs." },
+                    title = stringResource(R.string.tv_reduce_transparency),
+                    value = stringResource(onOff(reduceTransparency)),
+                    onFocused = { blurb = R.string.tv_solid_backgrounds_help_slower_tvs },
                     onClick = { AppSettings.setReduceDynamicBlur(!reduceTransparency) },
                 )
             }
 
-            item { TvListHeader("Connections") }
+            item { TvListHeader(stringResource(R.string.tv_connections_section)) }
             item {
                 TvListRow(
-                    title = "Scrobbling",
-                    onFocused = { blurb = "Last.fm and ListenBrainz." },
+                    title = stringResource(R.string.tv_scrobbling),
+                    onFocused = { blurb = R.string.tv_last_fm_and_listenbrainz },
                     onClick = { sheet = SettingsSheet.Scrobbling },
                 )
             }
 
-            item { TvListHeader("General") }
+            item { TvListHeader(stringResource(R.string.tv_general_section)) }
             if (update != null) {
                 item {
                     TvListRow(
-                        title = "Software Update",
-                        value = "${update?.version.orEmpty()} Available",
-                        onFocused = { blurb = "Download and install the new version of BitChord for TV." },
+                        title = stringResource(R.string.tv_software_update),
+                        value = stringResource(R.string.tv_version_available, update?.version.orEmpty()),
+                        onFocused = { blurb = R.string.tv_download_install_new_version },
                         onClick = { sheet = SettingsSheet.Update },
                     )
                 }
             }
             item {
                 TvListRow(
-                    title = "Set Up Again",
-                    onFocused = { blurb = "Go through the first-time setup again." },
+                    title = stringResource(R.string.tv_set_up_again),
+                    onFocused = { blurb = R.string.tv_first_time_setup_again },
                     onClick = onRunSetupAgain,
                 )
             }
             item {
                 TvListRow(
-                    title = "About",
+                    title = stringResource(R.string.tv_about),
                     value = BuildConfig.VERSION_NAME,
                     onFocused = { blurb = DefaultBlurb },
                     onClick = { sheet = SettingsSheet.About },
@@ -371,4 +373,4 @@ fun TvSettingsScreen(
     }
 }
 
-private fun onOff(value: Boolean) = if (value) "On" else "Off"
+private fun onOff(value: Boolean) = if (value) R.string.tv_on else R.string.tv_off

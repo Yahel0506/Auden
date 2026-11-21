@@ -3,7 +3,7 @@ import { lyricsGet } from './http';
 import type { Parsed } from './parse';
 import * as providers from './providers';
 import { enabledSources, useLyricsSettings } from './settings';
-import { artistForLyricsSearch, forLyricsSearch, sourceById, type LyricsSourceId } from './sources';
+import { artistForLyricsSearch, forLyricsSearch, sourceById, sourceLabel, type LyricsSourceId } from './sources';
 import { writeTtml } from './ttml';
 
 /**
@@ -65,7 +65,7 @@ function toResult(source: LyricsSourceId, parsed: Parsed): LyricsResult {
   const lines = withBackgroundVocals(parsed.lines);
   return {
     source,
-    label: sourceById(source)?.label ?? source,
+    label: sourceLabel(sourceById(source)) || source,
     lines,
     ttml: parsed.ttml ?? writeTtml(lines),
     wordSynced: lines.some((l) => l.words.length),

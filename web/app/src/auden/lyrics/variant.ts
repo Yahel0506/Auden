@@ -2,7 +2,7 @@ import { parseEnhancedLrc, parseLrc, parseTtml } from '@/lyrics/parse';
 import { withBackgroundVocals } from '@/lyrics/model';
 import type { LyricsResult } from '@/lyrics/repository';
 import type { LyricsSourceId } from '@/lyrics/sources';
-import { sourceById } from '@/lyrics/sources';
+import { sourceById, sourceLabel } from '@/lyrics/sources';
 import { writeTtml } from '@/lyrics/ttml';
 import type { LyricsVariantRow } from '../db/schema';
 import { MAX_LYRICS_CHARS, toLrc } from './lrc';
@@ -33,7 +33,7 @@ export function variantToResult(row: Pick<LyricsVariantRow, 'provider' | 'format
   const id = fromStoredProvider(row.provider);
   return {
     source: (id ?? row.provider) as LyricsSourceId,
-    label: id ? (sourceById(id)?.label ?? id) : storedProviderLabel(row.provider),
+    label: id ? (sourceLabel(sourceById(id)) || id) : storedProviderLabel(row.provider),
     lines,
     ttml: row.format === VariantFormat.TTML ? row.content : writeTtml(lines),
     wordSynced: lines.some((l) => l.words.length),

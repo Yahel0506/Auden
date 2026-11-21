@@ -1,0 +1,145 @@
+{
+  "extensionName": {
+    "message": "Auden"
+  },
+  "extensionDescription": {
+    "message": "Verbindet den Auden-Webplayer mit YouTube Music, Spotify und Discord."
+  },
+  "openAuden": {
+    "message": "Auden öffnen"
+  },
+  "checking": {
+    "message": "Wird geprüft …"
+  },
+  "notSignedIn": {
+    "message": "In diesem Browser nicht angemeldet"
+  },
+  "signIn": {
+    "message": "Anmelden"
+  },
+  "couldNotReadAccount": {
+    "message": "Auf dein Konto konnte nicht zugegriffen werden"
+  },
+  "youtubeSessionRejected": {
+    "message": "YouTube hat die Sitzung dieses Browsers abgelehnt. Melde dich erneut an."
+  },
+  "youtubeAccountMissing": {
+    "message": "Es wurde kein angemeldetes Google-Konto gefunden."
+  },
+  "youtubeAccountUnavailable": {
+    "message": "YouTube konnte in der Sitzung dieses Browsers kein Konto finden."
+  },
+  "disconnected": {
+    "message": "Getrennt"
+  },
+  "retry": {
+    "message": "Erneut versuchen"
+  },
+  "connect": {
+    "message": "Verbinden"
+  },
+  "disconnect": {
+    "message": "Trennen"
+  },
+  "spotifySignInExpired": {
+    "message": "Deine Spotify-Sitzung ist abgelaufen. Melde dich erneut an."
+  },
+  "spotifyRateLimited": {
+    "message": "Spotify begrenzt Anfragen vorübergehend. Versuche es gleich noch einmal."
+  },
+  "spotifyConnectionFailed": {
+    "message": "Spotify ist nicht erreichbar. Prüfe deine Verbindung und versuche es erneut."
+  },
+  "spotifySignInFailed": {
+    "message": "Die Spotify-Anmeldung ist fehlgeschlagen. Versuche es erneut."
+  },
+  "stopUsingAccountYouTube": {
+    "message": "Dieses Konto nicht mehr in Auden verwenden. Du bleibst bei YouTube angemeldet."
+  },
+  "stopUsingAccountSpotify": {
+    "message": "Dieses Konto nicht mehr in Auden verwenden. Du bleibst bei Spotify angemeldet."
+  },
+  "notConnected": {
+    "message": "Nicht verbunden"
+  },
+  "showingWhatYouPlay": {
+    "message": "Zeigt, was du gerade hörst"
+  },
+  "connecting": {
+    "message": "Verbindung wird hergestellt …"
+  },
+  "couldNotConnect": {
+    "message": "Verbindung fehlgeschlagen"
+  },
+  "onWaitingForSong": {
+    "message": "Aktiv, wartet auf einen Song"
+  },
+  "presenceOff": {
+    "message": "Aktivitätsanzeige aus"
+  },
+  "forgetDiscordAccount": {
+    "message": "Dieses Discord-Konto entfernen."
+  },
+  "couldNotReadSession": {
+    "message": "Die Sitzung konnte nicht gelesen werden"
+  },
+  "allowLyricSourcesTitle": {
+    "message": "Auden · Liedtextquellen"
+  },
+  "allowLyricSourcesHeading": {
+    "message": "Liedtextquellen zulassen"
+  },
+  "allowLyricSourcesExplanation": {
+    "message": "Diese Liedtextanbieter erlauben keine direkten Anfragen von Webseiten. Auden fragt sie daher über die Erweiterung ab. Dein Browser bittet dich um Bestätigung."
+  },
+  "allow": {
+    "message": "Zulassen"
+  },
+  "permissionDone": {
+    "message": "Fertig. Du kannst diesen Tab schließen und zu Auden zurückkehren."
+  },
+  "permissionDenied": {
+    "message": "Berechtigung verweigert. Diese Quellen bleiben deaktiviert."
+  },
+  "discordConnectTitle": {
+    "message": "Auden · Discord verbinden"
+  },
+  "discordConnectHeading": {
+    "message": "Auf Discord zeigen, was du hörst"
+  },
+  "discordConnectExplanation": {
+    "message": "Auden liest deine Discord-Sitzung aus einem discord.com-Tab und speichert sie in dieser Erweiterung. Der Webplayer erhält keinen Zugriff darauf."
+  },
+  "discordTokenWarning": {
+    "message": "Diese Funktion nutzt den Token deines Kontos. Die Discord-Nutzungsbedingungen erlauben das nicht. Nutzung auf eigene Verantwortung."
+  },
+  "connectDiscord": {
+    "message": "Discord verbinden"
+  },
+  "discordPermissionDenied": {
+    "message": "Berechtigung verweigert. Discord bleibt deaktiviert."
+  },
+  "discordConnected": {
+    "message": "Verbunden als $USER$. Du kannst diesen Tab schließen.",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "discordSignInProgress": {
+    "message": "Melde dich im geöffneten Tab bei Discord an. Diese Seite erkennt die Anmeldung."
+  },
+  "discordReadProgress": {
+    "message": "Deine Discord-Sitzung wird gelesen …"
+  },
+  "discordSessionMissing": {
+    "message": "Es wurde keine Discord-Sitzung gefunden. Melde dich auf discord.com an und versuche es erneut."
+  },
+  "discordTokenRejected": {
+    "message": "Discord hat den Token abgelehnt. Verbinde das Konto erneut."
+  },
+  "discordConnectionError": {
+    "message": "Die Verbindung zu Discord ist fehlgeschlagen. Versuche es erneut."
+  }
+}

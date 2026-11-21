@@ -1,3 +1,5 @@
+import { t as translateUi } from '@/i18n';
+import { useEffect } from 'react';
 import { PrefetchLink } from '@/components/PrefetchLink';
 
 /** A page-sized message, centred: also the Spotify page's sign-in invitation. */
@@ -10,27 +12,31 @@ export const stateStyles = {
 
 /** In place of a YouTube page when the extension isn't installed (prompt §1): an invitation, not an error. */
 export function NeedsExtension({ what = 'YouTube Music' }: { what?: string }) {
+  const resource = what === 'your library'
+    ? translateUi('states.your_library')
+    : what === 'your Spotify playlists'
+      ? translateUi('states.your_spotify_playlists')
+      : what === 'and search YouTube Music'
+        ? translateUi('states.search_youtube_music')
+        : translateUi('states.youtube_music');
   return (
     <div className={stateStyles.state}>
-      <p className={stateStyles.title}>Browse {what} with the Auden extension</p>
-      <p className={stateStyles.detail}>
-        The extension lets this page reach YouTube Music from your own browser. Addons and lyrics work without it.
-      </p>
-      <PrefetchLink to="/extension" className={stateStyles.button}>
-        Get the Extension
-      </PrefetchLink>
+      <p className={stateStyles.title}>{translateUi('states.browse_with_the_auden_extension', { what: resource })}</p>
+      <p className={stateStyles.detail}>{translateUi("states.the_extension_lets_this_page")}</p>
+      <PrefetchLink to="/extension" className={stateStyles.button}>{translateUi("states.get_the_extension")}</PrefetchLink>
     </div>
   );
 }
 
 export function LoadError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  useEffect(() => {
+    console.error('Auden page load failed', error);
+  }, [error]);
   return (
     <div className={stateStyles.state}>
-      <p className={stateStyles.title}>Couldn’t load this page</p>
-      <p className={stateStyles.detail}>{error instanceof Error ? error.message : String(error)}</p>
-      <button className={stateStyles.button} onClick={onRetry}>
-        Try Again
-      </button>
+      <p className={stateStyles.title}>{translateUi("states.couldn_t_load_this_page")}</p>
+      <p className={stateStyles.detail}>{translateUi('states.page_load_error_detail')}</p>
+      <button className={stateStyles.button} onClick={onRetry}>{translateUi("states.try_again")}</button>
     </div>
   );
 }
@@ -48,10 +54,8 @@ export function EmptyState({ title, detail }: { title: string; detail?: string }
 export function LoadMoreError({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="flex items-center justify-center gap-2.5 px-(--body-gutter) pt-6 pb-10 type-callout text-secondary">
-      <span>Couldn’t load more.</span>
-      <button className="type-callout-emphasized text-key" onClick={onRetry}>
-        Try Again
-      </button>
+      <span>{translateUi("states.couldn_t_load_more")}</span>
+      <button className="type-callout-emphasized text-key" onClick={onRetry}>{translateUi("states.try_again")}</button>
     </div>
   );
 }

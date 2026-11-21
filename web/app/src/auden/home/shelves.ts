@@ -1,6 +1,7 @@
 /** LocalShelves.kt's rules: the shelves Home can build from what is on the device and what was played. */
 
 import { primaryArtist } from '../stats/credit';
+import { t } from '@/i18n';
 
 /** The shelves Home can build from what is on the device and what has been listened to. */
 export const LocalShelfKind = {
@@ -313,26 +314,6 @@ function compareRank(a: Rank, b: Rank): number {
   return a.plays30 - b.plays30 || a.playsTotal - b.playsTotal || a.lastPlayedAt - b.lastPlayedAt;
 }
 
-const EN = {
-  titles: {
-    LOOP: 'On repeat',
-    REDISCOVER: 'Rediscover',
-    RECENTLY_ADDED: 'Recently added',
-    PLAYLISTS: 'Your playlists',
-    ARTIST_MIX: 'Mix: {artist}',
-    LIBRARY_SHUFFLE: 'From your library',
-  },
-  subtitles: {
-    LOOP: 'What you have played most this month',
-    REDISCOVER: 'Songs you loved and haven’t heard in a while',
-    RECENTLY_ADDED: 'New in your library and downloads',
-    PLAYLISTS: 'Saved on this device',
-    ARTIST_MIX: 'From your library and your history',
-    LIBRARY_SHUFFLE: 'Plays with no connection',
-  },
-  songCount: (n: number) => (n === 1 ? '1 song' : `${n} songs`),
-} satisfies CopyTable;
-
 const ES = {
   titles: {
     LOOP: 'En bucle',
@@ -360,8 +341,15 @@ interface CopyTable {
 }
 
 /** The shelf wording in the listener's language. */
-export function textFor(lang: 'en' | 'es'): LocalShelfText {
-  const copy = lang === 'es' ? ES : EN;
+export function textFor(lang?: 'en' | 'es'): LocalShelfText {
+  if (lang !== 'es') {
+    return {
+      title: (kind, artist) => t(`home_shelf_title_${kind.toLowerCase()}` as keyof typeof import('@/i18n.en.json'), { artist: artist ?? '' }),
+      subtitle: (kind) => t(`home_shelf_subtitle_${kind.toLowerCase()}` as keyof typeof import('@/i18n.en.json')),
+      songCount: (count) => t('home_shelf_song_count', { count }),
+    };
+  }
+  const copy = ES;
   return {
     title: (kind, artist) => copy.titles[kind].replace('{artist}', () => artist ?? ''),
     subtitle: (kind) => copy.subtitles[kind],

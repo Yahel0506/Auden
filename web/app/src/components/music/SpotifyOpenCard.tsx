@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Artwork } from './Artwork';
@@ -34,7 +35,7 @@ export function SpotifyOpenCard({
       <span className="mt-2 flex min-w-0 flex-col gap-px">
         <span className="truncate type-callout">{title}</span>
         <span className="truncate type-callout text-secondary">
-          {state === 'looking' ? 'Looking on YouTube Music…' : state === 'missing' ? 'Not on YouTube Music' : state === 'failed' ? 'Couldn’t search YouTube Music' : subtitle}
+          {state === 'looking' ? translateUi("components_music_spotifyopencard_looking_on_youtube_music") : state === 'missing' ? translateUi("components_music_spotifyopencard_not_on_youtube_music") : state === 'failed' ? translateUi("components_music_spotifyopencard_couldn_t_search_youtube_music") : subtitle}
         </span>
       </span>
     </button>

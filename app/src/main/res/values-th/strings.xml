@@ -11,6 +11,7 @@
     <string name="upload_notification_title">กำลังอัปโหลด</string>
     <string name="upload_notification_queued">%1$s · รออีก %2$d เพลง</string>
     <plurals name="uploading_song_count">
+        <item quantity="one">กำลังอัปโหลด %1$d เพลง</item>
         <item quantity="other">กำลังอัปโหลด %1$d เพลง</item>
     </plurals>
     <string name="cancel">ยกเลิก</string>
@@ -48,15 +49,19 @@
     <string name="suggested">แนะนำ</string>
     <string name="song_count">%1$d เพลง</string>
     <plurals name="song_count_plural">
+        <item quantity="one">%1$d เพลง</item>
         <item quantity="other">%1$d เพลง</item>
     </plurals>
     <plurals name="track_count_plural">
+        <item quantity="one">%1$d แทร็ก</item>
         <item quantity="other">%1$d แทร็ก</item>
     </plurals>
     <plurals name="artist_count">
+        <item quantity="one">%1$d ศิลปิน</item>
         <item quantity="other">%1$d ศิลปิน</item>
     </plurals>
     <plurals name="album_count">
+        <item quantity="one">%1$d อัลบั้ม</item>
         <item quantity="other">%1$d อัลบั้ม</item>
     </plurals>
     <string name="songs">เพลง</string>
@@ -74,6 +79,7 @@
     <string name="sharing_coming_soon">ฟีเจอร์แชร์กำลังจะมาเร็ว ๆ นี้</string>
     <string name="already_downloaded">ดาวน์โหลดไว้แล้ว</string>
     <plurals name="downloading_song_count">
+        <item quantity="one">กำลังดาวน์โหลด %1$d เพลง</item>
         <item quantity="other">กำลังดาวน์โหลด %1$d เพลง</item>
     </plurals>
     <string name="source">แหล่งข้อมูล</string>
@@ -154,13 +160,13 @@
     <string name="spatial_audio_subtitle">ขยายแทร็กสเตอริโอให้ดื่มด่ำยิ่งขึ้น</string>
     <string name="spatial_audio_atmos_subtitle">หยุดไว้สำหรับแทร็กนี้ — Dolby Atmos เป็นเสียงรอบทิศทางอยู่แล้ว</string>
     <string name="animated_cover_cellular">เล่นปกเคลื่อนไหวผ่านเน็ตมือถือ</string>
-    <string name="replay">Replay</string>
+    <string name="replay">ย้อนหลัง</string>
     <string name="replay_subtitle">เพลง ศิลปิน อัลบั้ม และแนวเพลงยอดนิยมของคุณ</string>
     <string name="work_out_genres">คำนวณแนวเพลง</string>
     <string name="export_data">ส่งออกข้อมูล</string>
-    <string name="export_data_subtitle">Settings, listening history and the local library, as one JSON file</string>
+    <string name="export_data_subtitle">การตั้งค่า ประวัติการฟัง และคลังเพลงในเครื่องรวมเป็นไฟล์ JSON เดียว</string>
     <string name="import_data">นำเข้าข้อมูล</string>
-    <string name="import_data_subtitle">Replaces the settings, history and local library on this device</string>
+    <string name="import_data_subtitle">แทนที่การตั้งค่า ประวัติ และคลังเพลงในเครื่องบนอุปกรณ์นี้</string>
     <string name="import_backup_title">นำเข้าข้อมูลสำรองหรือไม่</string>
     <string name="choose_file">เลือกไฟล์</string>
     <string name="top_artists">ศิลปินยอดนิยม</string>
@@ -363,18 +369,23 @@
     <string name="something_went_wrong">เกิดข้อผิดพลาดบางอย่าง</string>
     <string name="unknown_artist">ศิลปินที่ไม่ทราบชื่อ</string>
     <plurals name="downloads_failed_count">
+        <item quantity="one">ดาวน์โหลด · ล้มเหลว %1$d</item>
         <item quantity="other">การดาวน์โหลด · ล้มเหลว %1$d รายการ</item>
     </plurals>
     <plurals name="download_waiting_count">
+        <item quantity="one">รออยู่ %1$d</item>
         <item quantity="other">รอดำเนินการ %1$d รายการ</item>
     </plurals>
     <plurals name="download_done_count">
+        <item quantity="one">เสร็จแล้ว %1$d</item>
         <item quantity="other">เสร็จสิ้น %1$d รายการ</item>
     </plurals>
     <plurals name="download_failed_count">
+        <item quantity="one">ล้มเหลว %1$d</item>
         <item quantity="other">ล้มเหลว %1$d รายการ</item>
     </plurals>
     <plurals name="all_songs_downloaded">
+        <item quantity="one">ดาวน์โหลดครบ %1$d เพลงแล้ว</item>
         <item quantity="other">ดาวน์โหลดครบทั้ง %1$d เพลงแล้ว</item>
     </plurals>
     <string name="your_playlists">เพลย์ลิสต์ของคุณ</string>
@@ -388,15 +399,19 @@
     <string name="song_count_with_duration">%1$s, %2$s</string>
     <string name="song_count_with_hours_minutes">%1$s, %2$s %3$d นาที</string>
     <plurals name="hour_count">
+        <item quantity="one">%1$d ชั่วโมง</item>
         <item quantity="other">%1$d ชั่วโมง</item>
     </plurals>
     <plurals name="songs_will_play_next">
+        <item quantity="one">จะเล่น %1$d เพลงถัดไป</item>
         <item quantity="other">%1$d เพลงจะเล่นต่อไป</item>
     </plurals>
     <plurals name="songs_added_to_queue">
+        <item quantity="one">เพิ่ม %1$d เพลงลงคิวแล้ว</item>
         <item quantity="other">เพิ่ม %1$d เพลงลงในคิวแล้ว</item>
     </plurals>
     <plurals name="log_copied_line_count">
+        <item quantity="one">คัดลอกบันทึกแล้ว · %1$d บรรทัด</item>
         <item quantity="other">คัดลอกล็อกแล้ว · %1$d บรรทัด</item>
     </plurals>
     <string name="integrate_spotify_canvas">ตั้งค่า Spotify Canvas</string>
@@ -509,6 +524,7 @@
     <string name="verb_playing">กำลังเล่น</string>
     <string name="verb_watching">กำลังดู</string>
     <plurals name="minute_count">
+        <item quantity="one">%1$d นาที</item>
         <item quantity="other">%1$d นาที</item>
     </plurals>
     <string name="biggest_day_note">วันที่คุณฟังมากที่สุดคือ %1$s ด้วยเวลาฟัง %2$s</string>
@@ -557,6 +573,7 @@
     <string name="replay_minutes_start">คุณใช้เวลา </string>
     <string name="replay_minutes_value">%1$s</string>
     <plurals name="replay_minutes_unit">
+        <item quantity="one">%1$s นาที</item>
         <item quantity="other">%1$s นาที</item>
     </plurals>
     <string name="replay_mostly_around"> ส่วนใหญ่ในช่วง %1$s</string>
@@ -582,12 +599,15 @@
     <string name="your_lyrics_card">การ์ดเนื้อเพลงของคุณ</string>
     <string name="your_replay">Replay ของคุณ</string>
     <plurals name="replay_artist_count">
+        <item quantity="one">%1$s ศิลปิน</item>
         <item quantity="other">%1$s ศิลปิน</item>
     </plurals>
     <plurals name="replay_play_count">
+        <item quantity="one">เล่น %1$s ครั้ง</item>
         <item quantity="other">%1$s ครั้ง</item>
     </plurals>
     <plurals name="replay_song_count">
+        <item quantity="one">%1$s เพลง</item>
         <item quantity="other">%1$s เพลง</item>
     </plurals>
     <string name="all_audio_folders">โฟลเดอร์เสียงทั้งหมด</string>
@@ -623,7 +643,7 @@
     <string name="smb_not_configured">เชื่อมต่อโฟลเดอร์แชร์ในส่วนแหล่งข้อมูล</string>
     <string name="smb_empty">ไม่พบไฟล์เสียงในโฟลเดอร์แชร์ SMB ตรวจสอบเซิร์ฟเวอร์ในส่วนแหล่งข้อมูล</string>
     <string name="smb_description">เชื่อม Auden กับโฟลเดอร์เพลงที่แชร์ — NAS หรือโฟลเดอร์แชร์ของ Windows ผ่าน SMB</string>
-    <string name="smb_server_hint">nas.local or 192.168.1.10:4445</string>
+    <string name="smb_server_hint">nas.local หรือ 192.168.1.10:4445</string>
     <string name="smb_share_hint">ชื่อแชร์ เช่น Music</string>
     <string name="smb_folder_hint">โฟลเดอร์ (ไม่บังคับ)</string>
     <string name="smb_disconnect">ยกเลิกการเชื่อมต่อ</string>
@@ -657,7 +677,7 @@
     <string name="replay_genres_disabled_subtitle">กราฟแนวเพลงใน Replay จะซ่อนอยู่ตราบใดที่ปิดอยู่</string>
     <string name="swipe_plays_next">การปัดเพลงจะเล่นเพลงนั้นต่อไป</string>
     <string name="swipe_adds_to_queue">เมื่อปิด การปัดจะเพิ่มเพลงไปที่ท้ายคิวแทน</string>
-    <string name="import_backup_warning">This replaces this device’s settings, listening history, playlists and local library with the contents of the file. Export the current data first if you want to keep it.</string>
+    <string name="import_backup_warning">การตั้งค่า ประวัติการฟัง เพลย์ลิสต์ และคลังเพลงในเครื่องบนอุปกรณ์นี้จะถูกแทนที่ด้วยข้อมูลในไฟล์ หากต้องการเก็บข้อมูลเดิม ให้ส่งออกก่อน</string>
     <string name="youtube_music_account">บัญชี YouTube Music</string>
     <string name="tap_to_sign_in_google">แตะเพื่อลงชื่อเข้าใช้ด้วย Google</string>
     <string name="export_succeeded">ส่งออกการตั้งค่าและ %1$s แล้ว</string>
@@ -667,6 +687,7 @@
     <string name="unknown_error">ข้อผิดพลาดที่ไม่ทราบสาเหตุ</string>
     <string name="no_listening_history">ไม่มีประวัติการฟัง</string>
     <plurals name="listening_month_count">
+        <item quantity="one">ประวัติการฟัง %1$d เดือน</item>
         <item quantity="other">ฟังมาแล้ว %1$d เดือน</item>
     </plurals>
     <string name="no_local_albums">ยังไม่มีอะไรที่นี่เป็นของอัลบั้มหรือเพลย์ลิสต์ ดาวน์โหลดอัลบั้มหรือเพลย์ลิสต์ทั้งชุดแล้วจะปรากฏที่นี่</string>
@@ -795,278 +816,278 @@
     <string name="listen_together_status_all_offline">ทั้งเซิร์ฟเวอร์ที่กำหนดเองและเซิร์ฟเวอร์เริ่มต้นออฟไลน์อยู่</string>
     <string name="listen_together_top_bar_fallback">สำรอง · %1$s</string>
 
-    <string name="lyrics_offset">Lyrics offset</string>
+    <string name="lyrics_offset">ปรับเวลาแสดงเนื้อเพลง</string>
 
 
 
 
 
-    <string name="auto_quick_picks">Quick picks</string>
+    <string name="auto_quick_picks">เพลงแนะนำ</string>
 
-    <string name="auto_recents">Recent</string>
+    <string name="auto_recents">ล่าสุด</string>
 
-    <string name="auto_liked">Liked songs</string>
+    <string name="auto_liked">เพลงที่ชอบ</string>
 
-    <string name="auto_login_title">Sign in to YouTube on your phone</string>
+    <string name="auto_login_title">ลงชื่อเข้าใช้ YouTube บนโทรศัพท์</string>
 
-    <string name="auto_login_subtitle">Open Auden on your phone to sign in</string>
+    <string name="auto_login_subtitle">เปิด Auden บนโทรศัพท์เพื่อลงชื่อเข้าใช้</string>
 
-    <string name="auto_empty_recents_title">No recent songs</string>
+    <string name="auto_empty_recents_title">ยังไม่มีเพลงที่เล่นล่าสุด</string>
 
-    <string name="auto_empty_recents_subtitle">Songs you play will appear here</string>
+    <string name="auto_empty_recents_subtitle">เพลงที่คุณฟังจะปรากฏที่นี่</string>
 
-    <string name="auto_empty_quick_picks_title">No suggestions</string>
+    <string name="auto_empty_quick_picks_title">ไม่มีคำแนะนำ</string>
 
-    <string name="auto_empty_quick_picks_subtitle">Check your connection and try again</string>
+    <string name="auto_empty_quick_picks_subtitle">ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง</string>
 
-    <string name="auto_empty_playlists_title">No playlists available</string>
+    <string name="auto_empty_playlists_title">ไม่มีเพลย์ลิสต์ที่ใช้ได้</string>
 
-    <string name="auto_empty_playlists_subtitle">Check your connection and try again</string>
+    <string name="auto_empty_playlists_subtitle">ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง</string>
 
-    <string name="auto_empty_liked_title">No liked songs</string>
+    <string name="auto_empty_liked_title">ยังไม่มีเพลงที่ชอบ</string>
 
-    <string name="auto_empty_liked_subtitle">Tap the heart on a song to save it here</string>
+    <string name="auto_empty_liked_subtitle">แตะหัวใจข้างเพลงเพื่อบันทึกไว้ที่นี่</string>
 
-    <string name="auto_empty_offline_title">No offline songs</string>
+    <string name="auto_empty_offline_title">ไม่มีเพลงออฟไลน์</string>
 
-    <string name="auto_empty_offline_subtitle">Download songs on your phone to listen here</string>
+    <string name="auto_empty_offline_subtitle">ดาวน์โหลดเพลงลงโทรศัพท์เพื่อฟังที่นี่</string>
 
-    <string name="auto_unavailable_title">Content unavailable</string>
+    <string name="auto_unavailable_title">ไม่สามารถเข้าถึงเนื้อหาได้</string>
 
-    <string name="auto_unavailable_subtitle">Reopen the folder and try again</string>
+    <string name="auto_unavailable_subtitle">เปิดโฟลเดอร์อีกครั้งแล้วลองใหม่</string>
 
-    <string name="subscribe">Subscribe</string>
+    <string name="subscribe">ติดตาม</string>
 
-    <string name="unsubscribe">Unsubscribe</string>
+    <string name="unsubscribe">เลิกติดตาม</string>
 
-    <string name="settings_search_hint">Search settings</string>
+    <string name="settings_search_hint">ค้นหาการตั้งค่า</string>
 
-    <string name="settings_search_empty">No settings match “%1$s”</string>
+    <string name="settings_search_empty">ไม่พบการตั้งค่าที่ตรงกับ “%1$s”</string>
 
-    <string name="source_unrecognised">Auden could not tell what that link is</string>
+    <string name="source_unrecognised">Auden ไม่สามารถระบุประเภทของลิงก์นี้ได้</string>
 
-    <string name="source_already_added">Already added as %1$s</string>
+    <string name="source_already_added">เพิ่มไว้แล้วในชื่อ %1$s</string>
 
-    <string name="source_skipped_by_quality">Not used on %1$s · quality is set to %2$s</string>
+    <string name="source_skipped_by_quality">ไม่ได้ใช้บน %1$s · ตั้งค่าคุณภาพเป็น %2$s</string>
 
-    <string name="upgrade_quality">Upgrade quality</string>
+    <string name="upgrade_quality">เพิ่มคุณภาพเสียง</string>
 
     <string name="dolby_atmos">Dolby Atmos</string>
 
-    <string name="dolby_atmos_subtitle">Play the more immersive, surround version of a song when there is one.</string>
+    <string name="dolby_atmos_subtitle">เล่นเพลงเวอร์ชันเสียงรอบทิศทางที่สมจริงยิ่งขึ้นเมื่อมีให้เลือก</string>
 
-    <string name="dolby_atmos_unavailable">This device can\'t play Atmos, so these songs play in their usual version</string>
+    <string name="dolby_atmos_unavailable">อุปกรณ์นี้ไม่รองรับ Atmos จึงเล่นเพลงเหล่านี้ในเวอร์ชันปกติ</string>
 
 
     <string name="home_section">หน้าแรก</string>
-    <string name="hide_recents">Hide Recents</string>
-    <string name="hide_home_videos">Hide videos from Home</string>
-    <string name="hide_home_videos_subtitle">Shelves of only videos go too. Search, artists and playlists still show them</string>
-    <string name="hide_top_picks">Hide Top Picks for You</string>
-    <string name="hide_home_moods">Hide Find Your Mood</string>
-    <string name="square_video_thumbnails">Square video thumbnails</string>
-    <string name="square_video_thumbnails_subtitle">Show music videos as squares everywhere, including the player</string>
-    <string name="prefer_music_only">Prefer music-only version</string>
-    <string name="prefer_music_only_subtitle">Music videos play as their audio version, and the next track in the queue is converted ahead of time so Automix and crossfade work</string>
+    <string name="hide_recents">ซ่อนรายการล่าสุด</string>
+    <string name="hide_home_videos">ซ่อนวิดีโอจากหน้าแรก</string>
+    <string name="hide_home_videos_subtitle">ส่วนที่มีเฉพาะวิดีโอจะถูกซ่อนด้วย แต่ยังพบวิดีโอได้ในการค้นหา หน้าศิลปิน และเพลย์ลิสต์</string>
+    <string name="hide_top_picks">ซ่อนรายการเด่นสำหรับคุณ</string>
+    <string name="hide_home_moods">ซ่อนค้นหาเพลงตามอารมณ์</string>
+    <string name="square_video_thumbnails">ภาพตัวอย่างวิดีโอแบบสี่เหลี่ยมจัตุรัส</string>
+    <string name="square_video_thumbnails_subtitle">แสดงมิวสิกวิดีโอเป็นสี่เหลี่ยมจัตุรัสทุกที่ รวมถึงเครื่องเล่น</string>
+    <string name="prefer_music_only">เลือกเวอร์ชันเสียงเพลงก่อน</string>
+    <string name="prefer_music_only_subtitle">เล่นมิวสิกวิดีโอเป็นเวอร์ชันเสียง และเตรียมเพลงถัดไปในคิวล่วงหน้าเพื่อให้มิกซ์อัตโนมัติและการเปลี่ยนเพลงแบบเฟดทำงานได้</string>
     <string name="smart_version_alignment">จัดตำแหน่งเสียงอัจฉริยะ</string>
     <string name="smart_version_alignment_subtitle">วิเคราะห์รูปคลื่นเสียงเพื่อหาจุดเล่นที่ตรงกันพอดี</string>
 
-    <string name="equalizer_footer">Shapes the sound inside Auden, before it reaches the system.</string>
+    <string name="equalizer_footer">ปรับแต่งเสียงภายใน Auden ก่อนส่งต่อให้ระบบ</string>
 
-    <string name="equalizer_dynamic">Dynamic</string>
+    <string name="equalizer_dynamic">ไดนามิก</string>
 
-    <string name="equalizer_manual">Manual</string>
+    <string name="equalizer_manual">กำหนดเอง</string>
 
-    <string name="equalizer_tone">Tone</string>
+    <string name="equalizer_tone">โทนเสียง</string>
 
-    <string name="equalizer_tilt">Tilt</string>
+    <string name="equalizer_tilt">ความเอียง</string>
 
-    <string name="equalizer_contour">Contour</string>
+    <string name="equalizer_contour">รูปทรงเสียง</string>
 
-    <string name="equalizer_broad">Broad</string>
+    <string name="equalizer_broad">ช่วงกว้าง</string>
 
-    <string name="equalizer_focused">Focused</string>
+    <string name="equalizer_focused">เฉพาะจุด</string>
 
-    <string name="equalizer_broad_footer">Drag left for a warmer sound and right for a brighter one; down scoops the middle, up brings it forward. Broad moves wide stretches of the spectrum at once.</string>
+    <string name="equalizer_broad_footer">ลากไปทางซ้ายเพื่อเสียงอุ่นขึ้น ขวาเพื่อเสียงสดใสขึ้น ลงเพื่อลดเสียงกลาง และขึ้นเพื่อเน้นเสียงกลาง โหมดช่วงกว้างจะปรับหลายย่านความถี่พร้อมกัน</string>
 
-    <string name="equalizer_focused_footer">Drag left for a warmer sound and right for a brighter one; down scoops the middle, up brings it forward. Focused works on narrower stretches, so it changes less around what it moves.</string>
+    <string name="equalizer_focused_footer">ลากซ้ายเพื่อเสียงอุ่นขึ้น ขวาเพื่อเสียงสดใสขึ้น ลงเพื่อลดเสียงกลาง และขึ้นเพื่อเน้นเสียงกลาง โหมดเฉพาะจุดปรับย่านความถี่แคบกว่า จึงกระทบเสียงรอบข้างน้อยกว่า</string>
 
-    <string name="equalizer_preset">Preset</string>
+    <string name="equalizer_preset">ค่าที่ตั้งไว้ล่วงหน้า</string>
 
-    <string name="equalizer_bands">Bands</string>
+    <string name="equalizer_bands">ย่านความถี่</string>
 
-    <string name="equalizer_bands_footer">Moving a band leaves the preset behind and the curve becomes your own.</string>
+    <string name="equalizer_bands_footer">เมื่อปรับย่านความถี่ ระบบจะออกจากค่าที่ตั้งไว้ล่วงหน้าและใช้กราฟเสียงที่คุณกำหนดเอง</string>
 
-    <string name="equalizer_reset">Reset all bands</string>
+    <string name="equalizer_reset">รีเซ็ตทุกย่านความถี่</string>
 
-    <string name="equalizer_balance">Balance</string>
+    <string name="equalizer_balance">สมดุลเสียง</string>
 
-    <string name="equalizer_balance_left">L</string>
+    <string name="equalizer_balance_left">ซ้าย</string>
 
-    <string name="equalizer_balance_right">R</string>
+    <string name="equalizer_balance_right">ขวา</string>
 
-    <string name="equalizer_balance_footer">Shifts the sound towards one ear by quietening the other.</string>
+    <string name="equalizer_balance_footer">ย้ายสมดุลเสียงไปที่หูข้างหนึ่งโดยลดระดับเสียงอีกข้าง</string>
     <string name="equalizer_bitstream_title">ไม่ได้ทำงานในขณะนี้</string>
     <string name="equalizer_bitstream_subtitle">แทร็กนี้ถูกส่งไปยังเอาต์พุตโดยไม่ถอดรหัส</string>
     <string name="equalizer_bitstream_footer">อีควอไลเซอร์ทำงานกับเสียงที่ถอดรหัสแล้ว แทร็กนี้ถูกส่งผ่านเป็นบิตสตรีมให้อุปกรณ์ของคุณถอดรหัสเอง จึงไม่มีตัวอย่างเสียงให้กรองที่นี่</string>
 
-    <string name="system_equalizer">System equalizer</string>
+    <string name="system_equalizer">อีควอไลเซอร์ของระบบ</string>
 
-    <string name="system_equalizer_subtitle">Your device\'s own panel</string>
+    <string name="system_equalizer_subtitle">หน้าตั้งค่าของอุปกรณ์</string>
 
-    <string name="system_equalizer_footer">Runs after Auden\'s, on the whole audio session. Using both applies both.</string>
+    <string name="system_equalizer_footer">ทำงานหลังอีควอไลเซอร์ของ Auden กับเสียงทั้งหมด การเปิดใช้ทั้งสองจะใช้เอฟเฟกต์ทั้งคู่</string>
 
-    <string name="eq_preset_flat">Flat</string>
+    <string name="eq_preset_flat">เสียงเรียบ</string>
 
-    <string name="eq_preset_acoustic">Acoustic</string>
+    <string name="eq_preset_acoustic">อะคูสติก</string>
 
-    <string name="eq_preset_bass_boost">Bass boost</string>
+    <string name="eq_preset_bass_boost">เพิ่มเสียงเบส</string>
 
-    <string name="eq_preset_bass_cut">Bass cut</string>
+    <string name="eq_preset_bass_cut">ลดเสียงเบส</string>
 
-    <string name="eq_preset_vocal">Vocal</string>
+    <string name="eq_preset_vocal">เสียงร้อง</string>
 
-    <string name="eq_preset_treble_boost">Treble boost</string>
+    <string name="eq_preset_treble_boost">เพิ่มเสียงแหลม</string>
 
-    <string name="eq_preset_treble_cut">Treble cut</string>
+    <string name="eq_preset_treble_cut">ลดเสียงแหลม</string>
 
-    <string name="eq_preset_loudness">Loudness</string>
+    <string name="eq_preset_loudness">เพิ่มความดังรับรู้</string>
 
-    <string name="eq_preset_spoken_word">Spoken word</string>
+    <string name="eq_preset_spoken_word">เสียงพูด</string>
 
-    <string name="eq_preset_electronic">Electronic</string>
+    <string name="eq_preset_electronic">อิเล็กทรอนิกส์</string>
 
-    <string name="eq_preset_rock">Rock</string>
+    <string name="eq_preset_rock">ร็อก</string>
 
-    <string name="eq_preset_hip_hop">Hip-hop</string>
+    <string name="eq_preset_hip_hop">ฮิปฮอป</string>
 
-    <string name="eq_preset_jazz">Jazz</string>
+    <string name="eq_preset_jazz">แจ๊ส</string>
 
-    <string name="eq_preset_classical">Classical</string>
+    <string name="eq_preset_classical">คลาสสิก</string>
 
-    <string name="eq_preset_small_speakers">Small speakers</string>
+    <string name="eq_preset_small_speakers">ลำโพงขนาดเล็ก</string>
 
-    <string name="eq_preset_late_night">Late night</string>
+    <string name="eq_preset_late_night">ฟังตอนดึก</string>
 
-    <string name="eq_preset_custom">Custom</string>
+    <string name="eq_preset_custom">กำหนดเอง</string>
 
 
     <string name="player_theme">ธีมเครื่องเล่น</string>
     <string name="player_theme_default_subtitle">สีของปกต่อเนื่องลงมาด้านล่าง</string>
     <string name="player_theme_simple_subtitle">ปกแบบเบลอด้านหลังเครื่องเล่นทั้งหมด</string>
 
-    <string name="player_theme_legacy_subtitle">Brings back the drifting colour blobs behind the player from v1.5</string>
+    <string name="player_theme_legacy_subtitle">นำพื้นหลังหยดสีเคลื่อนไหวของเครื่องเล่นจากเวอร์ชัน 1.5 กลับมา</string>
 
-    <string name="add_addon">Add an addon</string>
+    <string name="add_addon">เพิ่มส่วนเสริม</string>
 
-    <string name="add_addon_detail">Point Auden at an addon server you host or were given a link to</string>
+    <string name="add_addon_detail">เชื่อม Auden กับเซิร์ฟเวอร์ส่วนเสริมที่คุณดูแลหรือได้รับลิงก์มา</string>
 
-    <string name="translation_language">Translation language</string>
+    <string name="translation_language">ภาษาแปล</string>
 
-    <string name="translation_language_description">The language the translate button turns lyrics into.</string>
+    <string name="translation_language_description">ภาษาที่ใช้แปลเนื้อเพลงเมื่อกดปุ่มแปล</string>
 
-    <string name="translation_language_app_default">App language</string>
+    <string name="translation_language_app_default">ภาษาแอป</string>
 
-    <string name="translation_language_subtitle">Follows the app language</string>
+    <string name="translation_language_subtitle">ใช้ตามภาษาแอป</string>
 
-    <string name="search_languages">Search languages</string>
+    <string name="search_languages">ค้นหาภาษา</string>
 
-    <string name="no_languages_match">No languages match</string>
+    <string name="no_languages_match">ไม่พบภาษาที่ตรงกัน</string>
 
 
 
-    <string name="audio_pipeline">Audio Pipeline</string>
-    <string name="cast_dialog_title">Cast</string>
-    <string name="cast_dialog_subtitle">Play on a Chromecast or Google Cast speaker</string>
-    <string name="cast_searching">Looking for devices…</string>
-    <string name="cast_searching_hint">Your phone and the receiver need to be on the same Wi-Fi network.</string>
-    <string name="cast_device_connecting">Connecting…</string>
-    <string name="cast_device_connected">Casting</string>
-    <string name="cast_stop">Stop casting</string>
-    <string name="cast_track_unsupported">This track can\'t be cast</string>
-    <string name="cast_connect_failed">Couldn\'t connect to the receiver</string>
+    <string name="audio_pipeline">เส้นทางประมวลผลเสียง</string>
+    <string name="cast_dialog_title">แคสต์</string>
+    <string name="cast_dialog_subtitle">เล่นผ่าน Chromecast หรือลำโพง Google Cast</string>
+    <string name="cast_searching">กำลังค้นหาอุปกรณ์…</string>
+    <string name="cast_searching_hint">โทรศัพท์และอุปกรณ์รับสัญญาณต้องอยู่ในเครือข่าย Wi-Fi เดียวกัน</string>
+    <string name="cast_device_connecting">กำลังเชื่อมต่อ…</string>
+    <string name="cast_device_connected">กำลังแคสต์</string>
+    <string name="cast_stop">หยุดแคสต์</string>
+    <string name="cast_track_unsupported">ไม่สามารถแคสต์เพลงนี้ได้</string>
+    <string name="cast_connect_failed">ไม่สามารถเชื่อมต่อกับอุปกรณ์รับสัญญาณได้</string>
     <string name="audio_pipeline_subtitle">เส้นทางสัญญาณแบบเรียลไทม์ จากตัวถอดรหัสถึงเอาต์พุต</string>
 
-    <string name="pipeline_track_info">Track Info</string>
+    <string name="pipeline_track_info">ข้อมูลเพลง</string>
 
-    <string name="pipeline_decoder">Decoder</string>
+    <string name="pipeline_decoder">ตัวถอดรหัส</string>
 
-    <string name="pipeline_resampler">Resampler</string>
+    <string name="pipeline_resampler">ตัวปรับอัตราสุ่มเสียง</string>
 
     <string name="pipeline_dsp">DSP</string>
 
-    <string name="pipeline_output_device">Output Device</string>
+    <string name="pipeline_output_device">อุปกรณ์ส่งออกเสียง</string>
 
-    <string name="pipeline_source">Source</string>
+    <string name="pipeline_source">แหล่งที่มา</string>
 
-    <string name="pipeline_format">Format</string>
+    <string name="pipeline_format">รูปแบบ</string>
 
-    <string name="pipeline_bit_depth">Bit Depth</string>
+    <string name="pipeline_bit_depth">ความลึกบิต</string>
 
-    <string name="pipeline_sample_rate">Sample Rate</string>
+    <string name="pipeline_sample_rate">อัตราการสุ่มเสียง</string>
 
-    <string name="pipeline_bitrate">Bitrate</string>
+    <string name="pipeline_bitrate">บิตเรต</string>
 
-    <string name="pipeline_channels">Channels</string>
+    <string name="pipeline_channels">ช่องสัญญาณ</string>
 
-    <string name="pipeline_decoder_name">Decoder Name</string>
+    <string name="pipeline_decoder_name">ชื่อตัวถอดรหัส</string>
 
-    <string name="pipeline_io_rate">I/O Rate</string>
+    <string name="pipeline_io_rate">อัตรารับส่งข้อมูล</string>
 
-    <string name="pipeline_type">Type</string>
+    <string name="pipeline_type">ประเภท</string>
 
-    <string name="pipeline_cutoff">Cutoff</string>
+    <string name="pipeline_cutoff">ความถี่ตัด</string>
 
-    <string name="pipeline_quality">Quality</string>
+    <string name="pipeline_quality">คุณภาพ</string>
 
-    <string name="pipeline_pcm_format">PCM Format</string>
+    <string name="pipeline_pcm_format">รูปแบบ PCM</string>
 
-    <string name="pipeline_eq_preset">EQ Preset</string>
+    <string name="pipeline_eq_preset">ค่า EQ ที่ตั้งไว้</string>
 
-    <string name="pipeline_stereo_expand">Stereo Expand</string>
+    <string name="pipeline_stereo_expand">ขยายมิติสเตอริโอ</string>
 
-    <string name="pipeline_buffers">Buffers</string>
+    <string name="pipeline_buffers">บัฟเฟอร์</string>
 
-    <string name="pipeline_output_api">Output API</string>
+    <string name="pipeline_output_api">API ส่งออกเสียง</string>
 
-    <string name="pipeline_device_name">Device Name</string>
+    <string name="pipeline_device_name">ชื่ออุปกรณ์</string>
 
 
 
-    <string name="shared_link">Shared link</string>
+    <string name="shared_link">ลิงก์ที่แชร์</string>
 
-    <string name="song_will_play_next">Song will play next</string>
+    <string name="song_will_play_next">เพลงนี้จะเล่นถัดไป</string>
 
-    <string name="song_added_to_queue">Song added to queue</string>
+    <string name="song_added_to_queue">เพิ่มเพลงลงคิวแล้ว</string>
     <string name="song_added_to_playlist">เพิ่มลงในเพลย์ลิสต์แล้ว</string>
     <string name="song_already_in_playlist">อยู่ในเพลย์ลิสต์แล้ว</string>
     <plurals name="add_to_playlists_count">
+        <item quantity="one">เพิ่มไปยัง %1$d เพลย์ลิสต์</item>
         <item quantity="other">เพิ่มลงใน %1$d เพลย์ลิสต์</item>
     </plurals>
     <plurals name="added_to_playlists_notice">
+        <item quantity="one">เพิ่มลงใน %1$d เพลย์ลิสต์แล้ว</item>
         <item quantity="other">เพิ่มลงใน %1$d เพลย์ลิสต์แล้ว</item>
     </plurals>
     <string name="party_queue_full">คิวเต็มแล้ว (ปาร์ตี้มีได้สูงสุด %d เพลง)</string>
 
-    <string name="paxsenix_api_key">PaxSenix API key</string>
+    <string name="paxsenix_api_key">คีย์ API ของ PaxSenix</string>
 
-    <string name="paxsenix_api_key_configured">PaxSenix API key — configured</string>
+    <string name="paxsenix_api_key_configured">คีย์ API ของ PaxSenix — ตั้งค่าแล้ว</string>
 
-    <string name="paxsenix_api_key_missing">PaxSenix API key — optional, not configured</string>
+    <string name="paxsenix_api_key_missing">คีย์ API ของ PaxSenix — ไม่บังคับ ยังไม่ได้ตั้งค่า</string>
 
-    <string name="addon_url_description">Paste the addon’s URL — either its root or its manifest.json. Auden reads what it can search and stream, then asks it for tracks over plain HTTP.</string>
+    <string name="addon_url_description">วาง URL ของส่วนเสริม จะเป็นที่อยู่หลักหรือไฟล์ manifest.json ก็ได้ Auden จะอ่านความสามารถในการค้นหาและสตรีม แล้วขอเพลงผ่าน HTTP โดยตรง</string>
 
-    <string name="sort_date_added_oldest">Date added (oldest first)</string>
+    <string name="sort_date_added_oldest">วันที่เพิ่ม (เก่าสุดก่อน)</string>
 
-    <string name="sort_date_added_toggle">Date added</string>
+    <string name="sort_date_added_toggle">วันที่เพิ่ม</string>
 
-    <string name="sort_default">Default order</string>
+    <string name="sort_default">ลำดับเริ่มต้น</string>
 
-    <string name="sort_library">Sort</string>
+    <string name="sort_library">เรียงลำดับ</string>
 
-    <string name="sort_songs">Sort songs</string>
-
-
+    <string name="sort_songs">เรียงเพลง</string>
 
 
 
@@ -1076,13 +1097,15 @@
 
 
 
-    <string name="vietnamese">Vietnamese</string>
 
 
-    <string name="miscellaneous_footer">When enabled, closing the app from the recent apps screen will also stop music playback.</string>
+    <string name="vietnamese">ภาษาเวียดนาม</string>
 
 
-    <string name="export_compatible_downloads">Export compatible downloads</string>
+    <string name="miscellaneous_footer">เมื่อเปิดใช้ การปิดแอปจากหน้ารายการแอปล่าสุดจะหยุดเล่นเพลงด้วย</string>
+
+
+    <string name="export_compatible_downloads">ส่งออกไฟล์ดาวน์โหลดที่รองรับ</string>
     <string name="sync_downloaded_playlists">อัปเดตเพลย์ลิสต์อยู่เสมอ</string>
     <string name="sync_downloaded_playlists_subtitle">ตรวจสอบวันละสองครั้งและดาวน์โหลดเพลงใหม่ในเพลย์ลิสต์ที่ดาวน์โหลดไว้</string>
     <string name="playlist_sync_ask_title">เพลงใหม่ใน %1$s: %2$d</string>
@@ -1091,10 +1114,10 @@
     <string name="playlist_updates_channel">การอัปเดตเพลย์ลิสต์</string>
 
 
-    <string name="output_precision">Output precision</string>
+    <string name="output_precision">ความละเอียดของเสียงส่งออก</string>
 
 
-    <string name="prefer_usb_dac">Prefer USB DAC</string>
+    <string name="prefer_usb_dac">เลือกใช้ USB DAC ก่อน</string>
     <string name="loudness_normalization">ปรับระดับความดังให้เท่ากัน</string>
     <string name="loudness_normalization_subtitle">ปรับทุกแทร็กให้ดังเท่ากัน</string>
     <string name="loudness_off_on_speaker">ปิดบนลำโพงโทรศัพท์</string>
@@ -1110,143 +1133,143 @@
     <string name="loudness_lufs">%1$s LUFS</string>
 
 
-    <string name="blur_unfocused_lyrics">Blur unfocused lyrics</string>
+    <string name="blur_unfocused_lyrics">เบลอเนื้อเพลงบรรทัดที่ไม่ได้เลือก</string>
 
 
-    <string name="blur_unfocused_lyrics_subtitle">Keeps the spotlight on the current line</string>
+    <string name="blur_unfocused_lyrics_subtitle">เน้นบรรทัดเนื้อเพลงที่กำลังร้อง</string>
 
 
 
 
-    <string name="lyrics_debug_logs">Lyrics debug logs</string>
+    <string name="lyrics_debug_logs">บันทึกการแก้ไขข้อผิดพลาดของเนื้อเพลง</string>
 
 
-    <string name="lyrics_debug_logs_subtitle">Show live API queries and scraper activity in the lyrics panel</string>
+    <string name="lyrics_debug_logs_subtitle">แสดงคำขอ API และการดึงข้อมูลแบบเรียลไทม์ในแผงเนื้อเพลง</string>
 
 
-    <string name="shelf_trending_community_playlists">Trending community playlists</string>
+    <string name="shelf_trending_community_playlists">เพลย์ลิสต์ยอดนิยมจากชุมชน</string>
 
 
-    <string name="shelf_featured_playlists_for_you">Featured playlists for you</string>
+    <string name="shelf_featured_playlists_for_you">เพลย์ลิสต์แนะนำสำหรับคุณ</string>
 
 
-    <string name="shelf_quick_picks">Quick picks</string>
+    <string name="shelf_quick_picks">เพลงแนะนำ</string>
 
 
-    <string name="shelf_listen_again">Listen again</string>
+    <string name="shelf_listen_again">ฟังอีกครั้ง</string>
 
 
-    <string name="shelf_mixed_for_you">Mixed for you</string>
+    <string name="shelf_mixed_for_you">มิกซ์สำหรับคุณ</string>
 
 
-    <string name="shelf_similar_to">Similar to %1$s</string>
+    <string name="shelf_similar_to">คล้ายกับ %1$s</string>
 
 
-    <string name="shelf_forgotten_favorites">Forgotten favorites</string>
+    <string name="shelf_forgotten_favorites">เพลงโปรดที่ลืมไปแล้ว</string>
 
 
-    <string name="shelf_recommended_music_videos">Recommended music videos</string>
+    <string name="shelf_recommended_music_videos">มิวสิกวิดีโอแนะนำ</string>
 
 
-    <string name="shelf_from_your_library">From your library</string>
+    <string name="shelf_from_your_library">จากคลังเพลงของคุณ</string>
 
 
-    <string name="shelf_charts">Charts</string>
+    <string name="shelf_charts">ชาร์ต</string>
 
 
-    <string name="shelf_new_releases">New releases</string>
+    <string name="shelf_new_releases">ผลงานใหม่</string>
 
 
-    <string name="shelf_top_music_videos">Top music videos</string>
+    <string name="shelf_top_music_videos">มิวสิกวิดีโอยอดนิยม</string>
 
 
-    <string name="shelf_for_you">For you</string>
+    <string name="shelf_for_you">สำหรับคุณ</string>
 
 
-    <string name="shelf_energy_boosters">Energy boosters</string>
+    <string name="shelf_energy_boosters">เพลงเพิ่มพลัง</string>
 
 
-    <string name="shelf_feel_good">Feel good</string>
+    <string name="shelf_feel_good">อารมณ์ดี</string>
 
 
-    <string name="shelf_commute">Commute</string>
+    <string name="shelf_commute">ระหว่างเดินทาง</string>
 
 
-    <string name="shelf_workout">Workout</string>
+    <string name="shelf_workout">ออกกำลังกาย</string>
 
 
-    <string name="shelf_focus">Focus</string>
+    <string name="shelf_focus">มีสมาธิ</string>
 
 
-    <string name="shelf_relax">Relax</string>
+    <string name="shelf_relax">ผ่อนคลาย</string>
 
 
-    <string name="shelf_sleep">Sleep</string>
+    <string name="shelf_sleep">นอนหลับ</string>
 
 
-    <string name="shelf_party">Party</string>
+    <string name="shelf_party">ปาร์ตี้</string>
 
 
-    <string name="shelf_romance">Romance</string>
+    <string name="shelf_romance">โรแมนติก</string>
 
 
-    <string name="shelf_sad">Sad</string>
+    <string name="shelf_sad">เศร้า</string>
 
 
-    <string name="shelf_100_on_repeat">100% on repeat</string>
+    <string name="shelf_100_on_repeat">เปิดฟังซ้ำไม่หยุด</string>
 
 
-    <string name="shelf_new_albums_singles">New albums &amp; singles</string>
+    <string name="shelf_new_albums_singles">อัลบั้มและซิงเกิลใหม่</string>
 
 
-    <string name="shelf_hits_today">Hits today</string>
+    <string name="shelf_hits_today">เพลงฮิตวันนี้</string>
 
 
-    <string name="shelf_artists_on_the_rise">Artists on the rise</string>
+    <string name="shelf_artists_on_the_rise">ศิลปินมาแรง</string>
 
 
 
-    <string name="shelf_top_tunes_right_now">Top tunes right now</string>
+    <string name="shelf_top_tunes_right_now">เพลงยอดนิยมตอนนี้</string>
 
 
-    <string name="shelf_concerts">Concerts</string>
+    <string name="shelf_concerts">คอนเสิร์ต</string>
 
 
     <string name="shelf_shorts">Shorts</string>
 
 
-    <string name="shelf_single">Single</string>
+    <string name="shelf_single">ซิงเกิล</string>
 
 
-    <string name="shelf_chart">Chart</string>
+    <string name="shelf_chart">ชาร์ต</string>
 
 
-    <string name="shelf_song_item">Song</string>
+    <string name="shelf_song_item">เพลง</string>
 
 
-    <string name="shelf_from_the_community">From the community</string>
+    <string name="shelf_from_the_community">จากชุมชน</string>
 
 
-    <string name="shelf_youtube_charts">YouTube Charts</string>
+    <string name="shelf_youtube_charts">ชาร์ต YouTube</string>
 
 
-    <string name="shelf_trending">Trending</string>
+    <string name="shelf_trending">กำลังมาแรง</string>
 
 
-    <string name="shelf_recents">Recents</string>
+    <string name="shelf_recents">ล่าสุด</string>
 
 
-    <string name="subscriptions">Subscriptions</string>
+    <string name="subscriptions">การติดตาม</string>
 
 
 
-    <string name="card_views_format">%1$s views</string>
+    <string name="card_views_format">ยอดชม %1$s ครั้ง</string>
 
 
-    <string name="card_plays_format">%1$s plays</string>
+    <string name="card_plays_format">เล่น %1$s ครั้ง</string>
 
 
-    <string name="card_songs_format">%1$s songs</string>
+    <string name="card_songs_format">%1$s เพลง</string>
 
 
     <string name="source_needs_lossless_output">ต้องใช้เอาต์พุตแบบ lossless · ใช้อุปกรณ์ที่รองรับ lossless</string>
@@ -1376,179 +1399,179 @@
     <string name="song_info_unavailable">ไม่มีข้อมูล</string>
     <string name="song_info_error">ไม่สามารถโหลดข้อมูลบางส่วนได้</string>
     <string name="song_info_retry">ลองอีกครั้ง</string>
-    <string name="saved_on_this_device">Saved on this device</string>
-    <string name="genre">Genre</string>
-    <string name="genres">Genres</string>
-    <string name="folder">Folder</string>
-    <string name="folders">Folders</string>
-    <string name="export_playlist">Export playlist…</string>
-    <string name="export_as_m3u8">M3U8 (other players)</string>
+    <string name="saved_on_this_device">บันทึกในอุปกรณ์นี้</string>
+    <string name="genre">แนวเพลง</string>
+    <string name="genres">แนวเพลง</string>
+    <string name="folder">โฟลเดอร์</string>
+    <string name="folders">โฟลเดอร์</string>
+    <string name="export_playlist">ส่งออกเพลย์ลิสต์…</string>
+    <string name="export_as_m3u8">M3U8 (เครื่องเล่นอื่น)</string>
     <string name="export_as_xspf">XSPF</string>
-    <string name="export_as_auden">Auden (keeps streamed songs)</string>
-    <string name="playlist_exported">Playlist exported</string>
-    <string name="playlist_export_failed">Couldn’t export the playlist</string>
-    <string name="playlist_import_failed">Couldn’t import that file</string>
-    <string name="playlist_imported">Imported “%1$s”: %2$d of %3$d songs</string>
-    <string name="save_to_device">Save to this device</string>
-    <string name="remove_from_device">Remove from this device</string>
-    <string name="remove_device_copy_title">Remove from this device?</string>
-    <string name="remove_device_copy_message">This deletes the copy and any changes you made to it. The original is not touched.</string>
-    <string name="update_playlists">Update playlists</string>
-    <string name="remove_from_playlists_count">Remove from %1$d</string>
-    <string name="song_removed_from_playlist">Removed from playlist</string>
-    <string name="playlists_updated_notice">Playlists updated</string>
-    <string name="library_channel_name">Library</string>
-    <string name="library_channel_description">Progress while playlists and albums are saved to this device</string>
-    <string name="saving_title">Saving “%1$s”</string>
-    <string name="saving_reading">Reading the track list…</string>
-    <string name="saving_matching">Finding songs · %1$d of %2$d</string>
-    <string name="saving_storing">Adding %1$d songs to your library…</string>
-    <string name="saved_title">“%1$s” saved</string>
-    <string name="saved_text">%1$d songs in your device library</string>
-    <string name="saved_text_unmatched">%1$d songs added · %2$d not found</string>
-    <string name="synced_text">Up to date · %1$d new songs</string>
-    <string name="save_failed_title">Couldn’t save “%1$s”</string>
-    <string name="save_failed_text">Check your connection and try again</string>
-    <string name="saving_ellipsis">Saving…</string>
-    <string name="manage_download">Manage download</string>
-    <string name="download_copies_count">%1$d copies</string>
-    <string name="copy_now_playing">Playing</string>
-    <string name="copy_in_app_storage">App storage</string>
-    <string name="copy_found_on_device">Found on this device</string>
-    <string name="copy_downloaded_by_app">Downloaded by Auden</string>
-    <string name="identifying_title">Identifying music</string>
-    <string name="identifying_starting">Looking up your songs…</string>
-    <string name="identifying_progress">%1$d of %2$d</string>
-    <string name="identifying_done_title">Music identified</string>
-    <string name="identifying_done_text">%1$d identified · %2$d to review · %3$d not found</string>
-    <string name="identify_songs">Identify songs</string>
-    <string name="identify_unidentified_count">%1$d not identified yet</string>
-    <string name="identify_review">Review suggestions · %1$d</string>
-    <string name="review_matches_title">Suggested matches</string>
-    <string name="accept_all">Accept all</string>
+    <string name="export_as_auden">Auden (เก็บข้อมูลเพลงสตรีม)</string>
+    <string name="playlist_exported">ส่งออกเพลย์ลิสต์แล้ว</string>
+    <string name="playlist_export_failed">ไม่สามารถส่งออกเพลย์ลิสต์ได้</string>
+    <string name="playlist_import_failed">ไม่สามารถนำเข้าไฟล์นั้นได้</string>
+    <string name="playlist_imported">นำเข้า “%1$s” แล้ว: %2$d จาก %3$d เพลง</string>
+    <string name="save_to_device">บันทึกลงอุปกรณ์นี้</string>
+    <string name="remove_from_device">ลบออกจากอุปกรณ์นี้</string>
+    <string name="remove_device_copy_title">ลบออกจากอุปกรณ์นี้หรือไม่</string>
+    <string name="remove_device_copy_message">การดำเนินการนี้จะลบสำเนาและการแก้ไขทั้งหมด โดยไม่กระทบต้นฉบับ</string>
+    <string name="update_playlists">อัปเดตเพลย์ลิสต์</string>
+    <string name="remove_from_playlists_count">ลบออกจาก %1$d รายการ</string>
+    <string name="song_removed_from_playlist">ลบออกจากเพลย์ลิสต์แล้ว</string>
+    <string name="playlists_updated_notice">อัปเดตเพลย์ลิสต์แล้ว</string>
+    <string name="library_channel_name">คลังเพลง</string>
+    <string name="library_channel_description">ความคืบหน้าในการบันทึกเพลย์ลิสต์และอัลบั้มลงอุปกรณ์นี้</string>
+    <string name="saving_title">กำลังบันทึก “%1$s”</string>
+    <string name="saving_reading">กำลังอ่านรายชื่อเพลง…</string>
+    <string name="saving_matching">กำลังค้นหาเพลง · %1$d จาก %2$d</string>
+    <string name="saving_storing">กำลังเพิ่ม %1$d เพลงลงคลัง…</string>
+    <string name="saved_title">บันทึก “%1$s” แล้ว</string>
+    <string name="saved_text">มี %1$d เพลงในคลังของอุปกรณ์</string>
+    <string name="saved_text_unmatched">เพิ่ม %1$d เพลง · ไม่พบ %2$d เพลง</string>
+    <string name="synced_text">อัปเดตแล้ว · เพลงใหม่ %1$d เพลง</string>
+    <string name="save_failed_title">ไม่สามารถบันทึก “%1$s” ได้</string>
+    <string name="save_failed_text">ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง</string>
+    <string name="saving_ellipsis">กำลังบันทึก…</string>
+    <string name="manage_download">จัดการการดาวน์โหลด</string>
+    <string name="download_copies_count">%1$d สำเนา</string>
+    <string name="copy_now_playing">กำลังเล่น</string>
+    <string name="copy_in_app_storage">พื้นที่จัดเก็บของแอป</string>
+    <string name="copy_found_on_device">พบในอุปกรณ์นี้</string>
+    <string name="copy_downloaded_by_app">ดาวน์โหลดโดย Auden</string>
+    <string name="identifying_title">กำลังระบุเพลง</string>
+    <string name="identifying_starting">กำลังค้นหาข้อมูลเพลง…</string>
+    <string name="identifying_progress">%1$d จาก %2$d</string>
+    <string name="identifying_done_title">ระบุเพลงแล้ว</string>
+    <string name="identifying_done_text">ระบุแล้ว %1$d · รอตรวจสอบ %2$d · ไม่พบ %3$d</string>
+    <string name="identify_songs">ระบุเพลง</string>
+    <string name="identify_unidentified_count">ยังระบุไม่ได้ %1$d เพลง</string>
+    <string name="identify_review">ตรวจสอบคำแนะนำ · %1$d</string>
+    <string name="review_matches_title">ผลการจับคู่ที่แนะนำ</string>
+    <string name="accept_all">ยอมรับทั้งหมด</string>
     <string name="suggestion_label">YouTube Music: %1$s</string>
-    <string name="accept_match">Accept</string>
-    <string name="reject_match">Reject</string>
-    <string name="duplicate_playlist">Duplicate</string>
-    <string name="playlist_copy_suffix">%1$s (copy)</string>
-    <string name="download_folder_structure">Folder structure</string>
-    <string name="download_folder_structure_subtitle">How downloaded songs are filed</string>
-    <string name="layout_preset_artist_album">Artist / Album / Track</string>
-    <string name="layout_preset_album">Album / Track</string>
-    <string name="layout_preset_flat">One folder: Artist - Title</string>
-    <string name="layout_custom">Custom template</string>
-    <string name="layout_custom_hint">Tokens: {title} {artist} {albumArtist} {album} {year} {track} {disc}. Use / for folders.</string>
-    <string name="layout_example">Example: %1$s</string>
-    <string name="layout_applies_to_new">Applies to songs downloaded from now on. Existing files stay where they are.</string>
-    <string name="layout_invalid">That template can’t be used</string>
-    <string name="storage_title">Download storage</string>
-    <string name="storage_summary">%1$d downloads · %2$s</string>
-    <string name="storage_scanning">Looking through your downloads…</string>
-    <string name="reorganize_title">Reorganize folders</string>
-    <string name="reorganize_pending">%1$d files aren’t where your layout puts them</string>
-    <string name="reorganize_ok">Everything is where it should be</string>
-    <string name="reorganize_action">Move</string>
-    <string name="reorganize_progress">Moving %1$d of %2$d</string>
-    <string name="reorganize_done">Moved %1$d · %2$d couldn’t be moved</string>
-    <string name="reorganize_undo">Undo last move</string>
-    <string name="orphans_title">Files with no record</string>
-    <string name="orphans_subtitle">%1$d files · %2$s</string>
-    <string name="duplicates_title">Duplicate downloads</string>
-    <string name="duplicates_subtitle">%1$d songs downloaded more than once</string>
-    <string name="duplicates_keep_best">Keep the largest</string>
-    <string name="storage_row_subtitle">Folders, duplicates and leftovers</string>
-    <string name="downloads_paused">Downloads paused</string>
-    <string name="downloads_paused_waiting">%1$d waiting</string>
-    <string name="resume_downloads">Resume</string>
-    <string name="download_concurrency">Simultaneous downloads</string>
-    <string name="download_concurrency_subtitle">Fewer is gentler on your connection; more is faster for long queues</string>
-    <string name="library_folder_title">Lyrics and covers folder</string>
-    <string name="library_folder_none">Pick Music/Auden to save .lrc and cover.jpg beside each song</string>
-    <string name="library_folder_set">Saving to %1$s</string>
-    <string name="library_folder_forget">Stop using this folder</string>
-    <string name="lyrics_saved_title">Lyrics</string>
-    <string name="lyrics_in_use">In use</string>
-    <string name="lyrics_fmt_word">Word by word</string>
-    <string name="lyrics_fmt_line">Line by line</string>
-    <string name="lyrics_fmt_plain">Not synced</string>
-    <string name="lyrics_lines_count">%1$d lines</string>
-    <string name="lyrics_song_offset">Timing for this song: %1$s</string>
-    <string name="lyrics_none_saved">No lyrics saved for this song yet</string>
-    <string name="download_lyrics_extras">Extra lyrics to keep</string>
-    <string name="download_lyrics_extras_hint">The best match is always saved. Tick providers to also keep their versions, so you can switch later.</string>
-    <string name="download_lyrics_extras_count">%1$d extra</string>
-    <string name="download_lyrics_extras_none">Best match only</string>
-    <string name="lyrics_batch_title">Finding lyrics for “%1$s”</string>
-    <string name="lyrics_batch_nothing">Everything already has lyrics</string>
-    <string name="lyrics_batch_done_title">Lyrics for “%1$s” saved</string>
-    <string name="lyrics_batch_done_text">%1$d found · %2$d without lyrics</string>
-    <string name="find_lyrics_for_all">Find lyrics</string>
-    <string name="spotify_fix_match">Fix Spotify match</string>
-    <string name="spotify_fix_match_hint">Pick the right song for “%1$s”</string>
-    <string name="spotify_search_hint">Search YouTube Music</string>
-    <string name="spotify_no_results">No songs found</string>
-    <string name="spotify_err_signed_out">Connect your Spotify account to see your library</string>
-    <string name="spotify_err_expired">Your Spotify session expired. Sign in again.</string>
-    <string name="spotify_err_rate_limited">Spotify asked to slow down. Try again in a moment.</string>
-    <string name="spotify_err_network">Couldn’t reach Spotify. Check your connection.</string>
-    <string name="spotify_err_unknown">Something went wrong with Spotify.</string>
-    <string name="spotify_sync_copies">Sync saved playlists</string>
-    <string name="spotify_sync_copies_count">%1$d on this device</string>
-    <string name="spotify_open_missing">Couldn’t find it on YouTube Music</string>
-    <string name="spotify_empty_albums">No saved albums</string>
-    <string name="spotify_empty_artists">No followed artists</string>
-    <string name="home_shelf_loop">On repeat</string>
-    <string name="home_shelf_loop_subtitle">What you have played most this month</string>
-    <string name="home_shelf_rediscover">Rediscover</string>
-    <string name="home_shelf_rediscover_subtitle">Songs you loved and haven’t heard in a while</string>
-    <string name="home_shelf_recently_added">Recently added</string>
-    <string name="home_shelf_recently_added_subtitle">New in your library and downloads</string>
-    <string name="home_shelf_playlists">Your playlists</string>
-    <string name="home_shelf_playlists_subtitle">Saved on this device</string>
-    <string name="home_shelf_artist_mix">Mix: %1$s</string>
-    <string name="home_shelf_artist_mix_subtitle">From your library and your history</string>
-    <string name="home_shelf_library">From your library</string>
-    <string name="home_shelf_library_subtitle">Plays with no connection</string>
-    <string name="home_mix_title">Home mix</string>
-    <string name="home_mix_subtitle">From all YouTube Music to mostly your own music</string>
-    <string name="home_mix_value">%1$d%% yours</string>
-    <string name="home_shelves_title">Home shelves</string>
-    <string name="home_shelves_subtitle">Choose which of your own shelves appear</string>
-    <string name="home_shelf_artist_mix_toggle">Artist mix</string>
-    <string name="dj_theme_focus">Focus</string>
-    <string name="dj_theme_chill">Chill</string>
-    <string name="dj_theme_energy">Energy</string>
-    <string name="dj_theme_acoustic">Acoustic</string>
-    <string name="dj_theme_favorites">Your favorites</string>
+    <string name="accept_match">ยอมรับ</string>
+    <string name="reject_match">ปฏิเสธ</string>
+    <string name="duplicate_playlist">รายการซ้ำ</string>
+    <string name="playlist_copy_suffix">%1$s (สำเนา)</string>
+    <string name="download_folder_structure">โครงสร้างโฟลเดอร์</string>
+    <string name="download_folder_structure_subtitle">วิธีจัดเก็บเพลงที่ดาวน์โหลด</string>
+    <string name="layout_preset_artist_album">ศิลปิน / อัลบั้ม / เพลง</string>
+    <string name="layout_preset_album">อัลบั้ม / เพลง</string>
+    <string name="layout_preset_flat">โฟลเดอร์เดียว: ศิลปิน - ชื่อเพลง</string>
+    <string name="layout_custom">เทมเพลตกำหนดเอง</string>
+    <string name="layout_custom_hint">ตัวแปร: {title} {artist} {albumArtist} {album} {year} {track} {disc} ใช้ / เพื่อแบ่งโฟลเดอร์</string>
+    <string name="layout_example">ตัวอย่าง: %1$s</string>
+    <string name="layout_applies_to_new">ใช้กับเพลงที่ดาวน์โหลดนับจากนี้ ไฟล์เดิมจะยังอยู่ที่เดิม</string>
+    <string name="layout_invalid">ไม่สามารถใช้เทมเพลตนี้ได้</string>
+    <string name="storage_title">พื้นที่จัดเก็บไฟล์ดาวน์โหลด</string>
+    <string name="storage_summary">ดาวน์โหลด %1$d รายการ · %2$s</string>
+    <string name="storage_scanning">กำลังตรวจสอบไฟล์ดาวน์โหลด…</string>
+    <string name="reorganize_title">จัดโฟลเดอร์ใหม่</string>
+    <string name="reorganize_pending">มี %1$d ไฟล์ที่ไม่อยู่ตามโครงสร้างที่กำหนด</string>
+    <string name="reorganize_ok">ไฟล์ทั้งหมดอยู่ในตำแหน่งที่ถูกต้อง</string>
+    <string name="reorganize_action">ย้าย</string>
+    <string name="reorganize_progress">กำลังย้าย %1$d จาก %2$d</string>
+    <string name="reorganize_done">ย้ายแล้ว %1$d · ย้ายไม่ได้ %2$d</string>
+    <string name="reorganize_undo">ยกเลิกการย้ายครั้งล่าสุด</string>
+    <string name="orphans_title">ไฟล์ที่ไม่มีข้อมูลบันทึก</string>
+    <string name="orphans_subtitle">%1$d ไฟล์ · %2$s</string>
+    <string name="duplicates_title">ไฟล์ดาวน์โหลดซ้ำ</string>
+    <string name="duplicates_subtitle">มี %1$d เพลงที่ดาวน์โหลดซ้ำกัน</string>
+    <string name="duplicates_keep_best">เก็บไฟล์ขนาดใหญ่ที่สุด</string>
+    <string name="storage_row_subtitle">โฟลเดอร์ ไฟล์ซ้ำ และไฟล์ตกค้าง</string>
+    <string name="downloads_paused">หยุดดาวน์โหลดชั่วคราว</string>
+    <string name="downloads_paused_waiting">รออยู่ %1$d รายการ</string>
+    <string name="resume_downloads">ดำเนินการต่อ</string>
+    <string name="download_concurrency">จำนวนดาวน์โหลดพร้อมกัน</string>
+    <string name="download_concurrency_subtitle">จำนวนน้อยช่วยลดภาระการเชื่อมต่อ ส่วนจำนวนมากจะเร็วกว่าเมื่อมีคิวยาว</string>
+    <string name="library_folder_title">โฟลเดอร์เนื้อเพลงและภาพปก</string>
+    <string name="library_folder_none">เลือก Music/Auden เพื่อบันทึก .lrc และ cover.jpg ไว้ข้างไฟล์เพลงแต่ละเพลง</string>
+    <string name="library_folder_set">กำลังบันทึกไปยัง %1$s</string>
+    <string name="library_folder_forget">หยุดใช้โฟลเดอร์นี้</string>
+    <string name="lyrics_saved_title">เนื้อเพลง</string>
+    <string name="lyrics_in_use">กำลังใช้งาน</string>
+    <string name="lyrics_fmt_word">ทีละคำ</string>
+    <string name="lyrics_fmt_line">ทีละบรรทัด</string>
+    <string name="lyrics_fmt_plain">ไม่ซิงก์</string>
+    <string name="lyrics_lines_count">%1$d บรรทัด</string>
+    <string name="lyrics_song_offset">เวลาของเนื้อเพลงนี้: %1$s</string>
+    <string name="lyrics_none_saved">ยังไม่ได้บันทึกเนื้อเพลงนี้</string>
+    <string name="download_lyrics_extras">เนื้อเพลงเพิ่มเติมที่ต้องการเก็บ</string>
+    <string name="download_lyrics_extras_hint">ระบบบันทึกผลที่ตรงที่สุดเสมอ เลือกผู้ให้บริการอื่นเพื่อเก็บเวอร์ชันเพิ่มเติมไว้สลับใช้ภายหลัง</string>
+    <string name="download_lyrics_extras_count">เพิ่มอีก %1$d</string>
+    <string name="download_lyrics_extras_none">เฉพาะผลที่ตรงที่สุด</string>
+    <string name="lyrics_batch_title">กำลังค้นหาเนื้อเพลง “%1$s”</string>
+    <string name="lyrics_batch_nothing">ทุกเพลงมีเนื้อเพลงแล้ว</string>
+    <string name="lyrics_batch_done_title">บันทึกเนื้อเพลง “%1$s” แล้ว</string>
+    <string name="lyrics_batch_done_text">พบ %1$d · ไม่มีเนื้อเพลง %2$d</string>
+    <string name="find_lyrics_for_all">ค้นหาเนื้อเพลง</string>
+    <string name="spotify_fix_match">แก้ไขการจับคู่กับ Spotify</string>
+    <string name="spotify_fix_match_hint">เลือกเพลงที่ตรงกับ “%1$s”</string>
+    <string name="spotify_search_hint">ค้นหาใน YouTube Music</string>
+    <string name="spotify_no_results">ไม่พบเพลง</string>
+    <string name="spotify_err_signed_out">เชื่อมต่อบัญชี Spotify เพื่อดูคลังเพลงของคุณ</string>
+    <string name="spotify_err_expired">เซสชัน Spotify หมดอายุแล้ว โปรดลงชื่อเข้าใช้อีกครั้ง</string>
+    <string name="spotify_err_rate_limited">Spotify จำกัดความถี่การใช้งาน โปรดลองใหม่อีกสักครู่</string>
+    <string name="spotify_err_network">เชื่อมต่อ Spotify ไม่ได้ โปรดตรวจสอบอินเทอร์เน็ต</string>
+    <string name="spotify_err_unknown">Spotify เกิดข้อผิดพลาด</string>
+    <string name="spotify_sync_copies">ซิงก์เพลย์ลิสต์ที่บันทึกไว้</string>
+    <string name="spotify_sync_copies_count">มี %1$d รายการในอุปกรณ์นี้</string>
+    <string name="spotify_open_missing">ไม่พบใน YouTube Music</string>
+    <string name="spotify_empty_albums">ไม่มีอัลบั้มที่บันทึกไว้</string>
+    <string name="spotify_empty_artists">ไม่มีศิลปินที่ติดตาม</string>
+    <string name="home_shelf_loop">เพลงที่ฟังวน</string>
+    <string name="home_shelf_loop_subtitle">เพลงที่คุณฟังมากที่สุดในเดือนนี้</string>
+    <string name="home_shelf_rediscover">กลับมาค้นพบอีกครั้ง</string>
+    <string name="home_shelf_rediscover_subtitle">เพลงโปรดที่คุณไม่ได้ฟังมานาน</string>
+    <string name="home_shelf_recently_added">เพิ่มล่าสุด</string>
+    <string name="home_shelf_recently_added_subtitle">รายการใหม่ในคลังเพลงและไฟล์ดาวน์โหลด</string>
+    <string name="home_shelf_playlists">เพลย์ลิสต์ของคุณ</string>
+    <string name="home_shelf_playlists_subtitle">บันทึกในอุปกรณ์นี้</string>
+    <string name="home_shelf_artist_mix">มิกซ์: %1$s</string>
+    <string name="home_shelf_artist_mix_subtitle">จากคลังเพลงและประวัติการฟังของคุณ</string>
+    <string name="home_shelf_library">จากคลังเพลงของคุณ</string>
+    <string name="home_shelf_library_subtitle">เล่นได้โดยไม่ต้องเชื่อมต่อ</string>
+    <string name="home_mix_title">มิกซ์หน้าแรก</string>
+    <string name="home_mix_subtitle">ตั้งแต่เพลงทั้งหมดใน YouTube Music ไปจนถึงเพลงของคุณเป็นหลัก</string>
+    <string name="home_mix_value">เพลงของคุณ %1$d%%</string>
+    <string name="home_shelves_title">ส่วนต่าง ๆ บนหน้าแรก</string>
+    <string name="home_shelves_subtitle">เลือกส่วนเนื้อหาส่วนตัวที่ต้องการแสดง</string>
+    <string name="home_shelf_artist_mix_toggle">มิกซ์ศิลปิน</string>
+    <string name="dj_theme_focus">มีสมาธิ</string>
+    <string name="dj_theme_chill">ชิล</string>
+    <string name="dj_theme_energy">พลังงาน</string>
+    <string name="dj_theme_acoustic">อะคูสติก</string>
+    <string name="dj_theme_favorites">เพลงโปรดของคุณ</string>
     <string name="dj_title">Auden DJ</string>
-    <string name="dj_subtitle">Themed sets from your own music, with a voice in between</string>
-    <string name="dj_start">Start the DJ</string>
-    <string name="dj_stop">Stop the DJ</string>
-    <string name="dj_request_hint">What do you feel like hearing?</string>
-    <string name="dj_request_examples">Try “something calm from the 90s”, “music to focus” or an artist</string>
-    <string name="dj_surprise">Surprise me</string>
-    <string name="dj_now_playing">Now: %1$s</string>
-    <string name="dj_more_like_this">More like this</string>
-    <string name="dj_less_like_this">Less like this</string>
-    <string name="dj_starting">Choosing the first set…</string>
+    <string name="dj_subtitle">เซ็ตเพลงตามธีมจากเพลงของคุณ พร้อมเสียงพูดแทรกระหว่างเซ็ต</string>
+    <string name="dj_start">เริ่ม DJ</string>
+    <string name="dj_stop">หยุด DJ</string>
+    <string name="dj_request_hint">อยากฟังเพลงแบบไหน</string>
+    <string name="dj_request_examples">ลองพิมพ์ “เพลงสบาย ๆ จากยุค 90” “เพลงช่วยให้มีสมาธิ” หรือชื่อศิลปิน</string>
+    <string name="dj_surprise">เซอร์ไพรส์ฉัน</string>
+    <string name="dj_now_playing">ตอนนี้: %1$s</string>
+    <string name="dj_more_like_this">เพิ่มเพลงแนวนี้</string>
+    <string name="dj_less_like_this">ลดเพลงแนวนี้</string>
+    <string name="dj_starting">กำลังเลือกเซ็ตแรก…</string>
     <string name="dj_too_few">Not enough music with tags yet. Play, download or add more songs and try again.</string>
-    <string name="dj_no_player">The DJ could not start the player. Try again.</string>
-    <string name="dj_setting_voice">DJ voice</string>
-    <string name="dj_setting_voice_subtitle">Speaks between sets, over the start of a song</string>
-    <string name="dj_setting_chatty">DJ comments on songs</string>
-    <string name="dj_setting_chatty_subtitle">A word about a song in the middle of a set</string>
-    <string name="dj_setting_block">Songs per set</string>
-    <string name="dj_setting_language">DJ language</string>
-    <string name="dj_language_es">Spanish</string>
-    <string name="dj_language_en">English</string>
-    <string name="dj_voice_none">The DJ has no voice right now (no key, or no voice for this language): you will read its lines instead.</string>
-    <string name="dj_voice_ready">Voice: %1$s</string>
-    <string name="dj_theme_discover">New for you</string>
-    <string name="dj_now_playing_short">Now: %1$s</string>
-    <string name="dj_speech_error">The DJ could not speak: %1$s</string>
-    <string name="no_audio_version">No audio version found for this video</string>
-    <string name="no_video_version">No video version found for this song</string>
-    <string name="version_switch_in_party">Everyone in Listen Together hears the same version</string>
+    <string name="dj_no_player">DJ ไม่สามารถเริ่มเล่นเพลงได้ โปรดลองอีกครั้ง</string>
+    <string name="dj_setting_voice">เสียง DJ</string>
+    <string name="dj_setting_voice_subtitle">พูดระหว่างเซ็ตและช่วงเริ่มเพลง</string>
+    <string name="dj_setting_chatty">DJ พูดถึงเพลง</string>
+    <string name="dj_setting_chatty_subtitle">แสดงความคิดเห็นสั้น ๆ เกี่ยวกับเพลงระหว่างเซ็ต</string>
+    <string name="dj_setting_block">เพลงต่อเซ็ต</string>
+    <string name="dj_setting_language">ภาษา DJ</string>
+    <string name="dj_language_es">ภาษาสเปน</string>
+    <string name="dj_language_en">ภาษาอังกฤษ</string>
+    <string name="dj_voice_none">ตอนนี้ DJ ไม่สามารถพูดได้ (ไม่มีคีย์หรือไม่มีเสียงในภาษานี้) ข้อความจะปรากฏให้อ่านแทน</string>
+    <string name="dj_voice_ready">เสียง: %1$s</string>
+    <string name="dj_theme_discover">ใหม่สำหรับคุณ</string>
+    <string name="dj_now_playing_short">ตอนนี้: %1$s</string>
+    <string name="dj_speech_error">DJ พูดไม่ได้: %1$s</string>
+    <string name="no_audio_version">ไม่พบเวอร์ชันเสียงของวิดีโอนี้</string>
+    <string name="no_video_version">ไม่พบเวอร์ชันวิดีโอของเพลงนี้</string>
+    <string name="version_switch_in_party">ทุกคนในการฟังร่วมกันจะได้ยินเวอร์ชันเดียวกัน</string>
     <string name="opened_file">ไฟล์ที่เปิด</string>
     <string name="no_local_folders">ไม่มีโฟลเดอร์ที่มีเพลง</string>
     <string name="offline_playlist_empty">เพลย์ลิสต์นี้ยังว่างอยู่ เพิ่มเพลงได้จากเมนูของเพลง</string>
@@ -1601,22 +1624,935 @@
     <string name="bit_perfect_status_unavailable">ไม่พร้อมใช้งานสำหรับแทร็กนี้ (%1$s)</string>
     <string name="new_playlist_on_device">ในอุปกรณ์นี้</string>
     <string name="new_playlist_on_youtube_music">YouTube Music</string>
-    <string name="connect_enabled">Play on my other devices</string>
+    <string name="connect_enabled">เล่นบนอุปกรณ์อื่นของฉัน</string>
     <string name="connect_enabled_subtitle">Lists the other Auden devices of this account in the audio output menu, so playback can move between them and be controlled from any of them</string>
-    <string name="automix_overview">Automix overview</string>
-    <string name="player_theme_default">Continuation</string>
-    <string name="player_theme_legacy">Colors</string>
-    <string name="player_theme_simple">Blur</string>
-    <string name="diwali_title">BitChord wishes you a Happy Diwali</string>
-    <string name="diwali_subtitle">May this festival of lights fill your home with joy and your days with music.</string>
-    <string name="diwali_cta">Let\'s Celebrate</string>
+    <string name="automix_overview">ภาพรวมการมิกซ์อัตโนมัติ</string>
+    <string name="player_theme_default">ต่อเนื่อง</string>
+    <string name="player_theme_legacy">สี</string>
+    <string name="player_theme_simple">ความเบลอ</string>
+    <string name="diwali_title">BitChord ขออวยพรให้คุณมีความสุขในเทศกาลดิวาลี</string>
+    <string name="diwali_subtitle">ขอให้เทศกาลแห่งแสงสว่างเติมความสุขให้บ้านของคุณและเติมเสียงเพลงให้ทุกวัน</string>
+    <string name="diwali_cta">มาฉลองกันเถอะ</string>
     <string name="background_video">วิดีโอพื้นหลัง</string>
-    <string name="background_video_subtitle">Plays Spotify\'s short vertical loop behind the player</string>
+    <string name="background_video_subtitle">แสดงวิดีโอแนวตั้งแบบวนสั้น ๆ ของ Spotify เป็นพื้นหลังเครื่องเล่น</string>
     <string name="hide_mini_lyrics">ซ่อนเนื้อเพลงขนาดเล็ก</string>
-    <string name="hide_mini_lyrics_subtitle">Removes the one-line synced lyric above the progress bar; the controls spread out to fill its place</string>
+    <string name="hide_mini_lyrics_subtitle">ซ่อนเนื้อเพลงหนึ่งบรรทัดเหนือแถบความคืบหน้า แล้วขยายปุ่มควบคุมให้ใช้พื้นที่แทน</string>
     <string name="library_statistics">สถิติ</string>
     <string name="library_other">อื่นๆ</string>
     <string name="add_local_files">เพิ่มไฟล์ในเครื่อง</string>
     <string name="local_files_added">เพิ่มไฟล์ในเครื่อง %1$d ไฟล์แล้ว</string>
-    <string name="import_playlist_file">Import file</string>
+    <string name="import_playlist_file">นำเข้าไฟล์</string>
+    <string name="account_channel_listen_as">ฟังในฐานะ</string>
+    <string name="source_quality_lossless">ไม่สูญเสียคุณภาพ</string>
+    <string name="metadata_repair_gap_artist">ศิลปิน</string>
+    <string name="metadata_repair_gap_album">อัลบั้ม</string>
+    <string name="metadata_repair_not_now">ไว้ทีหลัง</string>
+    <string name="dj_sec_sessions_saved">บันทึกแล้ว</string>
+    <string name="dj_open">เปิด</string>
+    <string name="dj_typed_title"> ส่วนใหญ่ในช่วง %1$s</string>
+    <string name="cover_fx_mono">โมโน</string>
+    <string name="cover_font">ฟอนต์</string>
+    <string name="cover_font_mono">โมโน</string>
+    <string name="cover_custom">กำหนดเอง</string>
+    <string name="rec_canvas">ปกอัลบั้มเคลื่อนไหว</string>
+    <string name="rec_lyrics">เนื้อเพลงซิงค์</string>
+    <string name="storage_measuring">กำลังวัด…</string>
+    <string name="manage_downloads_done">เสร็จสิ้น</string>
+    <string name="manage_downloads_confirm_action">นำออก</string>
+    <string name="settings_block_app_language">ภาษาแอป</string>
+    <string name="settings_group_more">เพิ่มเติม</string>
+    <string name="flow_import_link">นำเข้า</string>
+    <string name="settings_block_aq_downloads">การดาวน์โหลด</string>
+    <string name="transfer_connected">เชื่อมต่อแล้ว</string>
+    <string name="transfer_likes">การกดชอบ</string>
+    <string name="transfer_playlists">เพลย์ลิสต์</string>
+    <string name="transfer_albums">อัลบั้ม</string>
+    <string name="transfer_artists">ศิลปิน</string>
+    <string name="transfer_select_all">เลือกทั้งหมด</string>
+    <string name="transfer_cancel">กลับ</string>
+    <string name="transfer_step_likes">การกดชอบ</string>
+    <string name="transfer_done_button">เสร็จสิ้น</string>
+    <string name="transfer_notice_later">ไว้ทีหลัง</string>
+    <string name="setup_transfer_done">เสร็จสิ้น</string>
+    <string name="setup_name_hint">ชื่อของคุณ</string>
+    <string name="replay_milestone_minutes">นาทีที่ฟัง</string>
+    <string name="replay_play_playlist">เล่น</string>
+    <string name="tv_listening">กำลังฟัง</string>
+    <string name="tv_off">ปิด</string>
+    <string name="tv_playback_section">การเล่น</string>
+    <string name="tv_crossfade">ครอสเฟด</string>
+    <string name="tv_appearance">ลักษณะที่ปรากฏ</string>
+    <string name="tv_scrobbling">การสโครบเบิล</string>
+    <string name="tv_software_update">การอัปเดตซอฟต์แวร์</string>
+    <string name="tv_crossfade_duration">%1$d วิ</string>
+    <string name="tv_default">ค่าเริ่มต้น</string>
+    <string name="tv_equalizer_2">อีควอไลเซอร์</string>
+    <string name="tv_equalizer">อีควอไลเซอร์</string>
+    <string name="tv_scrobbling_2">การสโครบเบิล</string>
+    <string name="tv_appearance_2">ลักษณะที่ปรากฏ</string>
+    <string name="tv_songs">เพลง</string>
+    <string name="tv_up_next">กำลังจะเล่นต่อไป</string>
+    <string name="tv_sign_in">ลงชื่อเข้าใช้</string>
+    <string name="tv_no_results">ไม่มีผลลัพธ์</string>
+    <string name="tv_play_next">เล่นต่อไป</string>
+    <string name="tv_new_playlist">เพลย์ลิสต์ใหม่</string>
+    <string name="tv_add_to_playlist_2">เพิ่มลงเพลย์ลิสต์</string>
+    <string name="tv_top_songs">เพลงยอดนิยม</string>
+    <string name="source_not_available_in_build">ไม่มีในบิลด์นี้</string>
+    <string name="source_server_no_response">เซิร์ฟเวอร์ไม่ตอบสนอง</string>
+    <string name="source_server_answered">เซิร์ฟเวอร์ตอบกลับ %1$s</string>
+    <string name="source_addon_url_required">ต้องระบุ URL ของส่วนเสริม</string>
+    <string name="source_no_manifest_search_works">ไม่มี manifest · ใช้การค้นหาได้</string>
+    <string name="source_module_url_required">ต้องระบุ URL ดัชนีของโมดูล</string>
+    <string name="source_module_index_empty">ดัชนีตอบกลับแต่ไม่มีรายการโมดูล ตรวจสอบ URL</string>
+    <string name="source_auth_unavailable">BitChord ยืนยันอุปกรณ์นี้ไม่ได้</string>
+    <string name="source_addon_unreachable">เข้าถึงส่วนเสริมไม่ได้</string>
+    <string name="source_module_index_unreachable">เข้าถึงดัชนีโมดูลไม่ได้</string>
+    <string name="tester_code_title">รหัสผู้ทดสอบ</string>
+    <string name="tester_code_message">สำหรับผู้ทดสอบ BitChord ใช้รหัสนี้เพื่อยืนยันส่วนเสริมบนโทรศัพท์เครื่องนี้ที่ปลดล็อก bootloader แล้ว</string>
+    <string name="tester_code_message_saved">บันทึกรหัสผู้ทดสอบไว้ในโทรศัพท์นี้แล้ว ป้อนรหัสใหม่เพื่อแทนที่ หรือลบรหัสออก</string>
+    <string name="tester_code_saved">บันทึกรหัสผู้ทดสอบแล้ว</string>
+    <string name="tester_code_removed">ลบรหัสผู้ทดสอบแล้ว</string>
+    <string name="backdrop_motion">การเคลื่อนไหวของพื้นหลัง</string>
+    <string name="backdrop_motion_static">นิ่ง</string>
+    <string name="backdrop_motion_animated">เคลื่อนไหว</string>
+    <string name="backdrop_motion_reactive">ตอบสนองตามเพลง</string>
+    <string name="backdrop_motion_static_subtitle">สีสันจะอยู่นิ่ง</string>
+    <string name="backdrop_motion_animated_subtitle">สีสันจะค่อย ๆ เคลื่อนไหวไปตามเสียงเพลง</string>
+    <string name="backdrop_motion_reactive_subtitle">สีสันจะเคลื่อนไหวตามเสียงเบสและระดับเสียงของเพลง</string>
+    <string name="pipeline_pcm_data_rate">อัตราข้อมูล PCM</string>
+    <string name="confirm_delete">ยืนยันการลบ</string>
+    <string name="delete_playlist_question">ลบ “%1$s” หรือไม่?</string>
+    <string name="delete_playlist_warning">เพลย์ลิสต์จะถูกลบ และไม่สามารถย้อนกลับได้</string>
+    <string name="delete_download_question">นำ “%1$s” ออกจากอุปกรณ์นี้หรือไม่?</string>
+    <string name="delete_download_warning">ไฟล์ที่ดาวน์โหลดจะถูกลบออกจากอุปกรณ์นี้</string>
+    <string name="lyrics_blur_amount">ระดับความเบลอของเนื้อเพลง</string>
+    <string name="assume_lossless_output">ถือว่าเอาต์พุตไม่มีการสูญเสียคุณภาพ</string>
+    <string name="assume_lossless_output_detail">ใช้ส่วนเสริมที่รองรับเฉพาะเสียงแบบไม่สูญเสียคุณภาพ แม้ตรวจไม่พบเอาต์พุตแบบดังกล่าว เสียงอาจยังเล่นผ่านช่องทางที่สูญเสียคุณภาพ</string>
+    <string name="synced_with">ซิงค์กับ %1$s</string>
+    <string name="yt_sync">ส่งออกไปยัง YouTube Music</string>
+    <string name="yt_sync_running">กำลังส่งออกไปยัง YouTube Music</string>
+    <string name="yt_sync_retry">ลองส่งออกอีกครั้ง</string>
+    <string name="yt_sync_linked">ส่งออกไปยังเพลย์ลิสต์ YouTube Music แล้ว</string>
+    <string name="yt_sync_failed">ส่งออกไม่สำเร็จ แตะเพื่อลองอีกครั้ง</string>
+    <string name="yt_sync_nothing">ไม่มีเพลงเหล่านี้ใน YouTube Music</string>
+    <string name="yt_sync_sign_in">ลงชื่อเข้าใช้ YouTube Music เพื่อส่งออก</string>
+    <string name="spotify_import_language_preference">ภาษาที่ต้องการ</string>
+    <string name="spotify_import_language_hint">เช่น ปัญจาบี มราฐี เกาหลี…</string>
+    <string name="account_channel_looking_up">กำลังค้นหาช่องของคุณ…</string>
+    <string name="account_channel_list_failed">แสดงรายการช่องของบัญชีนี้ไม่ได้ คุณยังเลือกช่องใน YouTube Music ได้</string>
+    <string name="account_channel_description">คลังเพลง เพลงที่ชอบ และประวัติของคุณจะมาจากช่องที่เลือกไว้ที่นี่</string>
+    <string name="account_channel_choose_in_youtube">เลือกใน YouTube Music</string>
+    <string name="settings_developer">นักพัฒนา</string>
+    <string name="settings_credit_services">บริการเบื้องหลัง YouTube Music และ Listen Together</string>
+    <string name="source_addon">ส่วนเสริม</string>
+    <string name="source_custom_module">โมดูลที่กำหนดเอง</string>
+    <string name="source_module">แหล่งโมดูล</string>
+    <string name="source_quality_hi_res">เสียงความละเอียดสูง</string>
+    <string name="source_plugins">ปลั๊กอิน</string>
+    <string name="source_quality_high">คุณภาพสูง</string>
+    <string name="source_high_bitrate">บิตเรตสูง</string>
+    <string name="source_full_catalogue">แค็ตตาล็อกทั้งหมด</string>
+    <string name="source_radio">วิทยุ</string>
+    <string name="source_lossy">สูญเสียคุณภาพ</string>
+    <string name="export_playlist_title">ส่งออกเพลย์ลิสต์</string>
+    <string name="export_playlist_hint">เลือกรูปแบบไฟล์</string>
+    <string name="export_format_m3u8_detail">สำหรับโปรแกรมเล่นและแอปอื่น เพลงที่สตรีมจะบันทึกเป็นลิงก์ YouTube Music</string>
+    <string name="export_format_xspf_detail">รูปแบบ XML แบบเปิดที่มีชื่อเพลง ศิลปิน และอัลบั้ม โปรแกรมเล่นอย่าง VLC อ่านได้</string>
+    <string name="export_format_auden_detail">ไฟล์รูปแบบเฉพาะของ Auden เก็บเพลงที่สตรีมไว้อย่างครบถ้วน จึงนำเข้าอีกครั้งได้โดยไม่สูญเสียข้อมูล</string>
+    <string name="dj_nav_setting">DJ ในแถบนำทาง</string>
+    <string name="dj_nav_setting_subtitle">ปุ่ม DJ อยู่ตรงกลางแถบนำทาง</string>
+    <string name="dj_theme_mix">หลากหลายแนว</string>
+    <string name="whats_new_update">มีอะไรใหม่ในการอัปเดตนี้</string>
+    <string name="whats_new_none">เวอร์ชันนี้ไม่มีบันทึกการเปลี่ยนแปลง</string>
+    <string name="metadata_repair">ซ่อมข้อมูลเมตา</string>
+    <string name="metadata_repair_title">กำลังซ่อมข้อมูลเมตา</string>
+    <string name="metadata_repair_finished">ซ่อมเสร็จแล้ว</string>
+    <string name="metadata_repair_stopped">หยุดการซ่อมแล้ว</string>
+    <string name="metadata_repair_repaired">ซ่อมแล้ว</string>
+    <string name="metadata_repair_complete">ครบถ้วนอยู่แล้ว</string>
+    <string name="metadata_repair_unavailable">ไม่มีข้อมูล</string>
+    <string name="metadata_repair_filled">เติมข้อมูลแล้ว</string>
+    <string name="metadata_repair_left">คงไว้ตามเดิม</string>
+    <plurals name="source_module_count">
+        <item quantity="one">%1$d โมดูล</item>
+        <item quantity="other">%1$d โมดูล</item>
+    </plurals>
+    <string name="app_icon_liquid_glass">กระจกเหลว</string>
+    <string name="app_icon_liquid_glass_dark">Liquid Glass (โหมดมืด)</string>
+    <string name="app_icon_liquid_glass_clear">Liquid Glass (โปร่งใส)</string>
+    <string name="app_icon_liquid_glass_clear_dark">Liquid Glass (โปร่งใส โหมดมืด)</string>
+    <string name="app_icon_samsung_glass">กระจก Samsung</string>
+    <string name="app_icon_samsung_glass_dark">Samsung Glass (โหมดมืด)</string>
+    <string name="app_icon_samsung_glass_clear">Samsung Glass (โปร่งใส)</string>
+    <string name="app_icon_samsung_glass_clear_dark">Samsung Glass (โปร่งใส โหมดมืด)</string>
+    <string name="app_icon_pixel_glass">กระจก Pixel</string>
+    <string name="app_icon_pixel_glass_dark">Pixel Glass (โหมดมืด)</string>
+    <string name="app_icon_pixel_glass_clear">Pixel Glass (โปร่งใส)</string>
+    <string name="app_icon_pixel_glass_clear_dark">Pixel Glass (โปร่งใส โหมดมืด)</string>
+    <string name="yt_sync_skipped">ละเว้น %1$d เพลงที่ไม่มีเวอร์ชันบน YouTube Music</string>
+    <string name="local_playlist_synced">%1$d เพลง · %2$s</string>
+    <string name="metadata_repair_progress">%1$d จาก %2$d</string>
+    <string name="metadata_repair_checked">ตรวจสอบแล้ว %1$d เพลง</string>
+    <string name="metadata_repair_gap_cover">ปกอัลบั้ม</string>
+    <string name="metadata_repair_gap_title">ชื่อเพลง</string>
+    <string name="metadata_repair_step_reading">กำลังอ่านแท็ก</string>
+    <string name="metadata_repair_step_lookup">กำลังค้นหาเพลง</string>
+    <string name="metadata_repair_step_cover">กำลังดาวน์โหลดปกอัลบั้ม</string>
+    <string name="metadata_repair_step_writing">กำลังเขียนแท็ก</string>
+    <string name="metadata_repair_step_checking">กำลังตรวจสอบไฟล์</string>
+    <string name="metadata_repair_why_unreadable">อ่านไฟล์ไม่ได้</string>
+    <string name="metadata_repair_why_no_match">ไม่พบเพลงที่ตรงกัน</string>
+    <string name="metadata_repair_why_no_cover">ดาวน์โหลดปกอัลบั้มไม่ได้</string>
+    <string name="metadata_repair_why_write">เขียนไฟล์ใหม่ไม่ได้</string>
+    <string name="metadata_repair_offer_title">ซ่อมข้อมูลเมตาหรือไม่?</string>
+    <string name="metadata_repair_offer_text">ยอมรับคำแนะนำ %1$d รายการ ไฟล์จะถูกเขียนใหม่ด้วยชื่อเพลง ศิลปิน อัลบั้ม และปกที่แนะนำ</string>
+    <string name="metadata_repair_action">ซ่อม</string>
+    <string name="metadata_repair_why_unsupported">รูปแบบนี้ไม่รองรับการเขียนแท็กใหม่</string>
+    <string name="metadata_repair_nothing">ไม่มีไฟล์ที่ดาวน์โหลดไว้ให้ซ่อม</string>
+    <string name="dj_home_title">Auden DJ</string>
+    <string name="dj_home_subtitle">เซ็ตที่ DJ สร้างจากเพลงที่คุณฟัง เก็บไว้ และไม่ได้ฟังแล้ว</string>
+    <string name="dj_home_loading">DJ กำลังสำรวจเพลงของคุณ…</string>
+    <string name="dj_home_empty">เพิ่มเพลงลงในคลัง แล้ว DJ จะสร้างเซ็ตให้คุณ</string>
+    <string name="dj_sec_start">เริ่มเซ็ต</string>
+    <string name="dj_sec_for_you">คัดสรรเพื่อคุณ</string>
+    <string name="dj_sec_come_back">ฟังอีกครั้ง</string>
+    <string name="dj_sec_discover">ค้นพบเพลง</string>
+    <string name="dj_sec_moment">ตามช่วงเวลา</string>
+    <string name="dj_sec_explore">สำรวจเพลงของคุณ</string>
+    <string name="dj_sec_sessions">เซสชันของคุณ</string>
+    <string name="dj_sec_sessions_recent">ล่าสุด</string>
+    <string name="dj_on_air">DJ กำลังออกอากาศ</string>
+    <string name="dj_card_play">เริ่มเซ็ตนี้</string>
+    <string name="dj_card_again">อีกเวอร์ชัน</string>
+    <string name="dj_card_save">บันทึกเซ็ตนี้</string>
+    <string name="dj_card_unsave">นำออกจากรายการที่บันทึก</string>
+    <string name="dj_ask_hint">ขอเพลงจาก DJ…</string>
+    <string name="dj_ask_send">ส่ง</string>
+    <string name="dj_for_you">สำหรับคุณ</string>
+    <string name="dj_for_you_reason">DJ เลือกจากเพลงที่คุณฟัง</string>
+    <string name="dj_surprise_reason">เลือกจากเซ็ตด้านล่างโดยไม่ต้องเลือกเอง</string>
+    <string name="dj_mood_focus">มีสมาธิ</string>
+    <string name="dj_mood_chill">สบาย ๆ</string>
+    <string name="dj_mood_energy">มีพลัง</string>
+    <string name="dj_mood_acoustic">อะคูสติก</string>
+    <string name="dj_songs_count">%1$d เพลง</string>
+    <string name="dj_favorites">เพลงโปรดของคุณ</string>
+    <string name="dj_favorites_reason">%1$d เพลงที่คุณกลับมาฟังซ้ำ</string>
+    <string name="dj_top_artist_reason">เล่น %1$d ครั้งในเดือนนี้</string>
+    <string name="dj_habitual">ฟังประจำ: %1$s</string>
+    <string name="dj_habitual_reason">แนวเพลงที่คุณฟังบ่อยที่สุด</string>
+    <string name="dj_lost_songs">เพลงที่คุณเลิกฟังไปแล้ว</string>
+    <string name="dj_lost_songs_reason">คุณเคยฟังเพลงเหล่านี้บ่อย และไม่ได้ฟังมาประมาณ %1$d เดือนแล้ว</string>
+    <string name="dj_lost_artist_reason">ไม่ได้ฟังศิลปินนี้มานานกว่า %1$d เดือนแล้ว</string>
+    <string name="dj_lost_album_reason">ไม่ได้ฟังอัลบั้มนี้มานานกว่า %1$d เดือนแล้ว</string>
+    <string name="dj_discover_near">ใกล้เคียงกับรสนิยมของคุณ</string>
+    <string name="dj_discover_near_reason">เพลงใหม่จากวิทยุที่อิงเพลงที่คุณฟัง</string>
+    <string name="dj_discover_artist">ถ้าคุณชอบ %1$s</string>
+    <string name="dj_discover_artist_reason">เพลงใหม่ในแนวเดียวกัน</string>
+    <string name="dj_discover_far">ลองฟังแนวที่ไม่คุ้นเคย</string>
+    <string name="dj_discover_far_reason">เริ่มจากเพลงที่คุณแทบไม่ได้ฟัง</string>
+    <string name="dj_moment_reason_morning">เหมาะกับเช้านี้</string>
+    <string name="dj_moment_reason_afternoon">เหมาะกับบ่ายนี้</string>
+    <string name="dj_moment_reason_evening">เหมาะกับเย็นนี้</string>
+    <string name="dj_moment_reason_night">เหมาะกับช่วงเวลานี้</string>
+    <string name="dj_theme_decade">เพลงยุค %1$d</string>
+    <string name="dj_theme_reason">เพลงของคุณ %1$d เพลง</string>
+    <string name="dj_session_typed">ตามที่คุณขอ</string>
+    <string name="dj_with">ร่วมกับ %1$s</string>
+    <string name="music_backup">สำรองเพลง</string>
+    <string name="music_backup_subtitle">ทุกเพลงที่แคชของคุณเก็บไว้</string>
+    <string name="library_replay_cta">ดูสถิติของคุณ</string>
+    <string name="library_songs_count">%1$d เพลง</string>
+    <string name="from_spotify">จาก Spotify</string>
+    <string name="library_songs_count_one">1 เพลง</string>
+    <string name="library_collections">คอลเลกชัน</string>
+    <string name="library_backup_caption">ในอุปกรณ์ของคุณ</string>
+    <string name="select_songs">เลือกเพลง</string>
+    <string name="deselect_all">ยกเลิกการเลือกทั้งหมด</string>
+    <plurals name="songs_selected_count">
+        <item quantity="one">เลือก %1$d เพลง</item>
+        <item quantity="other">เลือกแล้ว %1$d เพลง</item>
+    </plurals>
+    <plurals name="remove_songs_question">
+        <item quantity="one">ลบ %1$d เพลงหรือไม่</item>
+        <item quantity="other">นำเพลง %1$d เพลงออกหรือไม่?</item>
+    </plurals>
+    <string name="remove_songs_from_playlists">เพลงเหล่านี้จะถูกนำออกจาก: %1$s</string>
+    <string name="remove_songs_from_this_playlist">เพลงเหล่านี้จะถูกนำออกจาก “%1$s”</string>
+    <plurals name="delete_downloads_question">
+        <item quantity="one">ลบไฟล์ดาวน์โหลด %1$d รายการหรือไม่</item>
+        <item quantity="other">ลบรายการดาวน์โหลด %1$d รายการหรือไม่?</item>
+    </plurals>
+    <string name="change_cover">เปลี่ยนปก</string>
+    <string name="remove_cover">นำปกออก</string>
+    <string name="cover_crop_title">ปรับปก</string>
+    <string name="cover_crop_hint">ลากเพื่อจัดตำแหน่งภาพ และบีบนิ้วเพื่อซูม</string>
+    <string name="cover_updated">อัปเดตปกแล้ว</string>
+    <string name="cover_removed">นำปกออกแล้ว</string>
+    <string name="cover_failed">ใช้รูปภาพนี้ไม่ได้</string>
+    <string name="cover_creator_title">สร้างปก</string>
+    <string name="cover_tab_background">พื้นหลัง</string>
+    <string name="cover_tab_text">ข้อความ</string>
+    <string name="cover_tab_image">รูปภาพ</string>
+    <string name="cover_tab_labels">ป้ายกำกับ</string>
+    <string name="cover_tab_stickers">สติกเกอร์</string>
+    <string name="cover_color">สี</string>
+    <string name="cover_style">สไตล์</string>
+    <string name="cover_effects">เอฟเฟกต์</string>
+    <string name="cover_bg_horizontal">แนวนอน</string>
+    <string name="cover_bg_vertical">แนวตั้ง</string>
+    <string name="cover_bg_radial">รัศมี</string>
+    <string name="cover_bg_corners">มุม</string>
+    <string name="cover_bg_solid">สีพื้น</string>
+    <string name="cover_add_text">เพิ่มข้อความ</string>
+    <string name="cover_add_text_hint">เพิ่มข้อความและปรับแต่งสี สไตล์ และเอฟเฟกต์</string>
+    <string name="cover_type_here">พิมพ์ที่นี่…</string>
+    <string name="cover_add_image">เพิ่มรูปภาพ</string>
+    <string name="cover_add_image_hint">เพิ่มรูปจากคลังภาพหรือไฟล์ แล้ววางบนปก</string>
+    <string name="cover_size">ขนาด</string>
+    <string name="cover_weight">น้ำหนัก</string>
+    <string name="cover_slant">เอียง</string>
+    <string name="cover_randomize">สุ่ม</string>
+    <string name="cover_fill">เติมสี</string>
+    <string name="cover_stroke">เส้นขอบ</string>
+    <string name="cover_effect_none">ไม่มี</string>
+    <string name="cover_effect_displace">บิดตำแหน่ง</string>
+    <string name="cover_effect_stack">ซ้อน</string>
+    <string name="cover_effect_flag">ธง</string>
+    <string name="cover_effect_sphere">ทรงกลม</string>
+    <string name="cover_param_frequency">ความถี่</string>
+    <string name="cover_param_intensity">ความเข้ม</string>
+    <string name="cover_param_copies">จำนวนสำเนา</string>
+    <string name="cover_param_spacing">ระยะห่าง</string>
+    <string name="cover_bring_forward">เลื่อนมาด้านหน้า</string>
+    <string name="cover_send_backward">เลื่อนไปด้านหลัง</string>
+    <string name="cover_edit_text">แก้ไขข้อความ</string>
+    <string name="cover_add_color">เพิ่มสี</string>
+    <string name="cover_remove_color">นำสีออก</string>
+    <string name="cover_shuffle_colors">สุ่มสี</string>
+    <string name="cover_labels_hint">แตะป้ายกำกับเพื่อเพิ่ม หรือเปลี่ยนป้ายที่เลือกอยู่</string>
+    <string name="cover_letter_spacing">ระยะห่างตัวอักษร</string>
+    <string name="cover_line_height">ระยะห่างบรรทัด</string>
+    <string name="cover_opacity">ความทึบ</string>
+    <string name="cover_caps">ตัวพิมพ์ใหญ่</string>
+    <string name="cover_effect_shadow">เงา</string>
+    <string name="cover_effect_neon">นีออน</string>
+    <string name="cover_effect_glitch">ภาพเพี้ยน</string>
+    <string name="cover_effect_extrude">สามมิติ</string>
+    <string name="cover_effect_echo">เสียงสะท้อน</string>
+    <string name="cover_effect_arc">โค้ง</string>
+    <string name="cover_effect_wave">คลื่น</string>
+    <string name="cover_param_distance">ระยะ</string>
+    <string name="cover_param_blur">ความเบลอ</string>
+    <string name="cover_param_glow">แสงเรือง</string>
+    <string name="cover_param_split">แยก</string>
+    <string name="cover_param_cuts">รอยตัด</string>
+    <string name="cover_param_depth">ความลึก</string>
+    <string name="cover_param_angle">มุม</string>
+    <string name="cover_param_bend">การโค้งงอ</string>
+    <string name="cover_param_taper">เรียว</string>
+    <string name="cover_param_amplitude">แอมพลิจูด</string>
+    <string name="cover_shape">รูปร่าง</string>
+    <string name="cover_shape_square">สี่เหลี่ยมจัตุรัส</string>
+    <string name="cover_shape_rounded">มุมมน</string>
+    <string name="cover_shape_circle">วงกลม</string>
+    <string name="cover_fx_sepia">ซีเปีย</string>
+    <string name="cover_fx_duotone">สองโทนสี</string>
+    <string name="cover_fx_invert">กลับสี</string>
+    <string name="cover_fx_posterize">โปสเตอร์</string>
+    <string name="cover_fx_pixelate">พิกเซล</string>
+    <string name="cover_fx_halftone">ฮาล์ฟโทน</string>
+    <string name="cover_fx_vignette">ขอบมืด</string>
+    <string name="cover_font_sans">ไม่มีเชิง</string>
+    <string name="cover_font_condensed">แคบ</string>
+    <string name="cover_font_serif">มีเชิง</string>
+    <string name="cover_font_typewriter">เครื่องพิมพ์ดีด</string>
+    <string name="cover_font_script">ลายมือหวัด</string>
+    <string name="cover_font_handwritten">ลายมือเขียน</string>
+    <string name="cover_font_smallcaps">ตัวพิมพ์ใหญ่ขนาดเล็ก</string>
+    <string name="cover_width">ความกว้าง</string>
+    <string name="cover_grain">เกรนภาพ</string>
+    <string name="cover_reroll">จัดเรียงใหม่</string>
+    <string name="cover_bg_mesh">ตาข่ายไล่สี</string>
+    <string name="cover_bg_aurora">แสงออโรรา</string>
+    <string name="cover_bg_sunburst">แสงรัศมี</string>
+    <string name="cover_bg_stripes">ลายทาง</string>
+    <string name="cover_bg_waves">ลายคลื่น</string>
+    <string name="cover_bg_dots">จุด</string>
+    <string name="cover_bg_ripple">ระลอกคลื่น</string>
+    <string name="cover_palette">ชุดสี</string>
+    <string name="cover_stickers_vintage">วินเทจ</string>
+    <string name="cover_stickers_future">อนาคต</string>
+    <string name="cover_stickers_graphic">กราฟิก</string>
+    <string name="edit_playlist">แก้ไขเพลย์ลิสต์</string>
+    <string name="browse_group_storage">บันทึกและดาวน์โหลด</string>
+    <string name="browse_group_tags">เนื้อเพลงและแท็ก</string>
+    <string name="browse_group_more">จัดการเพลย์ลิสต์</string>
+    <string name="cover">ปก</string>
+    <string name="cover_choose_photo">เลือกรูปภาพ</string>
+    <string name="playlist_description">คำอธิบาย</string>
+    <string name="playlist_description_hint">ใช้เพื่ออะไร เหมาะกับใคร…</string>
+    <string name="about_playlist">เกี่ยวกับเพลย์ลิสต์นี้</string>
+    <string name="flow_create_new">สร้างเพลย์ลิสต์ใหม่</string>
+    <string name="flow_create_new_sub">เริ่มจากรายการเปล่า</string>
+    <string name="flow_import">นำเข้าเพลย์ลิสต์</string>
+    <string name="flow_import_sub">นำเข้าจากไฟล์ YouTube Music หรือ Spotify</string>
+    <string name="flow_save_to">บันทึกไปที่</string>
+    <string name="flow_dest_device">อุปกรณ์นี้</string>
+    <string name="flow_dest_device_sub">เก็บไว้ใน Auden และใช้งานออฟไลน์ได้</string>
+    <string name="flow_dest_yt">YouTube Music</string>
+    <string name="flow_dest_yt_sub">บันทึกไว้ในบัญชีของคุณ</string>
+    <string name="flow_sign_in_needed">ลงชื่อเข้าใช้ YouTube Music เพื่อใช้ฟีเจอร์นี้</string>
+    <string name="flow_import_from">นำเข้าจาก</string>
+    <string name="flow_src_file">ไฟล์เพลย์ลิสต์</string>
+    <string name="flow_src_file_sub">เพลย์ลิสต์ที่บันทึกจากแอปอื่น</string>
+    <string name="flow_src_yt_sub">เพลย์ลิสต์หนึ่งในบัญชีของคุณ</string>
+    <string name="flow_src_spotify">Spotify</string>
+    <string name="flow_src_spotify_sub">ใช้ลิงก์ของเพลย์ลิสต์</string>
+    <string name="flow_import_to">บันทึกเพลย์ลิสต์ที่นำเข้าไปยัง</string>
+    <string name="flow_continue">ต่อไป</string>
+    <string name="flow_pick_playlist">เลือกเพลย์ลิสต์</string>
+    <string name="flow_no_playlists">บัญชีของคุณยังไม่มีเพลย์ลิสต์</string>
+    <string name="settings_block_output">เอาต์พุตเสียง</string>
+    <string name="settings_block_sound">เสียง</string>
+    <string name="settings_block_sound_effects">อีควอไลเซอร์และเอฟเฟกต์</string>
+    <string name="settings_general">ทั่วไป</string>
+    <string name="storage_overall">โดยรวม</string>
+    <string name="settings_recommended">แนะนำ</string>
+    <string name="settings_crumb">การตั้งค่า › %1$s</string>
+    <string name="rec_data">ลดคุณภาพเมื่อใช้เน็ตมือถือ</string>
+    <string name="rec_wifi_downloads">ดาวน์โหลดผ่าน Wi-Fi เท่านั้น</string>
+    <string name="rec_automix">เปลี่ยนผ่านระหว่างเพลงอย่างราบรื่น</string>
+    <string name="rec_loudness">ปรับระดับเสียงทุกเพลงให้ใกล้เคียงกัน</string>
+    <string name="rec_spatial">เสียงรอบทิศทางสำหรับหูฟัง</string>
+    <string name="rec_dj">Auden DJ ในแถบนำทาง</string>
+    <string name="rec_performance">แอนิเมชันลื่นไหลขึ้น</string>
+    <string name="rec_backup">สำรองข้อมูลของคุณ</string>
+    <string name="storage_legend_auden">Auden</string>
+    <string name="storage_legend_other">รายการอื่นทั้งหมด</string>
+    <string name="storage_free">เหลือพื้นที่ %1$s</string>
+    <string name="storage_uses">Auden ใช้ %1$s · %2$s</string>
+    <string name="storage_legend_database">ฐานข้อมูล</string>
+    <string name="storage_legend_app_data">ข้อมูลแอป</string>
+    <string name="storage_hint_cache">แคชเพลงและรูปภาพใช้พื้นที่ %1$s การล้างแคชเป็นวิธีที่เร็วที่สุดในการคืนพื้นที่ว่าง</string>
+    <string name="storage_hint_full">พื้นที่จัดเก็บในโทรศัพท์ใกล้เต็มแล้ว</string>
+    <string name="storage_remove_downloads">นำรายการดาวน์โหลดทั้งหมดออก</string>
+    <string name="storage_remove_downloads_title">นำรายการดาวน์โหลดทั้งหมดออกหรือไม่?</string>
+    <string name="storage_remove_downloads_message">เพลงที่ดาวน์โหลดและเนื้อเพลงทั้งหมดจะถูกลบออกจากอุปกรณ์นี้ แต่ยังอยู่ในคลังและดาวน์โหลดใหม่ได้</string>
+    <string name="storage_clear_caches">ล้างแคชเพลงและปกอัลบั้ม</string>
+    <string name="storage_clear_caches_title">ล้างแคชเพลงและปกอัลบั้มหรือไม่?</string>
+    <string name="storage_clear_caches_message">เพลงในแคช รวมถึงโฟลเดอร์เพลงในแคชในคลัง และปกอัลบั้มในแคชจะถูกลบ รายการดาวน์โหลดจะไม่ถูกลบ</string>
+    <string name="manage_downloads">จัดการรายการดาวน์โหลด</string>
+    <string name="manage_downloads_search">ค้นหารายการดาวน์โหลด</string>
+    <string name="manage_downloads_summary">%1$d เพลง · %2$s</string>
+    <string name="manage_downloads_largest">ใหญ่ที่สุด</string>
+    <string name="manage_downloads_all">รายการดาวน์โหลดทั้งหมด</string>
+    <string name="manage_downloads_empty">ยังไม่มีรายการดาวน์โหลด</string>
+    <string name="manage_downloads_no_match">ไม่พบ “%1$s”</string>
+    <string name="manage_downloads_remove">นำออก %1$d รายการ · %2$s</string>
+    <string name="manage_downloads_confirm_title">นำรายการดาวน์โหลด %1$d รายการออกหรือไม่?</string>
+    <string name="manage_downloads_confirm_message">ไฟล์จะถูกลบออกจากอุปกรณ์นี้ เพลงจะยังอยู่ในคลังและดาวน์โหลดใหม่ได้</string>
+    <string name="settings_block_transitions">การเปลี่ยนผ่าน</string>
+    <string name="settings_block_queue">คิวและเล่นอัตโนมัติ</string>
+    <string name="settings_block_versions">เวอร์ชันเพลง</string>
+    <string name="settings_block_devices">อุปกรณ์</string>
+    <string name="settings_block_dj_app">ในแอป</string>
+    <string name="settings_block_dj_voice">เสียงพูดและความคิดเห็น</string>
+    <string name="settings_block_dj_sets">เซ็ตเพลง</string>
+    <string name="settings_block_dl_quality">คุณภาพและเครือข่าย</string>
+    <string name="settings_block_dl_files">ตำแหน่งและวิธีจัดเก็บ</string>
+    <string name="settings_block_dl_lyrics">บันทึกพร้อมเพลง</string>
+    <string name="settings_block_dl_playlists">เพลย์ลิสต์ที่ดาวน์โหลด</string>
+    <string name="settings_block_local_folders">โฟลเดอร์</string>
+    <string name="settings_block_local_filters">ตัวกรอง</string>
+    <string name="settings_block_home_sections">ส่วนที่แสดง</string>
+    <string name="settings_block_home_mix">ผสมกับคลังเพลงของคุณ</string>
+    <string name="settings_block_style">ธีมและสไตล์</string>
+    <string name="settings_block_player_art">พื้นหลังและปกของโปรแกรมเล่น</string>
+    <string name="settings_block_player_controls">ปุ่มควบคุมและข้อมูลของโปรแกรมเล่น</string>
+    <string name="settings_block_pages">หน้าอัลบั้มและศิลปิน</string>
+    <string name="settings_block_lyrics">เนื้อเพลง</string>
+    <string name="settings_block_display">หน้าจอ</string>
+    <string name="settings_block_effects">เอฟเฟกต์แบบเบา</string>
+    <string name="settings_block_song_cache">แคชเพลง</string>
+    <string name="settings_block_image_cache">รูปภาพ</string>
+    <string name="settings_block_replay">รีเพลย์</string>
+    <string name="settings_block_backup">สำรองข้อมูล</string>
+    <string name="settings_block_advanced">ขั้นสูง</string>
+    <string name="settings_block_watch">สมาร์ตวอตช์</string>
+    <string name="voice_search">ค้นหาด้วยเสียง</string>
+    <string name="settings_group_music">เพลง</string>
+    <string name="settings_group_customize">ปรับแต่ง</string>
+    <string name="settings_group_device">อุปกรณ์และข้อมูล</string>
+    <string name="settings_cat_playback_sub">เอาต์พุตเสียง เอฟเฟกต์ การเปลี่ยนผ่าน และคิว</string>
+    <string name="settings_cat_dj_sub">เสียงพูด ความคิดเห็น และเซ็ตเพลง</string>
+    <string name="settings_cat_downloads_sub">คุณภาพ โฟลเดอร์ เนื้อเพลง และเพลย์ลิสต์ที่ซิงค์</string>
+    <string name="settings_cat_local_sub">โฟลเดอร์และตัวกรอง</string>
+    <string name="settings_cat_home_sub">สิ่งที่แสดงในฟีดหน้าแรก</string>
+    <string name="settings_cat_appearance_sub">ธีม กระจก โปรแกรมเล่น ปก และเนื้อเพลง</string>
+    <string name="settings_cat_language_sub">ภาษาของแอป</string>
+    <string name="settings_cat_performance_sub">อัตรารีเฟรชและเอฟเฟกต์แบบเบา</string>
+    <string name="settings_cat_storage_sub">แคชเพลงและรูปภาพ</string>
+    <string name="settings_cat_data_sub">รีเพลย์และข้อมูลสำรอง</string>
+    <string name="settings_cat_misc_sub">ตัวเลือกขั้นสูงและสมาร์ตวอตช์</string>
+    <string name="lyrics_preview_1">โอบกอดฉันไว้ในแสงสุดท้าย</string>
+    <string name="lyrics_preview_2">แสงทุกดวงค่อย ๆ ริบหรี่ลง</string>
+    <string name="lyrics_preview_3">พาฉันไปตามสายน้ำ</string>
+    <string name="lyrics_preview_4">ค่อย ๆ ผ่อนคลาย ค่ำคืนนี้ยังอีกยาวไกล</string>
+    <string name="lyrics_preview_5">เก็บเสียงสะท้อนไว้ แล้วปล่อยมันไป</string>
+    <string name="lyrics_preview_6">จนกว่าเช้าวันใหม่จะมาถึงเรา</string>
+    <string name="replay_weekly_summary">สรุปรายสัปดาห์</string>
+    <string name="home_new_from_your_artists">เพลงใหม่จากศิลปินที่คุณติดตาม</string>
+    <string name="home_because_you_listened">เพราะคุณฟัง %1$s</string>
+    <string name="home_more_like_artist">เพลงแนวเดียวกับ %1$s</string>
+    <string name="home_best_of_artist">เพลงยอดนิยมของ %1$s</string>
+    <string name="flow_src_yt_link_sub">จากลิงก์หรือเพลย์ลิสต์ของคุณ</string>
+    <string name="flow_src_yt_link_only_sub">จากลิงก์</string>
+    <string name="flow_paste_link">วางลิงก์ YouTube Music</string>
+    <string name="flow_or_yours">หรือเลือกเพลย์ลิสต์ของคุณ</string>
+    <string name="accent_color">สีเน้น</string>
+    <string name="accent_color_subtitle">สีของแถบนำทาง ไอคอน และเครื่องหมายต่าง ๆ</string>
+    <string name="accent_blue">น้ำเงิน</string>
+    <string name="accent_green">เขียว</string>
+    <string name="accent_lime">เขียวมะนาว</string>
+    <string name="accent_yellow">เหลือง</string>
+    <string name="accent_orange">ส้ม</string>
+    <string name="accent_pink">ชมพู</string>
+    <string name="accent_magenta">แดงม่วง</string>
+    <string name="accent_violet">ม่วง</string>
+    <string name="accent_white">ขาว</string>
+    <string name="accent_red">แดง</string>
+    <string name="settings_block_aq_streaming">สตรีมมิง</string>
+    <string name="app_icon_black">ดำ</string>
+    <string name="app_icon_white">ขาว</string>
+    <string name="app_icon_blue">น้ำเงิน</string>
+    <string name="app_icon_green">เขียว</string>
+    <string name="app_icon_lime">เขียวมะนาว</string>
+    <string name="app_icon_magenta">แดงม่วง</string>
+    <string name="app_icon_orange">ส้ม</string>
+    <string name="app_icon_pink">ชมพู</string>
+    <string name="app_icon_red">แดง</string>
+    <string name="app_icon_violet">ม่วง</string>
+    <string name="app_icon_yellow">เหลือง</string>
+    <string name="welcome_title_1">Auden ใหม่</string>
+    <string name="welcome_body_1">ตัวตนใหม่ เพลงเดิมที่คุณรัก ทุกสิ่งที่ชอบห่อหุ้มด้วยแบรนด์ที่ทำจากกระจก</string>
+    <string name="welcome_title_2">สร้างจากแสงและกระจก</string>
+    <string name="welcome_body_2">โลโก้ใหม่ที่หักเหแสง มีทั้งเวอร์ชันสว่างและมืดที่เปลี่ยนตามธีมของคุณ</string>
+    <string name="welcome_title_3">มี 13 ไอคอน เลือกแบบที่ชอบ</string>
+    <string name="welcome_body_3">Liquid Glass สีดำ สีขาว และหลากสีสัน เปลี่ยนได้ทุกเมื่อในการตั้งค่า</string>
+    <string name="welcome_title_4">สีของคุณอยู่ทุกที่</string>
+    <string name="welcome_body_4">เลือกสีเน้น แล้ว Auden จะใช้สีนั้นกับสวิตช์ แบนเนอร์ และโปรแกรมเล่น พร้อมแอนิเมชันเริ่มต้นใหม่</string>
+    <string name="welcome_next">ต่อไป</string>
+    <string name="welcome_start">เริ่มฟังเพลง</string>
+    <string name="glass_opacity">ความทึบของกระจก</string>
+    <string name="glass_material">วัสดุ</string>
+    <string name="glass_material_subtitle">กระจกจะหักเหและแสดงภาพด้านหลัง ส่วนแบบทึบจะเติมสีเต็มพื้นผิวและใช้ GPU น้อยกว่า</string>
+    <string name="glass_material_glass">กระจก</string>
+    <string name="glass_material_solid">ทึบ</string>
+    <string name="update_screen_version">v%1$s</string>
+    <string name="update_screen_download">ดาวน์โหลดอัปเดต</string>
+    <string name="update_screen_downloading">กำลังดาวน์โหลด… %1$d%%</string>
+    <string name="dj_mood_party">ปาร์ตี้</string>
+    <string name="dj_theme_party">ปาร์ตี้</string>
+    <string name="dj_mood_workout">ออกกำลังกาย</string>
+    <string name="dj_theme_workout">ออกกำลังกาย</string>
+    <string name="dj_mood_romantic">โรแมนติก</string>
+    <string name="dj_theme_romantic">โรแมนติก</string>
+    <string name="dj_mood_melancholy">หม่นเศร้า</string>
+    <string name="dj_theme_melancholy">หม่นเศร้า</string>
+    <string name="dj_mood_happy">มีความสุข</string>
+    <string name="dj_theme_happy">มีความสุข</string>
+    <string name="dj_mood_sleep">นอนหลับ</string>
+    <string name="dj_theme_sleep">นอนหลับ</string>
+    <string name="dj_mood_road_trip">เดินทางไกล</string>
+    <string name="dj_theme_road_trip">เดินทางไกล</string>
+    <string name="dj_mood_nostalgic">คิดถึงวันเก่า ๆ</string>
+    <string name="dj_theme_nostalgic">คิดถึงวันเก่า ๆ</string>
+    <string name="dj_mood_latin">ละติน</string>
+    <string name="dj_theme_latin">ละติน</string>
+    <string name="dj_mood_night">ยามดึก</string>
+    <string name="dj_theme_night">ยามดึก</string>
+    <string name="dj_mood_coffee">เวลากาแฟ</string>
+    <string name="dj_theme_coffee">เวลากาแฟ</string>
+    <string name="dj_mood_rainy">วันฝนตก</string>
+    <string name="dj_theme_rainy">วันฝนตก</string>
+    <string name="dj_top_decade_reason">ทศวรรษที่คุณฟังบ่อยที่สุด</string>
+    <string name="dj_session_to_playlist">บันทึกเป็นเพลย์ลิสต์</string>
+    <string name="dj_session_playlist_saved">บันทึกเป็นเพลย์ลิสต์ “%1$s” แล้ว</string>
+    <string name="likes_device_link">กดชอบในอุปกรณ์นี้</string>
+    <string name="my_favorites">รายการโปรดของฉัน</string>
+    <string name="listen_together_as">ในชื่อ %1$s</string>
+    <string name="listen_together_as_where">เปลี่ยนได้ในการตั้งค่าบัญชีและการเชื่อมต่อ</string>
+    <string name="other_functions">ฟังก์ชันอื่น ๆ</string>
+    <string name="apple_music">Apple Music</string>
+    <string name="tidal">Tidal</string>
+    <string name="sign_in_to">ลงชื่อเข้าใช้ %1$s</string>
+    <string name="sign_in_to_import_hint">ลงชื่อเข้าใช้เหมือนที่ทำบนเว็บไซต์ บัญชีนี้ช่วยให้ Auden อ่านคลังเพลงของคุณได้</string>
+    <string name="disconnect_service">ยกเลิกการเชื่อมต่อ %1$s</string>
+    <string name="connections">การเชื่อมต่อ</string>
+    <string name="connected_as">เชื่อมต่อในชื่อ %1$s</string>
+    <string name="auden_account">บัญชี Auden</string>
+    <string name="account_sheet_account_sub">ข้อมูลบัญชี การเชื่อมต่อ และการตั้งค่า</string>
+    <string name="playback_statistics">สถิติการเล่น</string>
+    <string name="auden_settings">การตั้งค่า Auden</string>
+    <string name="about_this_version">เกี่ยวกับเวอร์ชันนี้</string>
+    <string name="show_library_stats">แบนเนอร์สถิติในคลังเพลง</string>
+    <string name="show_library_stats_subtitle">สรุป Replay ของคุณที่ด้านบนของคลังเพลง</string>
+    <string name="edit_pinned">แก้ไขรายการปักหมุด</string>
+    <string name="edit_sections">แก้ไขส่วนต่าง ๆ</string>
+    <string name="profile_default_name">ฉัน</string>
+    <string name="profile_header">โปรไฟล์ของคุณ</string>
+    <string name="profile_name_footer">ชื่อที่ผู้อื่นเห็นในปาร์ตี้และ Connect เป็นชื่อโปรไฟล์ Auden ของคุณ การลงชื่อเข้าใช้บริการอื่นจะไม่เปลี่ยนชื่อนี้</string>
+    <string name="profile_name_footer_room">ชื่อที่ผู้อื่นเห็นในปาร์ตี้และ Connect การเปลี่ยนชื่อนี้จะย้ายห้องที่อุปกรณ์ในเครือข่ายเดียวกันใช้ค้นหากันด้วย</string>
+    <string name="profile_photo">รูปภาพ</string>
+    <string name="profile_photo_none">เลือกรูปจากคลังภาพ รูปจะอยู่ในอุปกรณ์นี้</string>
+    <string name="profile_photo_change">เปลี่ยนรูปภาพ</string>
+    <string name="profile_photo_remove">นำรูปภาพออก</string>
+    <string name="transfer_title">ย้ายเพลงของคุณ</string>
+    <string name="transfer_sources_header">จาก</string>
+    <string name="transfer_footer">Auden อ่านข้อมูลจากบริการอื่นและเก็บสำเนาไว้เอง จะไม่มีการส่งข้อมูลกลับหรือซิงค์ต่อเนื่อง เว้นแต่คุณจะสั่งอัปเดตเพลย์ลิสต์</string>
+    <string name="transfer_connect">เชื่อมต่อ</string>
+    <string name="transfer_yt_music">YouTube Music</string>
+    <string name="transfer_more_header">วิธีอื่น</string>
+    <string name="transfer_file_or_link">จากไฟล์หรือลิงก์</string>
+    <string name="transfer_file_or_link_sub">ไฟล์ M3U, XSPF หรือ Auden หรือลิงก์ YouTube Music</string>
+    <string name="transfer_likes_running">กำลังคัดลอกเพลงที่ชอบจาก YouTube Music…</string>
+    <string name="transfer_likes_incomplete">คัดลอกเพลงที่ชอบจาก YouTube Music ไม่เสร็จ เลือกเพลงที่ชอบแล้วลองย้ายอีกครั้ง</string>
+    <string name="transfer_loading">กำลังอ่านคลังเพลงของคุณ…</string>
+    <string name="transfer_failed">อ่านคลังเพลงไม่ได้ ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง</string>
+    <string name="transfer_retry">ลองอีกครั้ง</string>
+    <string name="transfer_choose_header">นำเข้าจาก %1$s</string>
+    <string name="transfer_likes_sub">เพลงที่คุณกดชอบที่นั่นจะกลายเป็นเพลงที่คุณกดชอบใน Auden</string>
+    <string name="transfer_unreadable">อ่านไม่ได้</string>
+    <string name="transfer_none">ไม่มีรายการ</string>
+    <string name="transfer_select_none">ยกเลิกการเลือกทั้งหมด</string>
+    <string name="transfer_start">ย้ายเพลง</string>
+    <string name="transfer_running">กำลังย้าย…</string>
+    <string name="transfer_stage_reading">กำลังอ่าน</string>
+    <string name="transfer_stage_matching">กำลังค้นหาเพลง</string>
+    <string name="transfer_stage_storing">กำลังบันทึก</string>
+    <string name="transfer_done_title">ย้ายเสร็จแล้ว</string>
+    <string name="transfer_done_tally">เพิ่ม %1$d รายการ มีอยู่แล้ว %2$d รายการ และไม่พบรายการที่ตรงกัน %3$d รายการ</string>
+    <string name="transfer_done_incomplete">อ่านบางรายการไม่ได้: %1$d รายการ คุณลองย้ายอีกครั้งได้</string>
+    <string name="transfer_notice_title">คลังเพลงของคุณอยู่ใน Auden แล้ว</string>
+    <string name="transfer_notice_body">Auden จะไม่แสดงคลัง YouTube Music แบบเรียลไทม์อีกต่อไป และคัดลอกเพลงที่ชอบมาแล้ว หากต้องการนำเข้าเพลย์ลิสต์ อัลบั้ม และศิลปิน ให้ใช้ฟีเจอร์ย้ายเพลง</string>
+    <string name="refresh_from_origin">อัปเดตจากแหล่งที่มา</string>
+    <string name="refresh_reading">กำลังอ่านแหล่งที่มา…</string>
+    <string name="refresh_error_gone">ไม่มีเพลย์ลิสต์นี้แล้ว</string>
+    <string name="refresh_error_no_origin">เพลย์ลิสต์นี้สร้างใน Auden จึงไม่มีแหล่งที่มาให้อัปเดต</string>
+    <string name="refresh_error_likes_list">นี่คือสำเนาเพลงที่คุณกดชอบ นำเข้ารายการเหล่านั้นเป็นเพลงที่ชอบผ่านฟีเจอร์ย้ายเพลง</string>
+    <string name="refresh_error_no_listing">Spotify ไม่มีรายชื่อเพลงในอัลบั้มนี้ จึงอัปเดตไม่ได้</string>
+    <string name="refresh_error_not_connected">เชื่อมต่อ %1$s ในเมนูย้ายเพลงเพื่ออัปเดตเพลย์ลิสต์นี้</string>
+    <string name="refresh_error_expired">เซสชัน %1$s หมดอายุแล้ว เชื่อมต่ออีกครั้งในเมนูย้ายเพลง</string>
+    <string name="refresh_error_empty">%1$s ไม่ส่งเพลงของเพลย์ลิสต์นี้กลับมา จึงไม่มีการเปลี่ยนแปลง เพลย์ลิสต์อาจเป็นส่วนตัวหรือถูกลบแล้ว</string>
+    <string name="refresh_error_failed">อ่าน %1$s ไม่ได้ โปรดลองอีกครั้งภายหลัง</string>
+    <string name="refresh_updated">อัปเดต %1$s แล้ว</string>
+    <string name="refresh_never_updated">ยังไม่เคยอัปเดตหลังจากนำเข้า</string>
+    <string name="refresh_first">อัปเดตครั้งแรก: เพิ่มเพลงเท่านั้น ไม่มีการนำเพลงออก</string>
+    <string name="refresh_nothing_new">ไม่มีเพลงใหม่จากแหล่งที่มา</string>
+    <string name="refresh_unmatched">ยังไม่พบเพลง %1$d เพลงบน YouTube Music</string>
+    <string name="refresh_merge">รวมรายการ (+%1$d / −%2$d)</string>
+    <string name="refresh_replace">แทนที่ด้วยข้อมูลจากต้นทาง (+%1$d / −%2$d)</string>
+    <string name="refresh_done">อัปเดต %1$s แล้ว</string>
+    <string name="export_yt_title">ส่งออก “%1$s” ไปยัง YouTube Music หรือไม่?</string>
+    <string name="export_yt_create">ระบบจะสร้างเพลย์ลิสต์ใหม่ที่มีเพลง %1$d เพลงบน YouTube Music</string>
+    <string name="export_yt_update">ระบบจะอัปเดตเพลย์ลิสต์ YouTube Music: เพิ่ม %1$d เพลง และนำออก %2$d เพลง</string>
+    <string name="export_yt_removes">รายการต่อไปนี้จะถูกนำออกจากที่นั่น:</string>
+    <string name="export_yt_confirm">ส่งออก</string>
+    <string name="export_yt_failed">เตรียมข้อมูลส่งออกไม่ได้</string>
+    <string name="refresh_error_generic">อัปเดตเพลย์ลิสต์ไม่ได้ โปรดลองอีกครั้งภายหลัง</string>
+    <string name="refresh_mark_synced">ทำเครื่องหมายว่าข้อมูลเป็นปัจจุบันแล้ว</string>
+    <string name="home_empty_title">ยังไม่มีอะไรให้แสดง</string>
+    <string name="home_empty_body">หน้าแรกสร้างขึ้นจากเพลงที่คุณฟังใน Auden ลองเปิดเพลงสักสองสามเพลง หรือนำเข้าเพลงจาก YouTube Music หรือ Spotify</string>
+    <string name="liked_music">เพลงที่ชอบ</string>
+    <string name="transfer_podcasts">พอดแคสต์</string>
+    <string name="transfer_start_count">ย้ายเพลง (%1$d)</string>
+    <string name="library_section_empty">ยังไม่มีอะไรที่นี่ นำเข้าเพลงจาก YouTube Music หรือ Spotify ได้ในเมนูย้ายเพลงบนหน้าโปรไฟล์บัญชี</string>
+    <string name="transfer_running_percent">กำลังย้าย %1$d%%</string>
+    <string name="transfer_unit_of">%1$d จาก %2$d</string>
+    <string name="home_recents_title">เล่นล่าสุด</string>
+    <string name="mix_in_loop">เพลงที่ฟังซ้ำ</string>
+    <string name="mix_genre">มิกซ์ %1$s</string>
+    <string name="mix_new">เพลงใหม่สำหรับคุณ</string>
+    <string name="mix_because">เพราะคุณชอบ %1$s</string>
+    <string name="mix_rediscover">ย้อนกลับไปฟัง</string>
+    <string name="mix_likes">มิกซ์เพลงที่ชอบ</string>
+    <string name="mix_deep_cuts">เพลงที่ยังไม่เคยฟัง: %1$s</string>
+    <string name="mix_one_year_ago">เมื่อหนึ่งปีก่อน</string>
+    <string name="setup_welcome_title">ยินดีต้อนรับสู่ Auden</string>
+    <string name="setup_welcome_body">เพลงของคุณ ในแบบของคุณ มาปรับ Auden ให้เป็นแบบที่คุณชอบกัน</string>
+    <string name="setup_music_title">นำเข้าเพลงของคุณ</string>
+    <string name="setup_music_body">นำเข้าคลังเพลงจากบริการอื่นหรือไฟล์ หรือเริ่มคลังใหม่ก็ได้ คุณนำเข้าเมื่อไรก็ได้</string>
+    <string name="setup_bring_music">นำเข้าเพลงของฉัน</string>
+    <string name="setup_bring_music_sub">Spotify, YouTube Music, ข้อมูลสำรอง, ไฟล์เพลย์ลิสต์ หรือโทรศัพท์เครื่องนี้</string>
+    <string name="setup_import_more">นำเข้าอย่างอื่น</string>
+    <string name="setup_automix_sub">เชื่อมเพลงแต่ละเพลงเข้าด้วยกันโดยไม่มีช่วงเงียบ</string>
+    <string name="setup_reduce_blur_sub">ลดภาพเบลอเคลื่อนไหวเพื่อประหยัดแบตเตอรี่</string>
+    <string name="setup_change_photo">เปลี่ยนรูปภาพ</string>
+    <string name="setup_continue">ต่อไป</string>
+    <string name="setup_transfer_reading_title">กำลังอ่านคลังเพลงของคุณ</string>
+    <string name="setup_transfer_running_title">กำลังนำเข้าเพลง</string>
+    <string name="setup_transfer_failed_title">ดำเนินการไม่สำเร็จ</string>
+    <string name="setup_start_fresh_sub">คลังเพลงว่างพร้อมให้คุณเริ่มค้นหาเพลง</string>
+    <string name="setup_import_title">เพลงของคุณอยู่ที่ไหน?</string>
+    <string name="setup_import_body">เลือกแหล่งที่มาและเลือกรายการที่จะนำเข้า คุณกลับมาทำทีหลังหรือข้ามขั้นตอนนี้ได้</string>
+    <string name="setup_transfer_pending">ไม่พบเพลง %1$d เพลงที่ตรงกัน และอ่านรายการ %2$d รายการไม่ได้ คุณลองนำเข้าใหม่ภายหลังได้</string>
+    <string name="setup_start_fresh">เริ่มใหม่</string>
+    <string name="setup_phone_music">เพลงในโทรศัพท์นี้</string>
+    <string name="setup_phone_music_sub">อนุญาตให้ Auden ค้นหาไฟล์เสียงในอุปกรณ์ของคุณ</string>
+    <string name="setup_spotify">Spotify</string>
+    <string name="setup_youtube">YouTube Music</string>
+    <string name="setup_import_service">เชื่อมต่อเพื่อเลือกรายการที่จะนำเข้า</string>
+    <string name="setup_backup">ข้อมูลสำรอง Auden</string>
+    <string name="setup_backup_sub">กู้คืนการตั้งค่า คลังเพลง เพลย์ลิสต์ และประวัติจาก JSON</string>
+    <string name="setup_playlist_file">ไฟล์เพลย์ลิสต์</string>
+    <string name="setup_playlist_sub">ไฟล์เพลย์ลิสต์ M3U, M3U8, XSPF หรือ Auden JSON</string>
+    <string name="setup_transfer_ready">เลือกรายการที่จะนำเข้า</string>
+    <string name="setup_transfer_likes">เพลงที่กดชอบ</string>
+    <string name="setup_transfer_import">นำเข้ารายการที่เลือก</string>
+    <string name="setup_profile_title">โปรไฟล์ Auden ของคุณ</string>
+    <string name="setup_profile_body">ตั้งชื่อที่เพื่อนจะเห็น รูปภาพเป็นตัวเลือกเสริม</string>
+    <string name="setup_photo_optional">เพิ่มรูปโปรไฟล์ (ไม่บังคับ)</string>
+    <string name="setup_greeting">ยินดีต้อนรับ %1$s</string>
+    <string name="setup_greeting_body">โปรไฟล์ของคุณพร้อมแล้ว เปลี่ยนได้ทุกเมื่อในการตั้งค่า</string>
+    <string name="setup_preferences_title">ปรับแต่งตามใจคุณ</string>
+    <string name="setup_preferences_body">คุณเปลี่ยนการตั้งค่าเหล่านี้ภายหลังได้</string>
+    <string name="setup_automix">มิกซ์อัตโนมัติ</string>
+    <string name="setup_reduce_blur">ลดภาพเบลอเคลื่อนไหว</string>
+    <string name="setup_enter_auden">เข้าสู่ Auden</string>
+    <string name="setup_photo_failed">บันทึกรูปนี้ไม่ได้ โปรดเลือกรูปอื่น</string>
+    <string name="setup_transfer_wait">การย้ายเพลงอาจใช้เวลาสักครู่ เปิด Auden ไว้จนกว่าจะเสร็จ</string>
+    <string name="setup_transfer_done_body">เพลงที่เลือกพร้อมเล่นใน Auden แล้ว</string>
+    <string name="setup_done_title">Auden พร้อมแล้ว %1$s</string>
+    <string name="setup_done_body">ตั้งค่าเพลงและโปรไฟล์ของคุณแล้ว เริ่มฟังได้เลย</string>
+    <string name="setup_permission_declined">คุณอนุญาตให้เข้าถึงเพลงภายหลังในการตั้งค่า Android ได้ Auden ยังเริ่มต้นด้วยคลังเพลงใหม่ได้</string>
+    <string name="replay_kind_week">สัปดาห์</string>
+    <string name="replay_kind_month">เดือน</string>
+    <string name="replay_kind_year">ปี</string>
+    <string name="replay_when_this_week">สัปดาห์นี้</string>
+    <string name="replay_when_last_week">สัปดาห์ที่แล้ว</string>
+    <string name="replay_when_week_of">สัปดาห์ของวันที่ %1$s</string>
+    <string name="replay_when_in">ใน %1$s</string>
+    <string name="replay_when_all_time">ตั้งแต่เริ่มใช้ Auden</string>
+    <string name="replay_you_listened">คุณฟังเพลง</string>
+    <string name="replay_your_top_artists">ศิลปินยอดนิยมของคุณ</string>
+    <string name="replay_your_top_songs">เพลงยอดนิยมของคุณ</string>
+    <string name="replay_your_top_albums">อัลบั้มยอดนิยมของคุณ</string>
+    <string name="replay_your_milestones">สถิติความสำเร็จของคุณ</string>
+    <string name="replay_relive_top">ย้อนฟังเพลงยอดนิยมของคุณใน %1$s</string>
+    <string name="replay_minutes_word">%1$s นาที</string>
+    <string name="replay_plays_n">เล่น %1$s ครั้ง</string>
+    <string name="replay_milestone_songs">เพลงที่ฟังแล้ว</string>
+    <string name="replay_milestone_artists">ศิลปินที่ค้นพบ</string>
+    <string name="replay_milestone_reached">ถึงสถิติเมื่อ %1$s</string>
+    <string name="replay_milestone_next">ถัดไป: %1$s</string>
+    <string name="replay_playlist_title">ย้อนดู %1$s</string>
+    <string name="replay_playlist_songs">%1$s เพลง · %2$s</string>
+    <string name="replay_save_playlist">บันทึกเป็นเพลย์ลิสต์</string>
+    <string name="replay_playlist_saved">บันทึก “%1$s” ลงในคลังแล้ว</string>
+    <string name="tv_account">บัญชี</string>
+    <string name="tv_couldn_t_load">โหลดไม่สำเร็จ</string>
+    <string name="tv_account_settings">การตั้งค่าบัญชี</string>
+    <string name="tv_sign_in_to_youtube_music">ลงชื่อเข้าใช้ YouTube Music</string>
+    <string name="tv_press_back_for_done_or_cancel">กดกลับเพื่อเลือกเสร็จสิ้นหรือยกเลิก</string>
+    <string name="tv_ok">ตกลง</string>
+    <string name="tv_free_software_under_the_gnu_gpl">ซอฟต์แวร์เสรีภายใต้ GNU GPL v3 ไม่เกี่ยวข้องกับ YouTube หรือ Google</string>
+    <string name="tv_reset_to_default">คืนค่าเริ่มต้น</string>
+    <string name="tv_up_and_down_set_a_band">กดขึ้นหรือลงเพื่อตั้งค่าย่านเสียง กดเลือกเพื่อรีเซ็ต</string>
+    <string name="tv_reset_all">รีเซ็ตทั้งหมด</string>
+    <string name="tv_create">สร้าง</string>
+    <string name="tv_download_and_install">ดาวน์โหลดและติดตั้ง</string>
+    <string name="tv_not_now">ไว้ทีหลัง</string>
+    <string name="tv_hide">ซ่อน</string>
+    <string name="tv_cancel_download">ยกเลิกการดาวน์โหลด</string>
+    <string name="tv_autoplay">เล่นอัตโนมัติ</string>
+    <string name="tv_not_playing">ไม่ได้กำลังเล่น</string>
+    <string name="tv_choose_something_from_home_explore_or">เลือกสิ่งที่ต้องการจากหน้าแรก สำรวจ หรือคลังเพลง</string>
+    <string name="tv_browse_music">เลือกดูเพลง</string>
+    <string name="tv_allow_access">อนุญาตการเข้าถึง</string>
+    <string name="tv_reload_library">โหลดคลังเพลงอีกครั้ง</string>
+    <string name="tv_empty_home_title">ยังไม่มีอะไรที่นี่</string>
+    <string name="tv_home_sign_in_for_recommendations">ลงชื่อเข้าใช้ในการตั้งค่า หรือตรวจสอบการเชื่อมต่อเพื่อดูคำแนะนำ</string>
+    <string name="tv_nothing_played_yet">ยังไม่มีเพลงที่เล่น</string>
+    <string name="tv_played_songs_appear_here">เพลงที่คุณเล่นจะแสดงที่นี่</string>
+    <string name="tv_empty_library_message">ยังไม่มีอะไรที่นี่</string>
+    <string name="tv_welcome_to_bit_chord">ยินดีต้อนรับสู่ BitChord</string>
+    <string name="tv_music_for_the_big_screen">เพลงของคุณบนจอใหญ่</string>
+    <string name="tv_continue">ต่อไป</string>
+    <string name="tv_set_up_later">ตั้งค่าภายหลัง</string>
+    <string name="tv_choose_a_look">เลือกรูปแบบ</string>
+    <string name="tv_change_look_later">เปลี่ยนได้ภายหลังในการตั้งค่า</string>
+    <string name="tv_you_are_all_set">ตั้งค่าเสร็จแล้ว</string>
+    <string name="tv_find_music_everything_saved">ค้นหาเพลงได้ในหน้าแรกและหน้าสำรวจ รายการที่บันทึกไว้จะอยู่ในคลังเพลง</string>
+    <string name="tv_start_listening">เริ่มฟังเพลง</string>
+    <string name="tv_signed_in">ลงชื่อเข้าใช้แล้ว</string>
+    <string name="tv_account_library_recommendations">นำเข้าคลังเพลง เพลย์ลิสต์ และคำแนะนำของคุณ คุณทำขั้นตอนนี้ภายหลังในการตั้งค่าได้</string>
+    <string name="tv_select_a_row_to_toggle">เลือกรายการเพื่อเปิดหรือปิด</string>
+    <string name="tv_synced_lyrics">เนื้อเพลงซิงค์</string>
+    <string name="tv_motion_artwork">ภาพปกเคลื่อนไหว</string>
+    <string name="tv_spatial_audio">เสียงรอบทิศทาง</string>
+    <string name="tv_on">เปิด</string>
+    <string name="tv_recommendations_account">คลังเพลง เพลย์ลิสต์ และคำแนะนำของคุณมาจากบัญชีนี้</string>
+    <string name="tv_automix_blurb">ผสมเพลงหนึ่งเข้ากับเพลงถัดไปโดยปรับให้เข้ากับจังหวะ</string>
+    <string name="tv_fades_song_in_and_out">ค่อย ๆ ลดเสียงเพลงหนึ่งขณะเพลงถัดไปเริ่มดังขึ้น เลือกเพื่อเปลี่ยนระยะเวลา</string>
+    <string name="tv_autoplay_blurb">เมื่อคิวสิ้นสุด จะเล่นเพลงที่คล้ายกับสิ่งที่คุณกำลังฟังต่อ</string>
+    <string name="tv_skip_silence_blurb">ข้ามช่วงเงียบตอนต้นและท้ายเพลง</string>
+    <string name="tv_shape_sound_with_presets">ปรับแต่งเสียงด้วยค่าที่ตั้งไว้หรือย่านเสียงเจ็ดแถบที่คุณกำหนดเอง</string>
+    <string name="tv_widens_stereo_music">ขยายเสียงสเตอริโอโดยใช้ระบบจำลองเสียงของทีวี หากมี</string>
+    <string name="tv_plays_each_song_at_loudness">เล่นทุกเพลงด้วยระดับความดังที่รับรู้ใกล้เคียงกัน</string>
+    <string name="tv_sends_audio_to_usb_dac">ส่งเสียงตรงไปยัง USB DAC ที่เชื่อมต่อโดยไม่เปลี่ยนแปลง เมื่อเชื่อมต่ออยู่</string>
+    <string name="tv_lyrics_follow_along">เนื้อเพลงเลื่อนไปตามเพลงทีละบรรทัด</string>
+    <string name="tv_choose_lyric_databases">เลือกฐานข้อมูลเนื้อเพลงที่จะค้นหาและกำหนดลำดับ</string>
+    <string name="tv_song_looping_video_artwork">เล่นภาพปกวิดีโอแบบวนซ้ำไว้ด้านหลังหน้าจอเล่นเพลง หากมี</string>
+    <string name="tv_fullscreen_lyrics_video_artwork">เล่นภาพปกวิดีโอไว้ด้านหลังหน้าเนื้อเพลงเต็มจอ</string>
+    <string name="tv_shows_codec_bitrate_sample_rate">แสดงโคเดก บิตเรต และอัตราสุ่มตัวอย่างของเพลงที่กำลังเล่น</string>
+    <string name="tv_background_behind_pages">พื้นหลังด้านหลังหน้าต่างต่าง ๆ ของ BitChord</string>
+    <string name="tv_now_playing_background">พื้นหลังหน้าเล่นอยู่: สีจากปกอัลบั้มหรือสีดำสนิทแบบ AMOLED</string>
+    <string name="tv_interface_size_blurb">ปรับทุกอย่างให้ใหญ่ขึ้นหรือเล็กลง เลือกเพื่อเปลี่ยนขนาด</string>
+    <string name="tv_screen_redraw_rate">ความถี่ในการวาดหน้าจอใหม่ขณะเลือกดู</string>
+    <string name="tv_calms_decorative_animation">ลดการเคลื่อนไหวของพื้นหลังและแอนิเมชันตกแต่งอื่น ๆ</string>
+    <string name="tv_solid_backgrounds_help_slower_tvs">แทนที่พื้นหลังเบลอด้วยสีพื้น ช่วยให้ทีวีรุ่นที่ช้าทำงานดีขึ้น</string>
+    <string name="tv_last_fm_and_listenbrainz">Last.fm และ ListenBrainz</string>
+    <string name="tv_download_install_new_version">ดาวน์โหลดและติดตั้ง BitChord สำหรับทีวีเวอร์ชันใหม่</string>
+    <string name="tv_first_time_setup_again">เริ่มตั้งค่าเริ่มต้นอีกครั้ง</string>
+    <string name="tv_settings_default_blurb">การตั้งค่าการเล่น เสียง และหน้าจอของ BitChord บนทีวีเครื่องนี้</string>
+    <string name="tv_account_section">บัญชี</string>
+    <string name="tv_sound_section">เสียง</string>
+    <string name="tv_display_section">หน้าจอ</string>
+    <string name="tv_connections_section">การเชื่อมต่อ</string>
+    <string name="tv_general_section">ทั่วไป</string>
+    <string name="tv_skip_silence">ข้ามช่วงเงียบ</string>
+    <string name="tv_sound_check">ปรับระดับเสียง</string>
+    <string name="tv_usb_dac">USB DAC</string>
+    <string name="tv_lyrics_sources">แหล่งเนื้อเพลง</string>
+    <string name="tv_motion_artwork_in_lyrics">ภาพปกเคลื่อนไหวในหน้าเนื้อเพลง</string>
+    <string name="tv_stats_for_nerds">สถิติสำหรับผู้สนใจ</string>
+    <string name="tv_player_background">พื้นหลังโปรแกรมเล่น</string>
+    <string name="tv_interface_size">ขนาดอินเทอร์เฟซ</string>
+    <string name="tv_refresh_rate">อัตรารีเฟรช</string>
+    <string name="tv_reduce_motion">ลดการเคลื่อนไหว</string>
+    <string name="tv_reduce_transparency">ลดความโปร่งใส</string>
+    <string name="tv_set_up_again">ตั้งค่าอีกครั้ง</string>
+    <string name="tv_about">เกี่ยวกับ</string>
+    <string name="tv_available">พร้อมใช้งาน</string>
+    <string name="tv_sign_in_bring_library">นำเข้าคลังเพลง เพลย์ลิสต์ และคำแนะนำของคุณ คุณทำขั้นตอนนี้ภายหลังในการตั้งค่าได้</string>
+    <string name="tv_automix">มิกซ์อัตโนมัติ</string>
+    <string name="tv_version_available">%1$s พร้อมใช้งาน</string>
+    <string name="tv_account_library_message">BitChord จะใช้คลังเพลงและคำแนะนำของ %1$s</string>
+    <string name="tv_no_songs">ไม่มีเพลง</string>
+    <string name="tv_recently_played">เล่นล่าสุด</string>
+    <string name="tv_liked_songs">เพลงที่ชอบ</string>
+    <string name="tv_sign_in_ellipsis">ลงชื่อเข้าใช้…</string>
+    <string name="tv_auto_recommended">อัตโนมัติ (แนะนำ)</string>
+    <string name="tv_refresh_auto_description">อนุญาตให้ทีวีและระบบ Android จัดการอัตรารีเฟรชหน้าจอโดยอัตโนมัติ</string>
+    <string name="tv_smooth_60">ลื่นไหล 60 Hz</string>
+    <string name="tv_refresh_60_description">ใช้อัตราการเคลื่อนไหวอินเทอร์เฟซมาตรฐาน 60 Hz ที่ความละเอียดดั้งเดิม</string>
+    <string name="tv_ultra_120">ลื่นไหลสูงสุด 120 Hz</string>
+    <string name="tv_refresh_120_description">ใช้อัตราการเคลื่อนไหวอินเทอร์เฟซสูงสุด 120 fps บนจอที่รองรับ วิดีโอ Canvas จะคงอัตราเฟรมต้นฉบับ</string>
+    <string name="tv_artwork">ภาพปก</string>
+    <string name="tv_artwork_theme_description">พื้นหลังมืดที่แต้มสีอ่อน ๆ จากปกของเพลงที่กำลังเล่น</string>
+    <string name="tv_midnight">เที่ยงคืน</string>
+    <string name="tv_midnight_theme_description">พื้นหลังสีน้ำเงินเข้ม</string>
+    <string name="tv_pure_black">ดำสนิท</string>
+    <string name="tv_pure_black_theme_description">สีดำแท้สำหรับหน้าจอ OLED</string>
+    <string name="tv_amoled">AMOLED</string>
+    <string name="tv_update_version_available">BitChord %1$s พร้อมใช้งาน</string>
+    <string name="tv_scan_phone_for_update">ใช้โทรศัพท์สแกนโค้ดเพื่อรับอัปเดตนี้จาก GitHub</string>
+    <string name="tv_downloaded_select_install">ดาวน์โหลดแล้ว เลือกติดตั้งตอนนี้เพื่ออัปเดต</string>
+    <string name="tv_download_progress">กำลังดาวน์โหลด… %1$d%%</string>
+    <plurals name="tv_minutes">
+        <item quantity="one">%1$d นาที</item>
+        <item quantity="other">%1$d นาที</item>
+    </plurals>
+    <string name="tv_profile_locked">โปรไฟล์ถูกล็อก ป้อน PIN ของ %1$s</string>
+    <string name="tv_create_profile_pin">สร้าง PIN 4 หลักสำหรับ %1$s</string>
+    <string name="tv_sign_out_profile_pin">ป้อน PIN 4 หลักเพื่อลงชื่อออกจาก %1$s</string>
+    <string name="tv_artist_about">เกี่ยวกับ %1$s</string>
+    <string name="tv_sign_in_with_your_phone">ลงชื่อเข้าใช้ด้วยโทรศัพท์</string>
+    <string name="tv_enter_4_digit_pin">ป้อน PIN 4 หลัก</string>
+    <string name="tv_sign_out">ลงชื่อออก</string>
+    <string name="tv_sleep_timer">ตั้งเวลาปิดเพลง</string>
+    <string name="tv_auth_remote_page_title">BitChord TV • รีโมตมือถือ</string>
+    <string name="tv_auth_remote_heading">รีโมต BitChord TV</string>
+    <string name="tv_auth_loading_tv">กำลังโหลดทีวี…</string>
+    <string name="tv_auth_connecting_tv">กำลังเชื่อมต่อกับ BitChord TV</string>
+    <string name="tv_auth_remote_search">ค้นหาเพลงเพื่อเล่นบนทีวี…</string>
+    <string name="tv_auth_playing_on_tv">กำลังเล่น {title} บนทีวี!</string>
+    <string name="tv_auth_sign_in_page_title">BitChord TV • ลงชื่อเข้าใช้แตะครั้งเดียว</string>
+    <string name="tv_auth_sign_in_title">ลงชื่อเข้าใช้ BitChord TV</string>
+    <string name="tv_auth_fast_login_description">ลงชื่อเข้าใช้ได้อย่างรวดเร็วและง่ายดายจากโทรศัพท์มือถือ</string>
+    <string name="tv_auth_fastest_option">ตัวเลือก 1 (เร็วที่สุด):</string>
+    <string name="tv_auth_open_youtube_music_step">แตะปุ่มด้านล่างเพื่อเปิด YouTube Music ในเบราว์เซอร์</string>
+    <string name="tv_auth_sign_in_google_step">ลงชื่อเข้าใช้ด้วยบัญชี Google หากยังไม่ได้ลงชื่อเข้าใช้</string>
+    <string name="tv_auth_submit_session_step">กลับมาที่นี่แล้ววางคุกกี้ หรือใช้สคริปต์คลิกครั้งเดียวเพื่อลงชื่อเข้าใช้อัตโนมัติ</string>
+    <string name="tv_auth_open_youtube_music">เปิด YouTube Music บนโทรศัพท์</string>
+    <string name="tv_auth_direct_session_submission">ส่งเซสชันโดยตรง</string>
+    <string name="tv_auth_submit_session_description">วางคุกกี้เซสชันหรือส่วนหัวของ YouTube Music เพื่อลงชื่อเข้าใช้บนทีวีทันที:</string>
+    <string name="tv_auth_cookie_placeholder">วาง SAPISID / คุกกี้เซสชันที่นี่…</string>
+    <string name="tv_auth_connect_account">เชื่อมต่อบัญชีกับทีวี</string>
+    <string name="tv_auth_no_cookie">ไม่พบคุกกี้ โปรดทำตามคำแนะนำ</string>
+    <string name="tv_auth_connected_page_title">BitChord TV • เชื่อมต่อแล้ว</string>
+    <string name="tv_auth_paired_successfully">จับคู่สำเร็จแล้ว!</string>
+    <string name="tv_auth_connected_description">เชื่อมต่อ BitChord TV แล้ว คุณใช้รีโมตมือถือควบคุมการเล่นได้</string>
+    <string name="tv_auth_open_remote">📱 เปิดรีโมตทีวี</string>
+    <string name="tv_auth_no_song_playing">ไม่มีเพลงที่กำลังเล่น</string>
+    <string name="tv_search_placeholder">ศิลปิน เพลง อัลบั้ม และอื่น ๆ</string>
+    <string name="tv_search_nothing_matched">ไม่พบ “%1$s” ตรวจสอบการสะกดหรือลองใช้คำอื่น</string>
+    <string name="tv_search_bit_chord">ค้นหาใน BitChord</string>
+    <string name="tv_search_songs_albums_artists_playlists">ค้นหาเพลง อัลบั้ม ศิลปิน และเพลย์ลิสต์</string>
+    <string name="tv_recent_searches">การค้นหาล่าสุด</string>
+    <string name="tv_top_results">ผลลัพธ์ยอดนิยม</string>
+    <string name="tv_allow_access_to_music">อนุญาตให้เข้าถึงเพลง</string>
+    <string name="tv_music_read_permission">BitChord ต้องได้รับอนุญาตให้อ่านเพลงในทีวีเครื่องนี้และไดรฟ์ USB ที่เชื่อมต่ออยู่</string>
+    <string name="tv_nothing_to_play_here">ยังไม่มีอะไรให้เล่นที่นี่</string>
+    <string name="tv_suggestions">คำแนะนำ</string>
+    <string name="tv_search_song_to_play_on_tv">ค้นหาเพลงเพื่อเล่นบนทีวี…</string>
+    <string name="tv_paste_sapisid_session_cookie_here">วาง SAPISID / คุกกี้เซสชันที่นี่…</string>
+    <string name="tv_sign_in_to_youtube_music_2">ลงชื่อเข้าใช้ YouTube Music</string>
+    <string name="tv_your_library_playlists_and_recommendations_follow_your">คลังเพลง เพลย์ลิสต์ และคำแนะนำของคุณจะผูกกับบัญชีของคุณ</string>
+    <string name="tv_sign_in_on_this_tv">ลงชื่อเข้าใช้บนทีวีเครื่องนี้</string>
+    <string name="tv_use_the_remote_to_sign_in_to">ใช้รีโมตเพื่อลงชื่อเข้าใช้ Google</string>
+    <string name="tv_sign_in_with_your_phone_2">ลงชื่อเข้าใช้ด้วยโทรศัพท์</string>
+    <string name="tv_scan_a_code_with_a_phone_on">ใช้โทรศัพท์บนเครือข่าย Wi-Fi เดียวกันสแกนโค้ด</string>
+    <string name="tv_enter_4_digit_pin_2">ป้อน PIN 4 หลัก</string>
+    <string name="tv_set_4_digit_pin">ตั้ง PIN 4 หลัก</string>
+    <string name="tv_confirm_4_digit_pin">ยืนยัน PIN 4 หลัก</string>
+    <string name="tv_re_enter_your_4_digit_pin">ป้อน PIN 4 หลักอีกครั้ง</string>
+    <string name="tv_turn_off_app_lock">ปิดการล็อกแอป</string>
+    <string name="tv_enter_current_4_digit_pin_to_remove">ป้อน PIN 4 หลักปัจจุบันเพื่อปลดล็อก</string>
+    <string name="tv_sign_out_2">ลงชื่อออก</string>
+    <string name="tv_app_lock_4_digit_pin">ล็อกแอป (PIN 4 หลัก)</string>
+    <string name="tv_remove_this_account_from_tv">นำบัญชีนี้ออกจากทีวี</string>
+    <string name="tv_show_what_you_re_listening_to_in">แสดงสิ่งที่คุณกำลังฟังในสถานะ Discord</string>
+    <string name="tv_discord_token">โทเค็น Discord</string>
+    <string name="tv_connect_these_on_the_bitchord_phone_app">เชื่อมต่อบัญชีเหล่านี้ในแอป BitChord บนโทรศัพท์ ทีวีจะใช้บัญชีเดียวกัน</string>
+    <string name="tv_refresh_rate_2">อัตรารีเฟรช</string>
+    <string name="tv_lyrics_sources_2">แหล่งเนื้อเพลง</string>
+    <string name="tv_select_to_turn_a_source_on_or">เลือกเพื่อเปิดหรือปิดแหล่งที่มา กดซ้ายหรือขวาเพื่อเลื่อนลำดับ ระบบจะค้นหาแหล่งแรกก่อน</string>
+    <string name="tv_prefer_word_synced">ต้องการเนื้อเพลงซิงค์ระดับคำ</string>
+    <string name="tv_hold_out_for_word_by_word_lyrics">รอเนื้อเพลงที่ซิงค์ทีละคำก่อนใช้เนื้อเพลงที่ซิงค์ทีละบรรทัด</string>
+    <string name="tv_play_last">เล่นล่าสุด</string>
+    <string name="tv_start_station">เริ่มสถานีเพลง</string>
+    <string name="tv_add_to_playlist">เพิ่มลงในเพลย์ลิสต์…</string>
+    <string name="tv_go_to_album">ไปที่อัลบั้ม</string>
+    <string name="tv_go_to_artist">ไปที่ศิลปิน</string>
+    <string name="tv_sleep_timer_2">ตั้งเวลาปิดเพลง</string>
+    <string name="tv_stats_for_nerds_2">สถิติสำหรับผู้สนใจ</string>
+    <string name="tv_it_will_be_private_with_this_song">เพลย์ลิสต์นี้จะเป็นส่วนตัวและมีเพลงนี้อยู่</string>
+    <string name="tv_playlist_name">ชื่อเพลย์ลิสต์</string>
+    <string name="tv_new_playlist_2">เพลย์ลิสต์ใหม่…</string>
+    <string name="tv_stop_playing_music_after">หยุดเล่นเพลงหลังจาก</string>
+    <string name="tv_end_of_current_song">จบเพลงปัจจุบัน</string>
+    <string name="tv_turn_off_timer">ปิดตัวตั้งเวลา</string>
+    <string name="tv_latest_release">รุ่นล่าสุด</string>
+    <string name="export_format_m3u8">M3U8</string>
+    <string name="export_format_xspf">XSPF</string>
+    <string name="export_format_auden">Auden</string>
+    <string name="dj_nav_tab">DJ</string>
+    <string name="cover_font_pro">SF Pro</string>
+    <string name="cover_stickers_auden">Auden</string>
+    <string name="cover_stickers_y2k">Y2K</string>
+    <string name="tv_kushagra_singh">Kushagra Singh</string>
+    <string name="tv_nithyanantha">Nithyanantha</string>
 </resources>

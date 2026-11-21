@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="connecting">Conectando…</string>
+    <string name="no_phone_title">Telefone não conectado</string>
+    <string name="no_phone_body">Abra o Auden no telefone e mantenha-o perto do relógio.</string>
+    <string name="retry">Tentar novamente</string>
+    <string name="nothing_playing">Nada tocando</string>
+    <string name="nothing_playing_body">Toque algo no Auden no telefone.</string>
+    <string name="resume">Retomar</string>
+    <string name="up_next">A seguir</string>
+    <string name="queue_empty">Nada na fila</string>
+    <string name="loading">Carregando…</string>
+    <string name="playing_now">Tocando agora</string>
+    <string name="more">Mais</string>
+    <string name="shuffle">Aleatório</string>
+    <string name="repeat">Repetir</string>
+    <string name="repeat_off">Desativado</string>
+    <string name="repeat_all">Todas</string>
+    <string name="repeat_one">Uma</string>
+    <string name="on">Ativado</string>
+    <string name="off">Desativado</string>
+    <string name="love">Curtir</string>
+    <string name="loved">Curtida</string>
+    <string name="volume">Volume</string>
+    <string name="on_phone">No telefone</string>
+    <string name="play">Tocar</string>
+    <string name="pause">Pausar</string>
+    <string name="next">Próxima</string>
+    <string name="previous">Anterior</string>
+    <string name="output">Saída de áudio</string>
+    <string name="this_watch">Este relógio</string>
+    <string name="watch_speaker">Alto-falante do relógio ou fones de ouvido</string>
+    <string name="on_phone_output">No telefone</string>
+    <string name="phone_speaker">Alto-falante do telefone</string>
+    <string name="wired_headphones">Fones com fio</string>
+    <string name="usb_audio">Áudio USB</string>
+    <string name="hdmi">HDMI</string>
+    <string name="other_output">Outra saída de áudio</string>
+    <string name="moving_to_watch">Transferindo para o relógio…</string>
+    <string name="update_channel">Atualizações</string>
+    <string name="update_ready">Atualização do Auden pronta</string>
+    <string name="update_tap">Toque para instalar a atualização pelo telefone.</string>
+</resources>

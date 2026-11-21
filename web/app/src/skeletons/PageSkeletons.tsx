@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { PageHeader } from '@/components/PageHeader';
 import { SkeletonBlock, SkeletonLine } from '@/components/Skeleton';
 import { DetailSkeleton } from './DetailSkeleton';
@@ -11,7 +12,7 @@ const sectionTitle = 'mx-(--body-gutter) mt-3';
 export function HomeSkeleton() {
   return (
     <div aria-busy="true">
-      <PageHeader title="Home" />
+      <PageHeader title={translateUi("page_skeletons.home")} />
       <ShelfSkeleton kind="editorial" />
       <ShelfSkeleton kind="tracks" />
       <ShelfSkeleton kind="square" />
@@ -23,7 +24,7 @@ export function HomeSkeleton() {
 export function NewSkeleton() {
   return (
     <div aria-busy="true">
-      <PageHeader title="New" />
+      <PageHeader title={translateUi("page_skeletons.new")} />
       <ShelfSkeleton kind="editorial" title={false} />
       <ShelfSkeleton kind="tracks" />
       <ShelfSkeleton kind="square" />

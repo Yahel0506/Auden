@@ -1,28 +1,30 @@
 package com.music.bitchord.ui.tv.personalization
 
 import androidx.compose.runtime.Immutable
+import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.Color
+import com.music.bitchord.R
 import java.text.BreakIterator
 
 enum class AppThemeOption(
     val id: String,
-    val title: String,
-    val description: String,
+    @StringRes val title: Int,
+    @StringRes val description: Int,
 ) {
     DYNAMIC_ARTWORK(
         id = "dynamic_artwork",
-        title = "Artwork",
-        description = "Dark, softly tinted by the artwork of what's playing.",
+        title = R.string.tv_artwork,
+        description = R.string.tv_artwork_theme_description,
     ),
     MIDNIGHT(
         id = "midnight",
-        title = "Midnight",
-        description = "A deep navy background.",
+        title = R.string.tv_midnight,
+        description = R.string.tv_midnight_theme_description,
     ),
     PURE_BLACK(
         id = "pure_black",
-        title = "Pure Black",
-        description = "True black, for OLED screens.",
+        title = R.string.tv_pure_black,
+        description = R.string.tv_pure_black_theme_description,
     );
 
     companion object {

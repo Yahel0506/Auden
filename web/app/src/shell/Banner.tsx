@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -28,7 +29,7 @@ export function Banner({ title, detail, action, onDismiss }: BannerProps) {
         <button
           className="-mr-3.5 grid size-7 place-items-center rounded-full text-white opacity-85 hover:bg-[#ffffff26] hover:opacity-100"
           onClick={onDismiss}
-          aria-label="Dismiss"
+          aria-label={translateUi("banner.dismiss")}
         >
           <X size={16} strokeWidth={2.4} />
         </button>

@@ -32,7 +32,7 @@
     <string name="local_music">Música local</string>
     <string name="audio_files_on_device">Archivos de audio del dispositivo</string>
     <string name="on_device">En el dispositivo</string>
-    <string name="playlists">Playlists</string>
+    <string name="playlists">Listas</string>
     <string name="new_playlist">Nueva playlist</string>
     <string name="saved_to_youtube_music">Guardada en YouTube Music</string>
     <string name="sign_in">Iniciar sesión</string>
@@ -148,7 +148,7 @@
     <string name="spatial_audio_subtitle">Amplía las pistas estéreo para una experiencia más inmersiva</string>
     <string name="spatial_audio_atmos_subtitle">En pausa para esta pista: Dolby Atmos ya es espacial</string>
     <string name="animated_cover_cellular">Reproducir portada animada con datos móviles</string>
-    <string name="replay">Replay</string>
+    <string name="replay">Resumen</string>
     <string name="replay_subtitle">Tus canciones, artistas, álbumes y géneros principales</string>
     <string name="work_out_genres">Calcular géneros</string>
     <string name="export_data">Exportar datos</string>
@@ -634,12 +634,12 @@
     <string name="smb_not_configured">Conecta una carpeta compartida en Fuentes</string>
     <string name="smb_empty">No se encontraron archivos de audio en la carpeta SMB. Revisa el servidor en Fuentes.</string>
     <string name="smb_description">Conecta Auden a una carpeta de música compartida: un NAS o una carpeta compartida de Windows por SMB.</string>
-    <string name="smb_server_hint">nas.local or 192.168.1.10:4445</string>
+    <string name="smb_server_hint">nas.local o 192.168.1.10:4445</string>
     <string name="smb_share_hint">Nombre del recurso, p. ej. Music</string>
     <string name="smb_folder_hint">Carpeta (opcional)</string>
     <string name="smb_disconnect">Desconectar</string>
     <string name="smb_test_failed">No se pudo conectar: %1$s</string>
-    <string name="playlist">playlist</string>
+    <string name="playlist">lista</string>
     <string name="open">Abrir</string>
     <string name="open_playlist">Abrir playlist</string>
     <string name="pin">Fijar</string>
@@ -930,7 +930,7 @@
 
     <string name="shelf_recommended_music_videos">Vídeos musicales recomendados</string>
 
-    <string name="shelf_relax">Relax</string>
+    <string name="shelf_relax">Relajación</string>
 
     <string name="shelf_romance">Romance</string>
 
@@ -1009,94 +1009,94 @@
 
     <string name="unsubscribe">Cancelar suscripción</string>
 
-    <string name="playlist_action">Playlist</string>
+    <string name="playlist_action">Lista</string>
 
 
-    <string name="lyrics_offset">Lyrics offset</string>
+    <string name="lyrics_offset">Desfase de letras</string>
 
 
 
 
 
-    <string name="auto_quick_picks">Quick picks</string>
+    <string name="auto_quick_picks">Selecciones rápidas</string>
 
-    <string name="auto_recents">Recent</string>
+    <string name="auto_recents">Recientes</string>
 
-    <string name="auto_liked">Liked songs</string>
+    <string name="auto_liked">Canciones que te gustan</string>
 
-    <string name="auto_login_title">Sign in to YouTube on your phone</string>
+    <string name="auto_login_title">Inicia sesión en YouTube desde el teléfono</string>
 
-    <string name="auto_login_subtitle">Open Auden on your phone to sign in</string>
+    <string name="auto_login_subtitle">Abre Auden en el teléfono para iniciar sesión</string>
 
-    <string name="auto_empty_recents_title">No recent songs</string>
+    <string name="auto_empty_recents_title">No hay canciones recientes</string>
 
-    <string name="auto_empty_recents_subtitle">Songs you play will appear here</string>
+    <string name="auto_empty_recents_subtitle">Aquí aparecerán las canciones que reproduzcas</string>
 
-    <string name="auto_empty_quick_picks_title">No suggestions</string>
+    <string name="auto_empty_quick_picks_title">No hay sugerencias</string>
 
-    <string name="auto_empty_quick_picks_subtitle">Check your connection and try again</string>
+    <string name="auto_empty_quick_picks_subtitle">Comprueba tu conexión e inténtalo de nuevo</string>
 
-    <string name="auto_empty_playlists_title">No playlists available</string>
+    <string name="auto_empty_playlists_title">No hay listas disponibles</string>
 
-    <string name="auto_empty_playlists_subtitle">Check your connection and try again</string>
+    <string name="auto_empty_playlists_subtitle">Comprueba tu conexión e inténtalo de nuevo</string>
 
-    <string name="auto_empty_liked_title">No liked songs</string>
+    <string name="auto_empty_liked_title">No hay canciones que te gusten</string>
 
-    <string name="auto_empty_liked_subtitle">Tap the heart on a song to save it here</string>
+    <string name="auto_empty_liked_subtitle">Toca el corazón de una canción para guardarla aquí</string>
 
-    <string name="auto_empty_offline_title">No offline songs</string>
+    <string name="auto_empty_offline_title">No hay canciones sin conexión</string>
 
-    <string name="auto_empty_offline_subtitle">Download songs on your phone to listen here</string>
+    <string name="auto_empty_offline_subtitle">Descarga canciones en el teléfono para escucharlas aquí</string>
 
-    <string name="auto_unavailable_title">Content unavailable</string>
+    <string name="auto_unavailable_title">Contenido no disponible</string>
 
-    <string name="auto_unavailable_subtitle">Reopen the folder and try again</string>
+    <string name="auto_unavailable_subtitle">Vuelve a abrir la carpeta e inténtalo de nuevo</string>
 
-    <string name="settings_search_hint">Search settings</string>
+    <string name="settings_search_hint">Buscar ajustes</string>
 
-    <string name="settings_search_empty">No settings match “%1$s”</string>
+    <string name="settings_search_empty">Ningún ajuste coincide con “%1$s”</string>
 
 
     <string name="home_section">Inicio</string>
-    <string name="hide_recents">Hide Recents</string>
-    <string name="hide_home_videos">Hide videos from Home</string>
-    <string name="hide_home_videos_subtitle">Shelves of only videos go too. Search, artists and playlists still show them</string>
-    <string name="hide_top_picks">Hide Top Picks for You</string>
-    <string name="hide_home_moods">Hide Find Your Mood</string>
-    <string name="square_video_thumbnails">Square video thumbnails</string>
-    <string name="square_video_thumbnails_subtitle">Show music videos as squares everywhere, including the player</string>
-    <string name="prefer_music_only">Prefer music-only version</string>
-    <string name="prefer_music_only_subtitle">Music videos play as their audio version, and the next track in the queue is converted ahead of time so Automix and crossfade work</string>
+    <string name="hide_recents">Ocultar recientes</string>
+    <string name="hide_home_videos">Ocultar videos de Inicio</string>
+    <string name="hide_home_videos_subtitle">También se ocultan las secciones con solo videos. Seguirán apareciendo en Búsqueda, Artistas y Listas.</string>
+    <string name="hide_top_picks">Ocultar selecciones recomendadas</string>
+    <string name="hide_home_moods">Ocultar Encuentra tu estado de ánimo</string>
+    <string name="square_video_thumbnails">Miniaturas cuadradas de videos</string>
+    <string name="square_video_thumbnails_subtitle">Mostrar los videos musicales en formato cuadrado, incluso en el reproductor</string>
+    <string name="prefer_music_only">Preferir la versión solo de audio</string>
+    <string name="prefer_music_only_subtitle">Los videos musicales se reproducen como audio cuando existe esa versión. La siguiente canción de la cola se convierte de antemano para permitir Automix y el fundido cruzado.</string>
     <string name="smart_version_alignment">Alineación de audio inteligente</string>
     <string name="smart_version_alignment_subtitle">Analiza las formas de onda para encontrar el momento exacto de reproducción correspondiente</string>
 
-    <string name="equalizer_footer">Shapes the sound inside Auden, before it reaches the system.</string>
+    <string name="equalizer_footer">Auden ajusta el sonido antes de enviarlo al sistema.</string>
 
-    <string name="equalizer_dynamic">Dynamic</string>
+    <string name="equalizer_dynamic">Dinámico</string>
 
     <string name="equalizer_manual">Manual</string>
 
-    <string name="equalizer_tone">Tone</string>
+    <string name="equalizer_tone">Tono</string>
 
-    <string name="equalizer_tilt">Tilt</string>
+    <string name="equalizer_tilt">Inclinación</string>
 
-    <string name="equalizer_contour">Contour</string>
+    <string name="equalizer_contour">Contorno</string>
 
-    <string name="equalizer_broad">Broad</string>
+    <string name="equalizer_broad">Amplio</string>
 
-    <string name="equalizer_focused">Focused</string>
+    <string name="equalizer_focused">Enfocado</string>
 
-    <string name="equalizer_broad_footer">Drag left for a warmer sound and right for a brighter one; down scoops the middle, up brings it forward. Broad moves wide stretches of the spectrum at once.</string>
+    <string name="equalizer_broad_footer">Arrastra a la izquierda para un sonido más cálido y a la derecha para uno más brillante. Baja para reducir los medios y sube para destacarlos. Amplio modifica una zona extensa del espectro.</string>
 
-    <string name="equalizer_focused_footer">Drag left for a warmer sound and right for a brighter one; down scoops the middle, up brings it forward. Focused works on narrower stretches, so it changes less around what it moves.</string>
+    <string name="equalizer_focused_footer">Arrastra a la izquierda para un sonido más cálido y a la derecha para uno más brillante. Baja para reducir los medios y sube para destacarlos. Enfocado actúa sobre zonas más estrechas y afecta menos a las frecuencias cercanas.</string>
 
-    <string name="equalizer_preset">Preset</string>
+    <string name="equalizer_preset">Preajuste</string>
 
-    <string name="equalizer_bands">Bands</string>
+    <string name="equalizer_bands">Bandas</string>
 
-    <string name="equalizer_bands_footer">Moving a band leaves the preset behind and the curve becomes your own.</string>
+    <string name="equalizer_bands_footer">Al mover una banda, el preajuste se reemplaza por tu propia curva.</string>
 
-    <string name="equalizer_reset">Reset all bands</string>
+    <string name="equalizer_reset">Restablecer todas las bandas</string>
 
     <string name="equalizer_balance">Balance</string>
 
@@ -1104,36 +1104,36 @@
 
     <string name="equalizer_balance_right">R</string>
 
-    <string name="equalizer_balance_footer">Shifts the sound towards one ear by quietening the other.</string>
+    <string name="equalizer_balance_footer">Desplaza el sonido hacia un oído al bajar el volumen del otro.</string>
     <string name="equalizer_bitstream_title">No está activo ahora</string>
     <string name="equalizer_bitstream_subtitle">Esta pista se envía a la salida sin decodificar</string>
     <string name="equalizer_bitstream_footer">El ecualizador trabaja con audio decodificado. Esta pista pasa como bitstream para que tu dispositivo la decodifique, así que aquí no hay muestras que filtrar.</string>
 
-    <string name="system_equalizer">System equalizer</string>
+    <string name="system_equalizer">Ecualizador del sistema</string>
 
-    <string name="system_equalizer_subtitle">Your device\'s own panel</string>
+    <string name="system_equalizer_subtitle">Panel propio del dispositivo</string>
 
-    <string name="system_equalizer_footer">Runs after Auden\'s, on the whole audio session. Using both applies both.</string>
+    <string name="system_equalizer_footer">Se aplica después del ecualizador de Auden a toda la sesión de audio. Si usas ambos, se aplican los dos.</string>
 
-    <string name="eq_preset_flat">Flat</string>
+    <string name="eq_preset_flat">Plano</string>
 
-    <string name="eq_preset_acoustic">Acoustic</string>
+    <string name="eq_preset_acoustic">Acústico</string>
 
-    <string name="eq_preset_bass_boost">Bass boost</string>
+    <string name="eq_preset_bass_boost">Refuerzo de graves</string>
 
-    <string name="eq_preset_bass_cut">Bass cut</string>
+    <string name="eq_preset_bass_cut">Reducción de graves</string>
 
-    <string name="eq_preset_vocal">Vocal</string>
+    <string name="eq_preset_vocal">Voz</string>
 
-    <string name="eq_preset_treble_boost">Treble boost</string>
+    <string name="eq_preset_treble_boost">Refuerzo de agudos</string>
 
-    <string name="eq_preset_treble_cut">Treble cut</string>
+    <string name="eq_preset_treble_cut">Reducción de agudos</string>
 
-    <string name="eq_preset_loudness">Loudness</string>
+    <string name="eq_preset_loudness">Sonoridad</string>
 
-    <string name="eq_preset_spoken_word">Spoken word</string>
+    <string name="eq_preset_spoken_word">Palabra hablada</string>
 
-    <string name="eq_preset_electronic">Electronic</string>
+    <string name="eq_preset_electronic">Electrónica</string>
 
     <string name="eq_preset_rock">Rock</string>
 
@@ -1141,91 +1141,91 @@
 
     <string name="eq_preset_jazz">Jazz</string>
 
-    <string name="eq_preset_classical">Classical</string>
+    <string name="eq_preset_classical">Clásica</string>
 
-    <string name="eq_preset_small_speakers">Small speakers</string>
+    <string name="eq_preset_small_speakers">Altavoces pequeños</string>
 
-    <string name="eq_preset_late_night">Late night</string>
+    <string name="eq_preset_late_night">Noche</string>
 
-    <string name="eq_preset_custom">Custom</string>
+    <string name="eq_preset_custom">Personalizado</string>
 
-    <string name="translation_language">Translation language</string>
+    <string name="translation_language">Idioma de traducción</string>
 
-    <string name="translation_language_description">The language the translate button turns lyrics into.</string>
+    <string name="translation_language_description">Idioma al que se traducen las letras al tocar el botón de traducción.</string>
 
-    <string name="translation_language_app_default">App language</string>
+    <string name="translation_language_app_default">Idioma de la aplicación</string>
 
-    <string name="translation_language_subtitle">Follows the app language</string>
+    <string name="translation_language_subtitle">Sigue el idioma de la aplicación</string>
 
-    <string name="search_languages">Search languages</string>
+    <string name="search_languages">Buscar idiomas</string>
 
-    <string name="no_languages_match">No languages match</string>
+    <string name="no_languages_match">Ningún idioma coincide</string>
 
 
 
-    <string name="audio_pipeline">Audio Pipeline</string>
-    <string name="cast_dialog_title">Cast</string>
-    <string name="cast_dialog_subtitle">Play on a Chromecast or Google Cast speaker</string>
-    <string name="cast_searching">Looking for devices…</string>
-    <string name="cast_searching_hint">Your phone and the receiver need to be on the same Wi-Fi network.</string>
-    <string name="cast_device_connecting">Connecting…</string>
-    <string name="cast_device_connected">Casting</string>
-    <string name="cast_stop">Stop casting</string>
-    <string name="cast_track_unsupported">This track can\'t be cast</string>
-    <string name="cast_connect_failed">Couldn\'t connect to the receiver</string>
+    <string name="audio_pipeline">Procesamiento de audio</string>
+    <string name="cast_dialog_title">Transmitir</string>
+    <string name="cast_dialog_subtitle">Reproducir en Chromecast o en un altavoz Google Cast</string>
+    <string name="cast_searching">Buscando dispositivos…</string>
+    <string name="cast_searching_hint">El teléfono y el dispositivo receptor deben usar la misma red Wi-Fi.</string>
+    <string name="cast_device_connecting">Conectando…</string>
+    <string name="cast_device_connected">Transmitiendo</string>
+    <string name="cast_stop">Detener transmisión</string>
+    <string name="cast_track_unsupported">No se puede transmitir esta canción</string>
+    <string name="cast_connect_failed">No se pudo conectar con el dispositivo receptor</string>
     <string name="audio_pipeline_subtitle">Ruta de la señal en vivo, del decodificador a la salida</string>
 
-    <string name="pipeline_track_info">Track Info</string>
+    <string name="pipeline_track_info">Información de la canción</string>
 
-    <string name="pipeline_decoder">Decoder</string>
+    <string name="pipeline_decoder">Decodificador</string>
 
-    <string name="pipeline_resampler">Resampler</string>
+    <string name="pipeline_resampler">Remuestreador</string>
 
     <string name="pipeline_dsp">DSP</string>
 
-    <string name="pipeline_output_device">Output Device</string>
+    <string name="pipeline_output_device">Dispositivo de salida</string>
 
-    <string name="pipeline_source">Source</string>
+    <string name="pipeline_source">Fuente</string>
 
-    <string name="pipeline_format">Format</string>
+    <string name="pipeline_format">Formato</string>
 
-    <string name="pipeline_bit_depth">Bit Depth</string>
+    <string name="pipeline_bit_depth">Profundidad de bits</string>
 
-    <string name="pipeline_sample_rate">Sample Rate</string>
+    <string name="pipeline_sample_rate">Frecuencia de muestreo</string>
 
-    <string name="pipeline_bitrate">Bitrate</string>
+    <string name="pipeline_bitrate">Tasa de bits</string>
 
-    <string name="pipeline_channels">Channels</string>
+    <string name="pipeline_channels">Canales</string>
 
-    <string name="pipeline_decoder_name">Decoder Name</string>
+    <string name="pipeline_decoder_name">Nombre del decodificador</string>
 
-    <string name="pipeline_io_rate">I/O Rate</string>
+    <string name="pipeline_io_rate">Tasa de entrada/salida</string>
 
-    <string name="pipeline_type">Type</string>
+    <string name="pipeline_type">Tipo</string>
 
-    <string name="pipeline_cutoff">Cutoff</string>
+    <string name="pipeline_cutoff">Corte</string>
 
-    <string name="pipeline_quality">Quality</string>
+    <string name="pipeline_quality">Calidad</string>
 
-    <string name="pipeline_pcm_format">PCM Format</string>
+    <string name="pipeline_pcm_format">Formato PCM</string>
 
-    <string name="pipeline_eq_preset">EQ Preset</string>
+    <string name="pipeline_eq_preset">Preajuste del ecualizador</string>
 
-    <string name="pipeline_stereo_expand">Stereo Expand</string>
+    <string name="pipeline_stereo_expand">Ampliación estéreo</string>
 
-    <string name="pipeline_buffers">Buffers</string>
+    <string name="pipeline_buffers">Búferes</string>
 
-    <string name="pipeline_output_api">Output API</string>
+    <string name="pipeline_output_api">API de salida</string>
 
-    <string name="pipeline_device_name">Device Name</string>
+    <string name="pipeline_device_name">Nombre del dispositivo</string>
 
 
 
-    <string name="shared_link">Shared link</string>
+    <string name="shared_link">Enlace compartido</string>
 
-    <string name="song_will_play_next">Song will play next</string>
+    <string name="song_will_play_next">La canción sonará a continuación</string>
 
-    <string name="song_added_to_queue">Song added to queue</string>
+    <string name="song_added_to_queue">Canción añadida a la cola</string>
     <string name="song_added_to_playlist">Agregada a la playlist</string>
     <string name="song_already_in_playlist">Ya está en la playlist</string>
     <plurals name="add_to_playlists_count">
@@ -1238,11 +1238,11 @@
     </plurals>
     <string name="party_queue_full">La cola está llena (máximo %d canciones en la fiesta)</string>
 
-    <string name="paxsenix_api_key">PaxSenix API key</string>
+    <string name="paxsenix_api_key">Clave de API de PaxSenix</string>
 
-    <string name="paxsenix_api_key_configured">PaxSenix API key — configured</string>
+    <string name="paxsenix_api_key_configured">Clave de API de PaxSenix · configurada</string>
 
-    <string name="paxsenix_api_key_missing">PaxSenix API key — optional, not configured</string>
+    <string name="paxsenix_api_key_missing">Clave de API de PaxSenix · opcional, sin configurar</string>
 
 
 
@@ -1315,7 +1315,7 @@
     <string name="artist_signatures_url_hint">https://signatures.example.com</string>
     <string name="artist_signatures_unconfigured">Sin configurar — toca para establecer la URL de la API</string>
     <string name="artist_signatures_test_failed">No se pudo contactar con la API en esa URL</string>
-    <string name="search_source_addons">Addons</string>
+    <string name="search_source_addons">Complementos</string>
     <string name="search_addons_none">No hay addons activados. Añade uno en Ajustes → Fuentes.</string>
     <string name="app_icon">Icono de la app</string>
     <string name="app_icon_default">Predeterminado</string>
@@ -1575,9 +1575,9 @@
     <string name="dj_theme_mix">Un poco de todo</string>
     <string name="dj_now_playing_short">Ahora: %1$s</string>
     <string name="dj_speech_error">El DJ no pudo hablar: %1$s</string>
-    <string name="no_audio_version">No audio version found for this video</string>
-    <string name="no_video_version">No video version found for this song</string>
-    <string name="version_switch_in_party">Everyone in Listen Together hears the same version</string>
+    <string name="no_audio_version">No se encontró una versión de audio para este video</string>
+    <string name="no_video_version">No se encontró una versión de video para esta canción</string>
+    <string name="version_switch_in_party">Todos los participantes de Listen Together escuchan la misma versión</string>
     <string name="opened_file">Archivo abierto</string>
     <string name="no_local_folders">No hay carpetas con música</string>
     <string name="offline_playlist_empty">Esta playlist aún está vacía. Añade canciones desde su menú.</string>
@@ -1633,9 +1633,9 @@
     <string name="connect_enabled">Reproducir en mis otros dispositivos</string>
     <string name="connect_enabled_subtitle">Muestra los otros dispositivos Auden de esta cuenta en el menú de salida de audio, para mover la reproducción entre ellos y controlarla desde cualquiera. Con una cuenta de Spotify se encuentran a través de ella; sin ninguna cuenta, por el mismo nombre de fiesta en la misma red</string>
     <string name="automix_overview">Resumen de Automix</string>
-    <string name="diwali_title">BitChord wishes you a Happy Diwali</string>
-    <string name="diwali_subtitle">May this festival of lights fill your home with joy and your days with music.</string>
-    <string name="diwali_cta">Let\'s Celebrate</string>
+    <string name="diwali_title">BitChord te desea un feliz Diwali</string>
+    <string name="diwali_subtitle">Que este festival de las luces llene tu hogar de alegría y tus días de música.</string>
+    <string name="diwali_cta">Celebremos</string>
     <string name="background_video">Video de fondo</string>
     <string name="background_video_subtitle">Reproduce el breve bucle vertical de Spotify detrás del reproductor</string>
     <string name="hide_mini_lyrics">Ocultar mini letra</string>
@@ -1772,7 +1772,7 @@
     <string name="cover_tab_text">Texto</string>
     <string name="cover_tab_image">Imagen</string>
     <string name="cover_tab_labels">Etiquetas</string>
-    <string name="cover_tab_stickers">Stickers</string>
+    <string name="cover_tab_stickers">Pegatinas</string>
     <string name="cover_color">Color</string>
     <string name="cover_style">Estilo</string>
     <string name="cover_effects">Efectos</string>
@@ -1814,7 +1814,7 @@
     <string name="cover_caps">Mayúsculas</string>
     <string name="cover_effect_shadow">Sombra</string>
     <string name="cover_effect_neon">Neón</string>
-    <string name="cover_effect_glitch">Glitch</string>
+    <string name="cover_effect_glitch">Distorsión</string>
     <string name="cover_effect_extrude">3D</string>
     <string name="cover_effect_echo">Eco</string>
     <string name="cover_effect_arc">Arco</string>
@@ -1833,7 +1833,7 @@
     <string name="cover_shape_square">Cuadrada</string>
     <string name="cover_shape_rounded">Redondeada</string>
     <string name="cover_shape_circle">Círculo</string>
-    <string name="cover_fx_mono">Mono</string>
+    <string name="cover_fx_mono">Monocromo</string>
     <string name="cover_fx_sepia">Sepia</string>
     <string name="cover_fx_duotone">Duotono</string>
     <string name="cover_fx_invert">Invertir</string>
@@ -1843,10 +1843,10 @@
     <string name="cover_fx_vignette">Viñeta</string>
     <string name="cover_font">Fuente</string>
     <string name="cover_font_pro">SF Pro</string>
-    <string name="cover_font_sans">Sans</string>
+    <string name="cover_font_sans">Sans serif</string>
     <string name="cover_font_condensed">Condensada</string>
-    <string name="cover_font_serif">Serif</string>
-    <string name="cover_font_mono">Mono</string>
+    <string name="cover_font_serif">Con serifa</string>
+    <string name="cover_font_mono">Monoespaciada</string>
     <string name="cover_font_typewriter">Máquina</string>
     <string name="cover_font_script">Caligráfica</string>
     <string name="cover_font_handwritten">A mano</string>
@@ -1949,7 +1949,7 @@
     <string name="settings_block_devices">Dispositivos</string>
     <string name="settings_block_dj_app">En la app</string>
     <string name="settings_block_dj_voice">Voz y comentarios</string>
-    <string name="settings_block_dj_sets">Sets</string>
+    <string name="settings_block_dj_sets">Sesiones</string>
     <string name="settings_block_dl_quality">Calidad y red</string>
     <string name="settings_block_dl_files">Dónde y cómo se guardan</string>
     <string name="settings_block_dl_lyrics">Guardado con la canción</string>
@@ -1968,7 +1968,7 @@
     <string name="settings_block_effects">Efectos más ligeros</string>
     <string name="settings_block_song_cache">Caché de canciones</string>
     <string name="settings_block_image_cache">Imágenes</string>
-    <string name="settings_block_replay">Replay</string>
+    <string name="settings_block_replay">Resumen</string>
     <string name="settings_block_backup">Copia de seguridad</string>
     <string name="settings_block_advanced">Avanzado</string>
     <string name="settings_block_watch">Reloj</string>
@@ -2015,7 +2015,7 @@
     <string name="accent_violet">Violeta</string>
     <string name="accent_white">Blanco</string>
     <string name="accent_red">Rojo</string>
-    <string name="settings_block_aq_streaming">Streaming</string>
+    <string name="settings_block_aq_streaming">Reproducción en línea</string>
     <string name="settings_block_aq_downloads">Descargas</string>
     <string name="app_icon_black">Negro</string>
     <string name="app_icon_white">Blanco</string>
@@ -2119,7 +2119,7 @@
     <string name="transfer_choose_header">Traer de %1$s</string>
     <string name="transfer_likes">Me gusta</string>
     <string name="transfer_likes_sub">Las canciones que te gustan allí pasan a ser tus Me gusta de Auden.</string>
-    <string name="transfer_playlists">Playlists</string>
+    <string name="transfer_playlists">Listas</string>
     <string name="transfer_albums">Álbumes</string>
     <string name="transfer_artists">Artistas</string>
     <string name="transfer_unreadable">No se pudo leer.</string>
@@ -2169,7 +2169,7 @@
     <string name="home_empty_title">Aún no hay nada que mostrar</string>
     <string name="home_empty_body">Inicio se hace con lo que escuchas en Auden. Reproduce algunas canciones o trae tu música de YouTube Music o Spotify.</string>
     <string name="liked_music">Música que te gusta</string>
-    <string name="transfer_podcasts">Podcasts</string>
+    <string name="transfer_podcasts">Pódcast</string>
     <string name="transfer_start_count">Transferir (%1$d)</string>
     <string name="library_section_empty">Aún no hay nada aquí. Trae tu música de YouTube Music o Spotify con Transfiere tu música, en la hoja de tu cuenta.</string>
     <string name="transfer_running_percent">Transfiriendo %1$d%%</string>
@@ -2223,7 +2223,7 @@
     <string name="setup_greeting_body">Tu perfil está listo. Puedes cambiarlo cuando quieras en Ajustes.</string>
     <string name="setup_preferences_title">Personaliza Auden</string>
     <string name="setup_preferences_body">Puedes cambiar estas preferencias más adelante.</string>
-    <string name="setup_automix">Automix</string>
+    <string name="setup_automix">Mezcla automática</string>
     <string name="setup_reduce_blur">Reducir desenfoque dinámico</string>
     <string name="setup_enter_auden">Entrar a Auden</string>
     <string name="setup_photo_failed">No se pudo guardar la foto. Elige otra imagen.</string>
@@ -2253,9 +2253,279 @@
     <string name="replay_milestone_artists">Artistas descubiertos</string>
     <string name="replay_milestone_reached">Alcanzado el %1$s</string>
     <string name="replay_milestone_next">Siguiente: %1$s</string>
-    <string name="replay_playlist_title">Replay %1$s</string>
+    <string name="replay_playlist_title">Resumen %1$s</string>
     <string name="replay_playlist_songs">%1$s canciones · %2$s</string>
     <string name="replay_play_playlist">Reproducir</string>
     <string name="replay_save_playlist">Guardar playlist</string>
     <string name="replay_playlist_saved">«%1$s» guardada en tu biblioteca</string>
+    <string name="account_channel_listen_as">Escuchar como</string>
+    <string name="source_quality_lossless">Sin pérdida</string>
+    <string name="source_quality_high">Alta calidad</string>
+    <string name="tv_sign_in_to_youtube_music">Iniciar sesión en YouTube Music</string>
+    <string name="tv_reset_to_default">Restablecer valores predeterminados</string>
+    <string name="tv_not_now">Ahora no</string>
+    <string name="tv_up_next">A continuación</string>
+    <string name="tv_autoplay">Reproducción automática</string>
+    <string name="tv_not_playing">Sin reproducción</string>
+    <string name="tv_nothing_played_yet">Todavía no has reproducido nada</string>
+    <string name="tv_continue">Continuar</string>
+    <string name="tv_start_listening">Empezar a escuchar</string>
+    <string name="tv_signed_in">Sesión iniciada</string>
+    <string name="tv_sign_in">Iniciar sesión</string>
+    <string name="tv_listening">Escuchando</string>
+    <string name="tv_synced_lyrics">Letras sincronizadas</string>
+    <string name="tv_spatial_audio">Audio espacial</string>
+    <string name="tv_on">Activado</string>
+    <string name="tv_off">Desactivado</string>
+    <string name="tv_playback_section">Reproducción</string>
+    <string name="tv_sound_section">Sonido</string>
+    <string name="tv_connections_section">Conexiones</string>
+    <string name="tv_crossfade">Fundido cruzado</string>
+    <string name="tv_skip_silence">Saltar silencios</string>
+    <string name="tv_usb_dac">DAC USB</string>
+    <string name="tv_lyrics_sources">Fuentes de letras</string>
+    <string name="tv_appearance">Apariencia</string>
+    <string name="tv_refresh_rate">Frecuencia de actualización</string>
+    <string name="tv_scrobbling">Registro de reproducciones</string>
+    <string name="tv_software_update">Actualización de software</string>
+    <string name="tv_recently_played">Reproducido recientemente</string>
+    <string name="tv_liked_songs">Canciones que te gustan</string>
+    <string name="tv_midnight">Medianoche</string>
+    <string name="tv_default">Predeterminado</string>
+    <string name="tv_download_progress">Descargando… %1$d%%</string>
+    <string name="tv_sign_out">Cerrar sesión</string>
+    <string name="tv_equalizer_2">Ecualizador</string>
+    <string name="tv_sleep_timer">Temporizador de apagado</string>
+    <string name="tv_no_results">Sin resultados</string>
+    <string name="tv_recent_searches">Búsquedas recientes</string>
+    <string name="tv_equalizer">Ecualizador</string>
+    <string name="tv_sign_in_to_youtube_music_2">Iniciar sesión en YouTube Music</string>
+    <string name="tv_sign_out_2">Cerrar sesión</string>
+    <string name="tv_discord_token">Token de Discord</string>
+    <string name="tv_scrobbling_2">Registro de reproducciones</string>
+    <string name="tv_refresh_rate_2">Frecuencia de actualización</string>
+    <string name="tv_appearance_2">Apariencia</string>
+    <string name="tv_lyrics_sources_2">Fuentes de letras</string>
+    <string name="tv_play_next">Reproducir a continuación</string>
+    <string name="tv_sleep_timer_2">Temporizador de apagado</string>
+    <string name="tv_new_playlist">Nueva lista</string>
+    <string name="tv_playlist_name">Nombre de la lista</string>
+    <string name="tv_add_to_playlist_2">Añadir a la lista</string>
+    <string name="tv_turn_off_timer">Desactivar temporizador</string>
+    <string name="tv_top_songs">Canciones principales</string>
+    <string name="tv_songs">Canciones</string>
+    <string name="source_not_available_in_build">No disponible en esta versión</string>
+    <string name="source_server_no_response">El servidor no respondió</string>
+    <string name="source_server_answered">El servidor respondió %1$s</string>
+    <string name="source_addon_url_required">Se requiere la URL del complemento</string>
+    <string name="source_no_manifest_search_works">Sin manifiesto · la búsqueda funciona</string>
+    <string name="source_module_url_required">Se requiere la URL del índice de módulos</string>
+    <string name="source_module_index_empty">El índice respondió, pero no incluye módulos. Comprueba la URL.</string>
+    <string name="source_auth_unavailable">BitChord no pudo verificar este dispositivo</string>
+    <string name="source_addon_unreachable">No se pudo acceder al complemento</string>
+    <string name="source_module_index_unreachable">No se pudo acceder al índice de módulos</string>
+    <plurals name="source_module_count">
+        <item quantity="one">%1$d módulo</item>
+        <item quantity="other">%1$d módulos</item>
+    </plurals>
+    <string name="tester_code_title">Código de prueba</string>
+    <string name="tester_code_message">Para quienes prueban BitChord. Permite verificar complementos en este teléfono con el cargador de arranque desbloqueado.</string>
+    <string name="tester_code_message_saved">Hay un código de prueba guardado en este teléfono. Introduce otro para reemplazarlo o elimínalo.</string>
+    <string name="tester_code_saved">Código de prueba guardado</string>
+    <string name="tester_code_removed">Código de prueba eliminado</string>
+    <string name="app_icon_liquid_glass">Cristal líquido</string>
+    <string name="app_icon_liquid_glass_dark">Cristal líquido oscuro</string>
+    <string name="app_icon_liquid_glass_clear">Cristal líquido transparente</string>
+    <string name="app_icon_liquid_glass_clear_dark">Cristal líquido transparente oscuro</string>
+    <string name="app_icon_samsung_glass">Cristal Samsung</string>
+    <string name="app_icon_samsung_glass_dark">Cristal Samsung oscuro</string>
+    <string name="app_icon_samsung_glass_clear">Cristal Samsung transparente</string>
+    <string name="app_icon_samsung_glass_clear_dark">Cristal Samsung transparente oscuro</string>
+    <string name="app_icon_pixel_glass">Cristal Pixel</string>
+    <string name="app_icon_pixel_glass_dark">Cristal Pixel oscuro</string>
+    <string name="app_icon_pixel_glass_clear">Cristal Pixel transparente</string>
+    <string name="app_icon_pixel_glass_clear_dark">Cristal Pixel transparente oscuro</string>
+    <string name="pipeline_pcm_data_rate">Velocidad de datos PCM</string>
+    <string name="spotify_import_language_preference">Preferencia de idioma</string>
+    <string name="spotify_import_language_hint">p. ej., panyabí, maratí o coreano…</string>
+    <string name="account_channel_looking_up">Buscando tus canales…</string>
+    <string name="account_channel_list_failed">No se pudieron mostrar los canales de esta cuenta. Puedes elegir uno desde YouTube Music.</string>
+    <string name="account_channel_description">Tu biblioteca, tus Me gusta y tu historial dependen del canal que elijas aquí.</string>
+    <string name="account_channel_choose_in_youtube">Elegir en YouTube Music</string>
+    <string name="settings_developer">Desarrollador</string>
+    <string name="settings_credit_services">YouTube Music y el servicio de Listen Together</string>
+    <string name="source_addon">Complemento</string>
+    <string name="source_custom_module">Módulo personalizado</string>
+    <string name="source_module">Fuente de módulos</string>
+    <string name="source_quality_hi_res">Alta resolución</string>
+    <string name="source_plugins">Complementos</string>
+    <string name="source_high_bitrate">Alta tasa de bits</string>
+    <string name="source_full_catalogue">Catálogo completo</string>
+    <string name="source_radio">Radio</string>
+    <string name="source_lossy">Con pérdida</string>
+    <string name="tv_account">Cuenta</string>
+    <string name="tv_couldn_t_load">No se pudo cargar</string>
+    <string name="tv_account_settings">Configuración de la cuenta</string>
+    <string name="tv_press_back_for_done_or_cancel">Pulsa Atrás para terminar o cancelar</string>
+    <string name="tv_ok">Aceptar</string>
+    <string name="tv_free_software_under_the_gnu_gpl">Software libre bajo la licencia GNU GPL v3. No está afiliado a YouTube ni a Google.</string>
+    <string name="tv_up_and_down_set_a_band">Pulsa arriba o abajo para ajustar una banda. Pulsa Seleccionar para restablecerla.</string>
+    <string name="tv_reset_all">Restablecer todo</string>
+    <string name="tv_create">Crear</string>
+    <string name="tv_download_and_install">Descargar e instalar</string>
+    <string name="tv_hide">Ocultar</string>
+    <string name="tv_cancel_download">Cancelar descarga</string>
+    <string name="tv_choose_something_from_home_explore_or">Elige algo en Inicio, Explorar o tu biblioteca.</string>
+    <string name="tv_browse_music">Explorar música</string>
+    <string name="tv_allow_access">Permitir acceso</string>
+    <string name="tv_reload_library">Volver a cargar la biblioteca</string>
+    <string name="tv_empty_home_title">Todavía no hay nada</string>
+    <string name="tv_home_sign_in_for_recommendations">Inicia sesión desde Configuración o comprueba tu conexión para ver tus recomendaciones.</string>
+    <string name="tv_played_songs_appear_here">Aquí aparecerán las canciones que escuches.</string>
+    <string name="tv_empty_library_message">Todavía no hay nada aquí.</string>
+    <string name="tv_welcome_to_bit_chord">Te damos la bienvenida a BitChord</string>
+    <string name="tv_music_for_the_big_screen">Tu música, en la gran pantalla.</string>
+    <string name="tv_set_up_later">Configurar más tarde</string>
+    <string name="tv_choose_a_look">Elige un aspecto</string>
+    <string name="tv_change_look_later">Puedes cambiarlo más tarde en Configuración.</string>
+    <string name="tv_you_are_all_set">Todo listo</string>
+    <string name="tv_find_music_everything_saved">Encuentra música en Inicio y Explorar. Todo lo que guardes estará en Biblioteca.</string>
+    <string name="tv_account_library_recommendations">Usa tu biblioteca, tus listas y tus recomendaciones. También puedes configurarlo más tarde en Ajustes.</string>
+    <string name="tv_select_a_row_to_toggle">Selecciona una opción para activarla o desactivarla.</string>
+    <string name="tv_motion_artwork">Carátulas animadas</string>
+    <string name="tv_recommendations_account">Tu biblioteca, tus listas y tus recomendaciones están vinculadas a esta cuenta.</string>
+    <string name="tv_automix_blurb">Mezcla una canción con la siguiente y ajusta el ritmo.</string>
+    <string name="tv_fades_song_in_and_out">Cada canción se desvanece al entrar la siguiente. Selecciona para cambiar la duración.</string>
+    <string name="tv_autoplay_blurb">Cuando termina la cola, sigue reproduciendo música parecida a la que escuchabas.</string>
+    <string name="tv_skip_silence_blurb">Salta los silencios al principio y al final de las canciones.</string>
+    <string name="tv_shape_sound_with_presets">Ajusta el sonido con preajustes o con tus propias siete bandas.</string>
+    <string name="tv_widens_stereo_music">Amplía el estéreo con el virtualizador de audio del televisor, si está disponible.</string>
+    <string name="tv_plays_each_song_at_loudness">Reproduce todas las canciones con el mismo volumen percibido.</string>
+    <string name="tv_sends_audio_to_usb_dac">Envía el audio sin cambios directamente al DAC USB conectado.</string>
+    <string name="tv_lyrics_follow_along">Las letras avanzan con la canción, línea por línea.</string>
+    <string name="tv_choose_lyric_databases">Elige qué bases de datos de letras consultar y en qué orden.</string>
+    <string name="tv_song_looping_video_artwork">Reproduce el video en bucle como fondo del reproductor, si está disponible.</string>
+    <string name="tv_fullscreen_lyrics_video_artwork">Mantiene el video reproduciéndose detrás de las letras a pantalla completa.</string>
+    <string name="tv_shows_codec_bitrate_sample_rate">Muestra el códec, la tasa de bits y la frecuencia de muestreo de la reproducción.</string>
+    <string name="tv_background_behind_pages">El fondo de las páginas de BitChord.</string>
+    <string name="tv_now_playing_background">El fondo de la pantalla En reproducción: los colores de la carátula o el negro puro de las pantallas AMOLED.</string>
+    <string name="tv_interface_size_blurb">Aumenta o reduce el tamaño de todos los elementos. Selecciona para alternar entre tamaños.</string>
+    <string name="tv_screen_redraw_rate">Con qué frecuencia se actualiza la pantalla mientras navegas.</string>
+    <string name="tv_calms_decorative_animation">Reduce el movimiento del fondo y de otras animaciones decorativas.</string>
+    <string name="tv_solid_backgrounds_help_slower_tvs">Sustituye los fondos desenfocados por fondos lisos. Mejora el rendimiento en televisores más lentos.</string>
+    <string name="tv_last_fm_and_listenbrainz">Last.fm y ListenBrainz.</string>
+    <string name="tv_download_install_new_version">Descarga e instala la nueva versión de BitChord para TV.</string>
+    <string name="tv_first_time_setup_again">Repite la configuración inicial.</string>
+    <string name="tv_settings_default_blurb">Preferencias de reproducción, sonido y pantalla de BitChord en este televisor.</string>
+    <string name="tv_account_section">Cuenta</string>
+    <string name="tv_display_section">Pantalla</string>
+    <string name="tv_general_section">General</string>
+    <string name="tv_sound_check">Comprobación de sonido</string>
+    <string name="tv_motion_artwork_in_lyrics">Carátulas animadas en las letras</string>
+    <string name="tv_stats_for_nerds">Estadísticas técnicas</string>
+    <string name="tv_player_background">Fondo del reproductor</string>
+    <string name="tv_interface_size">Tamaño de la interfaz</string>
+    <string name="tv_reduce_motion">Reducir movimiento</string>
+    <string name="tv_reduce_transparency">Reducir transparencia</string>
+    <string name="tv_set_up_again">Volver a configurar</string>
+    <string name="tv_about">Acerca de</string>
+    <string name="tv_available">Disponible</string>
+    <string name="tv_sign_in_bring_library">Accede a tu biblioteca, tus listas y tus recomendaciones. También puedes hacerlo más tarde en Configuración.</string>
+    <string name="tv_automix">Mezcla automática</string>
+    <string name="tv_crossfade_duration">%1$d s</string>
+    <string name="tv_version_available">Disponible: %1$s</string>
+    <string name="tv_account_library_message">BitChord usará la biblioteca y las recomendaciones de %1$s.</string>
+    <string name="tv_no_songs">Sin canciones</string>
+    <string name="tv_sign_in_ellipsis">Iniciar sesión…</string>
+    <string name="tv_auto_recommended">Automático (recomendado)</string>
+    <string name="tv_refresh_auto_description">Permite que el televisor y Android ajusten dinámicamente la frecuencia de actualización de la pantalla.</string>
+    <string name="tv_smooth_60">Fluido, 60 Hz</string>
+    <string name="tv_refresh_60_description">Solicita un movimiento fluido de 60 Hz a la resolución nativa.</string>
+    <string name="tv_ultra_120">Ultra, 120 Hz</string>
+    <string name="tv_refresh_120_description">Solicita hasta 120 fps para la interfaz en pantallas compatibles. El video mantiene la frecuencia de imagen original.</string>
+    <string name="tv_artwork">Carátula</string>
+    <string name="tv_artwork_theme_description">Oscuro, con un ligero matiz de los colores de la carátula.</string>
+    <string name="tv_midnight_theme_description">Fondo azul marino oscuro.</string>
+    <string name="tv_pure_black">Negro puro</string>
+    <string name="tv_pure_black_theme_description">Negro puro para pantallas OLED.</string>
+    <string name="tv_amoled">AMOLED</string>
+    <string name="tv_update_version_available">Disponible BitChord %1$s</string>
+    <string name="tv_scan_phone_for_update">Escanea el código con tu teléfono para descargar esta actualización desde GitHub.</string>
+    <string name="tv_downloaded_select_install">Descargado. Selecciona Instalar ahora para actualizar.</string>
+    <plurals name="tv_minutes">
+        <item quantity="one">%1$d minuto</item>
+        <item quantity="other">%1$d minutos</item>
+    </plurals>
+    <string name="tv_profile_locked">El perfil está bloqueado. Introduce el PIN de %1$s.</string>
+    <string name="tv_create_profile_pin">Crea un PIN de 4 dígitos para %1$s</string>
+    <string name="tv_sign_out_profile_pin">Introduce el PIN de 4 dígitos para cerrar la sesión de %1$s</string>
+    <string name="tv_artist_about">Acerca de %1$s</string>
+    <string name="tv_sign_in_with_your_phone">Iniciar sesión con el teléfono</string>
+    <string name="tv_enter_4_digit_pin">Introduce el PIN de 4 dígitos</string>
+    <string name="tv_auth_remote_page_title">BitChord TV · Control desde el móvil</string>
+    <string name="tv_auth_remote_heading">Control remoto de BitChord TV</string>
+    <string name="tv_auth_loading_tv">Cargando el televisor…</string>
+    <string name="tv_auth_connecting_tv">Conectando con BitChord TV</string>
+    <string name="tv_auth_remote_search">Busca una canción para reproducirla en el televisor…</string>
+    <string name="tv_auth_playing_on_tv">¡Reproduciendo {title} en el televisor!</string>
+    <string name="tv_auth_sign_in_page_title">BitChord TV · Inicio de sesión rápido</string>
+    <string name="tv_auth_sign_in_title">Iniciar sesión en BitChord TV</string>
+    <string name="tv_auth_fast_login_description">Inicia sesión rápida y fácilmente desde el teléfono</string>
+    <string name="tv_auth_fastest_option">Opción 1 (la más rápida):</string>
+    <string name="tv_auth_open_youtube_music_step">Pulsa el botón de abajo para abrir YouTube Music en el navegador.</string>
+    <string name="tv_auth_sign_in_google_step">Inicia sesión con tu cuenta de Google si aún no lo has hecho.</string>
+    <string name="tv_auth_submit_session_step">Vuelve aquí y pega la cookie, o usa el script de un clic para iniciar sesión automáticamente.</string>
+    <string name="tv_auth_open_youtube_music">Abrir YouTube Music en el teléfono</string>
+    <string name="tv_auth_direct_session_submission">Envío directo de sesión</string>
+    <string name="tv_auth_submit_session_description">Pega la cookie o los encabezados de tu sesión de YouTube Music para iniciar sesión en el televisor:</string>
+    <string name="tv_auth_cookie_placeholder">Pega aquí SAPISID o la cookie de sesión…</string>
+    <string name="tv_auth_connect_account">Conectar cuenta al televisor</string>
+    <string name="tv_auth_no_cookie">No se detectó ninguna cookie. Sigue las instrucciones.</string>
+    <string name="tv_auth_connected_page_title">BitChord TV · Conectado</string>
+    <string name="tv_auth_paired_successfully">Vinculación completada</string>
+    <string name="tv_auth_connected_description">Tu BitChord TV ya está conectado. Ahora puedes controlar la reproducción con el mando del teléfono.</string>
+    <string name="tv_auth_open_remote">📱 Abrir control remoto del televisor</string>
+    <string name="tv_auth_no_song_playing">No hay canciones en reproducción</string>
+    <string name="tv_search_placeholder">Artistas, canciones, álbumes y más</string>
+    <string name="tv_search_nothing_matched">No encontramos “%1$s”. Comprueba la ortografía o prueba con otras palabras.</string>
+    <string name="tv_search_bit_chord">Buscar en BitChord</string>
+    <string name="tv_search_songs_albums_artists_playlists">Busca canciones, álbumes, artistas y listas.</string>
+    <string name="tv_top_results">Resultados principales</string>
+    <string name="tv_allow_access_to_music">Permitir acceso a la música</string>
+    <string name="tv_music_read_permission">BitChord necesita permiso para leer la música de este televisor y de las unidades USB conectadas.</string>
+    <string name="tv_nothing_to_play_here">Todavía no hay nada que reproducir.</string>
+    <string name="tv_suggestions">Sugerencias</string>
+    <string name="tv_search_song_to_play_on_tv">Busca una canción para reproducirla en el televisor…</string>
+    <string name="tv_paste_sapisid_session_cookie_here">Pega aquí SAPISID o la cookie de sesión…</string>
+    <string name="tv_your_library_playlists_and_recommendations_follow_your">Tu biblioteca, tus listas y tus recomendaciones están vinculadas a tu cuenta.</string>
+    <string name="tv_sign_in_on_this_tv">Iniciar sesión en este televisor</string>
+    <string name="tv_use_the_remote_to_sign_in_to">Usa el mando para iniciar sesión en Google.</string>
+    <string name="tv_sign_in_with_your_phone_2">Iniciar sesión con el teléfono</string>
+    <string name="tv_scan_a_code_with_a_phone_on">Escanea el código con un teléfono conectado a la misma red Wi-Fi.</string>
+    <string name="tv_enter_4_digit_pin_2">Introduce el PIN de 4 dígitos</string>
+    <string name="tv_set_4_digit_pin">Crear PIN de 4 dígitos</string>
+    <string name="tv_confirm_4_digit_pin">Confirmar PIN de 4 dígitos</string>
+    <string name="tv_re_enter_your_4_digit_pin">Vuelve a introducir el PIN de 4 dígitos</string>
+    <string name="tv_turn_off_app_lock">Desactivar el bloqueo de la aplicación</string>
+    <string name="tv_enter_current_4_digit_pin_to_remove">Introduce el PIN actual de 4 dígitos para quitar el bloqueo</string>
+    <string name="tv_app_lock_4_digit_pin">Bloqueo de aplicación (PIN de 4 dígitos)</string>
+    <string name="tv_remove_this_account_from_tv">Quitar esta cuenta del televisor</string>
+    <string name="tv_show_what_you_re_listening_to_in">Mostrar lo que escuchas en tu estado de Discord.</string>
+    <string name="tv_connect_these_on_the_bitchord_phone_app">Conecta estas cuentas en la aplicación BitChord del teléfono. El televisor usará las mismas cuentas.</string>
+    <string name="tv_kushagra_singh">Kushagra Singh</string>
+    <string name="tv_nithyanantha">Nithyanantha</string>
+    <string name="tv_select_to_turn_a_source_on_or">Selecciona para activar o desactivar una fuente. Pulsa izquierda o derecha para cambiar su orden. La primera fuente se consulta primero.</string>
+    <string name="tv_prefer_word_synced">Preferir sincronización palabra por palabra</string>
+    <string name="tv_hold_out_for_word_by_word_lyrics">Espera a que haya letras sincronizadas palabra por palabra antes de usar las sincronizadas por línea.</string>
+    <string name="tv_play_last">Reproducir al final</string>
+    <string name="tv_start_station">Iniciar emisora</string>
+    <string name="tv_add_to_playlist">Añadir a la lista…</string>
+    <string name="tv_go_to_album">Ir al álbum</string>
+    <string name="tv_go_to_artist">Ir al artista</string>
+    <string name="tv_stats_for_nerds_2">Estadísticas técnicas</string>
+    <string name="tv_it_will_be_private_with_this_song">Será privada e incluirá esta canción.</string>
+    <string name="tv_new_playlist_2">Nueva lista…</string>
+    <string name="tv_stop_playing_music_after">Dejar de reproducir música después de</string>
+    <string name="tv_end_of_current_song">Al terminar la canción actual</string>
+    <string name="tv_latest_release">Versión más reciente</string>
 </resources>

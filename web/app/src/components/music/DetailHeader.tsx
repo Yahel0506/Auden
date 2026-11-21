@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { Check, Plus, Shuffle } from 'lucide-react';
 import { useState } from 'react';
 import { PrefetchLink } from '@/components/PrefetchLink';
@@ -102,26 +103,24 @@ export function DetailHeader({ info, onPlay, onShuffle, canPlay, extra, motion }
             {info.description}
           </p>
           {!expanded && info.description.length > 180 && (
-            <button className="shrink-0 ps-[5px] type-subhead-emphasized text-primary" onClick={() => setExpanded(true)}>
-              MORE
-            </button>
+            <button className="shrink-0 ps-[5px] type-subhead-emphasized text-primary" onClick={() => setExpanded(true)}>{translateUi("detail_header.more")}</button>
           )}
         </div>
       )}
       <div className="mt-3.5 flex items-center gap-3.5 self-end [grid-area:actions]">
-        <button className={detailButton.circle} aria-label="Shuffle" onClick={onShuffle} disabled={!canPlay}>
+        <button className={detailButton.circle} aria-label={translateUi("detail_header.shuffle")} onClick={onShuffle} disabled={!canPlay}>
           <Shuffle size={18} strokeWidth={2.2} />
         </button>
         <button className={detailButton.pill} onClick={onPlay} disabled={!canPlay}>
           <PlayIcon size={18} />
-          <span>Play</span>
+          <span>{translateUi("detail_header.play")}</span>
         </button>
         {library && (
           <button
             className={detailButton.circle}
-            aria-label={library.saved ? 'Remove from Library' : 'Add to Library'}
+            aria-label={library.saved ? translateUi("components_music_detailheader_remove_from_library") : translateUi("components_music_detailheader_add_to_library")}
             aria-pressed={library.saved}
-            title={library.saved ? 'In your library' : 'Add to Library'}
+            title={library.saved ? translateUi("components_music_detailheader_in_your_library") : translateUi("components_music_detailheader_add_to_library")}
             disabled={setSaved.isPending}
             onClick={() => setSaved.mutate({ playlistId: library.playlistId, saved: !library.saved })}
           >

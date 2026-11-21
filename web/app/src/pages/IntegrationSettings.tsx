@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import type { DiscordPresenceOptions } from '@bitchord/shared/bridge';
 import { APPLE_ORIGINS, useAppleAccess } from '@/data/apple/artistArt';
 import { useAppleSettings } from '@/data/apple/motionArt';
@@ -24,14 +25,12 @@ import { Select } from '@/components/Select';
 
 /** Allowed, or an Allow button that opens the extension's permission page. */
 function HostAccessValue({ access, request }: ReturnType<typeof useHostAccess>) {
-  const text = { checking: 'Checking…', unavailable: 'Needs the extension', granted: 'Allowed', needed: 'Not allowed' }[access];
+  const text = translateUi(({ checking: 'integration_settings.checking', unavailable: 'extension_page.needs_extension', granted: 'lyrics_settings.allowed', needed: 'lyrics_settings.not_allowed' } as const)[access]);
   return (
     <span className={settingsUi.value}>
       <span>{text}</span>
       {access === 'needed' && (
-        <button className={settingsUi.inlineButton} onClick={request}>
-          Allow
-        </button>
+        <button className={settingsUi.inlineButton} onClick={request}>{translateUi("integration_settings.allow")}</button>
       )}
     </span>
   );
@@ -48,14 +47,14 @@ export function AppleMusicToggles() {
   return (
     <>
       <Toggle
-        label="Artist Art"
-        detail="Artist pages take Apple Music’s photo, logo and colour."
+        label={translateUi("integration_settings.artist_art")}
+        detail={translateUi("integration_settings.artist_pages_take_apple_music")}
         checked={artistArt}
         onChange={setArtistArt}
       />
       <Toggle
-        label="Animated Artwork"
-        detail="Apple Music’s moving covers in the full-screen player and on album pages. Not with reduced motion or Save-Data, and not over cellular data unless you allow it below."
+        label={translateUi("integration_settings.animated_artwork")}
+        detail={translateUi("integration_settings.apple_music_s_moving_covers")}
         checked={motion}
         onChange={setMotion}
       />
@@ -69,8 +68,8 @@ export function ClipNetworkToggle() {
   const set = useClipNetwork((s) => s.setOverCellular);
   return (
     <Toggle
-      label="Moving artwork on cellular data"
-      detail="Lets Animated Artwork and Spotify Canvas loop over a cellular link. Save-Data still stops them. Only Chromium reports the link."
+      label={translateUi("integration_settings.moving_artwork_on_cellular_data")}
+      detail={translateUi("integration_settings.lets_animated_artwork_and_spotify")}
       checked={overCellular}
       onChange={set}
     />
@@ -103,7 +102,7 @@ export function SpotifyIntegration() {
         : { label: 'Disconnect', run: () => connect.mutate(false) };
   return (
     <span className={settingsUi.value}>
-      <span title={auth.auth.problem ?? undefined}>{spotifyText(auth)}</span>
+      <span title={auth.auth.problem ? translateUi('integration_settings.account_status_details_in_extension') : undefined}>{spotifyText(auth)}</span>
       <button className={settingsUi.inlineButton} onClick={action.run} disabled={connect.isPending || retry.isPending}>
         {action.label}
       </button>
@@ -112,12 +111,14 @@ export function SpotifyIntegration() {
 }
 
 function spotifyText(auth: SpotifyAuthStatus): string {
-  if (auth.state === 'checking') return 'Checking…';
-  if (auth.state === 'unavailable') return 'Not available in this version yet';
+  if (auth.state === 'checking') return translateUi('integration_settings.checking');
+  if (auth.state === 'unavailable') return translateUi('integration_settings.not_available_in_this_version_yet');
   const { browserSignedIn, connected, signedIn, user } = auth.auth;
-  if (!browserSignedIn) return 'Not signed in in this browser';
-  if (!connected) return 'Disconnected';
-  return signedIn ? `Signed in as ${user?.name ?? 'your account'}` : 'Couldn’t read your account';
+  if (!browserSignedIn) return translateUi('integration_settings.not_signed_in_in_this_browser');
+  if (!connected) return translateUi('integration_settings.disconnected');
+  return signedIn
+    ? translateUi('integration_settings.signed_in_as', { account: user?.name ?? translateUi('integration_settings.your_account') })
+    : translateUi('integration_settings.couldnt_read_your_account');
 }
 
 export function DiscordIntegration() {
@@ -129,7 +130,7 @@ export function DiscordIntegration() {
   const connected = status.discord.connected;
   return (
     <span className={settingsUi.value}>
-      <span title={status.discord.problem ?? undefined}>{text}</span>
+      <span title={status.discord.problem ? translateUi('integration_settings.connection_details_in_extension') : undefined}>{text}</span>
       <button
         className={settingsUi.inlineButton}
         onClick={() => (connected ? disconnect.mutate() : connect.mutate())}
@@ -142,16 +143,16 @@ export function DiscordIntegration() {
 }
 
 function discordText(status: DiscordStatus): string {
-  if (status.state === 'checking') return 'Checking…';
-  if (status.state === 'unavailable') return 'Not in this build of the extension';
+  if (status.state === 'checking') return translateUi('integration_settings.checking');
+  if (status.state === 'unavailable') return translateUi('integration_settings.not_in_this_build_of_the_extension');
   const { available, connected, enabled, user, gateway, problem } = status.discord;
-  if (!available) return 'Not in this build of the extension';
-  if (!connected || !user) return 'Not connected';
-  if (!enabled) return `${user.name} · presence off`;
-  if (gateway === 'error') return problem ?? 'Couldn’t connect';
-  if (gateway === 'ready') return `${user.name} · showing what you play`;
-  if (gateway === 'connecting') return `${user.name} · connecting…`;
-  return `${user.name} · on`;
+  if (!available) return translateUi('integration_settings.not_in_this_build_of_the_extension');
+  if (!connected || !user) return translateUi('integration_settings.not_connected');
+  if (!enabled) return translateUi('integration_settings.presence_off_for', { account: user.name });
+  if (gateway === 'error') return translateUi('integration_settings.couldnt_connect');
+  if (gateway === 'ready') return translateUi('integration_settings.showing_what_you_play_for', { account: user.name });
+  if (gateway === 'connecting') return translateUi('integration_settings.connecting_for', { account: user.name });
+  return translateUi('integration_settings.on_for', { account: user.name });
 }
 
 export function Toggle({ label, detail, checked, onChange }: { label: string; detail?: string; checked: boolean; onChange: (on: boolean) => void }) {
@@ -174,8 +175,8 @@ export function CanvasToggle() {
   if (auth.state !== 'ready' || !auth.auth.signedIn) return null;
   return (
     <Toggle
-      label="Spotify Canvas"
-      detail="Spotify’s looping clip behind the lyrics. Not with reduced motion or Save-Data, and not over cellular data unless you allow it."
+      label={translateUi("integration_settings.spotify_canvas")}
+      detail={translateUi("integration_settings.spotify_s_looping_clip_behind")}
       checked={canvas}
       onChange={setCanvas}
     />
@@ -207,20 +208,20 @@ export function DiscordSettings() {
   return (
     <>
       <section className={settingsUi.group}>
-        <Toggle label="Show what you’re playing" checked={on} onChange={(v) => setEnabled.mutate(v)} />
+        <Toggle label={translateUi("integration_settings.show_what_you_re_playing")} checked={on} onChange={(v) => setEnabled.mutate(v)} />
         {on && (
           <>
             <label className={settingsUi.controlRow}>
-              <span>Activity</span>
+              <span>{translateUi("integration_settings.activity")}</span>
               <Select
-                label="Activity"
+                label={translateUi("integration_settings.activity")}
                 value={options.activityType}
                 options={ACTIVITY_TYPES}
                 onChange={(activityType) => set({ activityType })}
               />
             </label>
             <label className={settingsUi.controlRow}>
-              <span>Name</span>
+              <span>{translateUi("integration_settings.name")}</span>
               <input
                 className={settingsUi.input}
                 placeholder="Auden"
@@ -229,34 +230,34 @@ export function DiscordSettings() {
               />
             </label>
             <label className={settingsUi.controlRow}>
-              <span>Status</span>
-              <Select label="Status" value={options.status} options={STATUSES} onChange={(status) => set({ status })} />
+              <span>{translateUi("integration_settings.status")}</span>
+              <Select label={translateUi("integration_settings.status")} value={options.status} options={STATUSES} onChange={(status) => set({ status })} />
             </label>
             <Toggle
-              label="Lead with the song"
-              detail="Member lists show the song title instead of the artist."
+              label={translateUi("integration_settings.lead_with_the_song")}
+              detail={translateUi("integration_settings.member_lists_show_the_song")}
               checked={options.useDetails}
               onChange={(v) => set({ useDetails: v })}
             />
-            <Toggle label="Listen button" checked={options.button1Visible} onChange={(v) => set({ button1Visible: v })} />
+            <Toggle label={translateUi("integration_settings.listen_button")} checked={options.button1Visible} onChange={(v) => set({ button1Visible: v })} />
             {options.button1Visible && (
               <label className={settingsUi.controlRow}>
-                <span>Listen button text</span>
+                <span>{translateUi("integration_settings.listen_button_text")}</span>
                 <input
                   className={settingsUi.input}
-                  placeholder="Listen on YouTube Music"
+                  placeholder={translateUi("integration_settings.listen_on_youtube_music")}
                   value={options.button1Text}
                   onChange={(e) => set({ button1Text: e.currentTarget.value })}
                 />
               </label>
             )}
-            <Toggle label="Auden button" checked={options.button2Visible} onChange={(v) => set({ button2Visible: v })} />
+            <Toggle label={translateUi("integration_settings.auden_button")} checked={options.button2Visible} onChange={(v) => set({ button2Visible: v })} />
             {options.button2Visible && (
               <label className={settingsUi.controlRow}>
-                <span>Auden button text</span>
+                <span>{translateUi("integration_settings.auden_button_text")}</span>
                 <input
                   className={settingsUi.input}
-                  placeholder="Visit Auden"
+                  placeholder={translateUi("integration_settings.visit_auden")}
                   value={options.button2Text}
                   onChange={(e) => set({ button2Text: e.currentTarget.value })}
                 />
@@ -266,8 +267,7 @@ export function DiscordSettings() {
         )}
       </section>
       <p className={settingsUi.footer}>
-        This uses your Discord account’s own token, which Discord’s terms don’t allow. Button text can use {'{song_name}'},{' '}
-        {'{artist_name}'} and {'{album_name}'}.
+        {translateUi("integration_settings.discord_token_terms_and_templates")}
       </p>
     </>
   );

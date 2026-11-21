@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { OfflineButton } from '@/auden/offline/ui/OfflineButton';
 import { SaveToDeviceButton } from '@/auden/playlists/ui/SaveToDeviceButton';
 import { saveSpotifyToDevice, saveYouTubeToDevice } from '@/auden/playlists/actions';
@@ -67,7 +68,7 @@ export default function PlaylistPage() {
         }
       />
       <TrackList tracks={tracks} variant="playlist" onNearEnd={onNearEnd} source={context.source} />
-      {isFetchingNextPage && <div className="flex justify-center py-5 type-callout text-secondary">Loading more songs…</div>}
+      {isFetchingNextPage && <div className="flex justify-center py-5 type-callout text-secondary">{translateUi("playlist_page.loading_more_songs")}</div>}
       {playlist.isFetchNextPageError && <LoadMoreError onRetry={() => void fetchNextPage()} />}
       <footer className={detailFooter}>
         <p>{header.meta}</p>

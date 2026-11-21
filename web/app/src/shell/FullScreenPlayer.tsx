@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { Maximize, Minimize, X } from 'lucide-react';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useLocation } from 'react-router';
@@ -74,9 +75,7 @@ function Scrubber() {
       </div>
       <div className="relative mt-0.5 flex justify-between type-[500_11px/14px] tabular-nums text-tertiary">
         <span ref={elapsed} />
-        <span ref={mixLabel} className="pointer-events-none absolute inset-x-0 text-center text-secondary opacity-0" aria-hidden="true">
-          Mixing
-        </span>
+        <span ref={mixLabel} className="pointer-events-none absolute inset-x-0 text-center text-secondary opacity-0" aria-hidden="true">{translateUi("full_screen_player.mixing")}</span>
         <span ref={remaining} />
       </div>
     </div>
@@ -100,21 +99,21 @@ function Transport() {
 
   return (
     <div className="mx-auto mt-[clamp(0px,0.5vh,4px)] mb-0 flex h-12 w-[min(100%,315px)] items-center justify-between">
-      <button className={toggle} aria-label="Shuffle" aria-pressed={shuffle} onClick={toggleShuffle}>
+      <button className={toggle} aria-label={translateUi("full_screen_player.shuffle")} aria-pressed={shuffle} onClick={toggleShuffle}>
         <ShuffleIcon size={30} />
       </button>
-      <button className={skip} disabled={!hasTrack} aria-label="Previous" onClick={previous}>
+      <button className={skip} disabled={!hasTrack} aria-label={translateUi("full_screen_player.previous")} onClick={previous}>
         <BackwardIcon size={40} />
       </button>
-      <button className={`${transportButton} size-14 text-primary`} disabled={!hasTrack} aria-label={playing ? 'Pause' : 'Play'} onClick={togglePlay}>
+      <button className={`${transportButton} size-14 text-primary`} disabled={!hasTrack} aria-label={playing ? translateUi('music.pause') : translateUi('music.play')} onClick={togglePlay}>
         {playing ? <PauseIcon size={48} /> : <PlayIcon size={48} />}
       </button>
-      <button className={skip} disabled={!hasTrack || !hasNext} aria-label="Next" onClick={next}>
+      <button className={skip} disabled={!hasTrack || !hasNext} aria-label={translateUi("full_screen_player.next")} onClick={next}>
         <ForwardIcon size={40} />
       </button>
       <button
         className={toggle}
-        aria-label={repeat === 'one' ? 'Repeat one' : repeat === 'all' ? 'Repeat all' : 'Repeat'}
+        aria-label={repeat === 'one' ? translateUi("shell_fullscreenplayer_repeat_one") : repeat === 'all' ? translateUi("shell_fullscreenplayer_repeat_all") : translateUi('music.repeat')}
         aria-pressed={repeat !== 'off'}
         onClick={cycleRepeat}
       >
@@ -257,7 +256,7 @@ export function FullScreenPlayer() {
       className="fixed inset-0 z-[calc(var(--z-contextual-menus)-2)] isolate animate-enter overflow-hidden text-primary [--art:min(34vw,calc(100dvh-280px),760px)] motion-reduce:[animation-name:fade-in] max-md:[--art:min(84vw,calc(100dvh-310px),420px)]"
       role="dialog"
       aria-modal="true"
-      aria-label="Now Playing"
+      aria-label={translateUi("full_screen_player.now_playing")}
       data-full-screen
       data-paused={!playing || undefined}
       onPointerMove={wake}
@@ -290,7 +289,7 @@ export function FullScreenPlayer() {
       )}
 
       {dj ? <DjScreen /> : <DjCaption />}
-      <button ref={close} className={`${corner} top-4 left-5`} aria-label="Close" onClick={() => setFullScreen(false)}>
+      <button ref={close} className={`${corner} top-4 left-5`} aria-label={translateUi("full_screen_player.close")} onClick={() => setFullScreen(false)}>
         <X size={20} />
       </button>
       {/* The music video's quality, just inside the full-screen button. */}
@@ -300,7 +299,7 @@ export function FullScreenPlayer() {
       {document.fullscreenEnabled && (
         <button
           className={`${corner} top-4 right-5`}
-          aria-label={browserFullScreen ? 'Exit full screen' : 'Enter full screen'}
+          aria-label={browserFullScreen ? translateUi("shell_fullscreenplayer_exit_full_screen") : translateUi("shell_fullscreenplayer_enter_full_screen")}
           onClick={toggleBrowserFullScreen}
         >
           {browserFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
@@ -325,7 +324,7 @@ export function FullScreenPlayer() {
           className={
             theater ? 'flex w-[min(720px,100%)] min-w-0 flex-col' : `flex w-(--art) min-w-0 flex-col${column ? ' max-md:order-2 max-md:w-full' : ''}`
           }
-          aria-label="Player"
+          aria-label={translateUi("full_screen_player.player")}
         >
           {/* Shrinks a touch while paused, as Apple's does. Beside a column, a music video plays here at 16:9. */}
           <div
@@ -433,7 +432,7 @@ export function FullScreenPlayer() {
         </section>
 
         {showLyrics && (
-          <section className="flex min-h-0 animate-fade-in self-stretch" aria-label="Lyrics">
+          <section className="flex min-h-0 animate-fade-in self-stretch" aria-label={translateUi("full_screen_player.lyrics")}>
             <LyricsPanel variant="full" />
           </section>
         )}
@@ -441,7 +440,7 @@ export function FullScreenPlayer() {
           // Up Next in the right-hand column: the side panel's list, laid out as a column.
           <section
             className="flex min-h-0 animate-fade-in flex-col self-stretch [mask-image:linear-gradient(180deg,#000_calc(100%-80px),transparent)]"
-            aria-label="Up Next"
+            aria-label={translateUi("full_screen_player.up_next")}
           >
             <UpNext />
           </section>
@@ -452,7 +451,7 @@ export function FullScreenPlayer() {
       {!dj && (
       <button
         className={`${corner} bottom-5 left-5 aria-pressed:text-primary`}
-        aria-label="Lyrics"
+        aria-label={translateUi("full_screen_player.lyrics")}
         aria-pressed={showLyrics}
         onClick={() => togglePanel('lyrics')}
       >
@@ -475,7 +474,7 @@ export function FullScreenPlayer() {
         ) : (
           <button
             className={`${chromeButton} ${fadeForVolume} aria-pressed:text-primary`}
-            aria-label="Up Next"
+            aria-label={translateUi("full_screen_player.up_next")}
             aria-pressed={showQueue}
             onClick={() => togglePanel('queue')}
           >

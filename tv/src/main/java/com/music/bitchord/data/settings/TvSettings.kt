@@ -2,6 +2,8 @@ package com.music.bitchord.data.settings
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.annotation.StringRes
+import com.music.bitchord.R
 import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.crypto.SecretKeyFactory
@@ -9,12 +11,12 @@ import javax.crypto.spec.PBEKeySpec
 import kotlinx.coroutines.flow.MutableStateFlow
 
 /** What Now Playing draws behind the song. */
-enum class TvPlayerStyle(val label: String) {
+enum class TvPlayerStyle(@StringRes val label: Int) {
     /** The moving mesh of the artwork's colours. */
-    DEFAULT("Default"),
+    DEFAULT(R.string.tv_default),
 
     /** Pure black, so an OLED panel's pixels stay off around the cover and lyrics. */
-    AMOLED("AMOLED"),
+    AMOLED(R.string.tv_amoled),
 }
 
 /**

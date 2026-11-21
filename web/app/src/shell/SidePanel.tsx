@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { lazy, Suspense } from 'react';
 import { useUi } from '@/state/ui';
 import { UpNext } from './UpNext';
@@ -15,7 +16,7 @@ export function SidePanel() {
   return (
     <aside
       className="absolute inset-y-0 right-0 z-(--z-web-chrome) flex w-(--side-panel-width) animate-slide-in flex-col glass-material shadow-glass max-sm:w-full"
-      aria-label={panel === 'up-next' ? 'Up Next' : 'Lyrics'}
+      aria-label={panel === 'up-next' ? translateUi("shell_sidepanel_up_next") : 'Lyrics'}
     >
       {panel === 'up-next' ? (
         <UpNext />

@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useState } from 'react';
 import {
   BackwardIcon,
@@ -54,26 +55,26 @@ export function PlayerBar() {
       <div
         className="glass-pill group/pill pointer-events-auto relative grid h-(--player-pill-height) w-[min(668px,100%)] grid-cols-[184px_minmax(180px,427px)_minmax(57px,auto)] items-center rounded-pill px-4"
         role="region"
-        aria-label="Player"
+        aria-label={translateUi("player_bar.player")}
       >
         <div className="flex items-center justify-between pr-2">
-          <button className={toggle} aria-label="Shuffle" aria-pressed={shuffle} onClick={toggleShuffle}>
+          <button className={toggle} aria-label={translateUi("player_bar.shuffle")} aria-pressed={shuffle} onClick={toggleShuffle}>
             <ShuffleIcon size={28} />
           </button>
           <div className="flex items-center gap-1.5">
-            <button className={transport} disabled={!hasTrack} aria-label="Previous" onClick={previous}>
+            <button className={transport} disabled={!hasTrack} aria-label={translateUi("player_bar.previous")} onClick={previous}>
               <BackwardIcon size={26} />
             </button>
-            <button className={transport} disabled={!hasTrack} aria-label={playing ? 'Pause' : 'Play'} onClick={togglePlay}>
+            <button className={transport} disabled={!hasTrack} aria-label={playing ? translateUi('music.pause') : translateUi('music.play')} onClick={togglePlay}>
               {playing ? <PauseIcon size={28} /> : <PlayIcon size={28} />}
             </button>
-            <button className={transport} disabled={!hasTrack || !hasNext} aria-label="Next" onClick={next}>
+            <button className={transport} disabled={!hasTrack || !hasNext} aria-label={translateUi("player_bar.next")} onClick={next}>
               <ForwardIcon size={26} />
             </button>
           </div>
           <button
             className={toggle}
-            aria-label={repeat === 'one' ? 'Repeat one' : repeat === 'all' ? 'Repeat all' : 'Repeat'}
+            aria-label={repeat === 'one' ? translateUi("shell_playerbar_repeat_one") : repeat === 'all' ? translateUi("shell_playerbar_repeat_all") : translateUi('music.repeat')}
             aria-pressed={repeat !== 'off'}
             onClick={cycleRepeat}
           >
@@ -96,12 +97,12 @@ export function PlayerBar() {
           <FavoriteButton videoId={videoId} className={fading} />
           {track && <TrackMenu track={track} className={fading} placement="above-end" />}
           {/* Always here: the panel itself says whether this track has lyrics, and from where. */}
-          <button className={fading} aria-label="Lyrics" aria-pressed={sidePanel === 'lyrics'} onClick={() => toggleSidePanel('lyrics')}>
+          <button className={fading} aria-label={translateUi("player_bar.lyrics")} aria-pressed={sidePanel === 'lyrics'} onClick={() => toggleSidePanel('lyrics')}>
             {sidePanel === 'lyrics' ? <LyricsActiveIcon size={18} /> : <LyricsIcon size={18} />}
           </button>
           <button
             className={fading}
-            aria-label="Up Next"
+            aria-label={translateUi("player_bar.up_next")}
             aria-pressed={sidePanel === 'up-next'}
             onClick={() => toggleSidePanel('up-next')}
           >

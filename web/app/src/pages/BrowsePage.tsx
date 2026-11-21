@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useParams, useSearchParams } from 'react-router';
 import { PageHeader } from '@/components/PageHeader';
 import { CircleLockup, SquareLockup, VideoLockup } from '@/components/music/Lockups';
@@ -25,7 +26,7 @@ export default function BrowsePage() {
   return (
     <>
       <PageHeader title={title} />
-      {empty && <EmptyState title="Nothing here yet" />}
+      {empty && <EmptyState title={translateUi("browse_page.nothing_here_yet")} />}
       {page.grid.length > 0 && (
         <ul className={seeAllGrid} data-wide={page.grid.every((i) => i.wide) || undefined}>
           {page.grid.map((item, i) => (

@@ -1,0 +1,145 @@
+{
+  "extensionName": {
+    "message": "Auden"
+  },
+  "extensionDescription": {
+    "message": "เชื่อมต่อโปรแกรมเล่นเว็บ Auden กับ YouTube Music, Spotify และ Discord"
+  },
+  "openAuden": {
+    "message": "เปิด Auden"
+  },
+  "checking": {
+    "message": "กำลังตรวจสอบ…"
+  },
+  "notSignedIn": {
+    "message": "ยังไม่ได้ลงชื่อเข้าใช้ในเบราว์เซอร์นี้"
+  },
+  "signIn": {
+    "message": "ลงชื่อเข้าใช้"
+  },
+  "couldNotReadAccount": {
+    "message": "อ่านบัญชีของคุณไม่ได้"
+  },
+  "youtubeSessionRejected": {
+    "message": "YouTube ไม่ยอมรับเซสชันของเบราว์เซอร์นี้ โปรดลงชื่อเข้าใช้อีกครั้ง"
+  },
+  "youtubeAccountMissing": {
+    "message": "ไม่พบบัญชี Google ที่ลงชื่อเข้าใช้"
+  },
+  "youtubeAccountUnavailable": {
+    "message": "YouTube ไม่พบบัญชีในเซสชันของเบราว์เซอร์นี้"
+  },
+  "disconnected": {
+    "message": "ยกเลิกการเชื่อมต่อแล้ว"
+  },
+  "retry": {
+    "message": "ลองอีกครั้ง"
+  },
+  "connect": {
+    "message": "เชื่อมต่อ"
+  },
+  "disconnect": {
+    "message": "ยกเลิกการเชื่อมต่อ"
+  },
+  "spotifySignInExpired": {
+    "message": "เซสชัน Spotify หมดอายุแล้ว โปรดลงชื่อเข้าใช้อีกครั้ง"
+  },
+  "spotifyRateLimited": {
+    "message": "Spotify จำกัดคำขอชั่วคราว โปรดลองอีกครั้งในอีกสักครู่"
+  },
+  "spotifyConnectionFailed": {
+    "message": "เชื่อมต่อ Spotify ไม่ได้ ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง"
+  },
+  "spotifySignInFailed": {
+    "message": "ลงชื่อเข้าใช้ Spotify ไม่สำเร็จ โปรดลองอีกครั้ง"
+  },
+  "stopUsingAccountYouTube": {
+    "message": "หยุดใช้บัญชีนี้ใน Auden คุณยังคงลงชื่อเข้าใช้ YouTube อยู่"
+  },
+  "stopUsingAccountSpotify": {
+    "message": "หยุดใช้บัญชีนี้ใน Auden คุณยังคงลงชื่อเข้าใช้ Spotify อยู่"
+  },
+  "notConnected": {
+    "message": "ไม่ได้เชื่อมต่อ"
+  },
+  "showingWhatYouPlay": {
+    "message": "กำลังแสดงสิ่งที่คุณกำลังฟัง"
+  },
+  "connecting": {
+    "message": "กำลังเชื่อมต่อ…"
+  },
+  "couldNotConnect": {
+    "message": "เชื่อมต่อไม่ได้"
+  },
+  "onWaitingForSong": {
+    "message": "เปิดอยู่ กำลังรอเพลง"
+  },
+  "presenceOff": {
+    "message": "ปิดสถานะการฟัง"
+  },
+  "forgetDiscordAccount": {
+    "message": "ลืมบัญชี Discord นี้"
+  },
+  "couldNotReadSession": {
+    "message": "อ่านเซสชันไม่ได้"
+  },
+  "allowLyricSourcesTitle": {
+    "message": "Auden: แหล่งเนื้อเพลง"
+  },
+  "allowLyricSourcesHeading": {
+    "message": "อนุญาตแหล่งเนื้อเพลง"
+  },
+  "allowLyricSourcesExplanation": {
+    "message": "ผู้ให้บริการเนื้อเพลงเหล่านี้ไม่อนุญาตให้หน้าเว็บเรียกใช้โดยตรง Auden จึงส่งคำขอผ่านส่วนขยาย เบราว์เซอร์จะขอให้คุณยืนยัน"
+  },
+  "allow": {
+    "message": "อนุญาต"
+  },
+  "permissionDone": {
+    "message": "เสร็จแล้ว คุณปิดแท็บนี้แล้วกลับไปที่ Auden ได้"
+  },
+  "permissionDenied": {
+    "message": "ไม่ได้รับอนุญาต แหล่งเนื้อเพลงเหล่านั้นจะยังปิดอยู่"
+  },
+  "discordConnectTitle": {
+    "message": "Auden: เชื่อมต่อ Discord"
+  },
+  "discordConnectHeading": {
+    "message": "แสดงสิ่งที่คุณกำลังฟังบน Discord"
+  },
+  "discordConnectExplanation": {
+    "message": "Auden อ่านเซสชัน Discord ของคุณจากแท็บ discord.com และเก็บไว้ในส่วนขยายนี้ โปรแกรมเล่นเว็บจะไม่เห็นข้อมูลนี้"
+  },
+  "discordTokenWarning": {
+    "message": "วิธีนี้ใช้โทเค็นบัญชีของคุณเอง ซึ่งขัดกับข้อกำหนดของ Discord คุณยอมรับความเสี่ยงเอง"
+  },
+  "connectDiscord": {
+    "message": "เชื่อมต่อ Discord"
+  },
+  "discordPermissionDenied": {
+    "message": "ไม่ได้รับอนุญาต Discord จะยังปิดอยู่"
+  },
+  "discordConnected": {
+    "message": "เชื่อมต่อในชื่อ $USER$ แล้ว คุณปิดแท็บนี้ได้",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "discordSignInProgress": {
+    "message": "ลงชื่อเข้าใช้ Discord ในแท็บที่เปิดขึ้น หน้านี้จะตรวจพบเอง"
+  },
+  "discordReadProgress": {
+    "message": "กำลังอ่านเซสชัน Discord…"
+  },
+  "discordSessionMissing": {
+    "message": "ไม่พบเซสชัน Discord โปรดลงชื่อเข้าใช้ที่ discord.com แล้วลองอีกครั้ง"
+  },
+  "discordTokenRejected": {
+    "message": "Discord ปฏิเสธโทเค็น โปรดเชื่อมต่อบัญชีอีกครั้ง"
+  },
+  "discordConnectionError": {
+    "message": "เชื่อมต่อ Discord ไม่ได้ โปรดลองอีกครั้ง"
+  }
+}

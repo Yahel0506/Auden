@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 /**
  * The boxed "E" (report §2), 4px after the title. Drawn as one shape with the
  * letter cut out of it, so the E sits exactly in the middle at any size and
@@ -11,7 +12,7 @@ export function ExplicitBadge({ size = 12 }: { size?: number }) {
       height={size}
       viewBox="0 0 12 12"
       role="img"
-      aria-label="Explicit"
+      aria-label={translateUi("explicit_badge.explicit")}
     >
       <path
         fill="currentColor"

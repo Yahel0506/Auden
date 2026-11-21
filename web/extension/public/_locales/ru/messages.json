@@ -1,0 +1,145 @@
+{
+  "extensionName": {
+    "message": "Auden"
+  },
+  "extensionDescription": {
+    "message": "Подключает веб-плеер Auden к YouTube Music, Spotify и Discord."
+  },
+  "openAuden": {
+    "message": "Открыть Auden"
+  },
+  "checking": {
+    "message": "Проверка…"
+  },
+  "notSignedIn": {
+    "message": "В этом браузере вход не выполнен"
+  },
+  "signIn": {
+    "message": "Войти"
+  },
+  "couldNotReadAccount": {
+    "message": "Не удалось прочитать аккаунт"
+  },
+  "youtubeSessionRejected": {
+    "message": "YouTube не принял сеанс этого браузера. Войдите снова."
+  },
+  "youtubeAccountMissing": {
+    "message": "Не найден аккаунт Google с выполненным входом."
+  },
+  "youtubeAccountUnavailable": {
+    "message": "В этом сеансе браузера YouTube не нашёл аккаунт."
+  },
+  "disconnected": {
+    "message": "Отключено"
+  },
+  "retry": {
+    "message": "Повторить"
+  },
+  "connect": {
+    "message": "Подключить"
+  },
+  "disconnect": {
+    "message": "Отключить"
+  },
+  "spotifySignInExpired": {
+    "message": "Срок действия сеанса Spotify истёк. Войдите снова."
+  },
+  "spotifyRateLimited": {
+    "message": "Spotify временно ограничил запросы. Повторите попытку позже."
+  },
+  "spotifyConnectionFailed": {
+    "message": "Не удалось подключиться к Spotify. Проверьте подключение и повторите попытку."
+  },
+  "spotifySignInFailed": {
+    "message": "Не удалось войти в Spotify. Повторите попытку."
+  },
+  "stopUsingAccountYouTube": {
+    "message": "Отключить этот аккаунт в Auden. Вы останетесь в аккаунте YouTube."
+  },
+  "stopUsingAccountSpotify": {
+    "message": "Отключить этот аккаунт в Auden. Вы останетесь в аккаунте Spotify."
+  },
+  "notConnected": {
+    "message": "Не подключено"
+  },
+  "showingWhatYouPlay": {
+    "message": "Показывать, что вы слушаете"
+  },
+  "connecting": {
+    "message": "Подключение…"
+  },
+  "couldNotConnect": {
+    "message": "Не удалось подключиться"
+  },
+  "onWaitingForSong": {
+    "message": "Включено, ожидание песни"
+  },
+  "presenceOff": {
+    "message": "Статус отключён"
+  },
+  "forgetDiscordAccount": {
+    "message": "Удалить аккаунт Discord."
+  },
+  "couldNotReadSession": {
+    "message": "Не удалось прочитать сеанс"
+  },
+  "allowLyricSourcesTitle": {
+    "message": "Auden: источники текстов песен"
+  },
+  "allowLyricSourcesHeading": {
+    "message": "Разрешить источники текстов"
+  },
+  "allowLyricSourcesExplanation": {
+    "message": "Эти источники текстов не позволяют веб-страницам обращаться к ним напрямую, поэтому Auden использует расширение. Браузер попросит вас подтвердить действие."
+  },
+  "allow": {
+    "message": "Разрешить"
+  },
+  "permissionDone": {
+    "message": "Готово. Закройте эту вкладку и вернитесь в Auden."
+  },
+  "permissionDenied": {
+    "message": "Доступ запрещён. Эти источники останутся отключёнными."
+  },
+  "discordConnectTitle": {
+    "message": "Auden: подключение Discord"
+  },
+  "discordConnectHeading": {
+    "message": "Показывать, что вы слушаете, в Discord"
+  },
+  "discordConnectExplanation": {
+    "message": "Auden читает сеанс Discord во вкладке discord.com и хранит его в этом расширении. Веб-плеер его не видит."
+  },
+  "discordTokenWarning": {
+    "message": "Используется токен вашего аккаунта, что запрещено правилами Discord. Используйте на свой риск."
+  },
+  "connectDiscord": {
+    "message": "Подключить Discord"
+  },
+  "discordPermissionDenied": {
+    "message": "Доступ запрещён. Discord останется отключённым."
+  },
+  "discordConnected": {
+    "message": "Подключено как $USER$. Эту вкладку можно закрыть.",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "discordSignInProgress": {
+    "message": "Войдите в Discord в открывшейся вкладке. Эта страница заметит вход."
+  },
+  "discordReadProgress": {
+    "message": "Чтение сеанса Discord…"
+  },
+  "discordSessionMissing": {
+    "message": "Сеанс Discord не найден. Войдите на discord.com и повторите попытку."
+  },
+  "discordTokenRejected": {
+    "message": "Discord отклонил токен. Подключите аккаунт снова."
+  },
+  "discordConnectionError": {
+    "message": "Не удалось подключиться к Discord. Повторите попытку."
+  }
+}

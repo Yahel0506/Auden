@@ -1,5 +1,7 @@
 package com.music.bitchord.ui.tv
 
+import androidx.compose.ui.res.stringResource
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -42,6 +44,7 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.annotation.StringRes
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
@@ -84,12 +87,12 @@ import com.music.bitchord.ui.tv.theme.TvThemeColors
 import kotlinx.coroutines.delay
 
 /** The tabs of the top bar. Now Playing is a tab too, but it opens the player rather than a page. */
-enum class TvDestination(val label: String) {
-    HOME("Home"),
-    EXPLORE("Explore"),
-    LIBRARY("Library"),
-    SEARCH("Search"),
-    SETTINGS("Settings"),
+enum class TvDestination(@StringRes val label: Int) {
+    HOME(R.string.home),
+    EXPLORE(R.string.explore),
+    LIBRARY(R.string.library),
+    SEARCH(R.string.search),
+    SETTINGS(R.string.settings),
 }
 
 /** A pushed album, playlist or artist page. */
@@ -594,7 +597,7 @@ private fun TvTopBar(
                     }
                 }
                 TvTabPill(
-                    label = tab.label,
+                    label = stringResource(tab.label),
                     selected = destination == tab,
                     interactionSource = interaction,
                     onClick = { onSelect(tab) },
@@ -602,21 +605,21 @@ private fun TvTopBar(
                 )
             }
             TvTabPill(
-                label = "Now Playing",
+                label = stringResource(R.string.now_playing),
                 selected = false,
                 modifier = downToContent,
                 onClick = onOpenNowPlaying,
             )
             TvTabIcon(
                 icon = Icons.Rounded.Search,
-                contentDescription = "Search",
+                contentDescription = stringResource(R.string.search),
                 selected = destination == TvDestination.SEARCH,
                 onClick = { onSelect(TvDestination.SEARCH) },
                 modifier = downToContent.then(if (destination == TvDestination.SEARCH) Modifier.focusRequester(tabFocus) else Modifier),
             )
             TvTabIcon(
                 icon = Icons.Rounded.Settings,
-                contentDescription = "Settings",
+                contentDescription = stringResource(R.string.settings),
                 selected = destination == TvDestination.SETTINGS,
                 onClick = { onSelect(TvDestination.SETTINGS) },
                 modifier = downToContent.then(if (destination == TvDestination.SETTINGS) Modifier.focusRequester(tabFocus) else Modifier),
@@ -644,7 +647,7 @@ private fun TvAvatarButton(
         if (imageUrl.isNullOrBlank()) {
             Icon(
                 imageVector = Icons.Rounded.Person,
-                contentDescription = "Account",
+                contentDescription = stringResource(R.string.tv_account),
                 tint = TvGlass.TextSecondary,
                 modifier = Modifier.size(18.dp),
             )

@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { ArrowUpRight, ChevronsUpDown } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { Menu, MenuHeader, MenuItem, MenuSeparator } from '@/components/Menu';
@@ -41,16 +42,12 @@ export function AccountButton() {
 
   if (!auth.browserSignedIn) {
     return (
-      <a className={pill} href={SIGN_IN_URL} target="_blank" rel="noreferrer">
-        Sign In
-      </a>
+      <a className={pill} href={SIGN_IN_URL} target="_blank" rel="noreferrer">{translateUi("account_button.sign_in")}</a>
     );
   }
   if (!auth.connected) {
     return (
-      <button className={pill} onClick={() => connect.mutate(true)} disabled={connect.isPending}>
-        Connect YouTube Music
-      </button>
+      <button className={pill} onClick={() => connect.mutate(true)} disabled={connect.isPending}>{translateUi("account_button.connect_youtube_music")}</button>
     );
   }
   if (!auth.active) {
@@ -58,11 +55,11 @@ export function AccountButton() {
     return (
       <button
         className={pill}
-        title={auth.problem ?? undefined}
+        title={auth.problem ? translateUi('account_button.account_status_details_in_extension') : undefined}
         onClick={() => refresh.mutate()}
         disabled={refresh.isPending}
       >
-        {refresh.isPending ? 'Reading account…' : 'Retry YouTube Sign-In'}
+        {refresh.isPending ? translateUi("shell_accountbutton_reading_account") : translateUi("shell_accountbutton_retry_youtube_sign_in")}
       </button>
     );
   }
@@ -83,7 +80,7 @@ export function AccountButton() {
         {multiple && <ChevronsUpDown size={14} strokeWidth={2} className="flex-none text-secondary" />}
       </button>
       {anchor && (
-        <Menu anchor={anchor} placement="above-start" onClose={close} label="Account">
+        <Menu anchor={anchor} placement="above-start" onClose={close} label={translateUi("account_button.account")}>
           {auth.accounts.map((account) => (
             <div key={account.authUser} role="group" aria-label={account.email ?? account.name}>
               <MenuHeader>{account.email ?? account.name}</MenuHeader>
@@ -110,18 +107,14 @@ export function AccountButton() {
               window.open(SIGN_IN_URL.replace('ServiceLogin', 'AddSession'), '_blank', 'noreferrer');
             }}
             trailing={<ArrowUpRight size={13} />}
-          >
-            Add Account
-          </MenuItem>
+          >{translateUi("account_button.add_account")}</MenuItem>
           <MenuItem
             destructive
             onSelect={() => {
               close();
               connect.mutate(false);
             }}
-          >
-            Disconnect from Auden
-          </MenuItem>
+          >{translateUi("account_button.disconnect_from_auden")}</MenuItem>
         </Menu>
       )}
     </>

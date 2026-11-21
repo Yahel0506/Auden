@@ -1,0 +1,145 @@
+{
+  "extensionName": {
+    "message": "Auden"
+  },
+  "extensionDescription": {
+    "message": "Kết nối trình phát web Auden với YouTube Music, Spotify và Discord."
+  },
+  "openAuden": {
+    "message": "Mở Auden"
+  },
+  "checking": {
+    "message": "Đang kiểm tra…"
+  },
+  "notSignedIn": {
+    "message": "Chưa đăng nhập trong trình duyệt này"
+  },
+  "signIn": {
+    "message": "Đăng nhập"
+  },
+  "couldNotReadAccount": {
+    "message": "Không thể đọc tài khoản"
+  },
+  "youtubeSessionRejected": {
+    "message": "YouTube không chấp nhận phiên trình duyệt này. Hãy đăng nhập lại."
+  },
+  "youtubeAccountMissing": {
+    "message": "Không tìm thấy tài khoản Google nào đã đăng nhập."
+  },
+  "youtubeAccountUnavailable": {
+    "message": "YouTube không tìm thấy tài khoản trong phiên trình duyệt này."
+  },
+  "disconnected": {
+    "message": "Đã ngắt kết nối"
+  },
+  "retry": {
+    "message": "Thử lại"
+  },
+  "connect": {
+    "message": "Kết nối"
+  },
+  "disconnect": {
+    "message": "Ngắt kết nối"
+  },
+  "spotifySignInExpired": {
+    "message": "Phiên Spotify đã hết hạn. Hãy đăng nhập lại."
+  },
+  "spotifyRateLimited": {
+    "message": "Spotify đang tạm thời giới hạn yêu cầu. Hãy thử lại sau ít phút."
+  },
+  "spotifyConnectionFailed": {
+    "message": "Không thể kết nối với Spotify. Hãy kiểm tra kết nối rồi thử lại."
+  },
+  "spotifySignInFailed": {
+    "message": "Spotify không thể đăng nhập. Hãy thử lại."
+  },
+  "stopUsingAccountYouTube": {
+    "message": "Ngừng dùng tài khoản này trong Auden. Bạn vẫn đăng nhập vào YouTube."
+  },
+  "stopUsingAccountSpotify": {
+    "message": "Ngừng dùng tài khoản này trong Auden. Bạn vẫn đăng nhập vào Spotify."
+  },
+  "notConnected": {
+    "message": "Chưa kết nối"
+  },
+  "showingWhatYouPlay": {
+    "message": "Đang hiển thị nội dung bạn nghe"
+  },
+  "connecting": {
+    "message": "Đang kết nối…"
+  },
+  "couldNotConnect": {
+    "message": "Không thể kết nối"
+  },
+  "onWaitingForSong": {
+    "message": "Đã bật, đang chờ bài hát"
+  },
+  "presenceOff": {
+    "message": "Đã tắt trạng thái hoạt động"
+  },
+  "forgetDiscordAccount": {
+    "message": "Xóa tài khoản Discord này."
+  },
+  "couldNotReadSession": {
+    "message": "Không thể đọc phiên đăng nhập"
+  },
+  "allowLyricSourcesTitle": {
+    "message": "Auden: nguồn lời bài hát"
+  },
+  "allowLyricSourcesHeading": {
+    "message": "Cho phép nguồn lời bài hát"
+  },
+  "allowLyricSourcesExplanation": {
+    "message": "Các nhà cung cấp lời bài hát này không cho trang web gửi yêu cầu trực tiếp, nên Auden sẽ dùng tiện ích mở rộng. Trình duyệt sẽ yêu cầu bạn xác nhận."
+  },
+  "allow": {
+    "message": "Cho phép"
+  },
+  "permissionDone": {
+    "message": "Đã xong. Bạn có thể đóng thẻ này và quay lại Auden."
+  },
+  "permissionDenied": {
+    "message": "Không được cho phép. Các nguồn đó sẽ vẫn tắt."
+  },
+  "discordConnectTitle": {
+    "message": "Auden: kết nối Discord"
+  },
+  "discordConnectHeading": {
+    "message": "Hiển thị nội dung bạn nghe trên Discord"
+  },
+  "discordConnectExplanation": {
+    "message": "Auden đọc phiên Discord từ thẻ discord.com và lưu trong tiện ích mở rộng này. Trình phát web không thể xem phiên đó."
+  },
+  "discordTokenWarning": {
+    "message": "Việc này sử dụng mã truy cập của chính tài khoản bạn, trái với điều khoản của Discord. Bạn tự chịu rủi ro khi sử dụng."
+  },
+  "connectDiscord": {
+    "message": "Kết nối Discord"
+  },
+  "discordPermissionDenied": {
+    "message": "Không được cho phép. Discord sẽ vẫn tắt."
+  },
+  "discordConnected": {
+    "message": "Đã kết nối với tư cách $USER$. Bạn có thể đóng thẻ này.",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "discordSignInProgress": {
+    "message": "Đăng nhập Discord trong thẻ vừa mở. Trang này sẽ tự nhận biết."
+  },
+  "discordReadProgress": {
+    "message": "Đang đọc phiên Discord…"
+  },
+  "discordSessionMissing": {
+    "message": "Không tìm thấy phiên Discord. Hãy đăng nhập tại discord.com rồi thử lại."
+  },
+  "discordTokenRejected": {
+    "message": "Discord đã từ chối mã truy cập. Hãy kết nối lại tài khoản."
+  },
+  "discordConnectionError": {
+    "message": "Không thể kết nối với Discord. Hãy thử lại."
+  }
+}

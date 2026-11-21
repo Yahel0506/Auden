@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="connecting">Verbindung wird hergestellt …</string>
+    <string name="no_phone_title">Smartphone nicht verbunden</string>
+    <string name="no_phone_body">Öffne Auden auf deinem Smartphone und halte es in der Nähe deiner Uhr.</string>
+    <string name="retry">Erneut versuchen</string>
+    <string name="nothing_playing">Keine Wiedergabe</string>
+    <string name="nothing_playing_body">Starte die Wiedergabe in Auden auf deinem Smartphone.</string>
+    <string name="resume">Fortsetzen</string>
+    <string name="up_next">Als Nächstes</string>
+    <string name="queue_empty">Warteschlange leer</string>
+    <string name="loading">Wird geladen …</string>
+    <string name="playing_now">Aktuelle Wiedergabe</string>
+    <string name="more">Mehr</string>
+    <string name="shuffle">Zufallswiedergabe</string>
+    <string name="repeat">Wiederholen</string>
+    <string name="repeat_off">Aus</string>
+    <string name="repeat_all">Alle</string>
+    <string name="repeat_one">Ein Song</string>
+    <string name="on">An</string>
+    <string name="off">Aus</string>
+    <string name="love">Gefällt mir</string>
+    <string name="loved">In den Favoriten</string>
+    <string name="volume">Lautstärke</string>
+    <string name="on_phone">Auf dem Smartphone</string>
+    <string name="play">Wiedergabe</string>
+    <string name="pause">Pause</string>
+    <string name="next">Weiter</string>
+    <string name="previous">Zurück</string>
+    <string name="output">Audioausgabe</string>
+    <string name="this_watch">Diese Uhr</string>
+    <string name="watch_speaker">Uhrlautsprecher oder Kopfhörer</string>
+    <string name="on_phone_output">Auf dem Smartphone</string>
+    <string name="phone_speaker">Smartphone-Lautsprecher</string>
+    <string name="wired_headphones">Kabelgebundene Kopfhörer</string>
+    <string name="usb_audio">USB-Audio</string>
+    <string name="hdmi">HDMI</string>
+    <string name="other_output">Andere Ausgabe</string>
+    <string name="moving_to_watch">Wechsel zur Uhr …</string>
+    <string name="update_channel">Updates</string>
+    <string name="update_ready">Auden-Update verfügbar</string>
+    <string name="update_tap">Tippe, um das Update vom Smartphone aus zu installieren.</string>
+</resources>

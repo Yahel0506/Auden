@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useCallback, useState } from 'react';
 import { Menu, MenuHeader, MenuItem, MenuSeparator } from '@/components/Menu';
 import { qualityLabel, setVideoQuality, useVideo } from '@/state/video';
@@ -45,16 +46,14 @@ export function VideoQuality({ className = '' }: { className?: string }) {
         </span>
       </button>
       {anchor && (
-        <Menu anchor={anchor} placement="below-end" onClose={close} label="Video quality">
+        <Menu anchor={anchor} placement="below-end" onClose={close} label={translateUi("video_quality.video_quality")}>
           <MenuItem
             checked={quality === 'auto'}
             trailing={quality === 'auto' && selected ? qualityLabel(selected) : undefined}
             onSelect={() => (close(), setVideoQuality('auto'))}
-          >
-            Auto
-          </MenuItem>
+          >{translateUi("video_quality.auto")}</MenuItem>
           <MenuSeparator />
-          <MenuHeader>Quality</MenuHeader>
+          <MenuHeader>{translateUi("video_quality.quality")}</MenuHeader>
           {heights.map((height) => (
             <MenuItem
               key={height}

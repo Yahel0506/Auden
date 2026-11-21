@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { StarFilledIcon, StarIcon } from '@/components/icons/Transport';
 import { isSyntheticId } from '@/playback/source';
 import { useLikeStatus, useSetLiked, useSignedIn } from '@/data/music/queries';
@@ -22,7 +23,7 @@ export function FavoriteButton({ videoId, className, size = 18 }: FavoriteButton
   return (
     <button
       className={className}
-      aria-label={liked ? 'Unfavorite' : 'Favorite'}
+      aria-label={liked ? translateUi('music.unfavorite') : translateUi('music.favorite')}
       aria-pressed={liked}
       disabled={status.isPending}
       onClick={(event) => {

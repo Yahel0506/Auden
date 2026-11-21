@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useSearchParams } from 'react-router';
 import { PrefetchLink } from '@/components/PrefetchLink';
 import { Artwork } from '@/components/music/Artwork';
@@ -14,15 +15,8 @@ import { SkeletonBlock, SkeletonLine } from '@/components/Skeleton';
 import { ShelfSkeleton } from '@/skeletons/ShelfSkeleton';
 
 const KIND_LABEL: Record<MusicItem['kind'], string> = {
-  song: 'Song',
-  video: 'Video',
-  album: 'Album',
-  playlist: 'Playlist',
-  'spotify-playlist': 'Spotify Playlist',
-  artist: 'Artist',
-  episode: 'Episode',
-  podcast: 'Podcast',
-  unknown: '',
+  song: 'search_page.kind_song', video: 'search_page.kind_video', album: 'search_page.kind_album', playlist: 'search_page.kind_playlist',
+  'spotify-playlist': 'search_page.kind_spotify_playlist', artist: 'search_page.kind_artist', episode: 'search_page.kind_episode', podcast: 'search_page.kind_podcast', unknown: '',
 };
 
 /** Apple's result shelves, in its order, from results grouped by kind. */
@@ -30,11 +24,11 @@ function shelvesFor(results: SearchResults): Shelf[] {
   const shelf = (title: string, items: MusicItem[], layout: Shelf['layout']): Shelf | null =>
     items.length ? { title, strapline: null, layout, items, seeAll: null } : null;
   return [
-    shelf('Artists', results.artists, 'circle'),
-    shelf('Albums', results.albums, 'square'),
-    shelf('Songs', results.songs, 'tracks'),
-    shelf('Playlists', results.playlists, 'square'),
-    shelf('Videos', results.videos, 'video'),
+    shelf(translateUi('search_page.artists'), results.artists, 'circle'),
+    shelf(translateUi('search_page.albums'), results.albums, 'square'),
+    shelf(translateUi('search_page.songs'), results.songs, 'tracks'),
+    shelf(translateUi('search_page.playlists'), results.playlists, 'square'),
+    shelf(translateUi('search_page.videos'), results.videos, 'video'),
   ].filter((s): s is Shelf => !!s);
 }
 
@@ -63,7 +57,7 @@ function TopResult({ item }: { item: MusicItem }) {
       <div className={playable ? `${topText} pr-9` : topText}>
         <span className="line-clamp-2 type-title-3">{item.title}</span>
         <span className="truncate type-callout text-secondary">
-          {[KIND_LABEL[item.kind], item.kind === 'artist' ? null : item.artists.map((a) => a.name).join(', ')].filter(Boolean).join(' · ')}
+          {[KIND_LABEL[item.kind] ? translateUi(KIND_LABEL[item.kind] as keyof typeof import('@/i18n.en.json')) : '', item.kind === 'artist' ? null : item.artists.map((a) => a.name).join(', ')].filter(Boolean).join(' · ')}
         </span>
       </div>
     </>
@@ -114,13 +108,13 @@ function Results({ query }: { query: string }) {
   const results = search.data;
   const shelves = shelvesFor(results);
   if (!results.top.length && !shelves.length) {
-    return <EmptyState title="No Results" detail={`Try a new search for something other than “${query}”.`} />;
+    return <EmptyState title={translateUi("search_page.no_results")} detail={translateUi('search_page.try_a_different_query', { query })} />;
   }
   return (
     <>
       {results.top.length > 0 && (
-        <section aria-label="Top Results">
-          <h2 className={sectionTitle}>Top Results</h2>
+        <section aria-label={translateUi("search_page.top_results")}>
+          <h2 className={sectionTitle}>{translateUi("search_page.top_results")}</h2>
           <div className={topGrid}>
             {results.top.map((item) => (
               <TopResult key={item.id} item={item} />
@@ -145,7 +139,7 @@ function Landing() {
       </div>
     );
   }
-  return <CategoryTiles groups={categories.data.map((g) => ({ ...g, title: g.title || 'Browse Categories' }))} />;
+  return <CategoryTiles groups={categories.data.map((g) => ({ ...g, title: g.title || translateUi('search_page.browse_categories') }))} />;
 }
 
 /** Search (report §6): a sticky bar with the field, then categories or grouped results. */

@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { AudioLines } from 'lucide-react';
 import { BackwardIcon, ForwardIcon, PauseIcon, PlayIcon } from '@/components/icons/Transport';
 import { usePlayer } from '@/state/player';
@@ -39,7 +40,7 @@ export function DjScreen() {
     <div className="pointer-events-none absolute inset-0 z-0 flex flex-col items-center px-6 pt-[clamp(20px,5vh,40px)] pb-16 text-white" data-dj-screen>
       <div className="flex items-center gap-2 text-white/80">
         <AudioLines size={18} aria-hidden="true" />
-        <span className="type-[700_15px/20px]">Auden DJ</span>
+        <span className="type-[700_15px/20px]">{translateUi("dj_screen.auden_dj")}</span>
       </div>
       <div className="relative mt-[clamp(8px,2vh,18px)] aspect-square shrink-0 w-[min(88vw,calc(100dvh-360px),560px)] max-md:w-[min(88vw,calc(100dvh-340px),420px)]">
         <DjRing className="absolute inset-0 size-full" />
@@ -53,18 +54,18 @@ export function DjScreen() {
       </div>
       <div className="flex-1" />
       <div className="pointer-events-auto flex h-14 w-[min(100%,260px)] items-center justify-between">
-        <button className={`${transportButton} size-12 text-white`} disabled aria-label="Previous">
+        <button className={`${transportButton} size-12 text-white`} disabled aria-label={translateUi("dj_screen.previous")}>
           <BackwardIcon size={40} />
         </button>
         <button
           className={`${transportButton} size-14 text-white`}
           disabled={!hasTrack}
-          aria-label={playing ? 'Pause' : 'Play'}
+          aria-label={playing ? translateUi('dj_ui_pause') : translateUi('dj_ui_play')}
           onClick={togglePlay}
         >
           {playing ? <PauseIcon size={48} /> : <PlayIcon size={48} />}
         </button>
-        <button className={`${transportButton} size-12 text-white`} disabled={!hasTrack || loading} aria-label="Next" onClick={next}>
+        <button className={`${transportButton} size-12 text-white`} disabled={!hasTrack || loading} aria-label={translateUi("dj_screen.next")} onClick={next}>
           <ForwardIcon size={40} />
         </button>
       </div>

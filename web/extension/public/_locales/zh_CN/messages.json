@@ -1,0 +1,145 @@
+{
+  "extensionName": {
+    "message": "Auden"
+  },
+  "extensionDescription": {
+    "message": "将 Auden 网页播放器连接到 YouTube Music、Spotify 和 Discord。"
+  },
+  "openAuden": {
+    "message": "打开 Auden"
+  },
+  "checking": {
+    "message": "正在检查…"
+  },
+  "notSignedIn": {
+    "message": "此浏览器尚未登录"
+  },
+  "signIn": {
+    "message": "登录"
+  },
+  "couldNotReadAccount": {
+    "message": "无法读取你的账号"
+  },
+  "youtubeSessionRejected": {
+    "message": "YouTube 不接受此浏览器会话。请重新登录。"
+  },
+  "youtubeAccountMissing": {
+    "message": "未找到已登录的 Google 账号。"
+  },
+  "youtubeAccountUnavailable": {
+    "message": "YouTube 无法在此浏览器会话中找到账号。"
+  },
+  "disconnected": {
+    "message": "已断开连接"
+  },
+  "retry": {
+    "message": "重试"
+  },
+  "connect": {
+    "message": "连接"
+  },
+  "disconnect": {
+    "message": "断开连接"
+  },
+  "spotifySignInExpired": {
+    "message": "Spotify 会话已过期。请重新登录。"
+  },
+  "spotifyRateLimited": {
+    "message": "Spotify 暂时限制了请求。请稍后重试。"
+  },
+  "spotifyConnectionFailed": {
+    "message": "无法连接到 Spotify。请检查网络连接后重试。"
+  },
+  "spotifySignInFailed": {
+    "message": "无法登录 Spotify。请重试。"
+  },
+  "stopUsingAccountYouTube": {
+    "message": "停止在 Auden 中使用此账号。你仍会保持登录 YouTube。"
+  },
+  "stopUsingAccountSpotify": {
+    "message": "停止在 Auden 中使用此账号。你仍会保持登录 Spotify。"
+  },
+  "notConnected": {
+    "message": "未连接"
+  },
+  "showingWhatYouPlay": {
+    "message": "正在显示你的播放内容"
+  },
+  "connecting": {
+    "message": "正在连接…"
+  },
+  "couldNotConnect": {
+    "message": "无法连接"
+  },
+  "onWaitingForSong": {
+    "message": "已开启，等待歌曲播放"
+  },
+  "presenceOff": {
+    "message": "状态显示已关闭"
+  },
+  "forgetDiscordAccount": {
+    "message": "移除此 Discord 账号。"
+  },
+  "couldNotReadSession": {
+    "message": "无法读取会话"
+  },
+  "allowLyricSourcesTitle": {
+    "message": "Auden：歌词来源"
+  },
+  "allowLyricSourcesHeading": {
+    "message": "允许歌词来源"
+  },
+  "allowLyricSourcesExplanation": {
+    "message": "这些歌词提供方不允许网页直接访问，因此 Auden 会通过扩展程序发起请求。浏览器会询问你是否确认。"
+  },
+  "allow": {
+    "message": "允许"
+  },
+  "permissionDone": {
+    "message": "已完成。你可以关闭此标签页并返回 Auden。"
+  },
+  "permissionDenied": {
+    "message": "未获允许。这些来源将保持关闭。"
+  },
+  "discordConnectTitle": {
+    "message": "Auden：连接 Discord"
+  },
+  "discordConnectHeading": {
+    "message": "在 Discord 上显示你的播放内容"
+  },
+  "discordConnectExplanation": {
+    "message": "Auden 会从 discord.com 标签页读取你的 Discord 会话，并将其保存在此扩展程序中。网页播放器无法读取。"
+  },
+  "discordTokenWarning": {
+    "message": "此操作会使用你账号自己的令牌，这违反 Discord 的服务条款。风险由你自行承担。"
+  },
+  "connectDiscord": {
+    "message": "连接 Discord"
+  },
+  "discordPermissionDenied": {
+    "message": "未获允许。Discord 将保持关闭。"
+  },
+  "discordConnected": {
+    "message": "已连接为 $USER$。你可以关闭此标签页。",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "discordSignInProgress": {
+    "message": "在打开的标签页中登录 Discord。此页面会自动检测。"
+  },
+  "discordReadProgress": {
+    "message": "正在读取你的 Discord 会话…"
+  },
+  "discordSessionMissing": {
+    "message": "未找到 Discord 会话。请在 discord.com 登录后重试。"
+  },
+  "discordTokenRejected": {
+    "message": "Discord 拒绝了此令牌。请重新连接账号。"
+  },
+  "discordConnectionError": {
+    "message": "无法连接到 Discord。请重试。"
+  }
+}

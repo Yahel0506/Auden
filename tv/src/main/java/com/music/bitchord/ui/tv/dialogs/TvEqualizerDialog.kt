@@ -1,5 +1,8 @@
 package com.music.bitchord.ui.tv.dialogs
 
+import androidx.compose.ui.res.stringResource
+import com.music.bitchord.R
+
 import android.view.KeyEvent
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
@@ -119,9 +122,9 @@ fun TvEqualizerDialog(
         )
     }
 
-    TvDialog(title = "Equalizer", width = 512.dp, onDismissRequest = onDismiss) {
+    TvDialog(title = stringResource(R.string.tv_equalizer), width = 512.dp, onDismissRequest = onDismiss) {
         TvListRow(
-            title = "Equalizer",
+            title = stringResource(R.string.tv_equalizer_2),
             value = if (enabled) "On" else "Off",
             modifier = Modifier.tvInitialFocus(),
             onClick = { AppSettings.setEqualizerEnabled(!enabled) },
@@ -164,13 +167,13 @@ fun TvEqualizerDialog(
                 }
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Up and down set a band. Select resets it.",
+                    text = stringResource(R.string.tv_up_and_down_set_a_band),
                     style = TvType.Caption,
                     color = TvGlass.TextTertiary,
                 )
                 Spacer(modifier = Modifier.height(14.dp))
                 TvButton(
-                    text = "Reset All",
+                    text = stringResource(R.string.tv_reset_all),
                     onClick = {
                         AppSettings.setEqualizerBands(List(EqLayout.MANUAL_COUNT) { 0f })
                         AppSettings.setEqualizerPreset(EqualizerPreset.FLAT)

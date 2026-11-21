@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { Maximize2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
@@ -124,7 +125,7 @@ export function Lcd() {
       <button
         // A music video plays here in small, at 16:9.
         className={`group/art relative block h-[34px] overflow-hidden rounded-[6px] bg-joe p-0 transition-[filter,opacity] ${video ? 'w-[60px] bg-black' : 'w-[34px]'}`}
-        aria-label="Open full screen player"
+        aria-label={translateUi("lcd.open_full_screen_player")}
         onClick={() => openFullScreen(true)}
       >
         {nowPlaying.artworkUrl && (
@@ -165,13 +166,13 @@ export function Lcd() {
             {track?.explicit && <ExplicitBadge size={11} />}
           </div>
         ) : (
-          <span className={titleClass}>{status === 'loading' ? 'Loading…' : ''}</span>
+          <span className={titleClass}>{status === 'loading' ? translateUi("shell_lcd_loading") : ''}</span>
         )}
         {status === 'error' ? (
           <span className="truncate type-callout-medium text-key">{error}</span>
         ) : (
           <span className="truncate type-callout-medium text-secondary">
-            {artist ? <Credits videoId={videoId} line={artist} artists={track?.artists ?? []} /> : status === 'loading' ? 'Loading…' : ''}
+            {artist ? <Credits videoId={videoId} line={artist} artists={track?.artists ?? []} /> : status === 'loading' ? translateUi("shell_lcd_loading") : ''}
           </span>
         )}
       </div>

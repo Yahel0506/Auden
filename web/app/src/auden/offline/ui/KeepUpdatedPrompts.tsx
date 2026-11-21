@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useEffect, useState } from 'react';
 import { getOfflineRuntime } from '../runtime';
 import type { Followed, FollowedMap } from '../types';
@@ -28,11 +29,11 @@ export function KeepUpdatedPrompts() {
   const asking = Object.entries(followed).filter((e): e is [string, Followed & { ask: NonNullable<Followed['ask']> }] => !!e[1].ask);
   if (!asking.length) return null;
   return (
-    <section className="mb-3" aria-label="New songs waiting">
+    <section className="mb-3" aria-label={translateUi("keep_updated_prompts.new_songs_waiting")}>
       {asking.map(([key, f]) => (
         <div key={key} className="mb-3 rounded-[12px] bg-quinary px-4 py-3 type-callout">
           <p>
-            <strong>{f.title}</strong> gained {f.ask.ids.length} songs since you saved it. That is a lot to fetch without asking.
+            {translateUi("keep_updated_prompts.gained_songs_since_saved", { title: f.title, count: f.ask.ids.length })}
           </p>
           <p className="mt-2 flex gap-4">
             <button
@@ -42,16 +43,12 @@ export function KeepUpdatedPrompts() {
                 setBusy(key);
                 void import('../keepUpdatedLive').then((m) => m.approveLive(key)).finally(() => setBusy(null));
               }}
-            >
-              Download them
-            </button>
+            >{translateUi("keep_updated_prompts.download_them")}</button>
             <button
               className={button}
               disabled={busy === key}
               onClick={() => void Promise.all([import('../keepUpdated'), import('../keepUpdatedLive')]).then(([k, m]) => k.dismissAsk(m.liveDeps(), key))}
-            >
-              Not now
-            </button>
+            >{translateUi("keep_updated_prompts.not_now")}</button>
           </p>
         </div>
       ))}
@@ -68,19 +65,17 @@ export function FollowedList() {
   const entries = Object.entries(followed);
   if (!entries.length) return null;
   return (
-    <section className="mb-3" aria-label="Playlists kept up to date">
-      <h2 className="mb-2 type-subhead-emphasized uppercase text-secondary">Kept up to date</h2>
+    <section className="mb-3" aria-label={translateUi("keep_updated_prompts.playlists_kept_up_to_date")}>
+      <h2 className="mb-2 type-subhead-emphasized uppercase text-secondary">{translateUi("keep_updated_prompts.kept_up_to_date")}</h2>
       <ul className="rounded-[12px] bg-quinary">
         {entries.map(([key, f]) => (
           <li key={key} className="flex items-center gap-3 px-4 py-2.5 type-callout">
             <span className="min-w-0 flex-1 truncate">{f.title}</span>
-            <span className="text-secondary">{f.toFolder ? 'with folder' : 'offline'}</span>
+            <span className="text-secondary">{translateUi(f.toFolder ? 'keep_updated_prompts.with_folder' : 'keep_updated_prompts.offline')}</span>
             <button
               className={button}
               onClick={() => void Promise.all([import('../keepUpdated'), import('../keepUpdatedLive')]).then(([k, m]) => k.unfollow(m.liveDeps(), key))}
-            >
-              Stop updating
-            </button>
+            >{translateUi("keep_updated_prompts.stop_updating")}</button>
           </li>
         ))}
       </ul>

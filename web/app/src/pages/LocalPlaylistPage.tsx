@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { Artwork } from '@/components/music/Artwork';
@@ -29,9 +30,9 @@ export default function LocalPlaylistPage() {
   const [over, setOver] = useState<number | null>(null);
   const [menu, setMenu] = useState<HTMLElement | null>(null);
 
-  if (!id) return <EmptyState title="Playlist not found" />;
+  if (!id) return <EmptyState title={translateUi("local_playlist_page.playlist_not_found")} />;
   if (playlist.isPending || loading) return null;
-  if (!playlist.data) return <EmptyState title="Playlist not found" detail="It may have been deleted." />;
+  if (!playlist.data) return <EmptyState title={translateUi("local_playlist_page.playlist_not_found")} detail={translateUi("local_playlist_page.it_may_have_been_deleted")} />;
   const title = playlist.data.title;
   const playable = items.flatMap((i) => (i.track ? [i.track] : []));
   const context = { source: { title, type: 'library' as const, id } };
@@ -44,53 +45,41 @@ export default function LocalPlaylistPage() {
           <Artwork src={cover} displayWidth={180} radius="var(--radius-artwork)" eager />
         </div>
         <div className="min-w-0">
-          <p className="type-callout text-secondary">Playlist on this device</p>
+          <p className="type-callout text-secondary">{translateUi("local_playlist_page.playlist_on_this_device")}</p>
           <h1 className="type-header-emphasized truncate">{title}</h1>
           <p className="type-callout text-secondary">
-            {items.length} {items.length === 1 ? 'song' : 'songs'}
-            {playlist.data.sourceId ? ' · saved copy: new songs from the original are added automatically' : ''}
+            {translateUi('playlists_tab.song_count', { count: items.length })}
+            {playlist.data.sourceId ? translateUi("pages_localplaylistpage_saved_copy_new_songs_from") : ''}
           </p>
           <div className="mt-3 flex flex-wrap gap-2.5">
-            <button className={pill} disabled={!playable.length} onClick={() => playList(playable, 0, context)}>
-              Play
-            </button>
-            <button className={pill} disabled={!playable.length} onClick={() => shuffleList(playable, context)}>
-              Shuffle
-            </button>
-            <button className={pill} onClick={() => void renameWithPrompt(id, title)}>
-              Rename
-            </button>
-            <button className={pill} onClick={() => void duplicate(id).then((copy) => copy && navigate(`/local/playlist/${encodeURIComponent(copy)}`))}>
-              Duplicate
-            </button>
+            <button className={pill} disabled={!playable.length} onClick={() => playList(playable, 0, context)}>{translateUi("local_playlist_page.play")}</button>
+            <button className={pill} disabled={!playable.length} onClick={() => shuffleList(playable, context)}>{translateUi("local_playlist_page.shuffle")}</button>
+            <button className={pill} onClick={() => void renameWithPrompt(id, title)}>{translateUi("local_playlist_page.rename")}</button>
+            <button className={pill} onClick={() => void duplicate(id).then((copy) => copy && navigate(`/local/playlist/${encodeURIComponent(copy)}`))}>{translateUi("local_playlist_page.duplicate")}</button>
             {/* Watched for new songs afterwards, when "Keep playlists updated" is on (Settings > Offline copies). */}
             <OfflineButton tracks={playable} collection={{ kind: 'local', id, title }} />
-            <button className={pill} aria-haspopup="menu" onClick={(e) => setMenu(e.currentTarget)}>
-              Export
-            </button>
+            <button className={pill} aria-haspopup="menu" onClick={(e) => setMenu(e.currentTarget)}>{translateUi("local_playlist_page.export")}</button>
             <button
               className={pill}
               onClick={() => {
                 if (window.confirm(`Delete “${title}”? The songs stay in your library.`)) void removePlaylist(id).then(() => navigate('/local?tab=playlists'));
               }}
-            >
-              Delete
-            </button>
+            >{translateUi("local_playlist_page.delete")}</button>
           </div>
         </div>
       </div>
       {menu && (
-        <Menu anchor={menu} onClose={() => setMenu(null)} label="Export playlist">
-          <MenuItem onSelect={() => (setMenu(null), void downloadPlaylist(id, 'M3U8'))}>M3U8 (songs with files)</MenuItem>
-          <MenuItem onSelect={() => (setMenu(null), void downloadPlaylist(id, 'XSPF'))}>XSPF</MenuItem>
-          <MenuItem onSelect={() => (setMenu(null), void downloadPlaylist(id, 'AUDEN'))}>Auden JSON (keeps everything)</MenuItem>
+        <Menu anchor={menu} onClose={() => setMenu(null)} label={translateUi("local_playlist_page.export_playlist")}>
+          <MenuItem onSelect={() => (setMenu(null), void downloadPlaylist(id, 'M3U8'))}>{translateUi("local_playlist_page.m3u8_songs_with_files")}</MenuItem>
+          <MenuItem onSelect={() => (setMenu(null), void downloadPlaylist(id, 'XSPF'))}>{translateUi("local_playlist_page.xspf")}</MenuItem>
+          <MenuItem onSelect={() => (setMenu(null), void downloadPlaylist(id, 'AUDEN'))}>{translateUi("local_playlist_page.auden_json_keeps_everything")}</MenuItem>
         </Menu>
       )}
 
       {items.length === 0 ? (
-        <EmptyState title="No songs yet" detail="Use ••• on any song and choose Add to Playlist on This Device." />
+        <EmptyState title={translateUi("local_playlist_page.no_songs_yet")} detail={translateUi("local_playlist_page.use_on_any_song_and")} />
       ) : (
-        <ul className="mx-(--body-gutter) mt-6" aria-label="Songs">
+        <ul className="mx-(--body-gutter) mt-6" aria-label={translateUi("local_playlist_page.songs")}>
           {items.map((item) => {
             const track = item.track;
             return (
@@ -130,9 +119,7 @@ export default function LocalPlaylistPage() {
                     {track ? track.artists.map((a) => a.name).join(', ') : 'This song has no file or YouTube version here.'}
                   </span>
                 </span>
-                <button className="type-callout text-secondary opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100" aria-label={`Remove ${track?.title ?? 'song'}`} onClick={() => void removeFromPlaylist(id, item.entryId)}>
-                  Remove
-                </button>
+                <button className="type-callout text-secondary opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100" aria-label={`Remove ${track?.title ?? 'song'}`} onClick={() => void removeFromPlaylist(id, item.entryId)}>{translateUi("local_playlist_page.remove")}</button>
                 {track && <TrackMenu track={track} className="grid size-7 place-items-center rounded-full text-key hover:bg-quinary" />}
               </li>
             );

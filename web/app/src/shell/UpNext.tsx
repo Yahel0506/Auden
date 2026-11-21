@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { party, useParty } from '@/party/listenTogether';
 import { Infinity as InfinityIcon, MoreHorizontal, X } from 'lucide-react';
 import { useCallback, useState } from 'react';
@@ -61,13 +62,13 @@ function Row({
         {/* The ✕ over the artwork's top-left, on hover. */}
         <button
           className="absolute -top-1.5 -left-1.5 hidden size-[22px] place-items-center rounded-full bg-thick-material text-primary shadow-[0_1px_3px_#0004] [backdrop-filter:blur(10px)] group-hover/row:grid"
-          aria-label={`Remove ${track.title}`}
+          aria-label={translateUi('music.remove_track', { title: track.title })}
           onClick={() => removeAt(at)}
         >
           <X size={12} strokeWidth={3} />
         </button>
       </div>
-      <button className="flex min-w-0 flex-col text-start" onClick={() => jumpTo(at)} aria-label={`Play ${track.title}`}>
+      <button className="flex min-w-0 flex-col text-start" onClick={() => jumpTo(at)} aria-label={translateUi('music.play_track', { title: track.title })}>
         <span className="truncate type-body text-primary">{track.title}</span>
         <span className="truncate type-body text-secondary">{track.artists.map((a) => a.name).join(', ')}</span>
       </button>
@@ -75,7 +76,7 @@ function Row({
         <span className="type-body tabular-nums text-secondary group-hover/row:invisible group-has-[[data-open]]/row:invisible">{formatDuration(track.durationSec)}</span>
         <button
           className="absolute inset-y-0 right-0 my-auto hidden size-7 place-items-center rounded-full text-key group-hover/row:grid data-open:grid"
-          aria-label={`More options for ${track.title}`}
+          aria-label={translateUi('music.more_options_for_track', { title: track.title })}
           aria-haspopup="menu"
           data-open={anchor !== null || undefined}
           onClick={(e) => setAnchor(anchor ? null : e.currentTarget)}
@@ -85,20 +86,16 @@ function Row({
       </div>
       {anchor && (
         <Menu anchor={anchor} onClose={close} label={track.title}>
-          <MenuItem onSelect={() => (close(), jumpTo(at))}>Play Now</MenuItem>
+          <MenuItem onSelect={() => (close(), jumpTo(at))}>{translateUi("up_next.play_now")}</MenuItem>
           <MenuItem
             onSelect={() => {
               close();
               removeAt(at);
               playNext([track], entry.source);
             }}
-          >
-            Play Next
-          </MenuItem>
+          >{translateUi("up_next.play_next")}</MenuItem>
           <MenuSeparator />
-          <MenuItem destructive onSelect={() => (close(), removeAt(at))}>
-            Remove from Up Next
-          </MenuItem>
+          <MenuItem destructive onSelect={() => (close(), removeAt(at))}>{translateUi("up_next.remove_from_up_next")}</MenuItem>
         </Menu>
       )}
     </li>
@@ -148,30 +145,28 @@ export function UpNext() {
   return (
     <>
       <div className="flex items-center gap-1.5 px-5 pt-[23px] pb-3">
-        <h3 className="flex-1 type-title-2-emphasized">Up Next</h3>
+        <h3 className="flex-1 type-title-2-emphasized">{translateUi("up_next.up_next")}</h3>
         {canClear && (
-          <button className="mr-1 type-title-3 text-key" onClick={clearUpNext}>
-            Clear
-          </button>
+          <button className="mr-1 type-title-3 text-key" onClick={clearUpNext}>{translateUi("up_next.clear")}</button>
         )}
         <button
           className={square}
-          aria-label="AutoPlay"
-          title="AutoPlay: keep playing similar music when the queue ends"
+          aria-label={translateUi("up_next.autoplay")}
+          title={translateUi("up_next.autoplay_keep_playing_similar_music")}
           aria-pressed={autoplay}
           onClick={() => (inParty ? party.setAutoplay(!autoplay) : setAutoplay(!autoplay))}
         >
           <InfinityIcon size={16} strokeWidth={2.4} />
         </button>
-        <button className={square} aria-label="Playback options" aria-haspopup="menu" onClick={(e) => setAnchor(e.currentTarget)}>
+        <button className={square} aria-label={translateUi("up_next.playback_options")} aria-haspopup="menu" onClick={(e) => setAnchor(e.currentTarget)}>
           <MoreHorizontal size={16} />
         </button>
         {anchor && (
-          <Menu anchor={anchor} onClose={close} label="Playback options">
-            <MenuHeader>Crossfade</MenuHeader>
+          <Menu anchor={anchor} onClose={close} label={translateUi("up_next.playback_options")}>
+            <MenuHeader>{translateUi("up_next.crossfade")}</MenuHeader>
             {CROSSFADE_CHOICES.map((seconds) => (
               <MenuItem key={seconds} checked={!automix && crossfadeSec === seconds} onSelect={() => (close(), setCrossfade(seconds))}>
-                {seconds === 0 ? 'Off' : `${seconds} seconds`}
+                {seconds === 0 ? translateUi('up_next.off') : translateUi('up_next.seconds_count', { count: seconds })}
               </MenuItem>
             ))}
             <MenuItem checked={automix} onSelect={() => (close(), setAutomix(true))}>
@@ -180,15 +175,15 @@ export function UpNext() {
           </Menu>
         )}
       </div>
-      {playingFrom && <p className="truncate px-5 pb-2 type-callout text-secondary">Playing from {playingFrom}</p>}
+      {playingFrom && <p className="truncate px-5 pb-2 type-callout text-secondary">{translateUi("up_next.playing_from", { source: playingFrom })}</p>}
 
       {upcoming.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 pb-20 text-center type-callout text-secondary">
-          <p className="type-callout-emphasized">Nothing in Up Next</p>
+          <p className="type-callout-emphasized">{translateUi("up_next.nothing_in_up_next")}</p>
           <p>
             {autoplay && repeat === 'off' && index >= 0
-              ? 'AutoPlay is finding similar music.'
-              : 'Songs you play next appear here.'}
+              ? translateUi("shell_upnext_autoplay_is_finding_similar_music")
+              : translateUi("shell_upnext_songs_you_play_next_appear")}
           </p>
         </div>
       ) : (
@@ -199,7 +194,7 @@ export function UpNext() {
               <h4 className="mx-2.5 mt-[18px] mb-0.5 flex items-center gap-1.5 type-callout-emphasized">
                 <InfinityIcon size={14} strokeWidth={2.4} /> AutoPlay
               </h4>
-              <p className="mx-2.5 mb-2 type-callout text-secondary">Similar music, from YouTube Music’s radio.</p>
+              <p className="mx-2.5 mb-2 type-callout text-secondary">{translateUi("up_next.similar_music_from_youtube_music")}</p>
               <ol className={list}>{rows(afterAutoplay)}</ol>
             </>
           )}

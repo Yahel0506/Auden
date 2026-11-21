@@ -17,6 +17,8 @@ export class SpotifyFailure extends Error {
   }
 }
 
+import { t as translateUi } from '@/i18n';
+
 /** By name as well as by class: a second copy of the module (a worker, hot reload) makes its errors fail `instanceof`. */
 const isBridgeCallError = (error: unknown): error is BridgeCallError =>
   error instanceof BridgeCallError || (error instanceof Error && error.name === 'BridgeCallError');
@@ -43,15 +45,15 @@ export function toSpotifyFailure(error: unknown): SpotifyFailure {
 export function spotifyFailureText(kind: SpotifyErrorKind): string {
   switch (kind) {
     case 'signed_out':
-      return 'Connect your Spotify account to see your library';
+      return translateUi('spotify_failure.connect_spotify_to_see_library');
     case 'expired':
-      return 'Your Spotify session expired. Sign in again.';
+      return translateUi('spotify_failure.session_expired_sign_in_again');
     case 'rate_limited':
-      return 'Spotify asked to slow down. Try again in a moment.';
+      return translateUi('spotify_failure.rate_limited_try_again');
     case 'network':
-      return 'Couldn’t reach Spotify. Check your connection.';
+      return translateUi('spotify_failure.couldnt_reach_check_connection');
     case 'unknown':
-      return 'Something went wrong with Spotify.';
+      return translateUi('spotify_failure.something_went_wrong');
   }
 }
 

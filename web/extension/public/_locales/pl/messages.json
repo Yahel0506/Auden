@@ -1,0 +1,145 @@
+{
+  "extensionName": {
+    "message": "Auden"
+  },
+  "extensionDescription": {
+    "message": "Łączy odtwarzacz internetowy Auden z YouTube Music, Spotify i Discordem."
+  },
+  "openAuden": {
+    "message": "Otwórz Auden"
+  },
+  "checking": {
+    "message": "Sprawdzanie…"
+  },
+  "notSignedIn": {
+    "message": "Nie zalogowano się w tej przeglądarce"
+  },
+  "signIn": {
+    "message": "Zaloguj się"
+  },
+  "couldNotReadAccount": {
+    "message": "Nie udało się odczytać danych konta"
+  },
+  "youtubeSessionRejected": {
+    "message": "YouTube odrzucił sesję tej przeglądarki. Zaloguj się ponownie."
+  },
+  "youtubeAccountMissing": {
+    "message": "Nie znaleziono zalogowanego konta Google."
+  },
+  "youtubeAccountUnavailable": {
+    "message": "YouTube nie znalazł konta w sesji tej przeglądarki."
+  },
+  "disconnected": {
+    "message": "Rozłączono"
+  },
+  "retry": {
+    "message": "Spróbuj ponownie"
+  },
+  "connect": {
+    "message": "Połącz"
+  },
+  "disconnect": {
+    "message": "Rozłącz"
+  },
+  "spotifySignInExpired": {
+    "message": "Sesja Spotify wygasła. Zaloguj się ponownie."
+  },
+  "spotifyRateLimited": {
+    "message": "Spotify tymczasowo ogranicza liczbę żądań. Spróbuj ponownie za chwilę."
+  },
+  "spotifyConnectionFailed": {
+    "message": "Nie udało się połączyć ze Spotify. Sprawdź połączenie i spróbuj ponownie."
+  },
+  "spotifySignInFailed": {
+    "message": "Nie udało się zalogować do Spotify. Spróbuj ponownie."
+  },
+  "stopUsingAccountYouTube": {
+    "message": "Przestań używać tego konta w Auden. Nadal będziesz mieć aktywną sesję w YouTube."
+  },
+  "stopUsingAccountSpotify": {
+    "message": "Przestań używać tego konta w Auden. Nadal będziesz mieć aktywną sesję w Spotify."
+  },
+  "notConnected": {
+    "message": "Nie połączono"
+  },
+  "showingWhatYouPlay": {
+    "message": "Wyświetlanie odtwarzanej muzyki"
+  },
+  "connecting": {
+    "message": "Łączenie…"
+  },
+  "couldNotConnect": {
+    "message": "Nie udało się połączyć"
+  },
+  "onWaitingForSong": {
+    "message": "Włączono, oczekiwanie na utwór"
+  },
+  "presenceOff": {
+    "message": "Aktywność wyłączona"
+  },
+  "forgetDiscordAccount": {
+    "message": "Zapomnij to konto Discord."
+  },
+  "couldNotReadSession": {
+    "message": "Nie udało się odczytać sesji"
+  },
+  "allowLyricSourcesTitle": {
+    "message": "Auden · Źródła tekstów"
+  },
+  "allowLyricSourcesHeading": {
+    "message": "Zezwól na dostęp do źródeł tekstów"
+  },
+  "allowLyricSourcesExplanation": {
+    "message": "Dostawcy tekstów nie przyjmują bezpośrednich żądań ze stron internetowych, dlatego Auden wysyła je przez rozszerzenie. Przeglądarka poprosi Cię o potwierdzenie."
+  },
+  "allow": {
+    "message": "Zezwól"
+  },
+  "permissionDone": {
+    "message": "Gotowe. Możesz zamknąć tę kartę i wrócić do Auden."
+  },
+  "permissionDenied": {
+    "message": "Nie udzielono zgody. Te źródła nadal są wyłączone."
+  },
+  "discordConnectTitle": {
+    "message": "Auden · Połącz z Discordem"
+  },
+  "discordConnectHeading": {
+    "message": "Pokazuj na Discordzie, czego słuchasz"
+  },
+  "discordConnectExplanation": {
+    "message": "Auden odczytuje Twoją sesję Discord z karty discord.com i zachowuje ją w rozszerzeniu. Odtwarzacz internetowy nie ma do niej dostępu."
+  },
+  "discordTokenWarning": {
+    "message": "Ta funkcja korzysta z tokenu Twojego konta, na co nie zezwala regulamin Discorda. Korzystasz na własną odpowiedzialność."
+  },
+  "connectDiscord": {
+    "message": "Połącz z Discordem"
+  },
+  "discordPermissionDenied": {
+    "message": "Nie udzielono zgody. Discord nadal jest wyłączony."
+  },
+  "discordConnected": {
+    "message": "Połączono jako $USER$. Możesz zamknąć tę kartę.",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "discordSignInProgress": {
+    "message": "Zaloguj się do Discorda na otwartej karcie. Ta strona wykryje logowanie."
+  },
+  "discordReadProgress": {
+    "message": "Odczytywanie sesji Discord…"
+  },
+  "discordSessionMissing": {
+    "message": "Nie znaleziono sesji Discord. Zaloguj się na discord.com i spróbuj ponownie."
+  },
+  "discordTokenRejected": {
+    "message": "Discord odrzucił token. Połącz konto ponownie."
+  },
+  "discordConnectionError": {
+    "message": "Nie udało się połączyć z Discordem. Spróbuj ponownie."
+  }
+}

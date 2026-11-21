@@ -2,6 +2,7 @@ package com.music.bitchord.ui.screens
 
 import com.music.bitchord.ui.icons.SfIcons
 import android.content.Intent
+import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
@@ -1046,6 +1047,32 @@ private fun AudioQuality.localizedLabel(): String = stringResource(
     },
 )
 
+private fun SourceKind.localizedLabelRes(): Int = when (this) {
+    SourceKind.ADDON -> R.string.source_addon
+    SourceKind.CUSTOM_MODULE -> R.string.source_custom_module
+    SourceKind.MODULE -> R.string.source_module
+    SourceKind.MONOCHROME -> R.string.source_monochrome
+    SourceKind.JIOSAAVN -> R.string.source_jiosaavn
+    SourceKind.YOUTUBE -> R.string.source_youtube_music
+}
+
+@Composable
+private fun SourceKind.localizedLabels(): List<String> = labels.map { label ->
+    stringResource(
+        when (label) {
+            "Lossless" -> R.string.lossless
+            "Hi-Res" -> R.string.source_quality_hi_res
+            "Plugins" -> R.string.source_plugins
+            "High Quality" -> R.string.source_quality_high
+            "High bitrate" -> R.string.source_high_bitrate
+            "Full catalogue" -> R.string.source_full_catalogue
+            "Radio" -> R.string.source_radio
+            "Lossy" -> R.string.source_lossy
+            else -> return@map label
+        },
+    )
+}
+
 /** The second line of a row: what this source is, or what is wrong with it. */
 @Composable
 private fun SourceConfig.statusLine(health: SourceHealth?): String = when {
@@ -1053,13 +1080,44 @@ private fun SourceConfig.statusLine(health: SourceHealth?): String = when {
     kind == SourceKind.JIOSAAVN -> stringResource(R.string.jiosaavn_mismatch_warning)
     // Downloads are a line of their own under this one — see [SourceRow].
     health is SourceHealth.Ok -> listOfNotNull(
-        health.detail,
-        kind.labels.take(3).joinToString(" · "),
+        health.detail?.let { health.localizedMessage(LocalContext.current, it) },
+        kind.localizedLabels().take(3).joinToString(" · "),
     ).joinToString(" · ")
-    health is SourceHealth.Rejected -> health.reason
-    health is SourceHealth.Unreachable -> stringResource(R.string.source_unreachable, health.reason)
+    health is SourceHealth.Rejected -> health.localizedMessage(LocalContext.current, health.reason)
+    health is SourceHealth.Unreachable -> stringResource(
+        R.string.source_unreachable,
+        health.localizedMessage(LocalContext.current, health.reason),
+    )
     kind.needsServer -> stringResource(R.string.checking)
-    else -> kind.labels.take(3).joinToString(" · ")
+    else -> kind.localizedLabels().take(3).joinToString(" · ")
+}
+
+/** Localizes only messages authored by this app; provider and diagnostic text stays verbatim. */
+private fun SourceHealth.localizedMessage(context: Context, message: String): String = when (message) {
+    "Not available in this build" -> context.getString(R.string.source_not_available_in_build)
+    "The server didn't answer" -> context.getString(R.string.source_server_no_response)
+    "An addon URL is required" -> context.getString(R.string.source_addon_url_required)
+    "This addon only works with a lossless output — use a lossless supported device" ->
+        context.getString(R.string.source_needs_lossless_output)
+    "No manifest · search works" -> context.getString(R.string.source_no_manifest_search_works)
+    "A module index URL is required" -> context.getString(R.string.source_module_url_required)
+    "The index answered but listed no modules — check the URL" ->
+        context.getString(R.string.source_module_index_empty)
+    "BitChord couldn't verify this device" -> context.getString(R.string.source_auth_unavailable)
+    "Could not reach the addon" -> context.getString(R.string.source_addon_unreachable)
+    "Could not reach the module index" -> context.getString(R.string.source_module_index_unreachable)
+    "Failed" -> context.getString(R.string.failed)
+    else -> when {
+        this is SourceHealth.Unreachable -> Regex("^The server answered (\\d+)$")
+            .matchEntire(message)?.groupValues?.get(1)?.let {
+                context.getString(R.string.source_server_answered, it)
+            } ?: message
+        this is SourceHealth.Ok -> Regex("^(\\d+) modules?$")
+            .matchEntire(message)?.groupValues?.get(1)?.toIntOrNull()?.let { count ->
+                context.resources.getQuantityString(R.plurals.source_module_count, count, count)
+            } ?: message
+        else -> message
+    }
 }
 
 /**
@@ -1081,6 +1139,7 @@ internal fun SourceEditorAlert(
     onDelete: () -> Unit,
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
+    val context = LocalContext.current
     val isNew = SourceRegistry.config(config.id) == null
     var baseUrl by remember { mutableStateOf(config.baseUrl) }
     var busy by remember { mutableStateOf(false) }
@@ -1141,11 +1200,11 @@ internal fun SourceEditorAlert(
             status = when (health) {
                 is SourceHealth.Ok -> listOfNotNull(
                     connected,
-                    found.kind.label,
-                    health.detail,
+                    context.getString(found.kind.localizedLabelRes()),
+                    health.detail?.let { health.localizedMessage(context, it) },
                 ).joinToString(" · ")
-                is SourceHealth.Rejected -> health.reason
-                is SourceHealth.Unreachable -> health.reason
+                is SourceHealth.Rejected -> health.localizedMessage(context, health.reason)
+                is SourceHealth.Unreachable -> health.localizedMessage(context, health.reason)
             }
             busy = false
 

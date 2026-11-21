@@ -1,0 +1,145 @@
+{
+  "extensionName": {
+    "message": "Auden"
+  },
+  "extensionDescription": {
+    "message": "Connecte le lecteur web d’Auden à YouTube Music, Spotify et Discord."
+  },
+  "openAuden": {
+    "message": "Ouvrir Auden"
+  },
+  "checking": {
+    "message": "Vérification…"
+  },
+  "notSignedIn": {
+    "message": "Aucune session ouverte dans ce navigateur"
+  },
+  "signIn": {
+    "message": "Se connecter"
+  },
+  "couldNotReadAccount": {
+    "message": "Impossible d’accéder à votre compte"
+  },
+  "youtubeSessionRejected": {
+    "message": "YouTube a refusé la session de ce navigateur. Reconnectez-vous."
+  },
+  "youtubeAccountMissing": {
+    "message": "Aucun compte Google connecté n’a été trouvé."
+  },
+  "youtubeAccountUnavailable": {
+    "message": "YouTube n’a pas trouvé de compte dans la session de ce navigateur."
+  },
+  "disconnected": {
+    "message": "Déconnecté"
+  },
+  "retry": {
+    "message": "Réessayer"
+  },
+  "connect": {
+    "message": "Connecter"
+  },
+  "disconnect": {
+    "message": "Déconnecter"
+  },
+  "spotifySignInExpired": {
+    "message": "Votre session Spotify a expiré. Reconnectez-vous."
+  },
+  "spotifyRateLimited": {
+    "message": "Spotify limite temporairement les requêtes. Réessayez dans un instant."
+  },
+  "spotifyConnectionFailed": {
+    "message": "Impossible de joindre Spotify. Vérifiez votre connexion et réessayez."
+  },
+  "spotifySignInFailed": {
+    "message": "La connexion au compte Spotify a échoué. Réessayez."
+  },
+  "stopUsingAccountYouTube": {
+    "message": "Cesser d’utiliser ce compte dans Auden. Votre session YouTube reste ouverte."
+  },
+  "stopUsingAccountSpotify": {
+    "message": "Cesser d’utiliser ce compte dans Auden. Votre session Spotify reste ouverte."
+  },
+  "notConnected": {
+    "message": "Non connecté"
+  },
+  "showingWhatYouPlay": {
+    "message": "Affichage de ce que vous écoutez"
+  },
+  "connecting": {
+    "message": "Connexion…"
+  },
+  "couldNotConnect": {
+    "message": "Connexion impossible"
+  },
+  "onWaitingForSong": {
+    "message": "Activée, en attente d’un titre"
+  },
+  "presenceOff": {
+    "message": "Présence désactivée"
+  },
+  "forgetDiscordAccount": {
+    "message": "Oublier ce compte Discord."
+  },
+  "couldNotReadSession": {
+    "message": "Impossible de lire la session"
+  },
+  "allowLyricSourcesTitle": {
+    "message": "Auden · Sources de paroles"
+  },
+  "allowLyricSourcesHeading": {
+    "message": "Autoriser les sources de paroles"
+  },
+  "allowLyricSourcesExplanation": {
+    "message": "Ces fournisseurs de paroles refusent les requêtes directes des pages web. Auden les interroge donc via l’extension. Votre navigateur vous demandera de confirmer l’autorisation."
+  },
+  "allow": {
+    "message": "Autoriser"
+  },
+  "permissionDone": {
+    "message": "Terminé. Vous pouvez fermer cet onglet et revenir à Auden."
+  },
+  "permissionDenied": {
+    "message": "Autorisation refusée. Ces sources restent désactivées."
+  },
+  "discordConnectTitle": {
+    "message": "Auden · Connexion à Discord"
+  },
+  "discordConnectHeading": {
+    "message": "Afficher sur Discord ce que vous écoutez"
+  },
+  "discordConnectExplanation": {
+    "message": "Auden lit votre session Discord depuis un onglet discord.com et la conserve dans cette extension. Le lecteur web n’y a pas accès."
+  },
+  "discordTokenWarning": {
+    "message": "Cette fonction utilise le jeton de votre compte, ce que les conditions de Discord n’autorisent pas. Utilisez-la à vos risques et périls."
+  },
+  "connectDiscord": {
+    "message": "Connecter Discord"
+  },
+  "discordPermissionDenied": {
+    "message": "Autorisation refusée. Discord reste désactivé."
+  },
+  "discordConnected": {
+    "message": "Compte connecté : $USER$. Vous pouvez fermer cet onglet.",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "discordSignInProgress": {
+    "message": "Connectez-vous à Discord dans l’onglet qui vient de s’ouvrir. Cette page détectera votre connexion."
+  },
+  "discordReadProgress": {
+    "message": "Lecture de votre session Discord…"
+  },
+  "discordSessionMissing": {
+    "message": "Aucune session Discord n’a été trouvée. Connectez-vous sur discord.com puis réessayez."
+  },
+  "discordTokenRejected": {
+    "message": "Discord a refusé le jeton. Reconnectez le compte."
+  },
+  "discordConnectionError": {
+    "message": "Impossible de se connecter à Discord. Réessayez."
+  }
+}

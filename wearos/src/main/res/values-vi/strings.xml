@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="connecting">Đang kết nối…</string>
+    <string name="no_phone_title">Chưa kết nối điện thoại</string>
+    <string name="no_phone_body">Mở Auden trên điện thoại và để điện thoại ở gần đồng hồ.</string>
+    <string name="retry">Thử lại</string>
+    <string name="nothing_playing">Không có nội dung đang phát</string>
+    <string name="nothing_playing_body">Phát nội dung nào đó trong Auden trên điện thoại.</string>
+    <string name="resume">Tiếp tục</string>
+    <string name="up_next">Tiếp theo</string>
+    <string name="queue_empty">Không có nội dung tiếp theo</string>
+    <string name="loading">Đang tải…</string>
+    <string name="playing_now">Đang phát</string>
+    <string name="more">Thêm</string>
+    <string name="shuffle">Trộn bài</string>
+    <string name="repeat">Lặp lại</string>
+    <string name="repeat_off">Tắt</string>
+    <string name="repeat_all">Tất cả</string>
+    <string name="repeat_one">Một bài</string>
+    <string name="on">Bật</string>
+    <string name="off">Tắt</string>
+    <string name="love">Yêu thích</string>
+    <string name="loved">Đã thích</string>
+    <string name="volume">Âm lượng</string>
+    <string name="on_phone">Trên điện thoại</string>
+    <string name="play">Phát</string>
+    <string name="pause">Tạm dừng</string>
+    <string name="next">Tiếp theo</string>
+    <string name="previous">Trước đó</string>
+    <string name="output">Đầu ra</string>
+    <string name="this_watch">Đồng hồ này</string>
+    <string name="watch_speaker">Loa đồng hồ hoặc tai nghe</string>
+    <string name="on_phone_output">Trên điện thoại</string>
+    <string name="phone_speaker">Loa điện thoại</string>
+    <string name="wired_headphones">Tai nghe có dây</string>
+    <string name="usb_audio">Âm thanh USB</string>
+    <string name="hdmi">HDMI</string>
+    <string name="other_output">Đầu ra khác</string>
+    <string name="moving_to_watch">Đang chuyển sang đồng hồ…</string>
+    <string name="update_channel">Bản cập nhật</string>
+    <string name="update_ready">Đã có bản cập nhật Auden</string>
+    <string name="update_tap">Chạm để cài đặt bản cập nhật từ điện thoại.</string>
+</resources>

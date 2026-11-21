@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { Banner, bannerButtonClass } from '@/shell/Banner';
 import { useJobs } from './jobs';
 
@@ -7,21 +8,17 @@ export function JobBanner() {
   const job = useJobs((s) => s.jobs[s.jobs.length - 1]);
   const dismiss = useJobs((s) => s.dismiss);
   if (!job) return null;
-  const progress = job.finished ? '' : job.total ? `${job.done} of ${job.total}` : '';
-  const detail = [progress, job.detail].filter(Boolean).join(' · ') || 'Starting…';
+  const progress = job.finished ? '' : job.total ? translateUi('job_banner.progress', { done: job.done, total: job.total }) : '';
+  const detail = [progress, job.detail].filter(Boolean).join(' · ') || translateUi('job_banner.starting');
   return (
     <Banner
       title={job.title}
       detail={detail}
       action={
         job.finished ? (
-          <button className={bannerButtonClass} onClick={() => dismiss(job.id)}>
-            Done
-          </button>
+          <button className={bannerButtonClass} onClick={() => dismiss(job.id)}>{translateUi("job_banner.done")}</button>
         ) : job.cancel ? (
-          <button className={bannerButtonClass} onClick={job.cancel}>
-            Stop
-          </button>
+          <button className={bannerButtonClass} onClick={job.cancel}>{translateUi("job_banner.stop")}</button>
         ) : null
       }
     />

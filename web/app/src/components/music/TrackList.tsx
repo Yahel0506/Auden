@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useRef, useState } from 'react';
 import { OnDeviceMark } from '@/auden/library/ui/OnDeviceMark';
@@ -110,7 +111,7 @@ function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps)
       data-variant={variant}
       data-current={current || undefined}
       data-unavailable={unavailable}
-      title={unavailable === 'matching' ? 'Looking for this on YouTube Music…' : unavailable === 'missing' ? 'Not found on YouTube Music' : undefined}
+      title={unavailable === 'matching' ? translateUi("components_music_tracklist_looking_for_this_on_youtube") : unavailable === 'missing' ? translateUi("components_music_tracklist_not_found_on_youtube_music") : undefined}
       onDoubleClick={onPlay}
     >
       <div className={`${cell} gap-3`}>
@@ -122,7 +123,7 @@ function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps)
                 // The playing row's marker: a still play glyph over the artwork (or where the number was).
                 <span
                   className="absolute inset-0 grid place-items-center rounded-artwork-sm bg-[rgb(0_0_0/0.45)] text-white group-hover/row:invisible"
-                  aria-label="Now playing"
+                  aria-label={translateUi("track_list.now_playing")}
                 >
                   <PlayIcon size={18} />
                 </span>
@@ -131,7 +132,7 @@ function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps)
           ) : (
             <span className="type-body text-secondary group-hover/row:invisible">
               {current ? (
-                <span className="grid place-items-center text-primary group-hover/row:invisible" aria-label="Now playing">
+                <span className="grid place-items-center text-primary group-hover/row:invisible" aria-label={translateUi("track_list.now_playing")}>
                   <PlayIcon size={14} />
                 </span>
               ) : (
@@ -143,7 +144,7 @@ function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps)
             className={`absolute inset-0 grid place-items-center rounded-artwork-sm opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 group-data-unavailable/row:hidden ${
               variant === 'playlist' ? 'bg-lockup-hover text-white' : 'text-primary'
             }`}
-            aria-label={playing ? `Pause ${track.title}` : `Play ${track.title}`}
+            aria-label={translateUi(playing ? 'music.pause_track' : 'music.play_track', { title: track.title })}
             onClick={onPlay}
             disabled={!!unavailable}
           >
@@ -189,7 +190,7 @@ function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps)
       <div className={`${cell} ${time[variant]} ${dimmed}`}>
         {/* The ⋯ button (TrackMenu) takes the time's place on hover, as Apple's rows do. */}
         <span className={unavailable ? undefined : 'group-focus-within/row:invisible group-hover/row:invisible group-has-[[data-open]]/row:invisible'}>
-          {unavailable === 'missing' ? 'Not found' : formatDuration(track.durationSec)}
+          {unavailable === 'missing' ? translateUi("components_music_tracklist_not_found") : formatDuration(track.durationSec)}
         </span>
         {(!unavailable || track.spotifyId) && (
           <TrackMenu
@@ -205,10 +206,10 @@ function Row({ track, variant, position, fallbackArtwork, onPlayRow }: RowProps)
 function Header() {
   return (
     <div className={`grid h-8 items-center ${playlistColumns} type-callout-emphasized text-secondary max-md:hidden`} aria-hidden="true">
-      <div className={`${cell} gap-3 ps-[7px]`}>Song</div>
-      <div className={secondary}>Artist</div>
-      <div className={tertiary}>Album</div>
-      <div className={`${cell} ${time.playlist}`}>Time</div>
+      <div className={`${cell} gap-3 ps-[7px]`}>{translateUi("track_list.song")}</div>
+      <div className={secondary}>{translateUi("track_list.artist")}</div>
+      <div className={tertiary}>{translateUi("track_list.album")}</div>
+      <div className={`${cell} ${time.playlist}`}>{translateUi("track_list.time")}</div>
     </div>
   );
 }
@@ -249,7 +250,7 @@ export function TrackList({ tracks, variant, fallbackArtwork, fallbackArtists, o
   }, [last?.index, tracks.length, virtual, onNearEnd]);
 
   return (
-    <div className="mx-(--body-gutter) type-callout text-secondary" data-variant={variant} role="table" aria-label="Songs">
+    <div className="mx-(--body-gutter) type-callout text-secondary" data-variant={variant} role="table" aria-label={translateUi("track_list.songs")}>
       {variant === 'playlist' && <Header />}
       <div ref={container}>
         {virtual ? (

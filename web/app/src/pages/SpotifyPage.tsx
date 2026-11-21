@@ -1,10 +1,11 @@
+import { t as translateUi } from '@/i18n';
 import { PageHeader } from '@/components/PageHeader';
 import { SquareLockup } from '@/components/music/Lockups';
 import { SpotifyOpenCard } from '@/components/music/SpotifyOpenCard';
 import { SpotifyProblem } from '@/components/music/SpotifyProblem';
 import { EmptyState, NeedsExtension, stateStyles } from '@/components/music/States';
 import type { SpotifyPlaylist } from '@bitchord/shared/bridge';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { MusicItem } from '@/data/music/types';
 import { needsSignIn, spotifyFailureText, toSpotifyFailure } from '@/data/spotify/failure';
 import { readLibraryCache } from '@/data/spotify/libraryCache';
@@ -35,19 +36,22 @@ export default function SpotifyPage() {
     return (
       <>
         <PageHeader title="Spotify" />
-        <EmptyState title="Update the extension" detail="This version of the Auden extension doesn’t include Spotify yet." />
+        <EmptyState title={translateUi("spotify_page.update_the_extension")} detail={translateUi("spotify_page.this_version_of_the_auden")} />
       </>
     );
   }
   const state = auth.auth;
+  useEffect(() => {
+    if (!state.signedIn && state.problem) console.error('Auden Spotify account status', state.problem);
+  }, [state.problem, state.signedIn]);
   // A throttle or a dropped connection on a cold start, with lists saved: show them, and say what happened.
   const offlineWithCache = !state.signedIn && isTransientProblem(state) && !!readLibraryCache();
   if (!state.signedIn && !offlineWithCache) {
     const [title, detail, action] = !state.browserSignedIn
-      ? ['Sign in to Spotify', 'Auden uses the Spotify account this browser is signed in to, through the extension.', 'Sign In']
+      ? [translateUi('spotify_page.sign_in_to_spotify'), translateUi('spotify_page.spotify_account_through_extension'), translateUi('spotify_page.sign_in')]
       : !state.connected
-        ? ['Spotify is disconnected', 'You’re signed in to Spotify in this browser. Connect to see your playlists here.', 'Connect']
-        : ['Couldn’t read your Spotify account', state.problem ?? 'Spotify didn’t answer.', 'Try Again'];
+        ? [translateUi('spotify_page.spotify_is_disconnected'), translateUi('spotify_page.connect_to_see_playlists'), translateUi('spotify_page.connect')]
+        : [translateUi('spotify_page.couldnt_read_account'), translateUi('spotify_page.spotify_didnt_answer'), translateUi('spotify_page.try_again')];
     return (
       <>
         <PageHeader title="Spotify" />
@@ -72,13 +76,11 @@ export default function SpotifyPage() {
       <PageHeader title="Spotify" />
       {(offlineWithCache || (state.signedIn && state.problemKind && isTransientProblem(state))) && (
         <p className="mx-[var(--page-gutter,20px)] mb-3 flex items-center gap-3 type-callout text-secondary">
-          <span>{spotifyFailureText(state.problemKind ?? 'network')} Showing what was saved.</span>
-          <button className="type-callout-emphasized text-key" disabled={retry.isPending} onClick={() => retry.mutate()}>
-            Retry
-          </button>
+          <span>{translateUi('spotify_page.showing_cached_library', { reason: spotifyFailureText(state.problemKind ?? 'network') })}</span>
+          <button className="type-callout-emphasized text-key" disabled={retry.isPending} onClick={() => retry.mutate()}>{translateUi("spotify_page.retry")}</button>
         </p>
       )}
-      <div className="flex gap-1 px-[var(--page-gutter,20px)] pb-2" role="tablist" aria-label="Spotify library">
+      <div className="flex gap-1 px-[var(--page-gutter,20px)] pb-2" role="tablist" aria-label={translateUi("spotify_page.spotify_library")}>
         {(['playlists', 'albums', 'artists'] as const).map((id) => (
           <button
             key={id}
@@ -87,13 +89,13 @@ export default function SpotifyPage() {
             className={`rounded-pill px-3.5 py-1.5 type-callout-emphasized ${tab === id ? 'bg-pill-bg text-pill' : 'text-secondary hover:bg-quinary'}`}
             onClick={() => setTab(id)}
           >
-            {id[0]!.toUpperCase() + id.slice(1)}
+            {translateUi(`spotify_page.tab_${id}` as keyof typeof import('@/i18n.en.json'))}
           </button>
         ))}
       </div>
       {tab === 'playlists' && <PlaylistsTab query={playlists} />}
-      {tab === 'albums' && (hasLibrary ? <AlbumsTab /> : <EmptyState title="Update the extension" detail="This version of the Auden extension can’t read your saved albums yet." />)}
-      {tab === 'artists' && (hasLibrary ? <ArtistsTab /> : <EmptyState title="Update the extension" detail="This version of the Auden extension can’t read your followed artists yet." />)}
+      {tab === 'albums' && (hasLibrary ? <AlbumsTab /> : <EmptyState title={translateUi("spotify_page.update_the_extension")} detail={translateUi("spotify_page.this_version_of_the_auden_2")} />)}
+      {tab === 'artists' && (hasLibrary ? <ArtistsTab /> : <EmptyState title={translateUi("spotify_page.update_the_extension")} detail={translateUi("spotify_page.this_version_of_the_auden_3")} />)}
     </>
   );
 }
@@ -120,7 +122,7 @@ function SpotifyRefreshError({ error, onRetry }: { error: unknown; onRetry: () =
     <p className="mx-[var(--page-gutter,20px)] mb-3 flex items-center gap-3 type-callout text-secondary">
       <span>{spotifyFailureText(failure.kind)} Showing what was saved.</span>
       <button className="type-callout-emphasized text-key" onClick={needsSignIn(failure.kind) ? openSpotifySignIn : onRetry}>
-        {needsSignIn(failure.kind) ? 'Sign in' : 'Retry'}
+        {needsSignIn(failure.kind) ? translateUi("pages_spotifypage_sign_in") : 'Retry'}
       </button>
     </p>
   );
@@ -128,7 +130,7 @@ function SpotifyRefreshError({ error, onRetry }: { error: unknown; onRetry: () =
 
 function PlaylistsTab({ query }: { query: ListQuery<SpotifyPlaylist> }) {
   return (
-    <LibraryList query={query} empty="No playlists yet">
+    <LibraryList query={query} empty={translateUi('spotify_page.no_playlists_yet')}>
       {(playlists) =>
         playlists.map((p) => {
           const item: MusicItem = {
@@ -157,7 +159,7 @@ function PlaylistsTab({ query }: { query: ListQuery<SpotifyPlaylist> }) {
 function AlbumsTab() {
   const albums = useSpotifyAlbums();
   return (
-    <LibraryList query={albums} empty="No saved albums yet">
+    <LibraryList query={albums} empty={translateUi('spotify_page.no_saved_albums_yet')}>
       {(items) =>
         items.map((a) => (
           <li key={a.id}>
@@ -172,11 +174,11 @@ function AlbumsTab() {
 function ArtistsTab() {
   const artists = useSpotifyArtists();
   return (
-    <LibraryList query={artists} empty="No followed artists yet">
+    <LibraryList query={artists} empty={translateUi('spotify_page.no_followed_artists_yet')}>
       {(items) =>
         items.map((a) => (
           <li key={a.id}>
-            <SpotifyOpenCard title={a.name} subtitle="Artist" imageUrl={a.imageUrl} round findHref={() => spotifyArtistHref(a.name)} />
+            <SpotifyOpenCard title={a.name} subtitle={translateUi("spotify_page.artist")} imageUrl={a.imageUrl} round findHref={() => spotifyArtistHref(a.name)} />
           </li>
         ))
       }

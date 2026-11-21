@@ -1,0 +1,145 @@
+{
+  "extensionName": {
+    "message": "Auden"
+  },
+  "extensionDescription": {
+    "message": "Menghubungkan pemutar web Auden ke YouTube Music, Spotify, dan Discord."
+  },
+  "openAuden": {
+    "message": "Buka Auden"
+  },
+  "checking": {
+    "message": "Memeriksa…"
+  },
+  "notSignedIn": {
+    "message": "Belum masuk di browser ini"
+  },
+  "signIn": {
+    "message": "Masuk"
+  },
+  "couldNotReadAccount": {
+    "message": "Tidak dapat membaca akun Anda"
+  },
+  "youtubeSessionRejected": {
+    "message": "YouTube menolak sesi browser ini. Masuk lagi."
+  },
+  "youtubeAccountMissing": {
+    "message": "Tidak ditemukan akun Google yang sudah masuk."
+  },
+  "youtubeAccountUnavailable": {
+    "message": "YouTube tidak dapat menemukan akun dalam sesi browser ini."
+  },
+  "disconnected": {
+    "message": "Terputus"
+  },
+  "retry": {
+    "message": "Coba lagi"
+  },
+  "connect": {
+    "message": "Hubungkan"
+  },
+  "disconnect": {
+    "message": "Putuskan sambungan"
+  },
+  "spotifySignInExpired": {
+    "message": "Sesi Spotify Anda telah kedaluwarsa. Masuk lagi."
+  },
+  "spotifyRateLimited": {
+    "message": "Spotify untuk sementara membatasi permintaan. Coba lagi sebentar lagi."
+  },
+  "spotifyConnectionFailed": {
+    "message": "Tidak dapat terhubung ke Spotify. Periksa koneksi Anda lalu coba lagi."
+  },
+  "spotifySignInFailed": {
+    "message": "Tidak dapat masuk ke Spotify. Coba lagi."
+  },
+  "stopUsingAccountYouTube": {
+    "message": "Berhenti menggunakan akun ini di Auden. Anda tetap masuk ke YouTube."
+  },
+  "stopUsingAccountSpotify": {
+    "message": "Berhenti menggunakan akun ini di Auden. Anda tetap masuk ke Spotify."
+  },
+  "notConnected": {
+    "message": "Tidak terhubung"
+  },
+  "showingWhatYouPlay": {
+    "message": "Menampilkan yang sedang Anda putar"
+  },
+  "connecting": {
+    "message": "Menghubungkan…"
+  },
+  "couldNotConnect": {
+    "message": "Tidak dapat terhubung"
+  },
+  "onWaitingForSong": {
+    "message": "Aktif, menunggu lagu"
+  },
+  "presenceOff": {
+    "message": "Status aktivitas nonaktif"
+  },
+  "forgetDiscordAccount": {
+    "message": "Lupakan akun Discord ini."
+  },
+  "couldNotReadSession": {
+    "message": "Tidak dapat membaca sesi"
+  },
+  "allowLyricSourcesTitle": {
+    "message": "Auden: sumber lirik"
+  },
+  "allowLyricSourcesHeading": {
+    "message": "Izinkan sumber lirik"
+  },
+  "allowLyricSourcesExplanation": {
+    "message": "Penyedia lirik ini tidak mengizinkan halaman web meminta data secara langsung, jadi Auden memintanya melalui ekstensi. Browser Anda akan meminta konfirmasi."
+  },
+  "allow": {
+    "message": "Izinkan"
+  },
+  "permissionDone": {
+    "message": "Selesai. Anda dapat menutup tab ini dan kembali ke Auden."
+  },
+  "permissionDenied": {
+    "message": "Tidak diizinkan. Sumber tersebut tetap nonaktif."
+  },
+  "discordConnectTitle": {
+    "message": "Auden: hubungkan Discord"
+  },
+  "discordConnectHeading": {
+    "message": "Tampilkan yang sedang Anda putar di Discord"
+  },
+  "discordConnectExplanation": {
+    "message": "Auden membaca sesi Discord Anda dari tab discord.com dan menyimpannya di ekstensi ini. Pemutar web tidak akan melihatnya."
+  },
+  "discordTokenWarning": {
+    "message": "Ini menggunakan token akun Anda sendiri, yang tidak diizinkan menurut ketentuan Discord. Gunakan dengan risiko Anda sendiri."
+  },
+  "connectDiscord": {
+    "message": "Hubungkan Discord"
+  },
+  "discordPermissionDenied": {
+    "message": "Tidak diizinkan. Discord tetap nonaktif."
+  },
+  "discordConnected": {
+    "message": "Terhubung sebagai $USER$. Anda dapat menutup tab ini.",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "discordSignInProgress": {
+    "message": "Masuk ke Discord di tab yang terbuka. Halaman ini akan mendeteksinya."
+  },
+  "discordReadProgress": {
+    "message": "Membaca sesi Discord Anda…"
+  },
+  "discordSessionMissing": {
+    "message": "Sesi Discord tidak ditemukan. Masuk ke discord.com lalu coba lagi."
+  },
+  "discordTokenRejected": {
+    "message": "Discord menolak token tersebut. Hubungkan akun lagi."
+  },
+  "discordConnectionError": {
+    "message": "Tidak dapat terhubung ke Discord. Coba lagi."
+  }
+}

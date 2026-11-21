@@ -1,11 +1,14 @@
 package com.music.bitchord.ui.tv.auth
 
 import android.content.Context
+import android.text.TextUtils
+import android.view.View
 import android.util.Log
 import com.music.bitchord.data.YtMusicRepository
 import com.music.bitchord.data.model.SearchFilter
 import com.music.bitchord.data.model.SearchResult
 import com.music.bitchord.data.model.Song
+import com.music.bitchord.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -20,6 +23,7 @@ import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
 import java.net.URLDecoder
+import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
 data class TvRemoteStatus(
@@ -76,6 +80,7 @@ object TvAuthServer {
     }
 
     suspend fun start(
+        context: Context,
         onCookieReceived: ((String) -> Unit)? = null,
     ): Pair<Int, String>? = withContext(Dispatchers.IO) {
         stop()
@@ -95,7 +100,7 @@ object TvAuthServer {
                 while (isRunning.get() && !socket.isClosed) {
                     try {
                         val client = socket.accept()
-                        handleClient(client, onCookieReceived)
+                        handleClient(client, context.applicationContext, onCookieReceived)
                     } catch (e: Exception) {
                         if (!isRunning.get()) break
                     }
@@ -117,7 +122,7 @@ object TvAuthServer {
         serverSocket = null
     }
 
-    private fun handleClient(client: Socket, onCookieReceived: ((String) -> Unit)?) {
+    private fun handleClient(client: Socket, context: Context, onCookieReceived: ((String) -> Unit)?) {
         Thread {
             try {
                 val reader = BufferedReader(InputStreamReader(client.getInputStream()))
@@ -234,20 +239,20 @@ object TvAuthServer {
                         val cookieValue = parseCookieFromBody(requestBody)
                         if (!cookieValue.isNullOrBlank()) {
                             onCookieReceived?.invoke(cookieValue)
-                            sendHtmlResponse(writer, getSuccessHtml())
+                            sendHtmlResponse(writer, getSuccessHtml(context))
                         } else {
-                            sendHtmlResponse(writer, getAuthHtml(error = "No cookie detected. Please follow the instructions."))
+                            sendHtmlResponse(writer, getAuthHtml(context, error = context.getString(R.string.tv_auth_no_cookie)))
                         }
                     }
 
                     // 6. Mobile Web Remote Control Page (/remote)
                     path == "/remote" -> {
-                        sendHtmlResponse(writer, getRemoteControlHtml())
+                        sendHtmlResponse(writer, getRemoteControlHtml(context))
                     }
 
                     // 7. Default Landing & Auth Page (/)
                     else -> {
-                        sendHtmlResponse(writer, getAuthHtml())
+                        sendHtmlResponse(writer, getAuthHtml(context))
                     }
                 }
             } catch (e: Exception) {
@@ -275,6 +280,40 @@ object TvAuthServer {
         writer.print("\r\n")
         writer.print(html)
         writer.flush()
+    }
+
+    private fun localizedHtml(
+        context: Context,
+        html: String,
+        strings: Map<String, Int>,
+        javascript: Map<String, Int> = emptyMap(),
+    ): String {
+        val locale = context.resources.configuration.locales[0] ?: Locale.getDefault()
+        val direction = if (TextUtils.getLayoutDirectionFromLocale(locale) == View.LAYOUT_DIRECTION_RTL) "rtl" else "ltr"
+        var page = html
+            .replace("{{lang}}", escapeHtml(locale.toLanguageTag()))
+            .replace("{{dir}}", direction)
+        for ((token, resourceId) in strings) {
+            page = page.replace("{{${token}}}", escapeHtml(context.getString(resourceId)))
+        }
+        page = page.replace("{{javascriptCopy}}", javascriptStrings(context, javascript))
+        return page
+    }
+
+    private fun escapeHtml(value: String): String = value
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;")
+
+    private fun javascriptString(value: String): String = JSONObject.quote(value)
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("&", "\\u0026")
+
+    private fun javascriptStrings(context: Context, strings: Map<String, Int>): String = strings.entries.joinToString(",") { (key, id) ->
+        "${javascriptString(key)}:${javascriptString(context.getString(id))}"
     }
 
     private fun parseFormParam(body: String, param: String): String? {
@@ -322,13 +361,13 @@ object TvAuthServer {
     // HTML Templates: Apple TV Mobile Remote & Google Sign-In Pages
     // ─────────────────────────────────────────────────────────────────────────
 
-    private fun getRemoteControlHtml(): String = """
+    private fun getRemoteControlHtml(context: Context): String = localizedHtml(context, """
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{lang}}" dir="{{dir}}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>BitChord TV • Mobile Remote</title>
+<title>{{remotePageTitle}}</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body { background: #08080B; color: #FFF; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; min-height: 100vh; padding: 18px; display: flex; flex-direction: column; align-items: center; }
@@ -365,15 +404,15 @@ body { background: #08080B; color: #FFF; font-family: -apple-system, BlinkMacSys
 <body>
 <div class="header">
   <div class="logo-badge">♪</div>
-  <h1>BitChord TV Remote</h1>
+  <h1>{{remoteHeading}}</h1>
 </div>
 
 <div class="card">
   <div class="now-playing">
     <img id="trackArt" class="art" src="" style="display:none;" />
     <div class="info">
-      <div id="trackTitle" class="title">Loading TV...</div>
-      <div id="trackArtist" class="artist">Connecting to BitChord TV</div>
+      <div id="trackTitle" class="title">{{loadingTv}}</div>
+      <div id="trackArtist" class="artist">{{connectingTv}}</div>
     </div>
   </div>
   <div class="progress-bar" id="pBar" onclick="handleSeek(event)">
@@ -394,21 +433,22 @@ body { background: #08080B; color: #FFF; font-family: -apple-system, BlinkMacSys
   <div class="dpad-row"><button class="dpad-btn" onclick="sendAction('key_up')">▲</button></div>
   <div class="dpad-row">
     <button class="dpad-btn" onclick="sendAction('key_left')">◀</button>
-    <button class="dpad-btn dpad-ok" onclick="sendAction('key_select')">OK</button>
+    <button class="dpad-btn dpad-ok" onclick="sendAction('key_select')">{{ok}}</button>
     <button class="dpad-btn" onclick="sendAction('key_right')">▶</button>
   </div>
   <div class="dpad-row"><button class="dpad-btn" onclick="sendAction('key_down')">▼</button></div>
   <div class="dpad-row" style="margin-top: 6px;">
-    <button class="dpad-btn" style="width: 110px;" onclick="sendAction('key_back')">Back</button>
+    <button class="dpad-btn" style="width: 110px;" onclick="sendAction('key_back')">{{back}}</button>
   </div>
 </div>
 
 <div class="card search-card">
-  <input type="text" class="search-input" id="sQuery" placeholder="Search song to play on TV..." onkeydown="if(event.key==='Enter')searchMusic()" />
+  <input type="text" class="search-input" id="sQuery" placeholder="{{searchPlaceholder}}" onkeydown="if(event.key==='Enter')searchMusic()" />
   <div class="search-results" id="sResults"></div>
 </div>
 
 <script>
+const copy = { {{javascriptCopy}} };
 let dur = 0;
 function fmtTime(ms) {
   if (ms <= 0) return "0:00";
@@ -417,7 +457,7 @@ function fmtTime(ms) {
 }
 function updateStatus() {
   fetch('/api/status').then(r => r.json()).then(data => {
-    document.getElementById('trackTitle').innerText = data.title || "No Song Playing";
+    document.getElementById('trackTitle').innerText = data.title || copy.noSongPlaying;
     document.getElementById('trackArtist').innerText = data.artist || "BitChord TV";
     let art = document.getElementById('trackArt');
     if (data.artworkUrl) { art.src = data.artworkUrl; art.style.display = 'block'; } else { art.style.display = 'none'; }
@@ -452,7 +492,12 @@ function searchMusic() {
       div.innerHTML = '<img class="result-thumb" src="' + (item.thumbnailUrl || '') + '" /><div class="result-text"><div class="result-title">' + item.title + '</div><div class="result-sub">' + item.subtitle + '</div></div>';
       div.onclick = () => {
         fetch('/api/play?videoId=' + encodeURIComponent(item.videoId) + '&title=' + encodeURIComponent(item.title) + '&artist=' + encodeURIComponent(item.subtitle) + '&thumbnailUrl=' + encodeURIComponent(item.thumbnailUrl), { method: 'POST' });
-        container.innerHTML = '<div style="padding:10px;text-align:center;color:#00E5FF;">Playing ' + item.title + ' on TV!</div>';
+        const message = copy.playingOnTv.replace('{title}', () => item.title);
+        container.replaceChildren();
+        const playing = document.createElement('div');
+        playing.style.cssText = 'padding:10px;text-align:center;color:#00E5FF;';
+        playing.textContent = message;
+        container.appendChild(playing);
       };
       container.appendChild(div);
     });
@@ -463,15 +508,26 @@ updateStatus();
 </script>
 </body>
 </html>
-""".trimIndent()
+    """.trimIndent(), mapOf(
+        "remotePageTitle" to R.string.tv_auth_remote_page_title,
+        "remoteHeading" to R.string.tv_auth_remote_heading,
+        "loadingTv" to R.string.tv_auth_loading_tv,
+        "connectingTv" to R.string.tv_auth_connecting_tv,
+        "ok" to R.string.tv_ok,
+        "back" to R.string.back,
+        "searchPlaceholder" to R.string.tv_auth_remote_search,
+    ), mapOf(
+        "noSongPlaying" to R.string.tv_auth_no_song_playing,
+        "playingOnTv" to R.string.tv_auth_playing_on_tv,
+    ))
 
-    private fun getAuthHtml(error: String? = null): String = """
+    private fun getAuthHtml(context: Context, error: String? = null): String = localizedHtml(context, """
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{lang}}" dir="{{dir}}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BitChord TV • 1-Tap Sign In</title>
+<title>{{authPageTitle}}</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #08080B; color: #FFF; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; }
@@ -486,44 +542,57 @@ textarea { width: 100%; height: 90px; background: rgba(0,0,0,0.5); border: 1px s
 <body>
 <div class="card" style="text-align: center;">
   <div style="width: 52px; height: 52px; border-radius: 50%; background: #FA2D48; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">♪</div>
-  <h1 style="font-size: 22px; font-weight: 800; margin-bottom: 6px;">Sign In to BitChord TV</h1>
-  <p style="font-size: 14px; color: #A0A0AB;">Fast & easy login from your mobile phone</p>
+  <h1 style="font-size: 22px; font-weight: 800; margin-bottom: 6px;">{{authHeading}}</h1>
+  <p style="font-size: 14px; color: #A0A0AB;">{{authSubtitle}}</p>
 
   <div class="step-box" style="text-align: left; margin-top: 18px;">
-    <strong>Option 1 (Fastest):</strong>
+    <strong>{{authFastestOption}}</strong>
     <ol style="margin-left: 18px; margin-top: 6px;">
-      <li>Tap the button below to open YouTube Music in your browser.</li>
-      <li>Sign in with your Google Account if not already logged in.</li>
-      <li>Return here and paste your cookie, or use the 1-click script to log in automatically!</li>
+      <li>{{authOpenYoutubeStep}}</li>
+      <li>{{authGoogleSignInStep}}</li>
+      <li>{{authSubmitSessionStep}}</li>
     </ol>
   </div>
 
   <a href="https://music.youtube.com" target="_blank" class="btn-google">
     <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"/><path fill="#FBBC05" d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"/></svg>
-    Open YouTube Music on Phone
+    {{authOpenYoutubeButton}}
   </a>
 </div>
 
 <div class="card">
-  <h2 style="font-size: 17px; font-weight: bold; margin-bottom: 8px;">Direct Session Submission</h2>
-  <p style="font-size: 13px; color: #AAA; line-height: 1.4;">Paste your YouTube Music session cookie / headers to immediately log in on TV:</p>
-  ${if (error != null) "<div style='color:#FF375F;font-size:13px;margin-top:8px;'>$error</div>" else ""}
+  <h2 style="font-size: 17px; font-weight: bold; margin-bottom: 8px;">{{authDirectSubmission}}</h2>
+  <p style="font-size: 13px; color: #AAA; line-height: 1.4;">{{authSubmitDescription}}</p>
+  ${if (error != null) "<div style='color:#FF375F;font-size:13px;margin-top:8px;'>${escapeHtml(error)}</div>" else ""}
   <form action="/submit" method="POST">
-    <textarea name="cookie" placeholder="Paste SAPISID / Session Cookie here..."></textarea>
-    <button type="submit" class="btn-primary">Connect Account to TV</button>
+    <textarea name="cookie" placeholder="{{authCookiePlaceholder}}"></textarea>
+    <button type="submit" class="btn-primary">{{authConnectButton}}</button>
   </form>
 </div>
 </body>
 </html>
-""".trimIndent()
+""".trimIndent(), mapOf(
+        "authPageTitle" to R.string.tv_auth_sign_in_page_title,
+        "authHeading" to R.string.tv_auth_sign_in_title,
+        "authSubtitle" to R.string.tv_auth_fast_login_description,
+        "authFastestOption" to R.string.tv_auth_fastest_option,
+        "authOpenYoutubeStep" to R.string.tv_auth_open_youtube_music_step,
+        "authGoogleSignInStep" to R.string.tv_auth_sign_in_google_step,
+        "authSubmitSessionStep" to R.string.tv_auth_submit_session_step,
+        "authOpenYoutubeButton" to R.string.tv_auth_open_youtube_music,
+        "authDirectSubmission" to R.string.tv_auth_direct_session_submission,
+        "authSubmitDescription" to R.string.tv_auth_submit_session_description,
+        "authCookiePlaceholder" to R.string.tv_auth_cookie_placeholder,
+        "authConnectButton" to R.string.tv_auth_connect_account,
+    ))
 
-    private fun getSuccessHtml(): String = """
+    private fun getSuccessHtml(context: Context): String = localizedHtml(context, """
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{lang}}" dir="{{dir}}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BitChord TV • Connected</title>
+<title>{{successPageTitle}}</title>
 <style>
 body { background: #08080B; color: #FFF; font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; text-align: center; }
 .card { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 24px; padding: 32px; max-width: 380px; }
@@ -533,11 +602,16 @@ body { background: #08080B; color: #FFF; font-family: -apple-system, sans-serif;
 <body>
 <div class="card">
   <div style="font-size: 48px; margin-bottom: 12px;">✅</div>
-  <h1 style="font-size: 22px; font-weight: bold; margin-bottom: 8px;">Paired Successfully!</h1>
-  <p style="font-size: 14px; color: #AAA;">Your BitChord TV is now connected. You can now use the mobile remote to control playback.</p>
-  <a href="/remote" class="btn">📱 Open TV Remote</a>
+  <h1 style="font-size: 22px; font-weight: bold; margin-bottom: 8px;">{{successHeading}}</h1>
+  <p style="font-size: 14px; color: #AAA;">{{successDescription}}</p>
+  <a href="/remote" class="btn">{{successRemoteButton}}</a>
 </div>
 </body>
 </html>
-""".trimIndent()
+""".trimIndent(), mapOf(
+        "successPageTitle" to R.string.tv_auth_connected_page_title,
+        "successHeading" to R.string.tv_auth_paired_successfully,
+        "successDescription" to R.string.tv_auth_connected_description,
+        "successRemoteButton" to R.string.tv_auth_open_remote,
+    ))
 }

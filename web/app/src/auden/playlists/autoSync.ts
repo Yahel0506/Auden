@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { queryClient } from '@/lib/queryClient';
@@ -136,27 +137,27 @@ export async function runDue(env: SyncEnv): Promise<SyncReport> {
 }
 
 export const SUMMARY_JOB = 'autosync';
-export const summaryText = (added: number): string => `${added} new ${added === 1 ? 'song' : 'songs'} added to your saved playlists`;
+export const summaryText = (added: number): string => translateUi('playlists_auto_sync.summary', { count: added });
 
 /** The banner line, only if songs arrived (removals are not announced, as on the phone). */
 export function announce(report: SyncReport): void {
   if (report.added <= 0) return;
-  useJobs.getState().start({ id: SUMMARY_JOB, title: 'Playlists updated', total: 1 });
+  useJobs.getState().start({ id: SUMMARY_JOB, title: translateUi('playlists_auto_sync.playlists_updated'), total: 1 });
   useJobs.getState().finish(SUMMARY_JOB, summaryText(report.added));
 }
 
 export const OFFLINE_JOB = 'autosync-offline';
 export function offlineSummary(r: OfflineReport): string | null {
   const parts = [
-    r.queued > 0 ? `${r.queued} new ${r.queued === 1 ? 'song' : 'songs'} queued for offline` : '',
-    r.asking > 0 ? `${r.asking} ${r.asking === 1 ? 'playlist is' : 'playlists are'} waiting for your OK on the Offline page` : '',
+    r.queued > 0 ? translateUi('playlists_auto_sync.offline_queued', { count: r.queued }) : '',
+    r.asking > 0 ? translateUi('playlists_auto_sync.offline_asking', { count: r.asking }) : '',
   ].filter(Boolean);
   return parts.length ? parts.join('; ') : null;
 }
 function announceOffline(report: OfflineReport): void {
   const text = offlineSummary(report);
   if (!text) return;
-  useJobs.getState().start({ id: OFFLINE_JOB, title: 'Offline copies updated', total: 1 });
+  useJobs.getState().start({ id: OFFLINE_JOB, title: translateUi('playlists_auto_sync.offline_copies_updated'), total: 1 });
   useJobs.getState().finish(OFFLINE_JOB, text);
 }
 

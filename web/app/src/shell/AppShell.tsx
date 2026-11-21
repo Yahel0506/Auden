@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { lazy, Suspense, useEffect } from 'react';
 import { resumeSession } from '@/party/listenTogether';
 import { startPartySync } from '@/party/partySync';
@@ -84,24 +85,20 @@ export function AppShell() {
   if (mobile) {
     banner = (
       <Banner
-        title="Auden is better in the app."
-        detail="Phone browsers can’t run the Auden extension. The Android app has everything."
+        title={translateUi("app_shell.auden_is_better_in_the")}
+        detail={translateUi("app_shell.phone_browsers_can_t_run")}
         action={
-          <a className={bannerButtonClass} href={config.androidAppUrl} target="_blank" rel="noreferrer">
-            Get the App
-          </a>
+          <a className={bannerButtonClass} href={config.androidAppUrl} target="_blank" rel="noreferrer">{translateUi("app_shell.get_the_app")}</a>
         }
       />
     );
   } else if (extension.state === 'missing' && !bannerDismissed) {
     banner = (
       <Banner
-        title="Play YouTube Music with the Auden extension."
-        detail="Playback, YouTube Music sign-in, Spotify and Discord need the extension. Addons and lyrics work without it."
+        title={translateUi("app_shell.play_youtube_music_with_the")}
+        detail={translateUi("app_shell.playback_youtube_music_sign_in")}
         action={
-          <PrefetchLink className={bannerButtonClass} to="/extension">
-            Get the Extension
-          </PrefetchLink>
+          <PrefetchLink className={bannerButtonClass} to="/extension">{translateUi("app_shell.get_the_extension")}</PrefetchLink>
         }
         onDismiss={dismissBanner}
       />

@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { Search, X } from 'lucide-react';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -73,8 +74,8 @@ export function SearchField({ initial, onSearch }: { initial: string; onSearch: 
           className="h-[38px] w-full rounded-pill border border-search-border bg-page pt-1.5 pr-[30px] pb-[5px] pl-7 type-body text-primary placeholder:text-tertiary [&::-webkit-search-cancel-button]:hidden"
           type="search"
           value={value}
-          placeholder="Artists, Songs, Lyrics, and More"
-          aria-label="Search"
+          placeholder={translateUi("search_field.artists_songs_lyrics_and_more")}
+          aria-label={translateUi("search_field.search")}
           role="combobox"
           aria-expanded={showList}
           aria-controls={listId}
@@ -104,7 +105,7 @@ export function SearchField({ initial, onSearch }: { initial: string; onSearch: 
           <button
             type="button"
             className="absolute right-[9px] grid size-4 place-items-center rounded-full bg-tertiary text-page"
-            aria-label="Clear"
+            aria-label={translateUi("search_field.clear")}
             onClick={() => {
               setValue('');
               input.current?.focus();
@@ -183,5 +184,6 @@ const lockupCols = 'grid-cols-[46px_minmax(0,1fr)]';
 const lockupMenuCols = 'grid-cols-[46px_minmax(0,1fr)_auto]';
 
 function kindLabel(kind: MusicItem['kind']): string {
-  return { song: 'Song', video: 'Video', album: 'Album', playlist: 'Playlist', 'spotify-playlist': 'Spotify Playlist', artist: 'Artist', episode: 'Episode', podcast: 'Podcast', unknown: '' }[kind];
+  const key = { song: 'search_page.kind_song', video: 'search_page.kind_video', album: 'search_page.kind_album', playlist: 'search_page.kind_playlist', 'spotify-playlist': 'search_page.kind_spotify_playlist', artist: 'search_page.kind_artist', episode: 'search_page.kind_episode', podcast: 'search_page.kind_podcast', unknown: '' }[kind];
+  return key ? translateUi(key as keyof typeof import('@/i18n.en.json')) : '';
 }

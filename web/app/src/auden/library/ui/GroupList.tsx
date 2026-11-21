@@ -1,6 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useEffect, useRef, useState } from 'react';
 import { Artwork } from '@/components/music/Artwork';
+import { t as translateUi } from '@/i18n';
 import type { LocalGroup } from '../groups';
 import type { LocalItem } from './data';
 
@@ -36,9 +37,9 @@ export function GroupList({ groups, round, onOpen }: { groups: LocalGroup<LocalI
                 <Artwork src={art} displayWidth={44} radius={round ? '50%' : 'var(--radius-artwork-small)'} />
               </div>
               <span className="min-w-0 flex-1">
-                <span className="block truncate type-body-emphasized text-primary">{group.title || 'Unknown'}</span>
+                <span className="block truncate type-body-emphasized text-primary">{group.title || translateUi('group_list.unknown')}</span>
                 <span className="block truncate type-callout text-secondary">
-                  {group.songs.length} {group.songs.length === 1 ? 'song' : 'songs'}
+                  {translateUi('group_list.song_count', { count: group.songs.length })}
                   {group.subtitle ? ` · ${group.subtitle}` : ''}
                 </span>
               </span>

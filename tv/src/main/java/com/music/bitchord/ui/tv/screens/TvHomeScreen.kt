@@ -19,10 +19,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.media3.session.MediaController
+import com.music.bitchord.R
 import com.music.bitchord.data.model.BrowseType
 import com.music.bitchord.data.model.HomeShelf
 import com.music.bitchord.data.model.ShelfItem
@@ -73,8 +75,8 @@ fun TvHomeScreen(
         is UiState.Success -> {
             if (state.data.isEmpty()) {
                 TvEmptyState(
-                    title = "Nothing Here Yet",
-                    message = "Sign in from Settings, or check your connection, to see your recommendations.",
+                    title = stringResource(R.string.tv_empty_home_title),
+                    message = stringResource(R.string.tv_home_sign_in_for_recommendations),
                     modifier = modifier,
                 )
             } else {

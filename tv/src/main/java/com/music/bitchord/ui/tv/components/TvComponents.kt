@@ -1,5 +1,8 @@
 package com.music.bitchord.ui.tv.components
 
+import androidx.compose.ui.res.stringResource
+import com.music.bitchord.R
+
 import android.graphics.Bitmap
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -317,7 +320,7 @@ fun TvErrorState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(text = "Couldn't Load", style = TvType.Title.copy(fontSize = 19.sp), color = TvGlass.TextPrimary)
+        Text(text = stringResource(R.string.tv_couldn_t_load), style = TvType.Title.copy(fontSize = 19.sp), color = TvGlass.TextPrimary)
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = message,
@@ -327,7 +330,7 @@ fun TvErrorState(
             modifier = Modifier.widthIn(max = 416.dp),
         )
         Spacer(modifier = Modifier.height(19.dp))
-        TvButton(text = "Try Again", onClick = onRetry)
+        TvButton(text = stringResource(R.string.try_again), onClick = onRetry)
     }
 }
 

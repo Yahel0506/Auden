@@ -1,0 +1,145 @@
+{
+  "extensionName": {
+    "message": "Auden"
+  },
+  "extensionDescription": {
+    "message": "Auden वेब प्लेयर को YouTube Music, Spotify और Discord से जोड़ता है।"
+  },
+  "openAuden": {
+    "message": "Auden खोलें"
+  },
+  "checking": {
+    "message": "जाँच हो रही है…"
+  },
+  "notSignedIn": {
+    "message": "इस ब्राउज़र में साइन इन नहीं है"
+  },
+  "signIn": {
+    "message": "साइन इन करें"
+  },
+  "couldNotReadAccount": {
+    "message": "आपका खाता पढ़ा नहीं जा सका"
+  },
+  "youtubeSessionRejected": {
+    "message": "YouTube ने इस ब्राउज़र सत्र को स्वीकार नहीं किया। फिर से साइन इन करें।"
+  },
+  "youtubeAccountMissing": {
+    "message": "कोई साइन-इन किया हुआ Google खाता नहीं मिला।"
+  },
+  "youtubeAccountUnavailable": {
+    "message": "इस ब्राउज़र सत्र में YouTube को कोई खाता नहीं मिला।"
+  },
+  "disconnected": {
+    "message": "डिस्कनेक्ट किया गया"
+  },
+  "retry": {
+    "message": "फिर कोशिश करें"
+  },
+  "connect": {
+    "message": "कनेक्ट करें"
+  },
+  "disconnect": {
+    "message": "डिस्कनेक्ट करें"
+  },
+  "spotifySignInExpired": {
+    "message": "आपका Spotify सत्र समाप्त हो गया है। फिर से साइन इन करें।"
+  },
+  "spotifyRateLimited": {
+    "message": "Spotify अनुरोधों को कुछ समय के लिए सीमित कर रहा है। थोड़ी देर बाद कोशिश करें।"
+  },
+  "spotifyConnectionFailed": {
+    "message": "Spotify से संपर्क नहीं हो सका। अपना कनेक्शन जाँचें और फिर कोशिश करें।"
+  },
+  "spotifySignInFailed": {
+    "message": "Spotify में साइन इन नहीं हो सका। फिर कोशिश करें।"
+  },
+  "stopUsingAccountYouTube": {
+    "message": "Auden में इस खाते का उपयोग बंद करें। YouTube में आपका साइन-इन बना रहेगा।"
+  },
+  "stopUsingAccountSpotify": {
+    "message": "Auden में इस खाते का उपयोग बंद करें। Spotify में आपका साइन-इन बना रहेगा।"
+  },
+  "notConnected": {
+    "message": "कनेक्ट नहीं है"
+  },
+  "showingWhatYouPlay": {
+    "message": "आप जो चला रहे हैं वह दिखाया जा रहा है"
+  },
+  "connecting": {
+    "message": "कनेक्ट हो रहा है…"
+  },
+  "couldNotConnect": {
+    "message": "कनेक्ट नहीं हो सका"
+  },
+  "onWaitingForSong": {
+    "message": "चालू है, गाने का इंतज़ार है"
+  },
+  "presenceOff": {
+    "message": "उपस्थिति बंद"
+  },
+  "forgetDiscordAccount": {
+    "message": "इस Discord खाते को भूल जाएँ।"
+  },
+  "couldNotReadSession": {
+    "message": "सत्र पढ़ा नहीं जा सका"
+  },
+  "allowLyricSourcesTitle": {
+    "message": "Auden: गीत के बोल के स्रोत"
+  },
+  "allowLyricSourcesHeading": {
+    "message": "गीत के बोल के स्रोतों को अनुमति दें"
+  },
+  "allowLyricSourcesExplanation": {
+    "message": "ये बोल प्रदाता वेब पेजों को सीधे अनुरोध करने की अनुमति नहीं देते, इसलिए Auden एक्सटेंशन के ज़रिए अनुरोध करता है। आपका ब्राउज़र पुष्टि माँगेगा।"
+  },
+  "allow": {
+    "message": "अनुमति दें"
+  },
+  "permissionDone": {
+    "message": "हो गया। आप यह टैब बंद करके Auden पर लौट सकते हैं।"
+  },
+  "permissionDenied": {
+    "message": "अनुमति नहीं दी गई। वे स्रोत बंद रहेंगे।"
+  },
+  "discordConnectTitle": {
+    "message": "Auden: Discord कनेक्ट करें"
+  },
+  "discordConnectHeading": {
+    "message": "Discord पर दिखाएँ कि आप क्या सुन रहे हैं"
+  },
+  "discordConnectExplanation": {
+    "message": "Auden discord.com टैब से आपका Discord सत्र पढ़कर इस एक्सटेंशन में रखता है। वेब प्लेयर इसे नहीं देख सकता।"
+  },
+  "discordTokenWarning": {
+    "message": "इसमें आपके खाते का अपना टोकन इस्तेमाल होता है, जिसकी Discord की शर्तें अनुमति नहीं देतीं। इसका उपयोग अपने जोखिम पर करें।"
+  },
+  "connectDiscord": {
+    "message": "Discord कनेक्ट करें"
+  },
+  "discordPermissionDenied": {
+    "message": "अनुमति नहीं दी गई। Discord बंद रहेगा।"
+  },
+  "discordConnected": {
+    "message": "$USER$ के रूप में कनेक्ट हो गया। आप यह टैब बंद कर सकते हैं।",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "discordSignInProgress": {
+    "message": "खुले हुए टैब में Discord पर साइन इन करें। यह पेज इसका पता लगा लेगा।"
+  },
+  "discordReadProgress": {
+    "message": "आपका Discord सत्र पढ़ा जा रहा है…"
+  },
+  "discordSessionMissing": {
+    "message": "कोई Discord सत्र नहीं मिला। discord.com पर साइन इन करके फिर कोशिश करें।"
+  },
+  "discordTokenRejected": {
+    "message": "Discord ने टोकन अस्वीकार कर दिया। खाता फिर से कनेक्ट करें।"
+  },
+  "discordConnectionError": {
+    "message": "Discord से कनेक्ट नहीं हो सका। फिर कोशिश करें।"
+  }
+}

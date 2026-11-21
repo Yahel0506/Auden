@@ -1,5 +1,6 @@
+import { t as translateUi } from '@/i18n';
 import { ChevronRight } from 'lucide-react';
-import { useState, type ComponentType } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 import { FaChrome, FaFirefoxBrowser } from 'react-icons/fa';
 import { SiDiscord, SiSpotify, SiYoutubemusic } from 'react-icons/si';
 import type { Capability } from '@bitchord/shared/bridge';
@@ -34,38 +35,38 @@ function downloadsFor(published: PublishedExtension | null): Download[] {
   return [
     {
       browser: 'chrome',
-      title: 'Download for Chrome',
-      detail: 'Chrome, Edge, Brave and other Chromium browsers',
+      title: translateUi('extension_page.download_for_chrome'),
+      detail: translateUi('extension_page.chrome_edge_brave_and_other_chromium_browsers'),
       href: published ? downloadUrl(published.files.chrome) : config.extensionChromeUrl,
       Icon: FaChrome,
       steps: [
-        `Extract the zip somewhere you’ll keep it. It holds one folder, ${folder('chrome')}.`,
-        'Open chrome://extensions and turn on Developer mode.',
-        'Choose Load unpacked and select that folder.',
-        'Come back to this page: the status above turns to Installed.',
+        translateUi('extension_page.chrome_step_extract_the_zip', { folder: folder('chrome') }),
+        translateUi('extension_page.chrome_step_open_extensions'),
+        translateUi('extension_page.chrome_step_choose_load_unpacked'),
+        translateUi('extension_page.chrome_step_return_to_this_page'),
       ],
       updateSteps: [
-        `Extract the new zip. It holds ${folder('chrome')}.`,
-        'In chrome://extensions, choose Load unpacked and select that folder. It has the same ID, so it takes the old one’s place and keeps your settings.',
-        'Delete the old folder, then come back to this page: the version above updates on its own.',
+        translateUi('extension_page.chrome_update_extract_zip', { folder: folder('chrome') }),
+        translateUi('extension_page.chrome_update_load_folder'),
+        translateUi('extension_page.chrome_update_delete_old_folder'),
       ],
     },
     {
       browser: 'firefox',
-      title: 'Download for Firefox',
-      detail: 'Firefox 128 or newer',
+      title: translateUi('extension_page.download_for_firefox'),
+      detail: translateUi('extension_page.firefox_128_or_newer'),
       href: published ? downloadUrl(published.files.firefox) : config.extensionFirefoxUrl,
       Icon: FaFirefoxBrowser,
       steps: [
-        `Extract the zip. It holds one folder, ${folder('firefox')}.`,
-        'Open about:debugging#/runtime/this-firefox and choose Load Temporary Add-on.',
-        'Select manifest.json inside that folder.',
-        'Firefox removes temporary add-ons when it quits; a signed version is coming.',
+        translateUi('extension_page.firefox_step_extract_the_zip', { folder: folder('firefox') }),
+        translateUi('extension_page.firefox_step_open_debugging'),
+        translateUi('extension_page.firefox_step_select_manifest'),
+        translateUi('extension_page.firefox_step_temporary_addons'),
       ],
       updateSteps: [
-        `Extract the new zip. It holds ${folder('firefox')}.`,
-        'In about:debugging, choose Load Temporary Add-on and select manifest.json in the new folder.',
-        'Come back to this page: the version above updates on its own.',
+        translateUi('extension_page.firefox_update_extract_zip', { folder: folder('firefox') }),
+        translateUi('extension_page.firefox_update_load_addon'),
+        translateUi('extension_page.firefox_update_return_to_page'),
       ],
     },
   ];
@@ -80,30 +81,30 @@ interface Integration {
   color: string;
   capability: Capability;
   /** What the row says when the extension serves this integration. */
-  ready: string;
+  readyKey: string;
 }
 
 const INTEGRATIONS: Integration[] = [
-  { name: 'YouTube Music', Icon: SiYoutubemusic, color: '#ff0033', capability: 'yt', ready: 'Playback ready · not signed in' },
-  { name: 'Spotify', Icon: SiSpotify, color: '#1ed760', capability: 'spotify', ready: 'Not connected' },
-  { name: 'Discord', Icon: SiDiscord, color: '#5865f2', capability: 'discord', ready: 'Off' },
+  { name: 'YouTube Music', Icon: SiYoutubemusic, color: '#ff0033', capability: 'yt', readyKey: 'extension_page.playback_ready_not_signed_in' },
+  { name: 'Spotify', Icon: SiSpotify, color: '#1ed760', capability: 'spotify', readyKey: 'extension_page.not_connected' },
+  { name: 'Discord', Icon: SiDiscord, color: '#5865f2', capability: 'discord', readyKey: 'extension_page.off' },
 ];
 
 /** YouTube Music's row: who requests act as, once the extension reports it. */
 function youtubeStatus(auth: YtAuthStatus): string | null {
   if (auth.state !== 'ready') return null;
   const { browserSignedIn, connected, active } = auth.auth;
-  if (!browserSignedIn) return 'Playback ready · not signed in';
-  if (!connected) return 'Disconnected';
-  return active ? `Signed in as ${active.name}` : 'Signed in · no account could be read';
+  if (!browserSignedIn) return translateUi('extension_page.playback_ready_not_signed_in');
+  if (!connected) return translateUi('extension_page.disconnected');
+  return active ? translateUi('extension_page.signed_in_as', { account: active.name }) : translateUi('extension_page.signed_in_account_unavailable');
 }
 
 /** One integration's state, honest about what this extension version can do. */
 function integrationStatus(status: ExtensionStatus, integration: Integration, auth: YtAuthStatus): string {
-  if (status.state === 'checking') return 'Checking…';
-  if (status.state === 'missing') return 'Needs the extension';
-  if (!status.extension.info.capabilities.includes(integration.capability)) return 'Not available in this version yet';
-  return (integration.capability === 'yt' && youtubeStatus(auth)) || integration.ready;
+  if (status.state === 'checking') return translateUi('extension_page.checking');
+  if (status.state === 'missing') return translateUi('extension_page.needs_extension');
+  if (!status.extension.info.capabilities.includes(integration.capability)) return translateUi('extension_page.unavailable_in_this_version');
+  return (integration.capability === 'yt' && youtubeStatus(auth)) || translateUi(integration.readyKey as keyof typeof import('@/i18n.en.json'));
 }
 
 export default function ExtensionPage() {
@@ -111,6 +112,9 @@ export default function ExtensionPage() {
   const update = useExtensionUpdate();
   const DOWNLOADS = downloadsFor(usePublishedExtension());
   const auth = useYtAuth();
+  useEffect(() => {
+    if (auth.state === 'ready' && auth.auth.problem) console.warn('Auden YouTube Music auth diagnostic', auth.auth.problem);
+  }, [auth.state, auth.state === 'ready' ? auth.auth.problem : null]);
   const [chosen, setChosen] = useState<Browser | null>(null);
   const [updating, setUpdating] = useState(false);
   const downloads = [...DOWNLOADS].sort((a, b) => Number(b.browser === currentBrowser) - Number(a.browser === currentBrowser));
@@ -121,36 +125,36 @@ export default function ExtensionPage() {
 
   return (
     <div className={settingsUi.centered}>
-      <PageHeader title="Auden Extension" />
+      <PageHeader title={translateUi("extension_page.auden_extension")} />
       <div className={settingsUi.body}>
         <section className={settingsUi.group} aria-live="polite">
           <div className={settingsUi.row}>
-            <span>Status</span>
+            <span>{translateUi("extension_page.status")}</span>
             <span className={settingsUi.value}>
-              {status.state === 'checking' && 'Checking…'}
-              {status.state === 'missing' && 'Not installed'}
+              {status.state === 'checking' && translateUi("pages_extensionpage_checking")}
+              {status.state === 'missing' && translateUi("pages_extensionpage_not_installed")}
               {status.state === 'present' && (
                 <>
                   <span className={settingsUi.dot} aria-hidden="true" />
-                  Installed · v{status.extension.info.version}
+                  {translateUi('extension_page.installed_version', { version: status.extension.info.version })}
                 </>
               )}
             </span>
           </div>
           {update.state !== 'unknown' && (
             <div className={settingsUi.row}>
-              <span>Latest</span>
+              <span>{translateUi("extension_page.latest")}</span>
               <span className={settingsUi.value}>
                 v{update.latest.version}
-                {update.state === 'current' && ' · Up to date'}
+                {update.state === 'current' && translateUi("pages_extensionpage_up_to_date")}
               </span>
             </div>
           )}
           {status.state === 'present' && (
             <div className={settingsUi.row}>
-              <span>Connection</span>
+              <span>{translateUi("extension_page.connection")}</span>
               <span className={settingsUi.value}>
-                {status.extension.bridge.transport === 'external' ? 'Direct' : 'Page relay'} ·{' '}
+                {status.extension.bridge.transport === 'external' ? translateUi('extension_page.direct') : translateUi("pages_extensionpage_page_relay")} ·{' '}
                 {status.extension.info.browser === 'firefox' ? 'Firefox' : 'Chromium'}
               </span>
             </div>
@@ -166,10 +170,12 @@ export default function ExtensionPage() {
             >
               <span className={settingsUi.updateDot} aria-hidden="true" />
               <span className={settingsUi.downloadText}>
-                <span className={settingsUi.downloadTitle}>Update to v{update.latest.version}</span>
+                <span className={settingsUi.downloadTitle}>{translateUi('extension_page.update_to_version', { version: update.latest.version })}</span>
                 <span className={settingsUi.downloadDetail}>
-                  You have v{update.installed}. Download the new {forUpdate.browser === 'firefox' ? 'Firefox' : 'Chrome'}{' '}
-                  build, then reload the extension.
+                  {translateUi('extension_page.installed_version_download_build', {
+                    version: update.installed,
+                    browser: forUpdate.browser === 'firefox' ? 'Firefox' : 'Chrome',
+                  })}
                 </span>
               </span>
               <ChevronRight size={16} strokeWidth={2.4} className={settingsUi.chevron} />
@@ -183,12 +189,9 @@ export default function ExtensionPage() {
             )}
           </>
         )}
-        <p className={settingsUi.footer}>
-          The extension does the networking and sign-in work a web page isn’t allowed to do. Addons and most lyric
-          providers work without it.
-        </p>
+        <p className={settingsUi.footer}>{translateUi("extension_page.the_extension_does_the_networking")}</p>
 
-        <h2 className={settingsUi.sectionHeader}>Get the extension</h2>
+        <h2 className={settingsUi.sectionHeader}>{translateUi("extension_page.get_the_extension")}</h2>
         <section className={settingsUi.group}>
           {downloads.map(({ browser, title, detail, href, Icon }) => (
             <a
@@ -203,7 +206,7 @@ export default function ExtensionPage() {
                 <span className={settingsUi.downloadTitle}>{title}</span>
                 <span className={settingsUi.downloadDetail}>
                   {detail}
-                  {browser === currentBrowser && ' · This browser'}
+                  {browser === currentBrowser && translateUi('extension_page.this_browser_suffix')}
                 </span>
               </span>
               <ChevronRight size={16} strokeWidth={2.4} className={settingsUi.chevron} />
@@ -217,10 +220,10 @@ export default function ExtensionPage() {
             ))}
           </ol>
         ) : (
-          <p className={settingsUi.footer}>Pick your browser to download the extension and see how to install it.</p>
+          <p className={settingsUi.footer}>{translateUi("extension_page.pick_your_browser_to_download")}</p>
         )}
 
-        <h2 className={settingsUi.sectionHeader}>Integrations</h2>
+        <h2 className={settingsUi.sectionHeader}>{translateUi("extension_page.integrations")}</h2>
         <section className={settingsUi.group}>
           {INTEGRATIONS.map((integration) => (
             <div key={integration.name} className={settingsUi.integration}>
@@ -239,16 +242,12 @@ export default function ExtensionPage() {
           ))}
         </section>
         {auth.state === 'ready' && auth.auth.problem && (
-          <p className={settingsUi.footer}>YouTube Music: {auth.auth.problem}.</p>
+          <p className={settingsUi.footer}>{translateUi('extension_page.youtube_auth_problem')}</p>
         )}
+        <p className={settingsUi.footer}>{translateUi("extension_page.sign_ins_stay_inside_the")}</p>
         <p className={settingsUi.footer}>
-          Sign-ins stay inside the extension: this page only ever sees results, never your cookies or tokens.
-        </p>
-        <p className={settingsUi.footer}>
-          Spotify Canvas, Discord presence and Listen Together are in{' '}
-          <PrefetchLink to="/settings" className={settingsUi.inlineLink}>
-            Settings
-          </PrefetchLink>
+          {translateUi('extension_page.integrations_are_in_settings')}{' '}
+          <PrefetchLink to="/settings" className={settingsUi.inlineLink}>{translateUi("extension_page.settings")}</PrefetchLink>
           .
         </p>
       </div>

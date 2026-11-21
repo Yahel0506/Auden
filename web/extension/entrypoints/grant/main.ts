@@ -1,5 +1,8 @@
 import '../popup/style.css';
 import './style.css';
+import { localizeStaticDocument, message } from '../../lib/i18n';
+
+localizeStaticDocument();
 
 // Opened by lyrics.requestPermissions: the browser only shows a permission
 // prompt in answer to a click on one of the extension's own pages.
@@ -14,6 +17,6 @@ for (const origin of origins) {
 const status = document.getElementById('status')!;
 document.getElementById('allow')!.addEventListener('click', async () => {
   const granted = await browser.permissions.request({ origins: origins.map((o) => `${o}/*`) }).catch(() => false);
-  status.textContent = granted ? 'Done. You can close this tab and go back to Auden.' : 'Not allowed. Those sources stay off.';
+  status.textContent = granted ? message('permissionDone') : message('permissionDenied');
   if (granted) setTimeout(() => window.close(), 1200);
 });

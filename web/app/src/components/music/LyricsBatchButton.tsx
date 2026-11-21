@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { Mic2 } from 'lucide-react';
 import { useState } from 'react';
 import { startLyricsBatch, type BatchSong } from '@/auden/lyrics/batch';
@@ -49,8 +50,8 @@ export function LyricsBatchButton({
   return (
     <button
       className={detailButton.circle}
-      aria-label="Find lyrics for these songs"
-      title="Find lyrics for these songs"
+      aria-label={translateUi("lyrics_batch_button.find_lyrics_for_these_songs")}
+      title={translateUi("lyrics_batch_button.find_lyrics_for_these_songs")}
       disabled={tracks.length === 0 || loading}
       onClick={async () => {
         let all = tracks;

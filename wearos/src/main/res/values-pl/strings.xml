@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="connecting">Łączenie…</string>
+    <string name="no_phone_title">Telefon niepołączony</string>
+    <string name="no_phone_body">Otwórz Auden na telefonie i trzymaj go blisko zegarka.</string>
+    <string name="retry">Spróbuj ponownie</string>
+    <string name="nothing_playing">Nic nie jest odtwarzane</string>
+    <string name="nothing_playing_body">Włącz muzykę w Auden na telefonie.</string>
+    <string name="resume">Wznów</string>
+    <string name="up_next">Następne</string>
+    <string name="queue_empty">Kolejka jest pusta</string>
+    <string name="loading">Wczytywanie…</string>
+    <string name="playing_now">Teraz odtwarzane</string>
+    <string name="more">Więcej</string>
+    <string name="shuffle">Losowo</string>
+    <string name="repeat">Powtarzanie</string>
+    <string name="repeat_off">Wyłączone</string>
+    <string name="repeat_all">Wszystkie</string>
+    <string name="repeat_one">Jeden utwór</string>
+    <string name="on">Włączone</string>
+    <string name="off">Wyłączone</string>
+    <string name="love">Lubię</string>
+    <string name="loved">W ulubionych</string>
+    <string name="volume">Głośność</string>
+    <string name="on_phone">Na telefonie</string>
+    <string name="play">Odtwórz</string>
+    <string name="pause">Wstrzymaj</string>
+    <string name="next">Następny</string>
+    <string name="previous">Poprzedni</string>
+    <string name="output">Wyjście audio</string>
+    <string name="this_watch">Ten zegarek</string>
+    <string name="watch_speaker">Głośnik zegarka lub słuchawki</string>
+    <string name="on_phone_output">Na telefonie</string>
+    <string name="phone_speaker">Głośnik telefonu</string>
+    <string name="wired_headphones">Słuchawki przewodowe</string>
+    <string name="usb_audio">Dźwięk przez USB</string>
+    <string name="hdmi">HDMI</string>
+    <string name="other_output">Inne wyjście</string>
+    <string name="moving_to_watch">Przełączanie na zegarek…</string>
+    <string name="update_channel">Aktualizacje</string>
+    <string name="update_ready">Aktualizacja Auden jest gotowa</string>
+    <string name="update_tap">Dotknij, aby zainstalować aktualizację z telefonu.</string>
+</resources>

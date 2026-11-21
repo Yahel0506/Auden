@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { Laptop, MonitorSpeaker, Smartphone, Tv, Watch } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import type { ConnectPlatform } from '@bitchord/shared/connect';
@@ -51,7 +52,7 @@ export function DevicePicker({ className, placement = 'above-end' }: { className
     <div ref={root} className="relative">
       <button
         className={className}
-        aria-label="Audio output"
+        aria-label={translateUi("device_picker.audio_output")}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-pressed={elsewhere}
@@ -64,17 +65,17 @@ export function DevicePicker({ className, placement = 'above-end' }: { className
           role="menu"
           className={`glass-pill absolute bottom-full z-50 mb-2 w-[min(300px,86vw)] rounded-[14px] p-2 text-start ${placement === 'above-end' ? 'right-0' : 'left-0'}`}
         >
-          <div className="px-2 pt-1 pb-2 type-body-emphasized">Connect to a device</div>
-          {status !== 'online' && <div className="px-2 pb-2 text-secondary">{status === 'connecting' ? 'Connecting…' : 'Not connected yet. Devices appear with the same YouTube Music or Spotify account (through the Auden extension) — or, with no account, the same party name on this network.'}</div>}
+          <div className="px-2 pt-1 pb-2 type-body-emphasized">{translateUi("device_picker.connect_to_a_device")}</div>
+          {status !== 'online' && <div className="px-2 pb-2 text-secondary">{status === 'connecting' ? translateUi("connect_ui_devicepicker_connecting") : translateUi("connect_ui_devicepicker_not_connected_yet_devices_appear")}</div>}
           {status === 'online' && (
             <ul className="flex flex-col">
-              {mine && <Row id={mine.deviceId} name="This browser" subtitle={mine.name} platform={mine.platform} active={activeId === myId} onPick={() => setOpen(false)} />}
+              {mine && <Row id={mine.deviceId} name={translateUi('connect_ui_this_browser')} subtitle={mine.name} platform={mine.platform} active={activeId === myId} onPick={() => setOpen(false)} />}
               {others.map((d) => (
-                <Row key={d.deviceId} id={d.deviceId} name={d.name} subtitle={d.platform === 'android' ? 'Auden for Android' : d.platform === 'tv' ? 'Auden for TV' : 'Auden'} platform={d.platform} active={activeId === d.deviceId} onPick={() => setOpen(false)} />
+                <Row key={d.deviceId} id={d.deviceId} name={d.name} subtitle={d.platform === 'android' ? translateUi('connect_ui_auden_for_android') : d.platform === 'tv' ? translateUi('connect_ui_auden_for_tv') : 'Auden'} platform={d.platform} active={activeId === d.deviceId} onPick={() => setOpen(false)} />
               ))}
             </ul>
           )}
-          {status === 'online' && others.length === 0 && <div className="px-2 pt-1 pb-1 text-secondary">Open Auden on another device with this account and it shows up here.</div>}
+          {status === 'online' && others.length === 0 && <div className="px-2 pt-1 pb-1 text-secondary">{translateUi("device_picker.open_auden_on_another_device")}</div>}
         </div>
       )}
     </div>
@@ -96,7 +97,7 @@ function Row({ id, name, subtitle, platform, active, onPick }: { id: string; nam
         <span className="shrink-0">{ICONS[platform]}</span>
         <span className="min-w-0 flex-1">
           <span className="block truncate type-body-emphasized">{name}</span>
-          <span className="block truncate text-secondary">{active ? `Playing on ${name}` : subtitle}</span>
+          <span className="block truncate text-secondary">{active ? translateUi('connect_ui_playing_on', { name }) : subtitle}</span>
         </span>
       </button>
     </li>

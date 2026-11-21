@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useEffect, useRef } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { ShelfView, TrackShelf } from '@/components/music/ShelfView';
@@ -97,19 +98,17 @@ export default function HomePage() {
   if (entries.length === 0) {
     return (
       <>
-        <PageHeader title="Home" />
+        <PageHeader title={translateUi("home_page.home")} />
         {missing ? (
           <NeedsExtension />
         ) : home.isError ? (
           <LoadError error={home.error} onRetry={() => void home.refetch()} />
         ) : (
-          <EmptyState title="Nothing here yet" detail="Add a folder of music, or play something: your own shelves fill in as you listen." />
+          <EmptyState title={translateUi("home_page.nothing_here_yet")} detail={translateUi("home_page.add_a_folder_of_music")} />
         )}
         {!missing && (
           <div className="flex justify-center">
-            <PrefetchLink to="/local" className="type-callout-emphasized text-key hover:underline">
-              Add your music
-            </PrefetchLink>
+            <PrefetchLink to="/local" className="type-callout-emphasized text-key hover:underline">{translateUi("home_page.add_your_music")}</PrefetchLink>
           </div>
         )}
       </>
@@ -118,7 +117,7 @@ export default function HomePage() {
 
   return (
     <>
-      <PageHeader title="Home" />
+      <PageHeader title={translateUi("home_page.home")} />
       <DjCard />
       {entries.map((entry, i) =>
         entry.side === 'local' ? (
@@ -135,10 +134,8 @@ export default function HomePage() {
       {home.isError && !home.data && remoteActive && <LoadError error={home.error} onRetry={() => void home.refetch()} />}
       {missing && (
         <p className="mx-(--body-gutter) my-8 type-callout text-secondary">
-          The YouTube Music feed needs the Auden extension.{' '}
-          <PrefetchLink to="/extension" className="text-key hover:underline">
-            Get the Extension
-          </PrefetchLink>
+          {translateUi("home_page.youtube_music_feed_needs_extension")}{' '}
+          <PrefetchLink to="/extension" className="text-key hover:underline">{translateUi("home_page.get_the_extension")}</PrefetchLink>
         </p>
       )}
     </>

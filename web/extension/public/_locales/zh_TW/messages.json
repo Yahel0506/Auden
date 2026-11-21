@@ -1,0 +1,145 @@
+{
+  "extensionName": {
+    "message": "Auden"
+  },
+  "extensionDescription": {
+    "message": "將 Auden 網頁播放器連接到 YouTube Music、Spotify 和 Discord。"
+  },
+  "openAuden": {
+    "message": "開啟 Auden"
+  },
+  "checking": {
+    "message": "正在檢查…"
+  },
+  "notSignedIn": {
+    "message": "此瀏覽器尚未登入"
+  },
+  "signIn": {
+    "message": "登入"
+  },
+  "couldNotReadAccount": {
+    "message": "無法讀取你的帳號"
+  },
+  "youtubeSessionRejected": {
+    "message": "YouTube 不接受此瀏覽器工作階段。請重新登入。"
+  },
+  "youtubeAccountMissing": {
+    "message": "找不到已登入的 Google 帳號。"
+  },
+  "youtubeAccountUnavailable": {
+    "message": "YouTube 無法在此瀏覽器工作階段中找到帳號。"
+  },
+  "disconnected": {
+    "message": "已中斷連線"
+  },
+  "retry": {
+    "message": "重試"
+  },
+  "connect": {
+    "message": "連線"
+  },
+  "disconnect": {
+    "message": "中斷連線"
+  },
+  "spotifySignInExpired": {
+    "message": "Spotify 工作階段已過期。請重新登入。"
+  },
+  "spotifyRateLimited": {
+    "message": "Spotify 暫時限制了要求。請稍後再試。"
+  },
+  "spotifyConnectionFailed": {
+    "message": "無法連線到 Spotify。請檢查網路連線後再試。"
+  },
+  "spotifySignInFailed": {
+    "message": "無法登入 Spotify。請重試。"
+  },
+  "stopUsingAccountYouTube": {
+    "message": "停止在 Auden 中使用此帳號。你仍會保持登入 YouTube。"
+  },
+  "stopUsingAccountSpotify": {
+    "message": "停止在 Auden 中使用此帳號。你仍會保持登入 Spotify。"
+  },
+  "notConnected": {
+    "message": "未連線"
+  },
+  "showingWhatYouPlay": {
+    "message": "正在顯示你的播放內容"
+  },
+  "connecting": {
+    "message": "正在連線…"
+  },
+  "couldNotConnect": {
+    "message": "無法連線"
+  },
+  "onWaitingForSong": {
+    "message": "已開啟，等待歌曲播放"
+  },
+  "presenceOff": {
+    "message": "狀態顯示已關閉"
+  },
+  "forgetDiscordAccount": {
+    "message": "移除此 Discord 帳號。"
+  },
+  "couldNotReadSession": {
+    "message": "無法讀取工作階段"
+  },
+  "allowLyricSourcesTitle": {
+    "message": "Auden：歌詞來源"
+  },
+  "allowLyricSourcesHeading": {
+    "message": "允許歌詞來源"
+  },
+  "allowLyricSourcesExplanation": {
+    "message": "這些歌詞提供者不允許網頁直接存取，因此 Auden 會透過擴充功能提出要求。瀏覽器會詢問你是否確認。"
+  },
+  "allow": {
+    "message": "允許"
+  },
+  "permissionDone": {
+    "message": "已完成。你可以關閉此分頁並返回 Auden。"
+  },
+  "permissionDenied": {
+    "message": "未獲允許。這些來源會維持關閉。"
+  },
+  "discordConnectTitle": {
+    "message": "Auden：連接 Discord"
+  },
+  "discordConnectHeading": {
+    "message": "在 Discord 上顯示你的播放內容"
+  },
+  "discordConnectExplanation": {
+    "message": "Auden 會從 discord.com 分頁讀取你的 Discord 工作階段，並將其保存在此擴充功能中。網頁播放器無法讀取。"
+  },
+  "discordTokenWarning": {
+    "message": "此操作會使用你帳號自己的權杖，這違反 Discord 的服務條款。風險由你自行承擔。"
+  },
+  "connectDiscord": {
+    "message": "連接 Discord"
+  },
+  "discordPermissionDenied": {
+    "message": "未獲允許。Discord 會維持關閉。"
+  },
+  "discordConnected": {
+    "message": "已連線為 $USER$。你可以關閉此分頁。",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "discordSignInProgress": {
+    "message": "在開啟的分頁中登入 Discord。此頁面會自動偵測。"
+  },
+  "discordReadProgress": {
+    "message": "正在讀取你的 Discord 工作階段…"
+  },
+  "discordSessionMissing": {
+    "message": "找不到 Discord 工作階段。請在 discord.com 登入後再試。"
+  },
+  "discordTokenRejected": {
+    "message": "Discord 拒絕了此權杖。請重新連接帳號。"
+  },
+  "discordConnectionError": {
+    "message": "無法連線到 Discord。請重試。"
+  }
+}

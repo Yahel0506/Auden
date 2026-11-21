@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import type { DownloadContext, DownloadResult } from './download';
 import type { FileStore } from './files';
 import type { ChangeBus, OfflineStore } from './store';
@@ -40,9 +41,9 @@ export function classify(error: unknown, online: boolean): Failure {
     return e.ageGated ? { kind: 'pause', reason: 'verify' } : { kind: 'permanent', message: messageOf(error) };
   }
   if (e?.name === 'AudioStreamError') {
-    if (e.kind === 'sabr') return { kind: 'permanent', message: 'YouTube only streams this track; there is no audio file to keep.' };
-    if (e.kind === 'webpo') return { kind: 'permanent', message: 'YouTube would only serve this track to a web client, which cuts off after about a minute. Try again later.' };
-    if (e.kind === 'http' && (e.status === 404 || e.status === 410)) return { kind: 'permanent', message: 'YouTube no longer has this audio.' };
+    if (e.kind === 'sabr') return { kind: 'permanent', message: translateUi('offline_queue.youtube_stream_only') };
+    if (e.kind === 'webpo') return { kind: 'permanent', message: translateUi('offline_queue.stream_limited_try_later') };
+    if (e.kind === 'http' && (e.status === 404 || e.status === 410)) return { kind: 'permanent', message: translateUi('offline_queue.audio_no_longer_available') };
   }
   if (!online) return { kind: 'pause', reason: 'offline' };
   return { kind: 'retry', message: messageOf(error) };

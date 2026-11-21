@@ -1,0 +1,145 @@
+{
+  "extensionName": {
+    "message": "Auden"
+  },
+  "extensionDescription": {
+    "message": "AudenのウェブプレーヤーをYouTube Music、Spotify、Discordに接続します。"
+  },
+  "openAuden": {
+    "message": "Audenを開く"
+  },
+  "checking": {
+    "message": "確認中…"
+  },
+  "notSignedIn": {
+    "message": "このブラウザーにログインしていません"
+  },
+  "signIn": {
+    "message": "ログイン"
+  },
+  "couldNotReadAccount": {
+    "message": "アカウントを読み取れませんでした"
+  },
+  "youtubeSessionRejected": {
+    "message": "YouTubeがこのブラウザーのセッションを受け付けませんでした。もう一度ログインしてください。"
+  },
+  "youtubeAccountMissing": {
+    "message": "Googleアカウントにログインしていません。"
+  },
+  "youtubeAccountUnavailable": {
+    "message": "このブラウザーのセッションでYouTubeアカウントを確認できませんでした。"
+  },
+  "disconnected": {
+    "message": "未接続"
+  },
+  "retry": {
+    "message": "再試行"
+  },
+  "connect": {
+    "message": "接続"
+  },
+  "disconnect": {
+    "message": "切断"
+  },
+  "spotifySignInExpired": {
+    "message": "Spotifyのセッションの有効期限が切れました。もう一度ログインしてください。"
+  },
+  "spotifyRateLimited": {
+    "message": "Spotifyが一時的にリクエストを制限しています。しばらくしてからもう一度お試しください。"
+  },
+  "spotifyConnectionFailed": {
+    "message": "Spotifyに接続できませんでした。接続を確認してもう一度お試しください。"
+  },
+  "spotifySignInFailed": {
+    "message": "Spotifyにログインできませんでした。もう一度お試しください。"
+  },
+  "stopUsingAccountYouTube": {
+    "message": "Audenでこのアカウントを使用しないようにします。YouTubeにはログインしたままです。"
+  },
+  "stopUsingAccountSpotify": {
+    "message": "Audenでこのアカウントを使用しないようにします。Spotifyにはログインしたままです。"
+  },
+  "notConnected": {
+    "message": "未接続"
+  },
+  "showingWhatYouPlay": {
+    "message": "再生中の曲を表示しています"
+  },
+  "connecting": {
+    "message": "接続中…"
+  },
+  "couldNotConnect": {
+    "message": "接続できませんでした"
+  },
+  "onWaitingForSong": {
+    "message": "オン・曲を待機中"
+  },
+  "presenceOff": {
+    "message": "プレゼンスをオフ"
+  },
+  "forgetDiscordAccount": {
+    "message": "このDiscordアカウントの接続を解除します。"
+  },
+  "couldNotReadSession": {
+    "message": "セッションを読み取れませんでした"
+  },
+  "allowLyricSourcesTitle": {
+    "message": "Auden: 歌詞の提供元"
+  },
+  "allowLyricSourcesHeading": {
+    "message": "歌詞の提供元を許可"
+  },
+  "allowLyricSourcesExplanation": {
+    "message": "これらの歌詞サービスにはウェブページから直接アクセスできないため、Audenは拡張機能を介して接続します。ブラウザーで確認が求められます。"
+  },
+  "allow": {
+    "message": "許可"
+  },
+  "permissionDone": {
+    "message": "完了しました。このタブを閉じてAudenに戻れます。"
+  },
+  "permissionDenied": {
+    "message": "許可されませんでした。これらの提供元は無効のままです。"
+  },
+  "discordConnectTitle": {
+    "message": "Auden: Discordに接続"
+  },
+  "discordConnectHeading": {
+    "message": "Discordに再生中の曲を表示"
+  },
+  "discordConnectExplanation": {
+    "message": "Audenはdiscord.comのタブからDiscordセッションを読み取り、この拡張機能内に保存します。ウェブプレーヤーからセッションを見ることはできません。"
+  },
+  "discordTokenWarning": {
+    "message": "ご自身のアカウントのトークンを使用します。Discordの利用規約では許可されていません。ご自身の責任でご利用ください。"
+  },
+  "connectDiscord": {
+    "message": "Discordに接続"
+  },
+  "discordPermissionDenied": {
+    "message": "許可されませんでした。Discordは無効のままです。"
+  },
+  "discordConnected": {
+    "message": "$USER$として接続しました。このタブは閉じられます。",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "discordSignInProgress": {
+    "message": "開いたタブでDiscordにログインしてください。このページがログインを検知します。"
+  },
+  "discordReadProgress": {
+    "message": "Discordセッションを読み取り中…"
+  },
+  "discordSessionMissing": {
+    "message": "Discordセッションが見つかりませんでした。discord.comにログインしてもう一度お試しください。"
+  },
+  "discordTokenRejected": {
+    "message": "Discordがトークンを拒否しました。アカウントをもう一度接続してください。"
+  },
+  "discordConnectionError": {
+    "message": "Discordに接続できませんでした。もう一度お試しください。"
+  }
+}

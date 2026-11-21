@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useMemo, useState } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { useTrackLog } from '@/playback/trackLog';
@@ -67,7 +68,7 @@ export default function DebugPage() {
 
   return (
     <>
-      <PageHeader title="Debug" />
+      <PageHeader title={translateUi("debug_page.debug")} />
       <div className="mx-(--body-gutter) mt-5 max-w-[980px]">
         <form
           className="flex gap-2.5"
@@ -80,16 +81,14 @@ export default function DebugPage() {
             className="h-9 flex-1 rounded-[10px] border-0 bg-quinary px-3.5 type-title-3"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Video id or YouTube link"
-            aria-label="Video id or YouTube link"
+            placeholder={translateUi("debug_page.video_id_or_youtube_link")}
+            aria-label={translateUi("debug_page.video_id_or_youtube_link")}
           />
-          <button className="h-9 rounded-pill bg-key-bg px-[18px] type-title-3-emphasized text-white disabled:opacity-40" type="submit" disabled={!id}>
-            Play
-          </button>
+          <button className="h-9 rounded-pill bg-key-bg px-[18px] type-title-3-emphasized text-white disabled:opacity-40" type="submit" disabled={!id}>{translateUi("debug_page.play")}</button>
         </form>
         {nowPlaying?.streamInfo && <p className="mt-2 type-callout text-secondary">{nowPlaying.streamInfo}</p>}
 
-        <h2 className={sectionHeader}>Test tracks</h2>
+        <h2 className={sectionHeader}>{translateUi("debug_page.test_tracks")}</h2>
         <ul className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-x-5 gap-y-0.5">
           {TEST_TRACKS.map((t) => (
             <li key={t.id}>
@@ -106,12 +105,12 @@ export default function DebugPage() {
         </ul>
 
         <div className="flex items-baseline justify-between">
-          <h2 className={sectionHeader}>Track log</h2>
+          <h2 className={sectionHeader}>{translateUi("debug_page.track_log")}</h2>
           <div className="flex gap-4 type-body text-key">
             <button onClick={() => setFilter(filter === 'all' ? 'current' : 'all')}>
-              {filter === 'all' ? 'Show current track' : 'Show everything'}
+              {filter === 'all' ? translateUi("pages_debugpage_show_current_track") : translateUi("pages_debugpage_show_everything")}
             </button>
-            <button onClick={clear}>Clear</button>
+            <button onClick={clear}>{translateUi("debug_page.clear")}</button>
           </div>
         </div>
         <ol

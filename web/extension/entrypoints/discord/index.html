@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="color-scheme" content="light dark" />
-    <title>Auden: connect Discord</title>
+    <title>Auden</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400..700&display=swap" />
@@ -11,13 +11,10 @@
   <body>
     <main class="card">
       <img src="/icon/48.png" width="40" height="40" alt="" />
-      <h1>Show what you’re playing on Discord</h1>
-      <p>
-        Auden reads your Discord session from a discord.com tab and keeps it in this extension. The web player never
-        sees it.
-      </p>
-      <p class="warning">This uses your account’s own token, which Discord’s terms don’t allow. Use it at your own risk.</p>
-      <button id="connect">Connect Discord</button>
+      <h1 data-i18n="discordConnectHeading"></h1>
+      <p data-i18n="discordConnectExplanation"></p>
+      <p class="warning" data-i18n="discordTokenWarning"></p>
+      <button id="connect" data-i18n="connectDiscord"></button>
       <p id="status" class="status" role="status"></p>
     </main>
     <script type="module" src="./main.ts"></script>

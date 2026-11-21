@@ -10,8 +10,11 @@ import {
   type SpotifyAuthState,
   type YtAuthState,
 } from '@bitchord/shared/bridge';
+import { discordErrorMessage, localizeStaticDocument, message, spotifyProblemMessage, youtubeProblemMessage } from '../../lib/i18n';
 
 declare const __SITE_ORIGINS__: string[];
+
+localizeStaticDocument();
 
 /** The popup asks the background, like the page does, so both see one state. */
 async function call<M extends BridgeMethod>(method: M, params: ParamsOf<M>): Promise<ResultOf<M>> {
@@ -42,7 +45,7 @@ function simpleRow(name: string, detail: string): HTMLLIElement {
 
 /** YouTube Music: who requests act as, and the way to stop (or start) using that session. */
 function youtubeRow(state: YtAuthState | null, refresh: (state: YtAuthState) => void): HTMLLIElement {
-  if (!state) return simpleRow('YouTube Music', 'Checking…');
+  if (!state) return simpleRow('YouTube Music', message('checking'));
   const row = el('li', 'row account');
   // A grey disc until there's a picture; an <img> without a src can draw a broken-image glyph.
   let avatar: HTMLElement = el('span', 'avatar');
@@ -50,21 +53,21 @@ function youtubeRow(state: YtAuthState | null, refresh: (state: YtAuthState) => 
   let action: HTMLElement;
 
   if (!state.browserSignedIn) {
-    who.append(el('span', 'title', 'YouTube Music'), el('span', 'detail', 'Not signed in in this browser'));
-    const link = el('a', 'action', 'Sign in');
+    who.append(el('span', 'title', 'YouTube Music'), el('span', 'detail', message('notSignedIn')));
+    const link = el('a', 'action', message('signIn'));
     (link as HTMLAnchorElement).href = 'https://music.youtube.com/';
     (link as HTMLAnchorElement).target = '_blank';
     action = link;
   } else if (!state.connected || !state.active) {
-    const detail = el('span', 'detail', state.connected ? 'Couldn’t read your account' : 'Disconnected');
-    if (state.problem) detail.title = state.problem;
+    const detail = el('span', 'detail', state.connected ? message('couldNotReadAccount') : message('disconnected'));
+    if (state.problem) detail.title = youtubeProblemMessage(state.problem);
     who.append(el('span', 'title', 'YouTube Music'), detail);
     if (state.connected) {
       // Signed in, but the account couldn't be read: say why, and offer another try.
-      action = el('button', 'action', 'Retry');
+      action = el('button', 'action', message('retry'));
       action.onclick = () => void call('yt.authState', { refresh: true }).then(refresh);
     } else {
-      action = el('button', 'action', 'Connect');
+      action = el('button', 'action', message('connect'));
       action.onclick = () => void call('yt.setConnected', { connected: true }).then(refresh);
     }
   } else {
@@ -76,13 +79,13 @@ function youtubeRow(state: YtAuthState | null, refresh: (state: YtAuthState) => 
       avatar = image;
     }
     who.append(el('span', 'title', state.active.name), el('span', 'detail', state.active.handle ?? 'YouTube Music'));
-    action = el('button', 'action', 'Disconnect');
-    action.title = 'Stop using this account in Auden. You stay signed in to YouTube.';
+    action = el('button', 'action', message('disconnect'));
+    action.title = message('stopUsingAccountYouTube');
     action.onclick = () => void call('yt.setConnected', { connected: false }).then(refresh);
   }
   row.append(avatar, who, action);
   if (state.problem) {
-    const why = el('li', 'row problem', state.problem);
+    const why = el('li', 'row problem', youtubeProblemMessage(state.problem));
     return Object.assign(row, { problemRow: why });
   }
   return row;
@@ -107,27 +110,26 @@ function button(text: string, onClick: () => void, title?: string): HTMLElement 
 
 /** Spotify: the browser's open.spotify.com session, as for YouTube. */
 function spotifyRow(state: SpotifyAuthState | null): HTMLLIElement {
-  if (!state) return simpleRow('Spotify', 'Checking…');
+  if (!state) return simpleRow('Spotify', message('checking'));
   const row = el('li', 'row account');
   const who = el('span', 'who');
   let action: HTMLElement;
   if (!state.browserSignedIn) {
-    who.append(el('span', 'title', 'Spotify'), el('span', 'detail', 'Not signed in in this browser'));
-    action = button('Sign in', () => void call('spotify.signIn', {}));
+    who.append(el('span', 'title', 'Spotify'), el('span', 'detail', message('notSignedIn')));
+    action = button(message('signIn'), () => void call('spotify.signIn', {}));
   } else if (!state.connected) {
-    who.append(el('span', 'title', 'Spotify'), el('span', 'detail', 'Disconnected'));
-    action = button('Connect', () => void call('spotify.setConnected', { connected: true }).then(setSpotify));
+    who.append(el('span', 'title', 'Spotify'), el('span', 'detail', message('disconnected')));
+    action = button(message('connect'), () => void call('spotify.setConnected', { connected: true }).then(setSpotify));
   } else if (!state.signedIn) {
-    const detail = el('span', 'detail', 'Couldn’t read your account');
-    if (state.problem) detail.title = state.problem;
+    const detail = el('span', 'detail', spotifyProblemMessage(state.problemKind));
     who.append(el('span', 'title', 'Spotify'), detail);
-    action = button('Retry', () => void call('spotify.authState', { refresh: true }).then(setSpotify));
+    action = button(message('retry'), () => void call('spotify.authState', { refresh: true }).then(setSpotify));
   } else {
     who.append(el('span', 'title', state.user?.name ?? 'Spotify'), el('span', 'detail', 'Spotify'));
     action = button(
-      'Disconnect',
+      message('disconnect'),
       () => void call('spotify.setConnected', { connected: false }).then(setSpotify),
-      'Stop using this account in Auden. You stay signed in to Spotify.',
+      message('stopUsingAccountSpotify'),
     );
   }
   row.append(avatarOf(state.user?.avatarUrl), who, action);
@@ -137,26 +139,26 @@ function spotifyRow(state: SpotifyAuthState | null): HTMLLIElement {
 /** Discord: connect on the extension's own page; presence itself is switched on in the web player. */
 function discordRow(state: DiscordState | null): HTMLLIElement | null {
   if (state && !state.available) return null;
-  if (!state) return simpleRow('Discord', 'Checking…');
+  if (!state) return simpleRow('Discord', message('checking'));
   const row = el('li', 'row account');
   const who = el('span', 'who');
   let action: HTMLElement;
   if (!state.connected || !state.user) {
-    who.append(el('span', 'title', 'Discord'), el('span', 'detail', 'Not connected'));
-    action = button('Connect', () => void call('discord.connect', {}).then(() => window.close()));
+    who.append(el('span', 'title', 'Discord'), el('span', 'detail', message('notConnected')));
+    action = button(message('connect'), () => void call('discord.connect', {}).then(() => window.close()));
   } else {
     const detail =
       state.gateway === 'ready'
-        ? 'Showing what you play'
+        ? message('showingWhatYouPlay')
         : state.gateway === 'connecting'
-          ? 'Connecting…'
+          ? message('connecting')
           : state.gateway === 'error'
-            ? (state.problem ?? 'Couldn’t connect')
+            ? discordErrorMessage(state.problem ?? message('couldNotConnect'))
             : state.enabled
-              ? 'On, waiting for a song'
-              : 'Presence off';
+              ? message('onWaitingForSong')
+              : message('presenceOff');
     who.append(el('span', 'title', state.user.name), el('span', 'detail', detail));
-    action = button('Disconnect', () => void call('discord.disconnect', {}).then(setDiscord), 'Forget this Discord account.');
+    action = button(message('disconnect'), () => void call('discord.disconnect', {}).then(setDiscord), message('forgetDiscordAccount'));
   }
   row.append(avatarOf(state.user?.avatarUrl), who, action);
   return row;
@@ -198,6 +200,6 @@ site.href = __SITE_ORIGINS__[0] ?? '#';
 render();
 call('yt.authState', {})
   .then(setYoutube)
-  .catch(() => list.replaceChildren(simpleRow('YouTube Music', 'Couldn’t read the session')));
+  .catch(() => list.replaceChildren(simpleRow('YouTube Music', message('couldNotReadSession'))));
 call('spotify.authState', {}).then(setSpotify).catch(() => undefined);
 call('discord.state', {}).then(setDiscord).catch(() => undefined);

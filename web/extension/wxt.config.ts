@@ -26,8 +26,9 @@ export default defineConfig({
     },
   }),
   manifest: ({ browser }) => ({
-    name: 'Auden',
-    description: 'Connects the Auden web player to YouTube Music, Spotify and Discord.',
+    name: '__MSG_extensionName__',
+    description: '__MSG_extensionDescription__',
+    default_locale: 'en',
     homepage_url: SITE_ORIGINS[0],
     // `cookies` reads the YouTube session for signed-in requests (phase 5);
     // the cookies themselves never leave the extension (lib/ytAuth.ts).

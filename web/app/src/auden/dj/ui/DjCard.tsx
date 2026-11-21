@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { useEffect, useRef, useState } from 'react';
 import { useParty } from '@/party/listenTogether';
 import { MeshBackdrop } from '@/shell/MeshBackdrop';
@@ -44,14 +45,14 @@ export function DjCard() {
     <section
       ref={card}
       className="relative isolate mx-(--body-gutter) mt-6 flex items-center gap-6 overflow-hidden rounded-[26px] bg-[#343438] py-5 pr-2 pl-[22px] text-white"
-      aria-label="Auden DJ"
+      aria-label={translateUi("dj_card.auden_dj")}
     >
       <MeshBackdrop artworkUrl={null} playing={motion} colors={colors} fadeMs={MESH_CYCLE_MS} pace={DJ_MESH_PACE} />
       <div className="pointer-events-none absolute inset-0 -z-1" style={{ background: DJ_SCRIM }} aria-hidden="true" />
       <div className="min-w-0 flex-1">
-        <h2 className="type-title-2-emphasized">Auden DJ</h2>
+        <h2 className="type-title-2-emphasized">{translateUi("dj_card.auden_dj")}</h2>
         <p className="mt-1.5 type-body-tall text-white/85">
-          {inParty ? 'The DJ can’t play in a Listen Together party: everyone hears the same stream.' : 'Themed sets from your own music, with a voice in between'}
+          {inParty ? translateUi("dj_ui_djcard_the_dj_can_t_play") : translateUi("dj_ui_djcard_themed_sets_from_your_own")}
         </p>
         {notice && !on && <p className="mt-1 type-callout text-white/90">{notice}</p>}
         <button
@@ -68,7 +69,7 @@ export function DjCard() {
             });
           }}
         >
-          {on ? 'Open DJ' : phase === 'starting' || busy ? 'Starting…' : 'Listen'}
+          {on ? translateUi("dj_ui_djcard_open_dj") : phase === 'starting' || busy ? translateUi("dj_ui_djcard_starting") : translateUi('dj_ui_listen')}
         </button>
         {/* While the DJ is on, its menu (ask, more / less like this, stop) is here too: during songs the player carries none of the DJ's
             chrome, and a DJ without a voice never shows its own screen. */}

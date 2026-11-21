@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { ArrowUpRight, ListMusic, Settings } from 'lucide-react';
 import { MdOutlineExtension } from 'react-icons/md';
 import { PrefetchLink, PrefetchNavLink } from '@/components/PrefetchLink';
@@ -29,13 +30,14 @@ import { useLocalPlaylists } from '@/auden/playlists/store';
 interface NavItem {
   to: string;
   label: string;
+  translate?: boolean;
   Icon: (props: NavIconProps) => React.ReactNode;
 }
 
 const PRIMARY: NavItem[] = [
-  { to: '/search', label: 'Search', Icon: SearchIcon },
-  { to: '/home', label: 'Home', Icon: HomeIcon },
-  { to: '/new', label: 'New', Icon: NewIcon },
+  { to: '/search', label: 'sidebar.search', translate: true, Icon: SearchIcon },
+  { to: '/home', label: 'sidebar.home', translate: true, Icon: HomeIcon },
+  { to: '/new', label: 'sidebar.new', translate: true, Icon: NewIcon },
 ];
 
 const LIBRARY_ICONS: Record<Exclude<LibrarySection, 'playlists'>, NavItem['Icon']> = {
@@ -52,7 +54,7 @@ function LocalPlaylistNav({ onNavigate }: { onNavigate: () => void }) {
   const lists = useLocalPlaylists();
   if (!lists.data?.length) return null;
   return (
-    <ul className={list} aria-label="Playlists on this device">
+    <ul className={list} aria-label={translateUi("sidebar.playlists_on_this_device")}>
       {lists.data.map(({ playlist }) => (
         <li key={playlist.id}>
           <PrefetchNavLink to={`/local/playlist/${encodeURIComponent(playlist.id)}`} className={item} onClick={onNavigate}>
@@ -64,8 +66,8 @@ function LocalPlaylistNav({ onNavigate }: { onNavigate: () => void }) {
   );
 }
 
-const ON_DEVICE: NavItem = { to: '/local', label: 'On This Device', Icon: SongsIcon };
-const OFFLINE: NavItem = { to: '/offline', label: 'Offline', Icon: SongsIcon };
+const ON_DEVICE: NavItem = { to: '/local', label: 'sidebar.on_this_device', translate: true, Icon: SongsIcon };
+const OFFLINE: NavItem = { to: '/offline', label: 'sidebar.offline', translate: true, Icon: SongsIcon };
 
 /** The offline manager's row, once the listener has switched offline copies on (Settings › Offline copies). */
 function OfflineNav({ onNavigate }: { onNavigate: () => void }) {
@@ -76,7 +78,8 @@ function OfflineNav({ onNavigate }: { onNavigate: () => void }) {
 const LIBRARY: NavItem[] = [
   ...(Object.keys(LIBRARY_ICONS) as (keyof typeof LIBRARY_ICONS)[]).map((section) => ({
     to: `/library/${section}`,
-    label: LIBRARY_SECTIONS[section].title,
+    label: `library_section_${section.replaceAll('-', '_')}`,
+    translate: true,
     Icon: LIBRARY_ICONS[section],
   })),
   ON_DEVICE,
@@ -95,11 +98,11 @@ const list = 'flex flex-col';
 function NavList({ items, onNavigate }: { items: NavItem[]; onNavigate: () => void }) {
   return (
     <ul className={list}>
-      {items.map(({ to, label, Icon }) => (
+        {items.map(({ to, label, translate, Icon }) => (
         <li key={to}>
           <PrefetchNavLink to={to} className={item} onClick={onNavigate}>
             <Icon size={24} className={icon} />
-            <span className={navLabel}>{label}</span>
+            <span className={navLabel}>{translate ? translateUi(label as keyof typeof import('@/i18n.en.json')) : label}</span>
           </PrefetchNavLink>
         </li>
       ))}
@@ -112,16 +115,16 @@ function LibraryNav({ onNavigate }: { onNavigate: () => void }) {
   const playlists = useLibraryPlaylists();
   return (
     <>
-      <h2 className={sectionHeader}>Library</h2>
+      <h2 className={sectionHeader}>{translateUi("sidebar.library")}</h2>
       <NavList items={LIBRARY} onNavigate={onNavigate} />
       <LocalPlaylistNav onNavigate={onNavigate} />
       <OfflineNav onNavigate={onNavigate} />
-      <h2 className={sectionHeader}>Playlists</h2>
+      <h2 className={sectionHeader}>{translateUi("sidebar.playlists")}</h2>
       <ul className={list}>
         <li>
           <PrefetchNavLink to="/library/playlists" className={item} onClick={onNavigate}>
             <AllPlaylistsIcon size={24} className={icon} />
-            <span className={navLabel}>{LIBRARY_SECTIONS.playlists.title}</span>
+            <span className={navLabel}>{translateUi('library_section_playlists')}</span>
           </PrefetchNavLink>
         </li>
         {playlists.data?.map((playlist) => (
@@ -149,7 +152,7 @@ function SpotifyNav({ onNavigate }: { onNavigate: () => void }) {
         <li>
           <PrefetchNavLink to="/spotify" end className={item} onClick={onNavigate}>
             <AllPlaylistsIcon size={24} className={icon} />
-            <span className={navLabel}>All Spotify Playlists</span>
+            <span className={navLabel}>{translateUi("sidebar.all_spotify_playlists")}</span>
           </PrefetchNavLink>
         </li>
         {playlists.data?.map((playlist) => (
@@ -182,10 +185,10 @@ export function Sidebar() {
       <nav
         className="absolute inset-y-0 left-0 z-(--z-web-chrome) flex w-(--web-navigation-width) flex-col glass-material max-sm:w-[min(300px,82vw)] max-sm:-translate-x-full max-sm:shadow-glass max-sm:transition-transform max-sm:duration-(--duration-panel) max-sm:ease-panel max-sm:data-[open=true]:translate-none"
         data-open={drawerOpen}
-        aria-label="Main"
+        aria-label={translateUi("sidebar.main")}
       >
         <div className="mt-2 ml-2 flex h-18 items-center px-5">
-          <PrefetchLink to="/home" className="inline-flex items-center gap-2 rounded-[6px]" aria-label="Auden, Home" onClick={close}>
+          <PrefetchLink to="/home" className="inline-flex items-center gap-2 rounded-[6px]" aria-label={translateUi("sidebar.auden_home")} onClick={close}>
             {/* White on dark, as Apple's own wordmark; it follows the label colour so it stays visible in light. */}
             <LogoMark size={22} className="text-primary" />
             <span className="type-[700_19px/24px] tracking-[-0.01em]">Auden</span>
@@ -197,7 +200,7 @@ export function Sidebar() {
             <LibraryNav onNavigate={close} />
           ) : (
             <>
-              <h2 className={sectionHeader}>Library</h2>
+              <h2 className={sectionHeader}>{translateUi("sidebar.library")}</h2>
               <NavList items={[ON_DEVICE]} onNavigate={close} />
               <LocalPlaylistNav onNavigate={close} />
               <OfflineNav onNavigate={close} />
@@ -211,20 +214,18 @@ export function Sidebar() {
             <span className={icon}>
               <MdOutlineExtension size={18} />
             </span>
-            <span className={navLabel}>Auden Extension</span>
+            <span className={navLabel}>{translateUi("sidebar.auden_extension")}</span>
             {update.state === 'available' && (
-              <span className="ml-auto rounded-[10px] bg-key px-[7px] py-0.5 type-subhead-emphasized text-white" title={`Version ${update.latest.version} is available`}>
-                Update
-              </span>
+              <span className="ml-auto rounded-[10px] bg-key px-[7px] py-0.5 type-subhead-emphasized text-white" title={`Version ${update.latest.version} is available`}>{translateUi("sidebar.update")}</span>
             )}
           </PrefetchNavLink>
           <AccountButton />
           <div className="flex items-center justify-between">
             <a className="inline-flex items-center gap-1 ps-1 type-callout text-primary hover:underline" href={config.androidAppUrl} target="_blank" rel="noreferrer">
-              <span>Get the Android app</span>
+              <span>{translateUi("sidebar.get_the_android_app")}</span>
               <ArrowUpRight size={14} strokeWidth={2} />
             </a>
-            <PrefetchNavLink to="/settings" className="grid size-7 place-items-center rounded-nav text-secondary hover:bg-quinary hover:text-primary aria-[current=page]:bg-quinary aria-[current=page]:text-primary" aria-label="Settings" title="Settings" onClick={close}>
+            <PrefetchNavLink to="/settings" className="grid size-7 place-items-center rounded-nav text-secondary hover:bg-quinary hover:text-primary aria-[current=page]:bg-quinary aria-[current=page]:text-primary" aria-label={translateUi("sidebar.settings")} title={translateUi("sidebar.settings")} onClick={close}>
               <Settings size={17} strokeWidth={1.9} />
             </PrefetchNavLink>
           </div>

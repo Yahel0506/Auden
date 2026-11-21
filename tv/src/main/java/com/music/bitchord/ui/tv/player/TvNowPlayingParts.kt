@@ -1,5 +1,8 @@
 package com.music.bitchord.ui.tv.player
 
+import androidx.compose.ui.res.stringResource
+import com.music.bitchord.R
+
 import android.view.KeyEvent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
@@ -369,20 +372,20 @@ internal fun TvTransport(
                 )
                 TvTransportButton(
                     icon = BitChordIcons.LyricsQuote,
-                    contentDescription = "Lyrics",
+                    contentDescription = stringResource(R.string.lyrics_saved_title),
                     active = lyricsOn,
                     enabled = lyricsAvailable,
                     onClick = onToggleLyrics,
                 )
                 TvTransportButton(
                     icon = BitChordIcons.Queue,
-                    contentDescription = "Up Next",
+                    contentDescription = stringResource(R.string.tv_up_next),
                     active = upNextOpen,
                     onClick = onToggleUpNext,
                 )
                 TvTransportButton(
                     icon = Icons.Rounded.MoreHoriz,
-                    contentDescription = "More",
+                    contentDescription = stringResource(R.string.more),
                     onClick = onMore,
                 )
             }
@@ -687,7 +690,7 @@ internal fun TvUpNext(
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Up Next",
+                text = stringResource(R.string.tv_up_next),
                 style = TvType.Headline,
                 color = TvGlass.TextPrimary,
                 modifier = Modifier.weight(1f),
@@ -695,7 +698,7 @@ internal fun TvUpNext(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 TvTransportButton(
                     icon = BitChordIcons.Shuffle,
-                    contentDescription = "Shuffle",
+                    contentDescription = stringResource(R.string.shuffle),
                     active = shuffle,
                     size = 32.dp,
                     onClick = onToggleShuffle,
@@ -714,7 +717,7 @@ internal fun TvUpNext(
                 )
                 TvTransportButton(
                     icon = BitChordIcons.Infinity,
-                    contentDescription = "Autoplay",
+                    contentDescription = stringResource(R.string.tv_autoplay),
                     active = autoplay,
                     size = 32.dp,
                     onClick = onToggleAutoplay,
@@ -824,16 +827,16 @@ internal fun TvNothingPlaying(onBrowse: () -> Unit, modifier: Modifier = Modifie
             modifier = Modifier.size(58.dp),
         )
         Spacer(modifier = Modifier.height(19.dp))
-        Text(text = "Not Playing", style = TvType.Title, color = TvGlass.TextPrimary)
+        Text(text = stringResource(R.string.tv_not_playing), style = TvType.Title, color = TvGlass.TextPrimary)
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text = "Choose something from Home, Explore or your Library.",
+            text = stringResource(R.string.tv_choose_something_from_home_explore_or),
             style = TvType.Callout,
             color = TvGlass.TextSecondary,
             textAlign = TextAlign.Center,
             modifier = Modifier.widthIn(max = 384.dp),
         )
         Spacer(modifier = Modifier.height(21.dp))
-        TvButton(text = "Browse Music", onClick = onBrowse, modifier = Modifier.width(208.dp).tvInitialFocus())
+        TvButton(text = stringResource(R.string.tv_browse_music), onClick = onBrowse, modifier = Modifier.width(208.dp).tvInitialFocus())
     }
 }

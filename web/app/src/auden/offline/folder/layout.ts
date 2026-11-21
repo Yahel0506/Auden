@@ -9,9 +9,9 @@
 
 export const DEFAULT_TEMPLATE = '{album}/{artist} - {title}';
 export const PRESETS: readonly { label: string; template: string }[] = [
-  { label: 'Album folder', template: DEFAULT_TEMPLATE },
-  { label: 'Artist / Album / Track', template: '{albumArtist}/{album}/{track} - {title}' },
-  { label: 'Flat', template: '{artist} - {title}' },
+  { label: 'offline_folder.preset_album_folder', template: DEFAULT_TEMPLATE },
+  { label: 'offline_folder.preset_artist_album_track', template: '{albumArtist}/{album}/{track} - {title}' },
+  { label: 'offline_folder.preset_flat', template: '{artist} - {title}' },
 ];
 
 export interface LayoutInfo {

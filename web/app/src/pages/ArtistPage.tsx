@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { heroFadeOverlay } from '@/lib/heroFade';
 import { useMemo, useState, type CSSProperties } from 'react';
 import { useParams } from 'react-router';
@@ -123,14 +124,12 @@ export default function ArtistPage() {
           {!apple && appleUngranted.length > 0 && (
             // The lyrics panel's permission notice, as a pill over the photograph.
             <div className="mt-3 flex items-center gap-2.5 rounded-[999px] bg-[#0000004d] py-1.5 pr-2 pl-3.5 type-callout text-[#ffffffcc] [backdrop-filter:blur(20px)_saturate(1.6)]">
-              <span>Apple Music artist art needs the extension’s permission.</span>
+              <span>{translateUi("artist_page.apple_music_artist_art_needs")}</span>
               <button
                 className="flex-none rounded-[999px] bg-[#ffffff26] px-2.5 py-1 type-callout-emphasized text-white hover:bg-[#ffffff40]"
                 // Stays until the extension confirms the grant (checked when this tab comes back).
                 onClick={requestAppleAccess}
-              >
-                Allow
-              </button>
+              >{translateUi("artist_page.allow")}</button>
             </div>
           )}
         </div>
@@ -138,7 +137,7 @@ export default function ArtistPage() {
 
       {data.topSongs.length > 0 && (
         <TrackShelf
-          title="Top Songs"
+          title={translateUi("artist_page.top_songs")}
           to={data.topSongsSeeAll ? browseHref(data.topSongsSeeAll) : null}
           tracks={data.topSongs}
           source={topSongs}
@@ -148,8 +147,8 @@ export default function ArtistPage() {
       <Shelves shelves={data.shelves} />
 
       {data.description && (
-        <section className="mx-(--body-gutter) mt-3 mb-10" aria-label={`About ${data.name}`}>
-          <h2 className="type-title-2-emphasized">About {data.name}</h2>
+        <section className="mx-(--body-gutter) mt-3 mb-10" aria-label={translateUi('artist_page.about_artist', { artist: data.name })}>
+          <h2 className="type-title-2-emphasized">{translateUi('artist_page.about_artist', { artist: data.name })}</h2>
           <p className="mt-2 max-w-[720px] type-body-tall whitespace-pre-line text-secondary">{data.description}</p>
         </section>
       )}

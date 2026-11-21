@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { getBridge } from '@/extension/bridge';
 import { enabledSources, useLyricsSettings } from '@/lyrics/settings';
 import { lookupLyrics, type LookupOptions, type LyricsResult, type LyricsTrack } from '@/lyrics/repository';
@@ -146,30 +147,30 @@ export function startLyricsBatch(songs: readonly BatchSong[], title: string): bo
   const jobs = useJobs.getState();
   jobs.start({
     id: JOB_ID,
-    title: `Finding lyrics for ${title}`,
+    title: translateUi('lyrics_batch.finding_lyrics_for', { title }),
     total: todo.length,
     cancel: () => {
       abort.abort();
       // Up to three songs already being looked up finish first.
-      useJobs.getState().update(JOB_ID, { detail: 'Stopping…', cancel: undefined });
+      useJobs.getState().update(JOB_ID, { detail: translateUi('lyrics_batch.stopping'), cancel: undefined });
     },
   });
   const sequence = enabledSources();
   void runBatch(songs, { lookup: lookupLyrics, save: saveBest, sequence }, {
     signal: abort.signal,
     onProgress: (done, total, r) =>
-      useJobs.getState().update(JOB_ID, { done, total, ...(abort.signal.aborted ? {} : { detail: `${r.found} found` }) }),
+      useJobs.getState().update(JOB_ID, { done, total, ...(abort.signal.aborted ? {} : { detail: translateUi('lyrics_batch.found_count', { count: r.found }) }) }),
   })
     .then((r) => {
-      const parts = [`${r.found} with lyrics`, `${r.missing} without`];
-      if (r.skipped) parts.push(`${r.skipped} skipped`);
+      const parts = [translateUi('lyrics_batch.with_lyrics_count', { count: r.found }), translateUi('lyrics_batch.without_lyrics_count', { count: r.missing })];
+      if (r.skipped) parts.push(translateUi('lyrics_batch.skipped_count', { count: r.skipped }));
       let summary = parts.join(', ');
       // Without the extension several providers cannot be reached, which reads as "without".
-      if (r.missing && !getBridge()) summary += '. Some providers need the extension.';
-      if (!todo.length) summary = 'Nothing to look up: these songs have no known length.';
-      useJobs.getState().finish(JOB_ID, abort.signal.aborted ? `Stopped. ${summary}` : summary);
+      if (r.missing && !getBridge()) summary += `. ${translateUi('lyrics_batch.some_providers_need_extension')}`;
+      if (!todo.length) summary = translateUi('lyrics_batch.nothing_to_look_up');
+      useJobs.getState().finish(JOB_ID, abort.signal.aborted ? `${translateUi('lyrics_batch.stopped')} ${summary}` : summary);
     })
-    .catch(() => useJobs.getState().finish(JOB_ID, 'Something went wrong.'))
+    .catch((error) => { console.error('Auden lyrics batch failed', error); useJobs.getState().finish(JOB_ID, translateUi('lyrics_batch.something_went_wrong')); })
     .finally(() => {
       running = false;
     });

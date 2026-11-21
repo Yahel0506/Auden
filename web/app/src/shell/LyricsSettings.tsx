@@ -1,10 +1,11 @@
+import { t as translateUi } from '@/i18n';
 import { ArrowDown, ArrowUp, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getBridge } from '@/extension/bridge';
 import { LYRIC_EXTENSION_ORIGINS as EXTENSION_ORIGINS } from '@/lyrics/http';
 import { useLyricsSettings } from '@/lyrics/settings';
-import { sourceById } from '@/lyrics/sources';
+import { sourceById, sourceLabel } from '@/lyrics/sources';
 
 const section = 'mx-1 mt-[18px] mb-1.5 type-subhead-emphasized uppercase text-secondary';
 const note = 'mx-1 mb-2 type-callout text-secondary';
@@ -51,18 +52,18 @@ export function LyricsSettings({ onClose }: { onClose: () => void }) {
         className="flex max-h-[min(720px,calc(100vh-48px))] w-[min(520px,calc(100vw-32px))] animate-zoom flex-col rounded-[14px] bg-page shadow-glass"
         role="dialog"
         aria-modal="true"
-        aria-label="Lyric settings"
+        aria-label={translateUi("lyrics_settings.lyric_settings")}
       >
         <header className="flex items-center justify-between px-5 pt-[18px] pb-2">
-          <h2 className="type-title-2-emphasized">Lyrics</h2>
-          <button className="grid size-[30px] place-items-center rounded-full bg-[#333336] text-secondary" aria-label="Close" onClick={onClose}>
+          <h2 className="type-title-2-emphasized">{translateUi("lyrics_settings.lyrics")}</h2>
+          <button className="grid size-[30px] place-items-center rounded-full bg-[#333336] text-secondary" aria-label={translateUi("lyrics_settings.close")} onClick={onClose}>
             <X size={16} />
           </button>
         </header>
 
         <div className="overflow-y-auto px-5 pb-5">
-          <h3 className={section}>Providers</h3>
-          <p className={note}>Asked all at once; the first in this order with word-timed lyrics wins.</p>
+          <h3 className={section}>{translateUi("lyrics_settings.providers")}</h3>
+          <p className={note}>{translateUi("lyrics_settings.asked_all_at_once_the")}</p>
           <ol className={group}>
             {order.map((id, index) => {
               const source = sourceById(id)!;
@@ -72,15 +73,15 @@ export function LyricsSettings({ onClose }: { onClose: () => void }) {
                   <label className={toggle}>
                     <input type="checkbox" className={checkbox} checked={on} onChange={(e) => setEnabled(id, e.currentTarget.checked)} />
                     <span className="flex min-w-0 flex-col">
-                      <span className="type-body-emphasized">{source.label}</span>
-                      <span className="truncate type-callout text-secondary">{source.detail}</span>
+                      <span className="type-body-emphasized">{sourceLabel(source)}</span>
+                      <span className="truncate type-callout text-secondary">{translateUi(source.detailKey)}</span>
                     </span>
                   </label>
                   <span className="flex gap-0.5">
-                    <button className={moveButton} aria-label={`Move ${source.label} up`} disabled={index === 0} onClick={() => move(id, -1)}>
+                    <button className={moveButton} aria-label={translateUi('lyrics_settings.move_provider_up', { provider: sourceLabel(source) })} disabled={index === 0} onClick={() => move(id, -1)}>
                       <ArrowUp size={14} />
                     </button>
-                    <button className={moveButton} aria-label={`Move ${source.label} down`} disabled={index === order.length - 1} onClick={() => move(id, 1)}>
+                    <button className={moveButton} aria-label={translateUi('lyrics_settings.move_provider_down', { provider: sourceLabel(source) })} disabled={index === order.length - 1} onClick={() => move(id, 1)}>
                       <ArrowDown size={14} />
                     </button>
                   </span>
@@ -92,55 +93,48 @@ export function LyricsSettings({ onClose }: { onClose: () => void }) {
           <label className={`${group} ${toggle} py-2 pr-2.5 pl-3`}>
             <input type="checkbox" className={checkbox} checked={preferSyllables} onChange={(e) => setPreferSyllables(e.currentTarget.checked)} />
             <span className="flex min-w-0 flex-col">
-              <span className="type-body-emphasized">Prefer syllable timing</span>
-              <span className="truncate type-callout text-secondary">Keep looking past a line-timed answer for a word-timed one.</span>
+              <span className="type-body-emphasized">{translateUi("lyrics_settings.prefer_syllable_timing")}</span>
+              <span className="truncate type-callout text-secondary">{translateUi("lyrics_settings.keep_looking_past_a_line")}</span>
             </span>
           </label>
 
-          <h3 className={section}>Extra lyrics to keep</h3>
-          <p className={note}>The best match is always saved. Tick providers to also keep their versions when you save a song’s lyrics, so you can switch later.</p>
+          <h3 className={section}>{translateUi("lyrics_settings.extra_lyrics_to_keep")}</h3>
+          <p className={note}>{translateUi("lyrics_settings.the_best_match_is_always")}</p>
           <ul className={group}>
             {order.map((id) => (
               <li key={id} className={`${row} [&+&]:border-t-[0.5px] [&+&]:border-t-divider`}>
                 <label className={toggle}>
                   <input type="checkbox" className={checkbox} checked={extras.includes(id)} onChange={(e) => setExtra(id, e.currentTarget.checked)} />
-                  <span className="type-body">{sourceById(id)?.label}</span>
+                  <span className="type-body">{sourceLabel(sourceById(id))}</span>
                 </label>
               </li>
             ))}
           </ul>
 
-          <h3 className={section}>Extension access</h3>
+          <h3 className={section}>{translateUi("lyrics_settings.extension_access")}</h3>
           {granted === null ? (
-            <p className={note}>KuGou, Musixmatch, Genius and PaxSenix need the Auden extension.</p>
+            <p className={note}>{translateUi("lyrics_settings.kugou_musixmatch_genius_and_paxsenix")}</p>
           ) : missing.length ? (
             <div className="flex items-center gap-3">
-              <p className={note}>
-                KuGou, Musixmatch, Genius and PaxSenix don’t let web pages ask them directly. Allow the extension to,
-                once.
-              </p>
-              <button className="flex-none rounded-[14px] bg-key px-3.5 py-1.5 type-callout-emphasized text-white" onClick={() => void getBridge()?.call('lyrics.requestPermissions', { origins: missing })}>
-                Allow
-              </button>
+              <p className={note}>{translateUi("lyrics_settings.kugou_musixmatch_genius_and_paxsenix_2")}</p>
+              <button className="flex-none rounded-[14px] bg-key px-3.5 py-1.5 type-callout-emphasized text-white" onClick={() => void getBridge()?.call('lyrics.requestPermissions', { origins: missing })}>{translateUi("lyrics_settings.allow")}</button>
             </div>
           ) : (
-            <p className={note}>All providers are reachable.</p>
+            <p className={note}>{translateUi("lyrics_settings.all_providers_are_reachable")}</p>
           )}
 
-          <h3 className={section}>PaxSenix key</h3>
+          <h3 className={section}>{translateUi("lyrics_settings.paxsenix_key")}</h3>
           <input
             className="w-full rounded-[10px] border-0 bg-quinary px-3 py-2 type-body text-primary"
             type="password"
-            placeholder="For PaxSenix: Spotify and Musixmatch"
+            placeholder={translateUi("lyrics_settings.for_paxsenix_spotify_and_musixmatch")}
             value={key}
             onChange={(e) => setKey(e.currentTarget.value)}
             onBlur={() => setPaxsenixKey(key)}
             autoComplete="off"
           />
 
-          <button className="mt-[18px] type-callout-emphasized text-key" onClick={reset}>
-            Restore Defaults
-          </button>
+          <button className="mt-[18px] type-callout-emphasized text-key" onClick={reset}>{translateUi("lyrics_settings.restore_defaults")}</button>
         </div>
       </div>
     </div>,

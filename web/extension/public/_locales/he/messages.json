@@ -1,0 +1,145 @@
+{
+  "extensionName": {
+    "message": "Auden"
+  },
+  "extensionDescription": {
+    "message": "מחבר את נגן האינטרנט של Auden ל-YouTube Music, Spotify ו-Discord."
+  },
+  "openAuden": {
+    "message": "פתיחת Auden"
+  },
+  "checking": {
+    "message": "בודק…"
+  },
+  "notSignedIn": {
+    "message": "לא מחובר בדפדפן הזה"
+  },
+  "signIn": {
+    "message": "התחברות"
+  },
+  "couldNotReadAccount": {
+    "message": "לא ניתן לקרוא את פרטי החשבון"
+  },
+  "youtubeSessionRejected": {
+    "message": "YouTube לא אישר את ההפעלה של הדפדפן הזה. התחברו שוב."
+  },
+  "youtubeAccountMissing": {
+    "message": "לא נמצא חשבון Google מחובר."
+  },
+  "youtubeAccountUnavailable": {
+    "message": "YouTube לא מצא חשבון בהפעלת הדפדפן הזו."
+  },
+  "disconnected": {
+    "message": "מנותק"
+  },
+  "retry": {
+    "message": "ניסיון חוזר"
+  },
+  "connect": {
+    "message": "חיבור"
+  },
+  "disconnect": {
+    "message": "ניתוק"
+  },
+  "spotifySignInExpired": {
+    "message": "פג תוקף ההפעלה של Spotify. התחברו שוב."
+  },
+  "spotifyRateLimited": {
+    "message": "Spotify מגבילה זמנית את הבקשות. נסו שוב בעוד רגע."
+  },
+  "spotifyConnectionFailed": {
+    "message": "לא ניתן להתחבר ל-Spotify. בדקו את החיבור ונסו שוב."
+  },
+  "spotifySignInFailed": {
+    "message": "לא ניתן להתחבר ל-Spotify. נסו שוב."
+  },
+  "stopUsingAccountYouTube": {
+    "message": "הפסקת השימוש בחשבון הזה ב-Auden. תישארו מחוברים ל-YouTube."
+  },
+  "stopUsingAccountSpotify": {
+    "message": "הפסקת השימוש בחשבון הזה ב-Auden. תישארו מחוברים ל-Spotify."
+  },
+  "notConnected": {
+    "message": "לא מחובר"
+  },
+  "showingWhatYouPlay": {
+    "message": "הצגת המוזיקה שאתם מנגנים"
+  },
+  "connecting": {
+    "message": "מתחבר…"
+  },
+  "couldNotConnect": {
+    "message": "לא ניתן להתחבר"
+  },
+  "onWaitingForSong": {
+    "message": "פעיל, ממתין לשיר"
+  },
+  "presenceOff": {
+    "message": "הנוכחות כבויה"
+  },
+  "forgetDiscordAccount": {
+    "message": "שכחת חשבון Discord זה."
+  },
+  "couldNotReadSession": {
+    "message": "לא ניתן לקרוא את ההפעלה"
+  },
+  "allowLyricSourcesTitle": {
+    "message": "Auden: מקורות מילים"
+  },
+  "allowLyricSourcesHeading": {
+    "message": "אישור גישה למקורות מילים"
+  },
+  "allowLyricSourcesExplanation": {
+    "message": "ספקי המילים האלה לא מאפשרים לדפי אינטרנט לפנות אליהם ישירות, לכן Auden מבקשת גישה דרך התוסף. הדפדפן יבקש מכם לאשר."
+  },
+  "allow": {
+    "message": "אישור"
+  },
+  "permissionDone": {
+    "message": "בוצע. אפשר לסגור את הכרטיסייה ולחזור ל-Auden."
+  },
+  "permissionDenied": {
+    "message": "הגישה לא אושרה. המקורות האלה יישארו כבויים."
+  },
+  "discordConnectTitle": {
+    "message": "Auden: חיבור ל-Discord"
+  },
+  "discordConnectHeading": {
+    "message": "הצגת המוזיקה שאתם מנגנים ב-Discord"
+  },
+  "discordConnectExplanation": {
+    "message": "Auden קוראת את ההפעלה שלכם ב-Discord מכרטיסייה של discord.com ושומרת אותה בתוסף. נגן האינטרנט לא נחשף אליה."
+  },
+  "discordTokenWarning": {
+    "message": "הפעולה משתמשת באסימון של החשבון שלכם, בניגוד לתנאי Discord. השימוש באחריותכם."
+  },
+  "connectDiscord": {
+    "message": "חיבור ל-Discord"
+  },
+  "discordPermissionDenied": {
+    "message": "הגישה לא אושרה. Discord יישאר כבוי."
+  },
+  "discordConnected": {
+    "message": "התחברתם בתור $USER$. אפשר לסגור את הכרטיסייה הזו.",
+    "placeholders": {
+      "user": {
+        "content": "$1"
+      }
+    }
+  },
+  "discordSignInProgress": {
+    "message": "התחברו ל-Discord בכרטיסייה שנפתחה. הדף יזהה זאת."
+  },
+  "discordReadProgress": {
+    "message": "קורא את ההפעלה שלכם ב-Discord…"
+  },
+  "discordSessionMissing": {
+    "message": "לא נמצאה הפעלה של Discord. התחברו ב-discord.com ונסו שוב."
+  },
+  "discordTokenRejected": {
+    "message": "Discord דחתה את האסימון. חברו את החשבון שוב."
+  },
+  "discordConnectionError": {
+    "message": "לא ניתן להתחבר ל-Discord. נסו שוב."
+  }
+}

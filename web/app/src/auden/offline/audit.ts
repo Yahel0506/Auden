@@ -1,3 +1,4 @@
+import { number } from '@/i18n';
 import type { FileStore, StoredFile } from './files';
 import type { OfflineStore } from './store';
 import type { OfflineItem } from './types';
@@ -69,10 +70,14 @@ export function usageBy(items: readonly OfflineItem[], by: 'album' | 'artist'): 
 }
 
 export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024) return `${number(bytes)} B`;
   const units = ['KB', 'MB', 'GB', 'TB'];
   let value = bytes / 1024;
   let i = 0;
   while (value >= 1024 && i < units.length - 1) (value /= 1024, i++);
-  return `${value >= 100 ? Math.round(value) : value.toFixed(1)} ${units[i]}`;
+  const wholeValue = value >= 100;
+  return `${number(wholeValue ? Math.round(value) : Number(value.toFixed(1)), {
+    minimumFractionDigits: wholeValue ? 0 : 1,
+    maximumFractionDigits: 1,
+  })} ${units[i]}`;
 }

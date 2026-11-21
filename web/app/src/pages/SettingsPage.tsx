@@ -1,3 +1,4 @@
+import { t as translateUi } from '@/i18n';
 import { ChevronRight, Users } from 'lucide-react';
 import { lazy, Suspense, useState, type ComponentType, type ReactNode } from 'react';
 import { MdOutlineExtension } from 'react-icons/md';
@@ -37,20 +38,20 @@ function Glyph({ Icon, color, ink }: { Icon: ComponentType<{ size?: number }>; c
   );
 }
 
-const THEME_LABELS: Record<PlayerTheme, string> = { continuation: 'Continuation', colors: 'Colors', blur: 'Blur' };
+const THEME_LABELS: Record<PlayerTheme, string> = { continuation: 'settings_page.theme_continuation', colors: 'settings_page.theme_colors', blur: 'settings_page.theme_blur' };
 const THEME_DETAIL: Record<PlayerTheme, string> = {
-  continuation: 'A soft mesh that carries on the colors of the cover, blurrier and darker toward the bottom.',
-  colors: 'The classic drifting mesh gradient.',
-  blur: 'The cover, blurred across the whole screen.',
+  continuation: 'settings_page.theme_continuation_detail',
+  colors: 'settings_page.theme_colors_detail',
+  blur: 'settings_page.theme_blur_detail',
 };
 
 const SHELF_LABELS: Record<LocalShelfKind, string> = {
-  LOOP: 'On repeat',
-  REDISCOVER: 'Rediscover',
-  RECENTLY_ADDED: 'Recently added',
-  PLAYLISTS: 'Your playlists',
-  ARTIST_MIX: 'Artist mix',
-  LIBRARY_SHUFFLE: 'From your library',
+  LOOP: 'home_shelf_title_loop',
+  REDISCOVER: 'home_shelf_title_rediscover',
+  RECENTLY_ADDED: 'home_shelf_title_recently_added',
+  PLAYLISTS: 'home_shelf_title_playlists',
+  ARTIST_MIX: 'settings_page.shelf_artist_mix',
+  LIBRARY_SHUFFLE: 'home_shelf_title_library_shuffle',
 };
 
 /** A row that opens a page of its own. */
@@ -68,12 +69,12 @@ function LinkRow({ to, icon, title, value }: { to: string; icon?: ReactNode; tit
 }
 
 function youtubeText(auth: ReturnType<typeof useYtAuth>): string {
-  if (auth.state === 'checking') return 'Checking…';
-  if (auth.state === 'unavailable') return 'Needs the extension';
+  if (auth.state === 'checking') return translateUi('settings_page.checking');
+  if (auth.state === 'unavailable') return translateUi('settings_page.needs_the_extension');
   const { browserSignedIn, connected, active } = auth.auth;
-  if (!browserSignedIn) return 'Not signed in';
-  if (!connected) return 'Disconnected';
-  return active ? active.name : 'Signed in';
+  if (!browserSignedIn) return translateUi('settings_page.not_signed_in');
+  if (!connected) return translateUi('settings_page.disconnected');
+  return active ? active.name : translateUi('settings_page.signed_in');
 }
 
 /**
@@ -105,17 +106,17 @@ export default function SettingsPage() {
   const discordText =
     discord.state === 'ready' && discord.discord.connected
       ? discord.discord.enabled
-        ? 'On'
-        : 'Off'
+        ? translateUi('settings_page.on')
+        : translateUi('settings_page.off')
       : discord.state === 'ready' && discord.discord.available
-        ? 'Not connected'
+        ? translateUi('integration_settings.not_connected')
         : null;
 
   return (
     <div className={settingsUi.centered}>
-      <PageHeader title="Settings" />
+      <PageHeader title={translateUi("settings_page.settings")} />
       <div className={settingsUi.body}>
-        <h2 className={settingsUi.sectionHeader}>Account & Integrations</h2>
+        <h2 className={settingsUi.sectionHeader}>{translateUi("settings_page.account_integrations")}</h2>
         <section className={settingsUi.group}>
           <div className={settingsUi.integration}>
             <Glyph Icon={SiYoutubemusic} color="#ffffff" ink="#ff0033" />
@@ -125,7 +126,7 @@ export default function SettingsPage() {
           <div className={settingsUi.integration}>
             <Glyph Icon={SiSpotify} color="#1ed760" />
             <span className={settingsUi.integrationName}>Spotify</span>
-            {present ? <SpotifyIntegration /> : <span className={settingsUi.value}>Needs the extension</span>}
+            {present ? <SpotifyIntegration /> : <span className={settingsUi.value}>{translateUi("settings_page.needs_the_extension")}</span>}
           </div>
           {present && discord.state === 'ready' && discord.discord.available && (
             <LinkRow to="/settings/discord" icon={<Glyph Icon={SiDiscord} color="#5865f2" />} title="Discord" value={discordText} />
@@ -133,15 +134,15 @@ export default function SettingsPage() {
           <LinkRow
             to="/extension"
             icon={<Glyph Icon={MdOutlineExtension} color="#636366" />}
-            title="Auden Extension"
-            value={present ? `v${extension.extension.info.version}` : 'Not installed'}
+            title={translateUi("settings_page.auden_extension")}
+            value={present ? `v${extension.extension.info.version}` : translateUi('pages_extensionpage_not_installed')}
           />
         </section>
         {config.connectUrl && (
           <section className={`${settingsUi.group} mt-3`}>
             <Toggle
-              label="Play on my other devices"
-              detail="Shows your other devices with Auden open on this account in Audio output, so you can hand playback to them and control it from here."
+              label={translateUi("settings_page.play_on_my_other_devices")}
+              detail={translateUi("settings_page.shows_your_other_devices_with")}
               checked={connectEnabled}
               onChange={setConnectEnabled}
             />
@@ -149,11 +150,11 @@ export default function SettingsPage() {
         )}
         <section className={`${settingsUi.group} mt-3 empty:hidden`}>
           <Toggle
-            label="Share Listening Activity to YouTube"
+            label={translateUi("settings_page.share_listening_activity_to_youtube")}
             detail={
               present && !extension.extension.info.capabilities.includes('yt.stats')
-                ? 'Update the Auden extension to share: this version can’t send plays to YouTube.'
-                : 'Songs you play here go to your YouTube Music history and shape its recommendations.'
+                ? translateUi("pages_settingspage_update_the_auden_extension_to")
+                : translateUi("pages_settingspage_songs_you_play_here_go")
             }
             checked={shareHistory}
             onChange={setShareHistory}
@@ -165,19 +166,19 @@ export default function SettingsPage() {
         <section className={settingsUi.group}>
           <div className={settingsUi.integration}>
             <Glyph Icon={SiApplemusic} color="#fa2d48" />
-            <span className={settingsUi.integrationName}>Extension Access</span>
-            {present ? <AppleMusicIntegration /> : <span className={settingsUi.value}>Needs the extension</span>}
+            <span className={settingsUi.integrationName}>{translateUi("settings_page.extension_access")}</span>
+            {present ? <AppleMusicIntegration /> : <span className={settingsUi.value}>{translateUi("settings_page.needs_the_extension")}</span>}
           </div>
           <AppleMusicToggles />
           <ClipNetworkToggle />
         </section>
-        <p className={settingsUi.footer}>From Apple Music’s public pages. No Apple Music account or sign-in needed.</p>
+        <p className={settingsUi.footer}>{translateUi("settings_page.from_apple_music_s_public")}</p>
 
-        <h2 className={settingsUi.sectionHeader}>Home</h2>
+        <h2 className={settingsUi.sectionHeader}>{translateUi("settings_page.home")}</h2>
         <section className={settingsUi.group}>
           <div className={settingsUi.integration}>
-            <span className={settingsUi.integrationName}>Your music on Home</span>
-            <span className={settingsUi.value}>{home.localWeight === 0 ? 'Feed only' : `${home.localWeight}%`}</span>
+            <span className={settingsUi.integrationName}>{translateUi("settings_page.your_music_on_home")}</span>
+            <span className={settingsUi.value}>{home.localWeight === 0 ? translateUi("pages_settingspage_feed_only") : `${home.localWeight}%`}</span>
           </div>
           <div className="px-4 pb-3">
             <input
@@ -187,110 +188,110 @@ export default function SettingsPage() {
               step={5}
               value={home.localWeight}
               onChange={(e) => home.setLocalWeight(Number(e.target.value))}
-              aria-label="How much of Home is your own music"
+              aria-label={translateUi("settings_page.how_much_of_home_is")}
               className="w-full accent-[var(--keyColor,currentColor)]"
             />
             <div className="flex justify-between type-callout text-secondary">
               <span>YouTube Music</span>
-              <span>Yours</span>
+              <span>{translateUi("settings_page.yours")}</span>
             </div>
           </div>
           {LOCAL_SHELF_KINDS.map((kind) => (
-            <Toggle key={kind} label={SHELF_LABELS[kind]} checked={home.enabled[kind]} onChange={(on) => home.setShelf(kind, on)} />
+            <Toggle key={kind} label={translateUi(SHELF_LABELS[kind] as keyof typeof import('@/i18n.en.json'))} checked={home.enabled[kind]} onChange={(on) => home.setShelf(kind, on)} />
           ))}
-          <Toggle label="Hide Recently Played" detail="Takes the shelf off Home, YouTube’s own copy too." checked={home.hideRecents} onChange={home.setHideRecents} />
-          <Toggle label="Hide music videos" detail="Takes them off Home’s feed, with any shelf left with nothing else on it." checked={home.hideVideos} onChange={home.setHideVideos} />
-          <Toggle label="Square video thumbnails" detail="Music videos show as squares, like songs." checked={home.squareVideoThumbnails} onChange={home.setSquareVideoThumbnails} />
+          <Toggle label={translateUi("settings_page.hide_recently_played")} detail={translateUi("settings_page.takes_the_shelf_off_home")} checked={home.hideRecents} onChange={home.setHideRecents} />
+          <Toggle label={translateUi("settings_page.hide_music_videos")} detail={translateUi("settings_page.takes_them_off_home_s")} checked={home.hideVideos} onChange={home.setHideVideos} />
+          <Toggle label={translateUi("settings_page.square_video_thumbnails")} detail={translateUi("settings_page.music_videos_show_as_squares")} checked={home.squareVideoThumbnails} onChange={home.setSquareVideoThumbnails} />
         </section>
         <section className={`${settingsUi.group} mt-3`}>
           <label className={settingsUi.controlRow}>
             <span className={settingsUi.rowText}>
-              <span>Player background</span>
-              <span className={settingsUi.rowDetail}>{THEME_DETAIL[look.theme]}</span>
+              <span>{translateUi("settings_page.player_background")}</span>
+              <span className={settingsUi.rowDetail}>{translateUi(THEME_DETAIL[look.theme] as keyof typeof import('@/i18n.en.json'))}</span>
             </span>
             <Select<PlayerTheme>
-              label="Player background"
+              label={translateUi("settings_page.player_background")}
               value={look.theme}
-              options={PLAYER_THEMES.map((t) => ({ value: t, label: THEME_LABELS[t] }))}
+              options={PLAYER_THEMES.map((t) => ({ value: t, label: translateUi(THEME_LABELS[t] as keyof typeof import('@/i18n.en.json')) }))}
               onChange={look.setTheme}
             />
           </label>
           <Toggle
-            label="Full-screen covers"
-            detail="Album and playlist covers run to the edges of the page and dissolve into it. On narrow windows only."
+            label={translateUi("settings_page.full_screen_covers")}
+            detail={translateUi("settings_page.album_and_playlist_covers_run")}
             checked={look.fullBleedCovers}
             onChange={look.setFullBleedCovers}
           />
         </section>
-        <p className={settingsUi.footer}>Built from what you play and the music on this device. With no network or no extension, Home is only yours.</p>
+        <p className={settingsUi.footer}>{translateUi("settings_page.built_from_what_you_play")}</p>
 
-        <h2 className={settingsUi.sectionHeader}>Auden DJ</h2>
+        <h2 className={settingsUi.sectionHeader}>{translateUi("settings_page.auden_dj")}</h2>
         <section className={settingsUi.group}>
-          <Toggle label="Voice" detail="The DJ speaks between sets. Off, or when the voice isn’t available, you read what it says." checked={dj.voice} onChange={(voice) => dj.set({ voice })} />
+          <Toggle label={translateUi("settings_page.voice")} detail={translateUi("settings_page.the_dj_speaks_between_sets")} checked={dj.voice} onChange={(voice) => dj.set({ voice })} />
           <div className={settingsUi.integration}>
-            <span className={settingsUi.integrationName}>Language</span>
-            <select className="rounded-md bg-quinary px-2 py-1 type-callout text-primary" value={dj.language} onChange={(e) => dj.set({ language: e.target.value === 'es' ? 'es' : 'en' })} aria-label="DJ language">
-              <option value="en">English</option>
-              <option value="es">Español</option>
+            <span className={settingsUi.integrationName}>{translateUi("settings_page.language")}</span>
+            <select className="rounded-md bg-quinary px-2 py-1 type-callout text-primary" value={dj.language} onChange={(e) => dj.set({ language: e.target.value === 'es' ? 'es' : 'en' })} aria-label={translateUi("settings_page.dj_language")}>
+              <option value="en">{translateUi("settings_page.english")}</option>
+              <option value="es">{translateUi("settings_page.spanish")}</option>
             </select>
           </div>
           <div className={settingsUi.integration}>
-            <span className={settingsUi.integrationName}>Songs per set</span>
+            <span className={settingsUi.integrationName}>{translateUi("settings_page.songs_per_set")}</span>
             <span className={settingsUi.value}>{dj.blockSize}</span>
           </div>
           <div className="px-4 pb-3">
-            <input type="range" min={5} max={12} step={1} value={dj.blockSize} onChange={(e) => dj.set({ blockSize: Number(e.target.value) })} aria-label="Songs per DJ set" className="w-full" />
+            <input type="range" min={5} max={12} step={1} value={dj.blockSize} onChange={(e) => dj.set({ blockSize: Number(e.target.value) })} aria-label={translateUi("settings_page.songs_per_dj_set")} className="w-full" />
           </div>
         </section>
-        <p className={settingsUi.footer}>Start the DJ from the card on Home. It plays your own music; it can’t run in a Listen Together party.</p>
+        <p className={settingsUi.footer}>{translateUi("settings_page.start_the_dj_from_the")}</p>
 
-        <h2 className={settingsUi.sectionHeader}>Local Library</h2>
+        <h2 className={settingsUi.sectionHeader}>{translateUi("settings_page.local_library")}</h2>
         <section className={settingsUi.group}>
-          <LinkRow to="/local" title="On This Device" value="Folders & songs" />
+          <LinkRow to="/local" title={translateUi("settings_page.on_this_device")} value={translateUi("settings_page.folders_and_songs")} />
           <Toggle
-            label="Keep saved playlists up to date"
-            detail="Adds new songs from YouTube Music and Spotify to your saved copies. Nothing is ever changed on those services."
+            label={translateUi("settings_page.keep_saved_playlists_up_to")}
+            detail={translateUi("settings_page.adds_new_songs_from_youtube")}
             checked={autoSync.enabled}
             onChange={autoSync.setEnabled}
           />
           <Toggle
-            label="Also when data saver is on"
-            detail="For saved copies of YouTube Music and Spotify playlists. Browsers only report Save-Data or a cellular link on Chromium; elsewhere this has no effect. Offline copies have their own rule: never on Save-Data or cellular."
+            label={translateUi("settings_page.also_when_data_saver_is")}
+            detail={translateUi("settings_page.for_saved_copies_of_youtube")}
             checked={autoSync.alsoOnDataSaver}
             onChange={autoSync.setAlsoOnDataSaver}
           />
         </section>
         <p className={settingsUi.footer}>
           {fsaSupported()
-            ? 'Your browser remembers the folders you add, but asks for permission again each visit: tap “Reconnect folder” on the On This Device page. Songs never leave this device.'
-            : 'This browser can’t keep access to a folder between visits. Auden remembers the songs it indexed; pick the same folder again each visit (Reconnect folder) to play them. Chromium-based browsers remember folders.'}
+            ? translateUi("pages_settingspage_your_browser_remembers_the_folders")
+            : translateUi("pages_settingspage_this_browser_can_t_keep")}
         </p>
 
-        <h2 className={settingsUi.sectionHeader}>Listen Together</h2>
+        <h2 className={settingsUi.sectionHeader}>{translateUi("settings_page.listen_together")}</h2>
         <section className={settingsUi.group}>
           <LinkRow
             to="/settings/listen-together"
             icon={<Glyph Icon={Users} color="#fa2d48" />}
-            title="Listen Together"
-            value={party.code ? `In party ${party.code}` : 'Listen in sync with friends'}
+            title={translateUi("settings_page.listen_together")}
+            value={party.code ? translateUi('settings_page.in_party', { code: party.code }) : translateUi('settings_page.listen_in_sync_with_friends')}
           />
         </section>
 
-        <h2 className={settingsUi.sectionHeader}>Playback</h2>
+        <h2 className={settingsUi.sectionHeader}>{translateUi("settings_page.playback")}</h2>
         <section className={settingsUi.group}>
           <Toggle
-            label="AutoPlay"
-            detail="When the queue ends, keep playing similar music."
+            label={translateUi("settings_page.autoplay")}
+            detail={translateUi("settings_page.when_the_queue_ends_keep")}
             checked={autoplay}
             onChange={setAutoplay}
           />
           <label className={settingsUi.controlRow}>
-            <span>Crossfade</span>
+            <span>{translateUi("settings_page.crossfade")}</span>
             <Select<number | 'automix'>
-              label="Crossfade"
+              label={translateUi("settings_page.crossfade")}
               value={automix ? 'automix' : crossfadeSec}
               options={[
-                ...CROSSFADE_CHOICES.map((seconds) => ({ value: seconds, label: seconds === 0 ? 'Off' : `${seconds} seconds` })),
+                ...CROSSFADE_CHOICES.map((seconds) => ({ value: seconds, label: seconds === 0 ? translateUi('settings_page.off') : translateUi('settings_page.seconds_count', { count: seconds }) })),
                 { value: 'automix', label: 'Automix' },
               ]}
               onChange={(value) => (value === 'automix' ? setAutomix(true) : setCrossfade(value))}
@@ -298,9 +299,9 @@ export default function SettingsPage() {
           </label>
           {automix && (
             <label className={settingsUi.controlRow}>
-              <span>Blend Length</span>
+              <span>{translateUi("settings_page.blend_length")}</span>
               <Select
-                label="Blend Length"
+                label={translateUi("settings_page.blend_length")}
                 value={automixBars}
                 options={AUTOMIX_BARS.map((bars) => ({ value: bars, label: `Up to ${bars} bars` }))}
                 onChange={setAutomixBars}
@@ -308,38 +309,34 @@ export default function SettingsPage() {
             </label>
           )}
           <Toggle
-            label="Prefer music-only version"
-            detail="Music videos play as their song when YouTube Music has one, and the next track is looked up ahead so Automix and crossfade keep working. Otherwise the video’s own audio plays, without the picture."
+            label={translateUi("settings_page.prefer_music_only_version")}
+            detail={translateUi("settings_page.music_videos_play_as_their")}
             checked={musicOnly}
             onChange={(on) => useMusicOnly.getState().setPreferMusicOnly(on)}
           />
           <Toggle
-            label="Show Stats for Nerds"
-            detail="Codec, bitrate and sample rate under the artist in the full-screen player, and what Automix is doing."
+            label={translateUi("settings_page.show_stats_for_nerds")}
+            detail={translateUi("settings_page.codec_bitrate_and_sample_rate")}
             checked={showNerdStats}
             onChange={setShowNerdStats}
           />
         </section>
         {automix && (
-          <p className={settingsUi.footer}>
-            Automix finds each song’s tempo, key and phrases, then blends on the beat: the next song is time-stretched to match, and
-            the bass swaps over halfway. Where it can, it loops a few instrumental bars of each song and ramps the tempo between
-            them. Songs it can’t read in time play to the end and crossfade. Based on AutoMix by David Finnegan (AGPL-3.0).
-          </p>
+          <p className={settingsUi.footer}>{translateUi("settings_page.automix_finds_each_song_s")}</p>
         )}
 
-        <h2 className={settingsUi.sectionHeader}>Lyrics</h2>
+        <h2 className={settingsUi.sectionHeader}>{translateUi("settings_page.lyrics")}</h2>
         <section className={settingsUi.group}>
           <button className={`${settingsUi.integrationPlain} ${settingsUi.linkRow}`} onClick={() => setLyrics(true)}>
-            <span className={settingsUi.integrationName}>Lyric Sources</span>
+            <span className={settingsUi.integrationName}>{translateUi("settings_page.lyric_sources")}</span>
             <span className={settingsUi.value}>
-              Order, sources, syllable timing
+              {translateUi('settings_page.order_sources_syllable_timing')}
               <ChevronRight size={16} />
             </span>
           </button>
           <div className={settingsUi.integrationPlain}>
-            <span className={settingsUi.integrationName}>Lyric Sources Access</span>
-            {present ? <LyricSourcesAccess /> : <span className={settingsUi.value}>Needs the extension</span>}
+            <span className={settingsUi.integrationName}>{translateUi("settings_page.lyric_sources_access")}</span>
+            {present ? <LyricSourcesAccess /> : <span className={settingsUi.value}>{translateUi("settings_page.needs_the_extension")}</span>}
           </div>
         </section>
 
