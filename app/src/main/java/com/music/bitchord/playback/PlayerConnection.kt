@@ -22,6 +22,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import androidx.media3.session.SessionToken
 import com.music.bitchord.data.model.ArtistRef
 import com.music.bitchord.data.model.NOTIFICATION_ART_PX
@@ -29,6 +30,7 @@ import com.music.bitchord.data.model.PlaybackSourceType
 import com.music.bitchord.data.model.QueueTier
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.data.model.artworkAt
+import com.music.bitchord.data.model.youTubeThumbnailFallback
 import com.music.bitchord.data.sources.SourceKind
 import com.music.bitchord.data.sources.SourceRegistry
 import com.music.bitchord.data.sources.SourceResolver
@@ -74,6 +76,12 @@ data class PlayerState(
     val isQualityUpgraded: Boolean = false,
 )
 
+/** The controller the app is bound with, for the parts of the UI that are not handed it. */
+object PlayerBinding {
+    @Volatile
+    var controller: MediaController? = null
+}
+
 /** Binds to [PlaybackService] for the lifetime of the composition. */
 @Composable
 fun rememberMediaController(): MediaController? {
@@ -84,12 +92,16 @@ fun rememberMediaController(): MediaController? {
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
         val future = MediaController.Builder(context, token).buildAsync()
         future.addListener(
-            { controller = runCatching { future.get() }.getOrNull() },
+            {
+                controller = runCatching { future.get() }.getOrNull()
+                PlayerBinding.controller = controller
+            },
             ContextCompat.getMainExecutor(context),
         )
         onDispose {
             MediaController.releaseFuture(future)
             controller = null
+            PlayerBinding.controller = null
         }
     }
     return controller
@@ -318,6 +330,50 @@ fun MediaController.setQueueDragActive(active: Boolean) {
         bundleOf(EXTRA_QUEUE_DRAG_ACTIVE to active),
     )
 }
+
+/** A queue-screen swipe moves this occurrence rather than adding a second copy. */
+suspend fun MediaController.moveQueueEntryToUser(index: Int, song: Song): Boolean =
+    try {
+        sendCustomCommand(
+            SessionCommand(ACTION_QUEUE_MOVE_TO_USER, Bundle.EMPTY),
+            bundleOf(
+                EXTRA_QUEUE_MOVE_INDEX to index,
+                EXTRA_QUEUE_MOVE_ENTRY to song.queueEntryId,
+                EXTRA_QUEUE_MOVE_MEDIA to song.videoId,
+            ),
+        ).await().resultCode == SessionResult.RESULT_SUCCESS
+    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        throw cancelled
+    } catch (_: Exception) {
+        false
+    }
+
+/** Removes one queue row the way the queue screen does, offering Undo for it afterwards. */
+suspend fun MediaController.removeQueueItemWithUndo(index: Int, song: Song): Boolean =
+    acknowledgedQueueEdit(
+        ACTION_QUEUE_REMOVE_WITH_UNDO,
+        bundleOf(
+            EXTRA_QUEUE_MOVE_INDEX to index,
+            EXTRA_QUEUE_MOVE_ENTRY to song.queueEntryId,
+            EXTRA_QUEUE_MOVE_MEDIA to song.videoId,
+        ),
+    )
+
+suspend fun MediaController.clearUserQueueWithUndo(): Boolean =
+    acknowledgedQueueEdit(ACTION_QUEUE_CLEAR_WITH_UNDO, Bundle.EMPTY)
+
+suspend fun MediaController.undoQueueEdit(token: String): Boolean =
+    acknowledgedQueueEdit(ACTION_QUEUE_UNDO, bundleOf(EXTRA_QUEUE_UNDO_TOKEN to token))
+
+private suspend fun MediaController.acknowledgedQueueEdit(action: String, args: Bundle): Boolean =
+    try {
+        sendCustomCommand(SessionCommand(action, Bundle.EMPTY), args).await().resultCode ==
+            SessionResult.RESULT_SUCCESS
+    } catch (cancelled: kotlinx.coroutines.CancellationException) {
+        throw cancelled
+    } catch (_: Exception) {
+        false
+    }
 
 /** Mirrors the controller into Compose state, polling position while playing. */
 @Composable
@@ -680,7 +736,9 @@ private fun Song.pickedMixQuery(configId: String): String {
  * a local (`file:` / `content:`) cover the row already has is left alone.
  */
 private fun Song.artworkForPlayback(): String? {
-    val own = artworkAt(NOTIFICATION_ART_PX)
+    // Media3 loads this itself, with no way to try a second URL, so a YouTube cover goes at the size every
+    // video has: a larger one is a 404 for an old upload, and a blank lock screen.
+    val own = artworkAt(NOTIFICATION_ART_PX)?.let { youTubeThumbnailFallback(it) ?: it }
     if (own != null && !own.startsWith("http")) return own
     val saved = Downloads.savedMetadata.value[videoId]?.thumbnailUrl
         ?.takeIf { it.startsWith("file:") && !Downloads.isMissingLocalFile(it) }

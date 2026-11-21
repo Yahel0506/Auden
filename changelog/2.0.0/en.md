@@ -4,6 +4,12 @@
 - **A paused cover rests.** Pausing shrinks the cover and drains its colour, and an animated cover's clip pauses with it.
 - **Hold the player bar.** Holding the player in the navigation bar opens the song's menu with its card on top — cover, title, artist and album — and a tap on the card opens the album.
 - **A lossless source, Monochrome.** Official builds carry Monochrome as a source of lossless audio. It is off by default: switch it on under Sources. Downloads are no longer FLAC-only, and High quality leaves out the heavy hi-res files, keeping lossy and CD-quality FLAC.
+- **Share lyrics as a video.** Picking lines to share opens a story you can save as a video: the song plays the picked stretch while the lines are lit as in the lyrics panel — the sweep, the lift of each word, held words swelling — over the player's backdrop or the song's animated cover, blurred. Switch to Video or Image, and show or hide the Auden mark.
+- **Queue swipes.** Swipe a queue row left to remove it, or right to move it into Next in queue (or play it next, as your setting says); the row slides away and the list closes over it.
+- **Undo in the queue.** Removing a song or clearing Next in queue offers Undo for a few seconds, and the queue comes back as it was.
+- **Sharper covers.** YouTube covers are asked at the large size the screen needs and fall back to the one every video has when a video has no larger copy, so none goes blank.
+- **Livelier lyrics.** The line being sung keeps its glow and feathered sweep on the main player's strip, on the extended lyrics screen while you scroll, and while you pick lines to share, with no hard edge around the glow.
+- **Matching without accents.** A title or an artist now matches its spelling without accents — Şımarık and Simarik, Müslüm Gürses and Muslum Gurses — and a CJK title's romanized aside, accents and all, files the upload that carries only the romanization.
 
 ## Home
 
@@ -33,6 +39,7 @@
 - **Liked Music and Favorites in Playlists.** Liked Music leads the Playlists section once YouTube Music is connected, and Favorites has the same kind of cover as the folders.
 - **Recents by where it was played.** What you play is remembered by where it was played from — a playlist, an album, a folder, an artist — each with its own picture.
 - **Replay, in Apple Music's shape.** The statistics page is redone: Week, Month, Year and All time, each browsable back through its periods, with a slow glow tinted by your top artist, a glass period menu, colourful artist cards, milestones and a closing playlist card.
+- **Listening on speakers counts.** What you play on Cast or your watch now adds to your minutes and plays in the listening statistics.
 
 ## Import & Transfer
 
@@ -66,6 +73,8 @@
 - **Nothing asks your account for what to play.** Search, radio, artist cards, lyrics and the DJ's and AutoPlay's suggestions are asked of YouTube Music as nobody — no sign-in behind them — and your searches are no longer written into your YouTube history. The DJ draws on your library, your likes and what you have listened to, and fills in with YouTube Music's own recommendations when that is not enough yet.
 - **Your profile is the account.** Your Auden profile's photo — or your initial — is the button on the top bars, and its card heads Account & integrations in place of "Not signed in" or a YouTube Music profile. YouTube Music, Spotify, Apple Music and Tidal sit together as connections in one group.
 - **A first-run setup.** A new listener starts straight on a setup drawn like the update's welcome: bring your music — Spotify, YouTube Music, Apple Music, Tidal, a backup, a playlist file or this phone — or start fresh, then your name and photo, a greeting, Automix and reduced blur, and in. The update's welcome is shown only to those who have been through the setup.
+- **Google Drive backup.** Settings → Your data → Google Drive backup keeps your listening and settings in a hidden app folder in your Drive, with a schedule (daily, weekly or monthly) and Sync now. Each phone is its own device: the listening of all your devices adds up in Replay, and you can restore this phone as another. Sign-ins are never included.
+- **YouTube Premium audio.** With YouTube Music connected, a switch under it in Account & integrations lets Premium accounts stream the higher-quality ~256 kbps Opus.
 
 ## Settings
 

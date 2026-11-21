@@ -264,6 +264,12 @@ internal class ManualUpgradeThrottle(private val cooldownMs: Long) {
 const val ACTION_QUEUE_DRAG = "com.music.bitchord.action.QUEUE_DRAG"
 const val EXTRA_QUEUE_DRAG_ACTIVE = "bitchord.queueDrag.active"
 
+/** Move an existing queue occurrence without resolving or copying its media source. */
+const val ACTION_QUEUE_MOVE_TO_USER = "com.music.bitchord.action.QUEUE_MOVE_TO_USER"
+const val EXTRA_QUEUE_MOVE_INDEX = "bitchord.queueMove.index"
+const val EXTRA_QUEUE_MOVE_ENTRY = "bitchord.queueMove.entry"
+const val EXTRA_QUEUE_MOVE_MEDIA = "bitchord.queueMove.media"
+
 /** A full first page for an explicitly requested station. */
 private const val INITIAL_STATION_TRACKS = 24
 
@@ -804,6 +810,32 @@ class PlaybackService : MediaLibraryService() {
     private val upgradeQualityCommand = SessionCommand(ACTION_UPGRADE_QUALITY, Bundle.EMPTY)
     private val swapVersionCommand = SessionCommand(ACTION_SWAP_VERSION, Bundle.EMPTY)
     private val queueDragCommand = SessionCommand(ACTION_QUEUE_DRAG, Bundle.EMPTY)
+    private val queueMoveToUserCommand = SessionCommand(ACTION_QUEUE_MOVE_TO_USER, Bundle.EMPTY)
+    private val queueMoveMutex = Mutex()
+    private val queueRemoveUndoCommand = SessionCommand(ACTION_QUEUE_REMOVE_WITH_UNDO, Bundle.EMPTY)
+    private val queueClearUndoCommand = SessionCommand(ACTION_QUEUE_CLEAR_WITH_UNDO, Bundle.EMPTY)
+    private val queueUndoCommand = SessionCommand(ACTION_QUEUE_UNDO, Bundle.EMPTY)
+
+    /**
+     * What a queue-screen removal (or clear) took out, held for a few seconds so Undo can put it back:
+     * the running order as it was, the playhead, the bounded window and its edits, and the order as the
+     * removal left it, which is how a later change by anyone else is noticed and the inverse refused.
+     */
+    private class QueueUndoEdit(
+        val token: String,
+        val before: List<MediaItem>,
+        val currentIndex: Int,
+        val positionMs: Long,
+        val removedCurrent: Boolean,
+        val window: QueueWindowSnapshot?,
+        val edits: BoundedQueueEditState,
+        val after: List<MediaItem>,
+        val afterCurrent: Int,
+        val expiresAt: Long,
+    )
+
+    private var queueUndoEdit: QueueUndoEdit? = null
+    private var queueUndoExpiryJob: Job? = null
 
     private var favoriteActionJob: Job? = null
     private var stationActionJob: Job? = null
@@ -2741,6 +2773,194 @@ class PlaybackService : MediaLibraryService() {
         activePlayer.seekTo(index, position)
         if (wasPlaying) activePlayer.play()
         refreshCustomLayouts()
+    }
+
+    private suspend fun moveQueueEntryToUser(args: Bundle): Boolean {
+        if (ListenTogether.state.value.controlsLocked) return false
+        val before = mediaSession?.player ?: return false
+        val requestedIndex = args.getInt(EXTRA_QUEUE_MOVE_INDEX, -1)
+        val entryId = args.getString(EXTRA_QUEUE_MOVE_ENTRY)
+        val mediaId = args.getString(EXTRA_QUEUE_MOVE_MEDIA)
+        val candidates = (0 until before.mediaItemCount).filter { index ->
+            val candidate = before.getMediaItemAt(index)
+            candidate.mediaId == mediaId && candidate.queueEntryId == entryId
+        }
+        val originalIndex = if (entryId != null) {
+            candidates.singleOrNull() ?: candidates.firstOrNull { it == requestedIndex }
+        } else candidates.firstOrNull { it == requestedIndex }
+        if (originalIndex == null || originalIndex == before.currentMediaItemIndex) return false
+        val original = before.getMediaItemAt(originalIndex)
+        val wasHistory = originalIndex < before.currentMediaItemIndex
+        val contextGeneration = boundedEditState.contextGeneration
+        val partyCode = ListenTogether.state.value.code
+        // A standby owns a snapshot of the old running order. Settle it before
+        // editing, then reacquire the player in case the handoff adopted it.
+        val settled = withTimeoutOrNull(5_000L) {
+            versionSwapJob?.join()
+            if (crossfade?.isTransitioning() == true) crossfade?.onSkipRequested()
+            while (crossfade?.isTransitioning() == true || versionSwapJob?.isActive == true) delay(16L)
+            true
+        } ?: false
+        if (!settled || ListenTogether.state.value.controlsLocked ||
+            ListenTogether.state.value.code != partyCode || boundedEditState.contextGeneration != contextGeneration
+        ) return false
+        val activePlayer = mediaSession?.player ?: return false
+        val from = (0 until activePlayer.mediaItemCount)
+            .filter { activePlayer.getMediaItemAt(it) === original }.singleOrNull() ?: return false
+        if (from == activePlayer.currentMediaItemIndex ||
+            (from < activePlayer.currentMediaItemIndex) != wasHistory
+        ) return false
+        val item = activePlayer.getMediaItemAt(from)
+        val timeline = (0 until activePlayer.mediaItemCount).map { activePlayer.getMediaItemAt(it).toSong() }
+        val insertion = QueueCoordinator.findUserQueueInsertionIndex(
+            timeline = timeline,
+            currentIndex = activePlayer.currentMediaItemIndex,
+            isNext = AppSettings.swipeToPlayNext.value,
+        )
+        val target = if (from < insertion) insertion - 1 else insertion
+        if (item.queueTier == QueueTier.USER_QUEUE && from == target) return false
+        val window = boundedContextWindow
+        if (!wasHistory && item.queueTier == QueueTier.CONTEXT && window != null &&
+            !ListenTogether.state.value.inParty
+        ) {
+            if (boundedContextToken == null ||
+                boundedContextRegistry.snapshot()?.contextToken != boundedContextToken
+            ) return false
+            val canonicalIndex = item.canonicalIndex ?: return false
+            val cycleId = item.contextCycleId ?: return false
+            // The canonical index identifies this source occurrence, even when
+            // other source positions have the same media id. Filtering this
+            // cycle prevents refill/refresh from recreating the promoted row.
+            val excluded = window.snapshot().excludedEntries
+            val lastPlannedOccurrence = cycleId > window.cycleId &&
+                (0 until window.canonicalSize).none { index ->
+                    index != canonicalIndex && QueueWindowEntry(index, cycleId) !in excluded
+                }
+            // Materialization and commit admit only the immediately following
+            // cycle. Retain its last source occurrence rather than strand refill;
+            // the move still succeeds, so this one occurrence can appear twice.
+            if (!lastPlannedOccurrence && !window.exclude(QueueWindowEntry(canonicalIndex, cycleId))) return false
+        }
+        // This is the session's native player, not a controller round-trip through
+        // resolveMediaItems: retain canonical metadata, URI, and occurrence identity.
+        activePlayer.replaceMediaItem(from, QueueShuffle.withQueueMetadata(item, newTier = QueueTier.USER_QUEUE))
+        if (from != target) activePlayer.moveMediaItem(from, target)
+        // Retiering the first context row can leave its index unchanged; that
+        // still counts as an explicit queue edit for a listening party.
+        partySync?.onLocalIntent()
+        player?.let(::saveQueueSnapshotImmediately)
+        return true
+    }
+
+    private fun invalidateQueueUndo() {
+        queueUndoEdit = null
+        queueUndoExpiryJob?.cancel()
+        queueUndoExpiryJob = null
+        QueueScreenUndo.clear()
+    }
+
+    /** Still the order the removal left: same items, same song playing, not past its few seconds. */
+    private fun queueUndoStillValid(edit: QueueUndoEdit, raw: ExoPlayer): Boolean =
+        SystemClock.elapsedRealtime() < edit.expiresAt &&
+            raw.currentMediaItemIndex == edit.afterCurrent &&
+            raw.mediaItemCount == edit.after.size &&
+            edit.after.indices.all { raw.getMediaItemAt(it) === edit.after[it] }
+
+    /**
+     * Removes one queue row (or, with [clear], every row of Next in queue) exactly as the plain commands do,
+     * and records the inverse for [undoQueueEdit].
+     */
+    private suspend fun removeQueueWithUndo(args: Bundle, clear: Boolean): Boolean {
+        if (ListenTogether.state.value.controlsLocked) return false
+        val raw = player ?: return false
+        if (crossfade?.isTransitioning() == true || versionSwapJob?.isActive == true) return false
+        val before = (0 until raw.mediaItemCount).map(raw::getMediaItemAt)
+        val currentIndex = raw.currentMediaItemIndex
+        val requestedIndex = args.getInt(EXTRA_QUEUE_MOVE_INDEX, -1)
+        if (!clear) {
+            val item = before.getOrNull(requestedIndex) ?: return false
+            if (item.mediaId != args.getString(EXTRA_QUEUE_MOVE_MEDIA) ||
+                item.queueEntryId != args.getString(EXTRA_QUEUE_MOVE_ENTRY)
+            ) return false
+        }
+        val window = boundedContextWindow?.snapshot()
+        val edits = boundedEditState
+        val removedCurrent = !clear && requestedIndex == currentIndex
+        val position = raw.currentPosition.coerceAtLeast(0L)
+        invalidateQueueUndo()
+        if (clear) QueueCoordinator.clearUserQueue(raw) else raw.removeMediaItem(requestedIndex)
+        val removedCount = before.size - raw.mediaItemCount
+        if (removedCount <= 0) return false
+        partySync?.onLocalIntent()
+        saveQueueSnapshotImmediately(raw)
+        // Let the player's own listeners finish what the removal sets off (a bounded refill, a retier)
+        // before the order is taken as the baseline.
+        boundedTopUpJob?.join()
+        delay(1L)
+        val message = if (clear) getString(R.string.queue_cleared)
+        else getString(R.string.queue_removed_song, before[requestedIndex].mediaMetadata.title?.toString().orEmpty())
+        val edit = QueueUndoEdit(
+            token = UUID.randomUUID().toString(),
+            before = before,
+            currentIndex = currentIndex,
+            positionMs = position,
+            removedCurrent = removedCurrent,
+            window = window,
+            edits = edits,
+            after = (0 until raw.mediaItemCount).map(raw::getMediaItemAt),
+            afterCurrent = raw.currentMediaItemIndex,
+            expiresAt = SystemClock.elapsedRealtime() + 4_500L,
+        )
+        queueUndoEdit = edit
+        QueueScreenUndo.publish(QueueUndoNotice(edit.token, message))
+        queueUndoExpiryJob = scope.launch {
+            while (queueUndoEdit === edit) {
+                delay(100L)
+                // Anything else touching the queue, or the time running out, ends the offer.
+                if (!queueUndoStillValid(edit, raw)) {
+                    if (queueUndoEdit === edit) invalidateQueueUndo()
+                }
+            }
+        }
+        return true
+    }
+
+    /** Puts the queue back as [removeQueueWithUndo] found it, if nothing has changed it since. */
+    private suspend fun undoQueueEdit(args: Bundle): Boolean {
+        val edit = queueUndoEdit ?: return false
+        if (args.getString(EXTRA_QUEUE_UNDO_TOKEN) != edit.token) return false
+        val raw = player ?: return false
+        if (!queueUndoStillValid(edit, raw) || ListenTogether.state.value.controlsLocked) {
+            invalidateQueueUndo()
+            return false
+        }
+        // An inverse is never itself undoable.
+        invalidateQueueUndo()
+        boundedTopUpJob?.cancel()
+        boundedTopUpJob = null
+        boundedContextWindow = edit.window?.let { QueueWindow.restore(it) }
+        boundedEditState = edit.edits
+        if (edit.removedCurrent) {
+            // The playing song was taken out: it comes back where it was, and picks up where it left off.
+            raw.setMediaItems(edit.before, edit.currentIndex, edit.positionMs)
+            raw.prepare()
+        } else {
+            // Reinsert what is missing, in place, without touching the decoder or the clock.
+            var index = 0
+            while (index < edit.before.size) {
+                if (index < raw.mediaItemCount && raw.getMediaItemAt(index) === edit.before[index]) {
+                    index++
+                } else {
+                    val start = index
+                    val held = if (index < raw.mediaItemCount) raw.getMediaItemAt(index) else null
+                    while (index < edit.before.size && edit.before[index] !== held) index++
+                    raw.addMediaItems(start, edit.before.subList(start, index))
+                }
+            }
+        }
+        saveQueueSnapshotImmediately(raw)
+        partySync?.onLocalIntent()
+        return true
     }
 
     private fun toggleShuffleFromSession() {
@@ -6748,6 +6968,8 @@ class PlaybackService : MediaLibraryService() {
      */
     private fun reportProgress() {
         scope.launch {
+            // Whether the last tick counted listening on a remote speaker: see below.
+            var remoteSampling = false
             while (isActive) {
                 // Re-read every tick rather than captured once: the session
                 // moves between two players, and a sampler pinned to the one
@@ -6778,6 +7000,28 @@ class PlaybackService : MediaLibraryService() {
                     // repeat: it returns immediately unless the track is
                     // pending and nothing is already looking.
                     lookForBetterCopy(player)
+                } else if (speakers.active && !mirrorGate.blocks(Effect.LISTEN_BOOKKEEPING)) {
+                    // On a speaker (Cast, the watch) the phone's player is held paused on purpose and the
+                    // receiver owns the clock, so the branch above never runs and none of that listening
+                    // reached the listening record. The receiver's own isPlaying is the tick here; the
+                    // phone's current item is the receiver's track (it follows the receiver), and the
+                    // receiver knows the real length. A mirrored Auden device is not one of these: its
+                    // listening is the other device's to count, which is what the gate says.
+                    val playingRemotely = speakers.isPlaying
+                    if (playingRemotely) {
+                        player?.currentMediaItem?.toSong()?.takeUnless { it.isDjClip }?.let {
+                            val length = speakers.durationMs.takeIf { d -> d != C.TIME_UNSET && d > 0 }
+                                ?: (player?.duration ?: 0L)
+                            ListeningRecorder.onSample(it, length)
+                        }
+                    } else if (remoteSampling) {
+                        // Paused on the speaker: close the gap like a local pause does.
+                        ListeningRecorder.onStopped()
+                    }
+                    remoteSampling = playingRemotely
+                } else if (remoteSampling) {
+                    remoteSampling = false
+                    ListeningRecorder.onStopped()
                 }
                 delay(PROGRESS_SAMPLE_MS)
             }
@@ -8811,6 +9055,10 @@ class PlaybackService : MediaLibraryService() {
                 .add(upgradeQualityCommand)
                 .add(swapVersionCommand)
                 .add(queueDragCommand)
+                .add(queueMoveToUserCommand)
+                .add(queueRemoveUndoCommand)
+                .add(queueClearUndoCommand)
+                .add(queueUndoCommand)
                 .build()
             return MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                 .setAvailablePlayerCommands(MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS)
@@ -8836,6 +9084,32 @@ class PlaybackService : MediaLibraryService() {
             args: Bundle,
         ): ListenableFuture<SessionResult> {
             when (customCommand.customAction) {
+                ACTION_QUEUE_REMOVE_WITH_UNDO, ACTION_QUEUE_CLEAR_WITH_UNDO, ACTION_QUEUE_UNDO -> {
+                    val editArgs = Bundle(args)
+                    return scope.future {
+                        queueMoveMutex.withLock {
+                            val done = when (customCommand.customAction) {
+                                ACTION_QUEUE_UNDO -> undoQueueEdit(editArgs)
+                                else -> removeQueueWithUndo(
+                                    editArgs,
+                                    customCommand.customAction == ACTION_QUEUE_CLEAR_WITH_UNDO,
+                                )
+                            }
+                            SessionResult(if (done) SessionResult.RESULT_SUCCESS else SessionError.ERROR_INVALID_STATE)
+                        }
+                    }
+                }
+                ACTION_QUEUE_MOVE_TO_USER -> {
+                    val moveArgs = Bundle(args)
+                    return scope.future {
+                        queueMoveMutex.withLock {
+                            SessionResult(
+                                if (moveQueueEntryToUser(moveArgs)) SessionResult.RESULT_SUCCESS
+                                else SessionError.ERROR_INVALID_STATE,
+                            )
+                        }
+                    }
+                }
                 ACTION_START_BOUNDED_CONTEXT -> {
                     // While another device plays, an album or playlist tapped here starts there; its shuffle goes along.
                     if (!sendBoundedContextToRemote(args)) {

@@ -23,6 +23,16 @@ interface AppUiHost {
     /** How a Library "Show all" grid is ordered. */
     val librarySort: StateFlow<LibrarySort>
 
+    /**
+     * Moves a queue row into Next in queue, as a swipe on it asks. False where the host can't — the swipe then
+     * only removes.
+     */
+    suspend fun moveQueueEntryToUser(index: Int, song: com.music.bitchord.data.model.Song): Boolean = false
+
+    /** The Undo notice of a queue removal, drawn over the foot of the queue; nothing where there is none. */
+    @Composable
+    fun QueueUndoNotice() {}
+
     /** Video ids of the tracks already downloaded, for the mark on their rows. */
     @Composable
     fun downloadedIds(): Set<String>

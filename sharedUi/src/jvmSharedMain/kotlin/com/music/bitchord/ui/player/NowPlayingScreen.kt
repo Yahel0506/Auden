@@ -98,6 +98,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.ui.draw.drawBehind
@@ -161,6 +163,7 @@ import com.music.bitchord.ui.haptics.rememberHaptics
 import com.music.bitchord.ui.icons.BitChordIcons
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.music.bitchord.data.canvas.CanvasSource
+import com.music.bitchord.ui.AppUi
 import com.music.bitchord.data.lyrics.LyricLine
 import com.music.bitchord.data.lyrics.LyricsSource
 import com.music.bitchord.data.settings.LastPlayerScreen
@@ -324,6 +327,12 @@ private val PortraitClipScrim = Brush.verticalGradient(
     0.40f to Color.Transparent,
     1f to Color.Black.copy(alpha = 0.70f),
 )
+
+/** Draws as usual, and keeps what it drew in [layer] for a still taken later. */
+private fun Modifier.recordBackdrop(layer: GraphicsLayer): Modifier = drawWithContent {
+    layer.record { this@drawWithContent.drawContent() }
+    drawLayer(layer)
+}
 
 /**
  * The default theme's backdrop — see [ArtworkMeshBackdrop] — in a scope of its
@@ -1215,6 +1224,10 @@ fun NowPlayingScreen(
     // phone's to make, so the request is handed down and the sheet comes back
     // through [PlayerHost.LyricsShareSheet].
     var lyricsShare by remember { mutableStateOf<LyricsShareRequest?>(null) }
+    // The backdrop the lyrics and queue sit on, kept as it draws, so a shared
+    // card carries the player's own background rather than a redrawing of it.
+    val backdropLayer = rememberGraphicsLayer()
+    val shareScope = rememberCoroutineScope()
     // Whether anything is up over the player: a drawer, a popup, the ⋯ menu.
     // A canvas holds still under them, as it does for the lyrics and the
     // queue — each blurs a still of the player, and a clip playing on behind
@@ -1238,8 +1251,19 @@ fun NowPlayingScreen(
         subLines = lyricsTranslation.subLines,
         artworkUrl = remoteArt,
         haptics = haptics,
-        onCard = { lyricsShare = it },
+        onCard = { request ->
+            shareScope.launch {
+                val backdrop = runCatching { backdropLayer.toImageBitmap() }.getOrNull()
+                lyricsShare = request.copy(backdrop = backdrop)
+            }
+        },
     )
+    // A pick lives in the lyrics panel. Leaving it any way — the cover in the
+    // header, a swipe, the queue — ends the pick, or its bar stays up over the
+    // main player and keeps the transport hidden.
+    LaunchedEffect(lyricsOpen) {
+        if (!lyricsOpen && lyricPicker.picking) lyricPicker.cancel()
+    }
     // Nothing here resets [lyricsOpen] on a track change, deliberately. The
     // panel is a place, not a property of the track: someone reading along who
     // skips — or who simply lets the queue run on — means to carry on reading,
@@ -2452,6 +2476,9 @@ fun NowPlayingScreen(
                             onRemove = onRemoveFromQueue,
                             onMove = onMoveInQueue,
                             onClear = onClearQueue,
+                            onSwipeToQueue = { index, song -> AppUi.host.moveQueueEntryToUser(index, song) },
+                            undoNotice = { AppUi.host.QueueUndoNotice() },
+                            gesturesEnabled = queueOpen && !lyricsOpen && !queueDragging,
                             onDragActiveChange = onQueueDragActiveChange,
                             shuffleEnabled = shuffleEnabled,
                             repeatMode = repeatMode,
@@ -2502,54 +2529,57 @@ fun NowPlayingScreen(
                     animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
                     label = "fullArtworkBackdropCrossfade",
                 )
-                if (legacyMeshBackdrop) {
-                    // v1.5's backdrop, restored verbatim: no seam, because the blobs
-                    // are not anchored to anything on screen — they fill the player and
-                    // the artwork simply sits on top of them. Keyed on the track, so
-                    // they drift when the player opens and on every skip, then rest.
-                    LegacyMeshBackdrop(
-                        imageUrl = remoteArt,
-                        canvasFrame = { canvasFrame },
-                        trackKey = song.videoId,
-                        modifier = Modifier.graphicsLayer { alpha = 1f - fullArtworkBackdropAlpha },
+                // One layer for all three, recorded for a shared lyrics card.
+                Box(Modifier.fillMaxSize().recordBackdrop(backdropLayer)) {
+                    if (legacyMeshBackdrop) {
+                        // v1.5's backdrop, restored verbatim: no seam, because the blobs
+                        // are not anchored to anything on screen — they fill the player and
+                        // the artwork simply sits on top of them. Keyed on the track, so
+                        // they drift when the player opens and on every skip, then rest.
+                        LegacyMeshBackdrop(
+                            imageUrl = remoteArt,
+                            canvasFrame = { canvasFrame },
+                            trackKey = song.videoId,
+                            modifier = Modifier.graphicsLayer { alpha = 1f - fullArtworkBackdropAlpha },
+                        )
+                    }
+                    if (artworkMeshBackdrop) {
+                        // Hung from where the picture stops, so the screen carries on in
+                        // the colours the artwork ended in: the banner's bottom edge, or
+                        // a portrait clip's or its still's. Left there as the player
+                        // collapses rather than following the sleeve down, since above
+                        // the seam the mesh holds one colour, so a seam left behind a
+                        // collapsed sleeve shows nothing at all.
+                        //
+                        // Stays mounted under a full-screen Spotify Canvas, undrawn, for
+                        // a panel opening over it to find ready.
+                        PlayerMeshBackdrop(
+                            playing = { isPlaying },
+                            panels = lyricsOpen || queueOpen,
+                            trackKey = song.videoId,
+                            imageUrl = remoteArt,
+                            canvasFrame = { canvasFrame },
+                            seamTarget = {
+                                val stillBottom = stillBottomPx()
+                                when {
+                                    clipPortrait -> clipBottom
+                                    stillBottom > 0f -> with(density) { stillBottom.toDp() }
+                                    heroMode -> heroHeight
+                                    else -> 0.dp
+                                }
+                            },
+                            // Whole until the blurred cover has covered it, rather than
+                            // the two fading through each other and dipping toward the
+                            // black beneath, and out of the frame altogether after that.
+                            alpha = {
+                                if ((spotifyCanvasPresentation && !lyricsOpen && !queueOpen) || fullArtworkBackdropAlpha >= 1f) 0f else 1f
+                            },
+                        )
+                    }
+                    fullArtworkBlurContent(
+                        Modifier.graphicsLayer { alpha = fullArtworkBackdropAlpha },
                     )
                 }
-                if (artworkMeshBackdrop) {
-                    // Hung from where the picture stops, so the screen carries on in
-                    // the colours the artwork ended in: the banner's bottom edge, or
-                    // a portrait clip's or its still's. Left there as the player
-                    // collapses rather than following the sleeve down, since above
-                    // the seam the mesh holds one colour, so a seam left behind a
-                    // collapsed sleeve shows nothing at all.
-                    //
-                    // Stays mounted under a full-screen Spotify Canvas, undrawn, for
-                    // a panel opening over it to find ready.
-                    PlayerMeshBackdrop(
-                        playing = { isPlaying },
-                        panels = lyricsOpen || queueOpen,
-                        trackKey = song.videoId,
-                        imageUrl = remoteArt,
-                        canvasFrame = { canvasFrame },
-                        seamTarget = {
-                            val stillBottom = stillBottomPx()
-                            when {
-                                clipPortrait -> clipBottom
-                                stillBottom > 0f -> with(density) { stillBottom.toDp() }
-                                heroMode -> heroHeight
-                                else -> 0.dp
-                            }
-                        },
-                        // Whole until the blurred cover has covered it, rather than
-                        // the two fading through each other and dipping toward the
-                        // black beneath, and out of the frame altogether after that.
-                        alpha = {
-                            if ((spotifyCanvasPresentation && !lyricsOpen && !queueOpen) || fullArtworkBackdropAlpha >= 1f) 0f else 1f
-                        },
-                    )
-                }
-                fullArtworkBlurContent(
-                    Modifier.graphicsLayer { alpha = fullArtworkBackdropAlpha },
-                )
 
                 // Mount once, behind the controls. A known portrait aspect changes the
                 // invisible view to full-player bounds before its first frame is shown.
@@ -4105,6 +4135,9 @@ fun NowPlayingScreen(
                                     onRemove = onRemoveFromQueue,
                                     onMove = onMoveInQueue,
                                     onClear = onClearQueue,
+                                    onSwipeToQueue = { index, song -> AppUi.host.moveQueueEntryToUser(index, song) },
+                                    undoNotice = { AppUi.host.QueueUndoNotice() },
+                                    gesturesEnabled = queuePanelVisible && queueOpen && !queueDragging,
                                     onScrollingChange = { queueScrolling = it },
                                     onDragActiveChange = onQueueDragActiveChange,
                                     shuffleEnabled = shuffleEnabled,

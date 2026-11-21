@@ -13,6 +13,7 @@ import com.music.bitchord.data.settings.AppSettings
 import com.music.bitchord.data.settings.LibraryViewType
 import com.music.bitchord.data.model.Song
 import com.music.bitchord.download.Downloads
+import com.music.bitchord.playback.moveQueueEntryToUser
 
 /** The shared pages' settings and downloads, answered from the phone's own stores. */
 object AndroidAppUiHost : AppUiHost {
@@ -32,6 +33,14 @@ object AndroidAppUiHost : AppUiHost {
         // Re-asked when the library index is rebuilt: a file may have appeared that is this song.
         val revision by dev.auden.library.links.LocalLinks.revision.collectAsStateWithLifecycle()
         return song.videoId in saved || remember(song.videoId, revision) { dev.auden.library.links.LocalLinks.has(song) }
+    }
+
+    override suspend fun moveQueueEntryToUser(index: Int, song: Song): Boolean =
+        com.music.bitchord.playback.PlayerBinding.controller?.moveQueueEntryToUser(index, song) ?: false
+
+    @Composable
+    override fun QueueUndoNotice() {
+        com.music.bitchord.ui.components.QueueUndoNoticeSlot()
     }
 
     override suspend fun releaseMotion(album: String, artist: String): CanvasArtwork? {

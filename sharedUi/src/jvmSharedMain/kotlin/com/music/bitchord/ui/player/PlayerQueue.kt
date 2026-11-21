@@ -51,6 +51,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.coroutines.withTimeoutOrNull
+import com.music.bitchord.ui.AppUi
 import kotlinx.coroutines.flow.first
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -157,7 +160,21 @@ internal fun Modifier.fadingEdges(): Modifier = this
     }
 
 /** One track in [InlineQueue], and where it sits in the player's timeline. */
-internal data class QueueTrack(val timelineIndex: Int, val song: Song, val key: String)
+internal data class QueueTrack(
+    val timelineIndex: Int,
+    val song: Song,
+    val key: String,
+    val uniqueEntryId: String? = null,
+    val uniqueSongReference: Boolean = false,
+)
+
+/** Native snapshots can copy metadata, but must retain a unique occurrence id. */
+private fun QueueTrack.sameEntryAs(other: QueueTrack): Boolean =
+    if (uniqueEntryId != null && other.uniqueEntryId != null) {
+        uniqueEntryId == other.uniqueEntryId && song.videoId == other.song.videoId
+    } else {
+        uniqueSongReference && other.uniqueSongReference && song === other.song
+    }
 
 /** The groups a queue row can be dragged within; a drag never leaves its own. */
 internal enum class QueueSection { USER, CONTEXT, AUTOPLAY }
@@ -196,13 +213,20 @@ internal fun splitQueue(queue: List<Song>, currentIndex: Int, showHistory: Boole
     // (a queue restored twice, an add replayed); the repeat gets a suffix
     // instead of taking the whole player down.
     val usedKeys = HashSet<String>()
+    val entryCounts = queue.mapNotNull { it.queueEntryId }.groupingBy { it }.eachCount()
+    val referenceCounts = java.util.IdentityHashMap<Song, Int>()
+    queue.forEach { referenceCounts[it] = (referenceCounts[it] ?: 0) + 1 }
     fun track(index: Int, prefix: String): QueueTrack {
         val song = queue[index]
         val base = prefix + "_" + (song.queueEntryId ?: "${song.videoId}#${occurrence[index]}")
         var key = base
         var repeat = 1
         while (!usedKeys.add(key)) key = base + "~" + repeat++
-        return QueueTrack(index, song, key)
+        return QueueTrack(
+            index, song, key,
+            uniqueEntryId = song.queueEntryId?.takeIf { entryCounts[it] == 1 },
+            uniqueSongReference = referenceCounts[song] == 1,
+        )
     }
     val user = ArrayList<QueueTrack>()
     val context = ArrayList<QueueTrack>()
@@ -237,6 +261,12 @@ internal fun InlineQueue(
     onRemove: (Int) -> Unit,
     onMove: (Int, Int) -> Unit,
     onClear: () -> Unit,
+    /** Null where the host can't move a row into Next in queue: swipes then only remove. */
+    onSwipeToQueue: (suspend (Int, Song) -> Boolean)? = null,
+    /** Drawn over the foot of the list: the Undo notice of a removal. */
+    undoNotice: @Composable () -> Unit = {},
+    /** Prewarmed/offscreen queue panes must not accept or finish a swipe. */
+    gesturesEnabled: Boolean = true,
     onScrollingChange: (Boolean) -> Unit = {},
     onDragActiveChange: (Boolean) -> Unit = {},
     /** Phone only: let queue scrolling dismiss/restore the lower half player. */
@@ -269,6 +299,50 @@ internal fun InlineQueue(
     val showHistory by PlayerSettings.showQueueHistory.collectAsStateWithLifecycle()
     val tracks = remember(queue, currentIndex, showHistory) { splitQueue(queue, currentIndex, showHistory) }
     val drag = rememberQueueDrag(listState, tracks, onMove, onDragActiveChange)
+    val reduceAnimation by PlayerSettings.reduceAnimation.collectAsStateWithLifecycle()
+    val swipeToPlayNext by AppUi.host.swipeToPlayNext.collectAsStateWithLifecycle()
+    val latestTracks by rememberUpdatedState(tracks)
+    val swipesEnabled = !controlsLocked && gesturesEnabled && drag.held == null
+    fun resolveSwipeTrack(original: QueueTrack): QueueTrack? {
+        val live = tracks.history.firstOrNull { it.key == original.key }
+            ?: tracks.user.firstOrNull { it.key == original.key }
+            ?: tracks.context.firstOrNull { it.key == original.key }
+            ?: tracks.autoplay.firstOrNull { it.key == original.key }
+        // Legacy/duplicate ids still require the same Song instance; only ids
+        // unique in BOTH snapshots may survive native metadata copies.
+        return live?.takeIf { it.sameEntryAs(original) }
+    }
+    val canCommitSwipe: (QueueTrack, QueueSwipeAction) -> Boolean = { original, action ->
+        val live = resolveSwipeTrack(original)
+        val destination = if (swipeToPlayNext) tracks.user.firstOrNull() else tracks.user.lastOrNull()
+        swipesEnabled && live != null &&
+            (action == QueueSwipeAction.REMOVE || (onSwipeToQueue != null && live.key != destination?.key))
+    }
+    val commitSwipe: suspend (QueueTrack, QueueSwipeAction) -> Boolean = { original, action ->
+        val live = resolveSwipeTrack(original)
+        if (live != null && canCommitSwipe(original, action)) {
+            when (action) {
+                QueueSwipeAction.REMOVE -> {
+                    onRemove(live.timelineIndex)
+                    true
+                }
+                QueueSwipeAction.QUEUE -> {
+                    val moveToHead = swipeToPlayNext
+                    if (onSwipeToQueue?.invoke(live.timelineIndex, live.song) == true) {
+                        // Native acknowledgement can precede the UI snapshot.
+                        // A same-key manual row stays hidden until arrival is real.
+                        withTimeoutOrNull(2_000) {
+                            snapshotFlow {
+                                val rows = latestTracks.user
+                                val destination = if (moveToHead) rows.firstOrNull() else rows.lastOrNull()
+                                destination != null && destination.sameEntryAs(live)
+                            }.first { it }
+                        } == true
+                    } else false
+                }
+            }
+        } else false
+    }
     val nowPlaying = tracks.nowPlaying
     val contextSong = tracks.context.firstOrNull()?.song
     val contextTitle = contextSong?.playbackSource?.takeIf { it.isNotBlank() }
@@ -341,12 +415,15 @@ internal fun InlineQueue(
                         )
                     }
                     items(tracks.history, key = { it.key }) { track ->
-                        InlineQueueRow(
-                            song = track.song,
-                            isCurrent = false,
+                        SwipeableQueueRow(
+                            track = track,
                             onClick = { onJumpTo(track.timelineIndex) },
                             onRemove = { onRemove(track.timelineIndex) },
                             locked = controlsLocked,
+                            swipesEnabled = swipesEnabled,
+                            reduceAnimation = reduceAnimation,
+                            canCommitSwipe = canCommitSwipe,
+                            commitSwipe = commitSwipe,
                             modifier = queueMotion(),
                         )
                     }
@@ -378,7 +455,8 @@ internal fun InlineQueue(
                             QueueClearButton(MaterialTheme.typography.labelLarge, controlsLocked, onClear)
                         }
                     }
-                    queueSection(tracks.user, QueueSection.USER, drag, controlsLocked, onJumpTo, onRemove)
+                    queueSection(tracks.user, QueueSection.USER, drag, controlsLocked, onJumpTo, onRemove,
+                        swipesEnabled, reduceAnimation, canCommitSwipe, commitSwipe)
                 }
                 if (tracks.context.isNotEmpty()) {
                     item(key = "header-context") {
@@ -391,13 +469,15 @@ internal fun InlineQueue(
                             modifier = Modifier.padding(top = 16.dp, bottom = 6.dp).then(queueMotion()),
                         )
                     }
-                    queueSection(tracks.context, QueueSection.CONTEXT, drag, controlsLocked, onJumpTo, onRemove)
+                    queueSection(tracks.context, QueueSection.CONTEXT, drag, controlsLocked, onJumpTo, onRemove,
+                        swipesEnabled, reduceAnimation, canCommitSwipe, commitSwipe)
                 }
                 if (autoplayEnabled || tracks.autoplay.isNotEmpty()) {
                     item(key = "autoplay-heading") {
                         AutoplayHeading(hasTracks = tracks.autoplay.isNotEmpty(), modifier = queueMotion())
                     }
-                    queueSection(tracks.autoplay, QueueSection.AUTOPLAY, drag, controlsLocked, onJumpTo, onRemove)
+                    queueSection(tracks.autoplay, QueueSection.AUTOPLAY, drag, controlsLocked, onJumpTo, onRemove,
+                        swipesEnabled, reduceAnimation, canCommitSwipe, commitSwipe)
                 }
             }
             // The held row, drawn over the list where the finger is. Positioned
@@ -416,6 +496,7 @@ internal fun InlineQueue(
                     )
                 }
             }
+            Box(Modifier.align(Alignment.BottomCenter).padding(horizontal = PLAYER_GUTTER)) { undoNotice() }
         }
     }
 }
@@ -433,6 +514,10 @@ private fun LazyListScope.queueSection(
     locked: Boolean,
     onJumpTo: (Int) -> Unit,
     onRemove: (Int) -> Unit,
+    swipesEnabled: Boolean,
+    reduceAnimation: Boolean,
+    canCommitSwipe: (QueueTrack, QueueSwipeAction) -> Boolean,
+    commitSwipe: suspend (QueueTrack, QueueSwipeAction) -> Boolean,
 ) {
     items(rows, key = { it.key }) { track ->
         val held = drag.held?.key == track.key
@@ -441,9 +526,8 @@ private fun LazyListScope.queueSection(
             // with it and neither drag-end callback runs — end the drag here.
             DisposableEffect(Unit) { onDispose { drag.end(track.key) } }
         }
-        InlineQueueRow(
-            song = track.song,
-            isCurrent = false,
+        SwipeableQueueRow(
+            track = track,
             onClick = { onJumpTo(track.timelineIndex) },
             onRemove = { onRemove(track.timelineIndex) },
             locked = locked,
@@ -451,7 +535,63 @@ private fun LazyListScope.queueSection(
             onDragStart = { drag.start(track.key, section) },
             onDrag = drag::drag,
             onDragEnd = { drag.end(track.key) },
+            swipesEnabled = swipesEnabled && !held,
+            reduceAnimation = reduceAnimation,
+            canCommitSwipe = canCommitSwipe,
+            commitSwipe = commitSwipe,
             modifier = if (held) Modifier.alpha(0f) else queueMotion(),
+        )
+    }
+}
+
+/** The wrapper owns swipe motion; the original row and its handle detector stay intact. */
+@Composable
+private fun SwipeableQueueRow(
+    track: QueueTrack,
+    onClick: () -> Unit,
+    onRemove: () -> Unit,
+    locked: Boolean,
+    swipesEnabled: Boolean,
+    reduceAnimation: Boolean,
+    canCommitSwipe: (QueueTrack, QueueSwipeAction) -> Boolean,
+    commitSwipe: suspend (QueueTrack, QueueSwipeAction) -> Boolean,
+    modifier: Modifier = Modifier,
+    draggable: Boolean = false,
+    onDragStart: () -> Unit = {},
+    onDrag: (Float) -> Unit = {},
+    onDragEnd: () -> Unit = {},
+) {
+    QueueSwipeRow(
+        track = track,
+        enabled = swipesEnabled,
+        reduceAnimation = reduceAnimation,
+        canCommit = canCommitSwipe,
+        onCommit = commitSwipe,
+        modifier = modifier,
+    ) { interactive ->
+        // The handle survives ordinary recomposition; swipe visibility also
+        // gates its detector. Its callbacks read live gates, not captured ones.
+        val currentInteractive by rememberUpdatedState(interactive)
+        val currentDragStart by rememberUpdatedState(onDragStart)
+        val currentDrag by rememberUpdatedState(onDrag)
+        val currentDragEnd by rememberUpdatedState(onDragEnd)
+        var handleDragging by remember(track.key) { mutableStateOf(false) }
+        InlineQueueRow(
+            song = track.song,
+            isCurrent = false,
+            onClick = { if (interactive) onClick() },
+            onRemove = { if (interactive) onRemove() },
+            locked = locked,
+            draggable = draggable,
+            onDragStart = {
+                handleDragging = currentInteractive
+                if (handleDragging) currentDragStart()
+            },
+            onDrag = { if (handleDragging) currentDrag(it) },
+            onDragEnd = {
+                if (handleDragging) currentDragEnd()
+                handleDragging = false
+            },
         )
     }
 }

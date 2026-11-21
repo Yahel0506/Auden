@@ -10,6 +10,9 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -36,6 +39,19 @@ data class QueueActionNotice(
 fun QueueActionNoticeHost(
     notice: QueueActionNotice?,
     modifier: Modifier = Modifier,
+) = QueueActionNoticeWithAction(notice, modifier, actionLabel = null, onAction = null)
+
+/**
+ * [QueueActionNoticeHost] with a button at the notice's end — Undo — when [actionLabel] and
+ * [onAction] are given. A function of its own so the original's callers, in the app's root
+ * composable, keep the signature they were compiled against.
+ */
+@Composable
+fun QueueActionNoticeWithAction(
+    notice: QueueActionNotice?,
+    modifier: Modifier,
+    actionLabel: String?,
+    onAction: (() -> Unit)?,
 ) {
     val reduceAnimation by AppSettings.reduceAnimation.collectAsStateWithLifecycle()
 
@@ -65,11 +81,19 @@ fun QueueActionNoticeHost(
                     .padding(bottom = 8.dp)
                     .semantics { liveRegion = LiveRegionMode.Polite },
             ) {
-                Text(
-                    text = current.message,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = current.message,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f).padding(vertical = 16.dp),
+                    )
+                    if (actionLabel != null && onAction != null) {
+                        TextButton(onClick = onAction) { Text(actionLabel, color = Color.White) }
+                    }
+                }
             }
         }
     }

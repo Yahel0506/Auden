@@ -371,6 +371,19 @@ object AppSettings {
     val directSourceStream = MutableStateFlow(false)
 
     /**
+     * The listener's word that their YouTube account has Premium, and that
+     * YouTube playback should take the signed-in route that reaches Premium's
+     * ~256kbps Opus (itag 774) instead of the anonymous 251 — the route
+     * age-restricted tracks already take. See
+     * [InnerTubeXResolver.extract][com.music.bitchord.data.innertube.InnerTubeXResolver.extract].
+     *
+     * Off by default and asked rather than detected: nothing InnerTubeX
+     * exposes confirms the entitlement, and claiming it for an account
+     * without Premium only costs that account the faster anonymous route.
+     */
+    val youtubePremiumAudio = MutableStateFlow(false)
+
+    /**
      * Treats addons that declare `checkValidLossless` as if a lossless output
      * were connected, whatever Auden detects. For hardware Android reports in
      * a way [com.music.bitchord.playback.audio.LosslessOutput] does not
@@ -484,6 +497,9 @@ object AppSettings {
 
     /** Hides the "Playing from" / "Played by" caption at the top of the main player. */
     val hideSongStatus = MutableStateFlow(false)
+
+    /** Draws the Auden mark at the top of a shared lyrics card. */
+    val lyricsCardLogo = MutableStateFlow(true)
 
     val showQueueHistory = MutableStateFlow(false)
 
@@ -1073,6 +1089,8 @@ object AppSettings {
         loudnessOffOnSpeaker.value = prefs.getBoolean(KEY_LOUDNESS_OFF_ON_SPEAKER, true)
         dolbyAtmos.value = prefs.getBoolean(KEY_DOLBY_ATMOS, true)
         directSourceStream.value = prefs.getBoolean(KEY_DIRECT_SOURCE_STREAM, false)
+        youtubePremiumAudio.value = prefs.getBoolean(KEY_YOUTUBE_PREMIUM_AUDIO, false)
+        lyricsCardLogo.value = prefs.getBoolean(KEY_LYRICS_CARD_LOGO, true)
         assumeLosslessOutput.value = prefs.getBoolean(KEY_ASSUME_LOSSLESS_OUTPUT, false)
         com.music.bitchord.playback.audio.LosslessOutput.setAssumed(assumeLosslessOutput.value)
         spatialAudio.value = prefs.getBoolean(KEY_SPATIAL_AUDIO, false)
@@ -1423,6 +1441,13 @@ object AppSettings {
         prefs.edit().putBoolean(KEY_DOLBY_ATMOS, value).apply()
     }
 
+    fun setYoutubePremiumAudio(value: Boolean) {
+        youtubePremiumAudio.value = value
+        prefs.edit().putBoolean(KEY_YOUTUBE_PREMIUM_AUDIO, value).apply()
+        // Remembered URLs were picked under the old route; the next play asks again.
+        com.music.bitchord.data.innertube.StreamResolver.forgetResolved()
+    }
+
     fun setDirectSourceStream(value: Boolean) {
         directSourceStream.value = value
         prefs.edit().putBoolean(KEY_DIRECT_SOURCE_STREAM, value).apply()
@@ -1574,6 +1599,11 @@ object AppSettings {
     fun setHideSongStatus(value: Boolean) {
         hideSongStatus.value = value
         prefs.edit().putBoolean(KEY_HIDE_SONG_STATUS, value).apply()
+    }
+
+    fun setLyricsCardLogo(value: Boolean) {
+        lyricsCardLogo.value = value
+        prefs.edit().putBoolean(KEY_LYRICS_CARD_LOGO, value).apply()
     }
 
     fun setShowQueueHistory(value: Boolean) {
@@ -2531,6 +2561,8 @@ object AppSettings {
     private const val KEY_LOUDNESS_OFF_ON_SPEAKER = "loudness_off_on_speaker"
     private const val KEY_DOLBY_ATMOS = "dolby_atmos"
     private const val KEY_DIRECT_SOURCE_STREAM = "direct_source_stream"
+    private const val KEY_YOUTUBE_PREMIUM_AUDIO = "youtube_premium_audio"
+    private const val KEY_LYRICS_CARD_LOGO = "lyrics_card_logo"
     private const val KEY_ASSUME_LOSSLESS_OUTPUT = "assume_lossless_output"
     private const val KEY_SPATIAL_AUDIO = "spatial_audio"
     private const val KEY_EQ_ENABLED = "equalizer_enabled"

@@ -20,8 +20,13 @@ import dev.auden.library.db.TrackEntity
 import dev.auden.profile.ProfileStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromStream
+import kotlinx.serialization.json.encodeToStream
+import java.io.InputStream
+import java.io.OutputStream
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -69,6 +74,9 @@ object Backup {
         prettyPrint = true
     }
 
+    /** The same rules without the indentation, for copies no one reads by eye. */
+    private val compactJson = Json(json) { prettyPrint = false }
+
     /** A suggested filename, dated so successive exports don't collide. */
     fun suggestedName(): String =
         "auden-backup-${DateTimeFormatter.ofPattern("yyyy-MM-dd").format(
@@ -85,37 +93,51 @@ object Backup {
      */
     suspend fun exportTo(context: Context, target: Uri): Result<Int> = withContext(Dispatchers.IO) {
         runCatching {
-            val buckets = ListeningStats.exportAll()
-            val db = AudenDb.get(context).backup()
-            val library = LibraryData(
-                tracks = db.tracks(),
-                playlists = db.playlists(),
-                entries = db.entries(),
-                lyricsVariants = db.lyricsVariants(),
-                lyricsPrefs = db.lyricsPrefs(),
-                spotifyMatches = db.spotifyMatches(),
-                playlistOrigins = db.playlistOrigins(),
-                followedArtists = db.followedArtists(),
-            )
-            val file = BackupFile(
-                versionName = BuildConfig.VERSION_NAME,
-                exportedAt = Instant.now().toString(),
-                settings = AppSettings.exportPrefs().mapNotNull { (key, value) ->
-                    PrefValue.of(value)?.let { key to it }
-                }.toMap(),
-                listening = buckets,
-                library = library,
-                offlinePlaylists = OfflinePlaylists.exportPrefs().mapNotNull { (key, value) ->
-                    PrefValue.of(value)?.let { key to it }
-                }.toMap(),
-                listenTogether = ListenTogetherData(nickname = ListenTogether.nickname()),
-            )
-            val text = json.encodeToString(BackupFile.serializer(), file)
             context.contentResolver.openOutputStream(target, "wt")
-                ?.use { it.write(text.toByteArray()) }
+                ?.use { writeTo(context, it, pretty = true) }
                 ?: error("Couldn't open that file for writing")
-            buckets.size
         }
+    }
+
+    /**
+     * Writes a backup into [out], returning how many months of listening it
+     * held. [out] is left open: the caller owns it.
+     *
+     * Streamed rather than built as one String and then copied to bytes, which
+     * held the whole file in memory twice over. [pretty] is for a file someone
+     * may open and read; the Drive copy is compressed and never read by a
+     * person, so it goes without.
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun writeTo(context: Context, out: OutputStream, pretty: Boolean): Int = withContext(Dispatchers.IO) {
+        val buckets = ListeningStats.exportAll()
+        val db = AudenDb.get(context).backup()
+        val library = LibraryData(
+            tracks = db.tracks(),
+            playlists = db.playlists(),
+            entries = db.entries(),
+            lyricsVariants = db.lyricsVariants(),
+            lyricsPrefs = db.lyricsPrefs(),
+            spotifyMatches = db.spotifyMatches(),
+            playlistOrigins = db.playlistOrigins(),
+            followedArtists = db.followedArtists(),
+        )
+        val file = BackupFile(
+            versionName = BuildConfig.VERSION_NAME,
+            exportedAt = Instant.now().toString(),
+            settings = AppSettings.exportPrefs().mapNotNull { (key, value) ->
+                PrefValue.of(value)?.let { key to it }
+            }.toMap(),
+            listening = buckets,
+            library = library,
+            offlinePlaylists = OfflinePlaylists.exportPrefs().mapNotNull { (key, value) ->
+                PrefValue.of(value)?.let { key to it }
+            }.toMap(),
+            listenTogether = ListenTogetherData(nickname = ListenTogether.nickname()),
+        )
+        (if (pretty) json else compactJson).encodeToStream(BackupFile.serializer(), file, out)
+        out.flush()
+        buckets.size
     }
 
     /**
@@ -128,50 +150,58 @@ object Backup {
      */
     suspend fun importFrom(context: Context, source: Uri): Result<Summary> = withContext(Dispatchers.IO) {
         runCatching {
-            val text = context.contentResolver.openInputStream(source)
-                ?.use { it.readBytes().decodeToString() }
+            context.contentResolver.openInputStream(source)
+                ?.use { readFrom(context, it) }
                 ?: error("Couldn't open that file")
-            val file = runCatching { json.decodeFromString(BackupFile.serializer(), text) }
-                .getOrElse { error("That doesn't look like an Auden backup") }
-            require(file.app == APP_TAG || file.app == LEGACY_APP_TAG) { "That backup is from another app" }
-            require(file.version <= SCHEMA_VERSION) {
-                "That backup was written by a newer version of Auden"
-            }
-
-            // The library goes first and as one transaction: if it is refused nothing else has changed.
-            file.library?.let { lib ->
-                AudenDb.get(context).backup().replaceAll(
-                    lib.tracks, lib.playlists, lib.entries, lib.lyricsVariants, lib.lyricsPrefs, lib.spotifyMatches,
-                    lib.playlistOrigins, lib.followedArtists,
-                )
-                LocalPlaylists.reload()
-            }
-            ListeningStats.importAll(file.listening)
-            // Read before the settings are replaced: a file that carries no profile (an older one, or one the
-            // web made) must leave this device's in place rather than reset who it is.
-            val profileBefore = ProfileStore.current()
-            AppSettings.importPrefs(file.settings.mapValues { it.value.decoded() })
-            // Shares AppSettings' preference file, so it has already been
-            // overwritten by the line above — it just doesn't know yet.
-            SearchHistory.reload()
-            // Null in a file from before they were carried: those are then left as they are.
-            file.offlinePlaylists?.let { prefs -> OfflinePlaylists.importPrefs(prefs.mapValues { it.value.decoded() }) }
-            file.listenTogether?.let { ListenTogether.restoreNickname(it.nickname) }
-            // Also in AppSettings' file. The profile the backup carried is adopted as it is, with its party id
-            // and Connect room: that is how a second device becomes the same listener.
-            ProfileStore.reloadAfterRestore(
-                restored = file.settings[ProfileStore.KEY]?.decoded() as? String,
-                previous = profileBefore,
-            )
-            Summary(
-                months = file.listening.size,
-                settings = file.settings.size,
-                from = file.versionName,
-                at = file.exportedAt,
-                playlists = file.library?.playlists?.size ?: 0,
-                songs = file.library?.tracks?.size ?: 0,
-            )
         }
+    }
+
+    /**
+     * Reads a backup from [input] and applies it, under the same all-or-nothing
+     * rule as [importFrom]. [input] is left open: the caller owns it.
+     */
+    @OptIn(ExperimentalSerializationApi::class)
+    suspend fun readFrom(context: Context, input: InputStream): Summary = withContext(Dispatchers.IO) {
+        val file = runCatching { json.decodeFromStream(BackupFile.serializer(), input) }
+            .getOrElse { error("That doesn't look like an Auden backup") }
+        require(file.app == APP_TAG || file.app == LEGACY_APP_TAG) { "That backup is from another app" }
+        require(file.version <= SCHEMA_VERSION) {
+            "That backup was written by a newer version of Auden"
+        }
+
+        // The library goes first and as one transaction: if it is refused nothing else has changed.
+        file.library?.let { lib ->
+            AudenDb.get(context).backup().replaceAll(
+                lib.tracks, lib.playlists, lib.entries, lib.lyricsVariants, lib.lyricsPrefs, lib.spotifyMatches,
+                lib.playlistOrigins, lib.followedArtists,
+            )
+            LocalPlaylists.reload()
+        }
+        ListeningStats.importAll(file.listening)
+        // Read before the settings are replaced: a file that carries no profile (an older one, or one the
+        // web made) must leave this device's in place rather than reset who it is.
+        val profileBefore = ProfileStore.current()
+        AppSettings.importPrefs(file.settings.mapValues { it.value.decoded() })
+        // Shares AppSettings' preference file, so it has already been
+        // overwritten by the line above — it just doesn't know yet.
+        SearchHistory.reload()
+        // Null in a file from before they were carried: those are then left as they are.
+        file.offlinePlaylists?.let { prefs -> OfflinePlaylists.importPrefs(prefs.mapValues { it.value.decoded() }) }
+        file.listenTogether?.let { ListenTogether.restoreNickname(it.nickname) }
+        // Also in AppSettings' file. The profile the backup carried is adopted as it is, with its party id
+        // and Connect room: that is how a second device becomes the same listener.
+        ProfileStore.reloadAfterRestore(
+            restored = file.settings[ProfileStore.KEY]?.decoded() as? String,
+            previous = profileBefore,
+        )
+        Summary(
+            months = file.listening.size,
+            settings = file.settings.size,
+            from = file.versionName,
+            at = file.exportedAt,
+            playlists = file.library?.playlists?.size ?: 0,
+            songs = file.library?.tracks?.size ?: 0,
+        )
     }
 
     /** What an import turned out to contain, for the line shown afterwards. */

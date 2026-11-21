@@ -71,6 +71,7 @@ fun AccountAndScrobblingScreen(
     val discordUsername by AppSettings.discordUsername.collectAsStateWithLifecycle()
     val discordRpcEnabled by AppSettings.discordRpcEnabled.collectAsStateWithLifecycle()
     val spotifyConnected by AppSettings.spotifySpdcToken.collectAsStateWithLifecycle()
+    val youtubePremiumAudio by AppSettings.youtubePremiumAudio.collectAsStateWithLifecycle()
 
     Column(
         modifier = modifier
@@ -107,6 +108,21 @@ fun AccountAndScrobblingScreen(
                     title = stringResource(R.string.listen_as),
                     subtitle = channelName ?: stringResource(R.string.default_youtube_profile),
                     onClick = onSwitchChannel,
+                )
+                // Under the service, and only while it is connected: it is a claim about the account, and only a
+                // signed-in Premium session is offered the higher Opus rung.
+                FullWidthDivider()
+                SettingsRow(
+                    icon = SfIcons.AutoAwesome,
+                    title = stringResource(R.string.youtube_premium_audio),
+                    subtitle = stringResource(R.string.youtube_premium_audio_subtitle),
+                    trailing = {
+                        IosSwitch(
+                            checked = youtubePremiumAudio,
+                            onCheckedChange = AppSettings::setYoutubePremiumAudio,
+                        )
+                    },
+                    onClick = { AppSettings.setYoutubePremiumAudio(!youtubePremiumAudio) },
                 )
                 FullWidthDivider()
                 DestructiveRow(label = stringResource(R.string.sign_out), onClick = onSignOut)

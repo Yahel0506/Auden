@@ -97,6 +97,7 @@ object AppleMusicCanvas {
                     return CanvasArtwork(
                         primary, alternate, songName, songArtist, albumName,
                         portraitUrl = tallUrl(video),
+                        source = CanvasSource.APPLE,
                     )
                 }
             }
@@ -156,6 +157,7 @@ object AppleMusicCanvas {
                 title = name,
                 artist = attributes["artistName"]?.jsonPrimitive?.contentOrNull,
                 album = name,
+                source = CanvasSource.APPLE,
             )
         }
         return null
@@ -300,6 +302,7 @@ object AppleMusicCanvas {
             artist = songArtist ?: attributes["artistName"]?.jsonPrimitive?.contentOrNull,
             album = albumName,
             portraitUrl = tallUrl(video),
+            source = CanvasSource.APPLE,
         )
     }
 

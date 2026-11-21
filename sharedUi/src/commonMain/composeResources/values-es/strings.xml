@@ -149,6 +149,7 @@
     <string name="personalized_recommendations">Recibe recomendaciones personalizadas</string>
     <string name="pinned">Fijado</string>
     <string name="play_next">Reproducir después</string>
+    <string name="add_to_queue">Agregar a la cola</string>
     <string name="playlist">lista</string>
     <string name="playlist_action">Lista</string>
     <string name="playlists">Listas</string>

@@ -220,6 +220,11 @@ import com.music.bitchord.ui.screens.SettingsChoicePage
 import com.music.bitchord.ui.components.SpotifyImportAlert
 import com.music.bitchord.ui.components.SpotifyMatchSheet
 import com.music.bitchord.ui.screens.WearOsScreen
+import com.music.bitchord.ui.components.clearQueueWithUndo
+import com.music.bitchord.ui.components.removeQueueRowWithUndo
+import com.music.bitchord.ui.screens.DriveBackupAlertsHost
+import com.music.bitchord.ui.screens.DriveBackupPages
+import com.music.bitchord.ui.screens.isDriveRoute
 import com.music.bitchord.ui.screens.AccountAndScrobblingScreen
 import com.music.bitchord.ui.screens.TransferPage
 import com.music.bitchord.ui.screens.DiscordDialog
@@ -3127,7 +3132,7 @@ private fun BitChordApp(
                     c.play()
                 }
             },
-            onRemoveFromQueue = { controller?.removeMediaItem(it) },
+            onRemoveFromQueue = { controller?.removeQueueRowWithUndo(it) },
             onMoveInQueue = { from, to -> controller?.moveMediaItem(from, to) },
             onQueueDragActiveChange = { active -> controller?.setQueueDragActive(active) },
             // The enriched copy, not player.song — otherwise the menu
@@ -3262,9 +3267,7 @@ private fun BitChordApp(
             audioOutputMenu = audioOutputMenu,
             onClearQueue = {
                 // Keep what's playing and context/autoplay; drop user-queued tracks.
-                controller?.let { c ->
-                    QueueCoordinator.clearUserQueue(c)
-                }
+                controller?.clearQueueWithUndo()
             },
         )
         if (djScreen) {
@@ -3391,10 +3394,7 @@ private fun BitChordApp(
         // Settings' pages, in the light theme, are drawn as the account sheet is: the grouped grey of the page, and the
         // groups white on it. In the dark theme they are as they were.
         val lightTheme = MaterialTheme.colorScheme.background.luminance() > 0.5f
-        val groupedRoutes = route == AppRoute.Settings || route is AppRoute.SettingsSection ||
-            route == AppRoute.AccountScrobbling || route == AppRoute.Sources || route == AppRoute.ListenTogether ||
-            route == AppRoute.WearOs || route == AppRoute.Equalizer || route == AppRoute.EqualizerPresets ||
-            route == AppRoute.Discord || route == AppRoute.Transfer
+        val groupedRoutes = route.isSettingsRoute()
         // The sheet stands over the bars: they are left as they are, and it rises over them. A screen opened from it is
         // stacked on the page it stands on, and the sheet then goes under that page, inside it, until it is taken off.
         val sheetPresent by remember { derivedStateOf { showAccountSheet || sheetProgress.value > 0.001f } }
@@ -3769,6 +3769,8 @@ private fun BitChordApp(
                             )
                         } else if (pageRoute == AppRoute.WearOs) {
                             WearOsScreen(contentPadding = listPadding)
+                        } else if (pageRoute.isDriveRoute()) {
+                            DriveBackupPages(pageRoute, navigator, listPadding)
                         } else if (pageRoute == AppRoute.ListenTogether) {
                             ListenTogetherScreen(
                                 signedIn = signedIn,
@@ -3832,6 +3834,7 @@ private fun BitChordApp(
                                 onSources = { navigator.push(AppRoute.Sources) },
                                 onListenTogether = { navigator.push(AppRoute.ListenTogether) },
                                 onWearOs = { navigator.push(AppRoute.WearOs) },
+                                onDriveBackup = { navigator.push(AppRoute.DriveBackup) },
                                 onSpotifyCanvasAuth = { showSpotifyCanvasAuth = true },
                                 onAppLanguage = { showAppLanguage = true },
                                 onEditSignatureApi = { editingSignatureApi = true },
@@ -4485,11 +4488,7 @@ private fun BitChordApp(
                     val slotStacked = (showAccountSheet && sheetOwnerKey != null && key != sheetOwnerKey) ||
                         destination.isPushedFolder(pushedFolder)
                     val slotSettings = destination.isSettingsPage()
-                    val slotGrouped = lightTheme && (pageRoute == AppRoute.Settings || pageRoute is AppRoute.SettingsSection ||
-                        pageRoute == AppRoute.AccountScrobbling || pageRoute == AppRoute.Sources ||
-                        pageRoute == AppRoute.ListenTogether || pageRoute == AppRoute.WearOs ||
-                        pageRoute == AppRoute.Equalizer || pageRoute == AppRoute.EqualizerPresets ||
-                        pageRoute == AppRoute.Discord || pageRoute == AppRoute.Transfer)
+                    val slotGrouped = lightTheme && pageRoute.isSettingsRoute()
                     Box(
                         if (slotStacked) {
                             Modifier
@@ -4644,6 +4643,8 @@ private fun BitChordApp(
                         AppRoute.Sources -> stringResource(R.string.sources)
                         AppRoute.ListenTogether -> stringResource(R.string.listen_together)
                         AppRoute.WearOs -> stringResource(R.string.wear_os_page_title)
+                        AppRoute.DriveBackup -> stringResource(R.string.drive_backup_title)
+                        AppRoute.DriveDevices -> stringResource(R.string.drive_devices_title)
                         AppRoute.Equalizer -> stringResource(R.string.equalizer)
                         AppRoute.Settings -> stringResource(R.string.settings)
                         is AppRoute.SettingsSection -> stringResource(route.category.title)
@@ -6176,399 +6177,402 @@ private fun BitChordApp(
             }
         }
 
-        selectionConfirm?.let { request ->
-            val dismiss = {
-                selectionConfirm = null
-                request.onCancel()
-            }
-            BackHandler(onBack = dismiss)
-            ConfirmAlert(
-                hazeState = hazeState,
-                title = request.title,
-                message = request.message,
-                confirmLabel = request.confirmLabel,
-                onConfirm = {
+        // The playlist, cover and import dialogs, in a scope of their own: BitChordApp is at the JVM's method limit.
+        Isolated {
+            selectionConfirm?.let { request ->
+                val dismiss = {
                     selectionConfirm = null
-                    request.onConfirm()
-                },
-                onDismiss = dismiss,
-            )
-        }
-
-        creatingCover?.let { (browseId, name) ->
-            com.music.bitchord.ui.cover.CoverCreator(
-                title = name,
-                songCount = dev.auden.library.LocalPlaylists.get(browseId)?.songs?.size ?: 0,
-                onCancel = { creatingCover = null },
-                onSave = { picture ->
-                    creatingCover = null
-                    scope.launch {
-                        val saved = dev.auden.library.CustomPlaylistCovers.save(
-                            context, browseId.removePrefix("local:playlist:"), picture,
-                        )
-                        if (saved != null) viewModel.setLocalPlaylistCover(browseId, saved)
-                        showQueueNotice(context.getString(if (saved != null) R.string.cover_updated else R.string.cover_failed))
-                    }
-                },
-            )
-        }
-
-        croppingCover?.let { (browseId, uri) ->
-            CoverCropper(
-                uri = uri,
-                outputSide = dev.auden.library.CustomPlaylistCovers.MAX_SIDE,
-                onCancel = { croppingCover = null },
-                onFailed = {
-                    croppingCover = null
-                    showQueueNotice(context.getString(R.string.cover_failed))
-                },
-                onCropped = { cropped ->
-                    croppingCover = null
-                    scope.launch {
-                        val saved = dev.auden.library.CustomPlaylistCovers.save(
-                            context, browseId.removePrefix("local:playlist:"), cropped,
-                        )
-                        if (saved != null) viewModel.setLocalPlaylistCover(browseId, saved)
-                        showQueueNotice(context.getString(if (saved != null) R.string.cover_updated else R.string.cover_failed))
-                    }
-                },
-            )
-        }
-
-        // ---- Add to playlist / new playlist ----
-        // One sheet for both, because they are one decision: the list of
-        // playlists with a way to make another. `creatingPlaylist` opens it
-        // straight onto the form, which is what the Library tile means.
-        if (playlistTarget != null || playlistTargets.isNotEmpty() || creatingPlaylist) {
-            // One song from its own menu, or several from a selection or a whole release.
-            val targets = playlistTarget?.let(::listOf) ?: playlistTargets
-            val target = targets.singleOrNull()
-            val dismiss = {
-                playlistTarget = null
-                playlistTargets = emptyList()
-                creatingPlaylist = false
-                newPlaylistOptions = null
-            }
-            val deviceRows = localPlaylists.map {
-                UserPlaylist(
-                    playlistId = MainViewModel.DEVICE_PLAYLIST_PREFIX + it.id,
-                    title = it.title,
-                    subtitle = context.getString(R.string.local_playlist_subtitle, it.songs.size),
-                    thumbnailUrl = it.songs.firstOrNull { s -> !s.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl,
+                    request.onCancel()
+                }
+                BackHandler(onBack = dismiss)
+                ConfirmAlert(
+                    hazeState = hazeState,
+                    title = request.title,
+                    message = request.message,
+                    confirmLabel = request.confirmLabel,
+                    onConfirm = {
+                        selectionConfirm = null
+                        request.onConfirm()
+                    },
+                    onDismiss = dismiss,
                 )
             }
-            val pickerRows = deviceRows + playlists
-            // Which of these already hold the song, read as the sheet opens
-            // and again if the account's list arrives after it.
-            val membership by viewModel.membership.collectAsStateWithLifecycle()
-            LaunchedEffect(targets.map { it.selectionKey }, pickerRows.map { it.playlistId }) {
-                if (targets.isNotEmpty()) viewModel.loadMembership(targets, pickerRows)
+
+            creatingCover?.let { (browseId, name) ->
+                com.music.bitchord.ui.cover.CoverCreator(
+                    title = name,
+                    songCount = dev.auden.library.LocalPlaylists.get(browseId)?.songs?.size ?: 0,
+                    onCancel = { creatingCover = null },
+                    onSave = { picture ->
+                        creatingCover = null
+                        scope.launch {
+                            val saved = dev.auden.library.CustomPlaylistCovers.save(
+                                context, browseId.removePrefix("local:playlist:"), picture,
+                            )
+                            if (saved != null) viewModel.setLocalPlaylistCover(browseId, saved)
+                            showQueueNotice(context.getString(if (saved != null) R.string.cover_updated else R.string.cover_failed))
+                        }
+                    },
+                )
             }
-            DisposableEffect(Unit) { onDispose { viewModel.clearMembership() } }
-            PlaylistPickerSheet(
-                playlists = pickerRows,
-                signedIn = signedIn,
-                loading = playlistsLoading,
-                song = target,
-                songs = targets,
-                startCreating = targets.isEmpty(),
-                privacyOptions = if (targets.isEmpty()) newPlaylistOptions else null,
-                present = membership.filterValues { it is MainViewModel.Member.Has && it.present }.keys,
-                checking = membership.filterValues { it is MainViewModel.Member.Checking }.keys,
-                onDismiss = dismiss,
-                onApply = { add, remove ->
-                    if (targets.isNotEmpty()) {
-                        // Read now: the picker's own copy is cleared as it closes, and a question may come first.
-                        val members = membership
-                        val apply: (List<UserPlaylist>) -> Unit = { removing ->
-                            viewModel.applyPlaylistChanges(targets, add, removing, members) { added, removed, failed ->
-                                // One line for the whole batch, saying what changed.
-                                (
+
+            croppingCover?.let { (browseId, uri) ->
+                CoverCropper(
+                    uri = uri,
+                    outputSide = dev.auden.library.CustomPlaylistCovers.MAX_SIDE,
+                    onCancel = { croppingCover = null },
+                    onFailed = {
+                        croppingCover = null
+                        showQueueNotice(context.getString(R.string.cover_failed))
+                    },
+                    onCropped = { cropped ->
+                        croppingCover = null
+                        scope.launch {
+                            val saved = dev.auden.library.CustomPlaylistCovers.save(
+                                context, browseId.removePrefix("local:playlist:"), cropped,
+                            )
+                            if (saved != null) viewModel.setLocalPlaylistCover(browseId, saved)
+                            showQueueNotice(context.getString(if (saved != null) R.string.cover_updated else R.string.cover_failed))
+                        }
+                    },
+                )
+            }
+
+            // ---- Add to playlist / new playlist ----
+            // One sheet for both, because they are one decision: the list of
+            // playlists with a way to make another. `creatingPlaylist` opens it
+            // straight onto the form, which is what the Library tile means.
+            if (playlistTarget != null || playlistTargets.isNotEmpty() || creatingPlaylist) {
+                // One song from its own menu, or several from a selection or a whole release.
+                val targets = playlistTarget?.let(::listOf) ?: playlistTargets
+                val target = targets.singleOrNull()
+                val dismiss = {
+                    playlistTarget = null
+                    playlistTargets = emptyList()
+                    creatingPlaylist = false
+                    newPlaylistOptions = null
+                }
+                val deviceRows = localPlaylists.map {
+                    UserPlaylist(
+                        playlistId = MainViewModel.DEVICE_PLAYLIST_PREFIX + it.id,
+                        title = it.title,
+                        subtitle = context.getString(R.string.local_playlist_subtitle, it.songs.size),
+                        thumbnailUrl = it.songs.firstOrNull { s -> !s.thumbnailUrl.isNullOrBlank() }?.thumbnailUrl,
+                    )
+                }
+                val pickerRows = deviceRows + playlists
+                // Which of these already hold the song, read as the sheet opens
+                // and again if the account's list arrives after it.
+                val membership by viewModel.membership.collectAsStateWithLifecycle()
+                LaunchedEffect(targets.map { it.selectionKey }, pickerRows.map { it.playlistId }) {
+                    if (targets.isNotEmpty()) viewModel.loadMembership(targets, pickerRows)
+                }
+                DisposableEffect(Unit) { onDispose { viewModel.clearMembership() } }
+                PlaylistPickerSheet(
+                    playlists = pickerRows,
+                    signedIn = signedIn,
+                    loading = playlistsLoading,
+                    song = target,
+                    songs = targets,
+                    startCreating = targets.isEmpty(),
+                    privacyOptions = if (targets.isEmpty()) newPlaylistOptions else null,
+                    present = membership.filterValues { it is MainViewModel.Member.Has && it.present }.keys,
+                    checking = membership.filterValues { it is MainViewModel.Member.Checking }.keys,
+                    onDismiss = dismiss,
+                    onApply = { add, remove ->
+                        if (targets.isNotEmpty()) {
+                            // Read now: the picker's own copy is cleared as it closes, and a question may come first.
+                            val members = membership
+                            val apply: (List<UserPlaylist>) -> Unit = { removing ->
+                                viewModel.applyPlaylistChanges(targets, add, removing, members) { added, removed, failed ->
+                                    // One line for the whole batch, saying what changed.
+                                    (
+                                        when {
+                                            added > 0 && removed > 0 -> context.getString(R.string.playlists_updated_notice)
+                                            added > 1 -> context.resources.getQuantityString(
+                                                R.plurals.added_to_playlists_notice, added, added,
+                                            )
+                                            added == 1 -> context.getString(R.string.song_added_to_playlist)
+                                            removed > 0 -> context.getString(R.string.song_removed_from_playlist)
+                                            failed > 0 -> context.getString(R.string.failed)
+                                            else -> null
+                                        }
+                                        )?.let(showQueueNotice)
+                                }
+                            }
+                            songSelection.clear()
+                            // Taking several songs out of a playlist at once is asked about first; a "no"
+                            // still files them into the playlists that were ticked.
+                            if (targets.size > 1 && remove.isNotEmpty()) {
+                                selectionConfirm = SelectionConfirm(
+                                    title = context.resources.getQuantityString(
+                                        R.plurals.remove_songs_question, targets.size, targets.size,
+                                    ),
+                                    message = context.getString(
+                                        R.string.remove_songs_from_playlists, remove.joinToString(", ") { it.title },
+                                    ),
+                                    confirmLabel = context.getString(R.string.remove),
+                                    onCancel = { if (add.isNotEmpty()) apply(emptyList()) },
+                                    onConfirm = { apply(remove) },
+                                )
+                            } else {
+                                apply(remove)
+                            }
+                        }
+                    },
+                    onCreate = { title, privacy ->
+                        viewModel.createPlaylist(title, privacy, targets)
+                        if (targets.size > 1) {
+                            songSelection.clear()
+                            showQueueNotice(context.getString(R.string.song_added_to_playlist))
+                        }
+                    },
+                )
+            }
+
+            // ---- Add to a device playlist / new device playlist ----
+            // The sheet above over the offline player's own playlists, for a track
+            // that is a file on this device. Nothing here waits on a network, so
+            // there is no loading state and the outcome is known on the tap.
+            if (offlinePlaylistTarget != null || offlinePlaylistTargets.isNotEmpty() || creatingOfflinePlaylist) {
+                val targets = offlinePlaylistTarget?.let(::listOf) ?: offlinePlaylistTargets
+                val target = targets.singleOrNull()
+                val dismiss = {
+                    offlinePlaylistTarget = null
+                    offlinePlaylistTargets = emptyList()
+                    creatingOfflinePlaylist = false
+                }
+                // Which lists hold every file being filed already: those start ticked, and unticking one
+                // takes the files out of it.
+                val holding = remember(targets, offlinePlaylists, localPlaylists) {
+                    if (targets.isEmpty()) {
+                        emptySet()
+                    } else {
+                        val wanted = targets.mapNotNullTo(HashSet()) { it.localUri }
+                        fun List<Song>.holdsAll() = mapNotNullTo(HashSet()) { it.localUri }.containsAll(wanted)
+                        (localPlaylists.filter { it.songs.holdsAll() }.map { it.id } +
+                            offlinePlaylists.filter { it.songs.holdsAll() }.map { it.id }).toSet()
+                    }
+                }
+                // Every list kept on this device: the offline player's own, and the library's (saved copies, imports,
+                // lists made here), which hold streamed songs too — so a file can sit among them.
+                val choices = remember(offlinePlaylists, localPlaylists) {
+                    localPlaylists.map { playlist ->
+                        UserPlaylist(
+                            playlistId = playlist.id,
+                            title = playlist.title,
+                            subtitle = context.resources.getQuantityString(
+                                R.plurals.song_count_plural,
+                                playlist.songs.size,
+                                playlist.songs.size,
+                            ),
+                            thumbnailUrl = playlist.coverUrl ?: playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl },
+                        )
+                    } + offlinePlaylists.map { playlist ->
+                        UserPlaylist(
+                            playlistId = playlist.id,
+                            title = playlist.title,
+                            subtitle = context.resources.getQuantityString(
+                                R.plurals.song_count_plural,
+                                playlist.songs.size,
+                                playlist.songs.size,
+                            ),
+                            thumbnailUrl = playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl }
+                                .takeUnless { playlist.isLiked },
+                        )
+                    }
+                }
+                PlaylistPickerSheet(
+                    playlists = choices,
+                    loading = false,
+                    song = target,
+                    songs = targets,
+                    startCreating = targets.isEmpty(),
+                    offline = true,
+                    present = holding,
+                    onDismiss = dismiss,
+                    onApply = { picked, unpicked ->
+                        if (targets.isNotEmpty()) {
+                            val libraryIds = localPlaylists.mapTo(HashSet()) { it.id }
+                            val apply: (List<UserPlaylist>) -> Unit = { removing ->
+                                val (libraryPicked, offlinePicked) = picked.partition { it.playlistId in libraryIds }
+                                val result = OfflinePlaylists.add(offlinePicked.mapTo(HashSet()) { it.playlistId }, targets)
+                                var added = result.added
+                                var alreadyThere = result.alreadyThere
+                                libraryPicked.forEach { list ->
+                                    if (dev.auden.library.LocalPlaylists.add(list.playlistId, targets) > 0) added++ else alreadyThere++
+                                }
+                                removing.forEach { list ->
+                                    if (list.playlistId in libraryIds) {
+                                        targets.forEach { dev.auden.library.LocalPlaylists.removeMatching(list.playlistId, it) }
+                                    } else {
+                                        targets.forEach { OfflinePlaylists.remove(list.playlistId, it) }
+                                    }
+                                }
+                                showQueueNotice(
                                     when {
-                                        added > 0 && removed > 0 -> context.getString(R.string.playlists_updated_notice)
+                                        added > 0 && removing.isNotEmpty() -> context.getString(R.string.playlists_updated_notice)
                                         added > 1 -> context.resources.getQuantityString(
                                             R.plurals.added_to_playlists_notice, added, added,
                                         )
                                         added == 1 -> context.getString(R.string.song_added_to_playlist)
-                                        removed > 0 -> context.getString(R.string.song_removed_from_playlist)
-                                        failed > 0 -> context.getString(R.string.failed)
-                                        else -> null
-                                    }
-                                    )?.let(showQueueNotice)
+                                        removing.isNotEmpty() -> context.getString(R.string.song_removed_from_playlist)
+                                        alreadyThere > 0 -> context.getString(R.string.song_already_in_playlist)
+                                        else -> context.getString(R.string.failed)
+                                    },
+                                )
+                            }
+                            songSelection.clear()
+                            if (targets.size > 1 && unpicked.isNotEmpty()) {
+                                selectionConfirm = SelectionConfirm(
+                                    title = context.resources.getQuantityString(
+                                        R.plurals.remove_songs_question, targets.size, targets.size,
+                                    ),
+                                    message = context.getString(
+                                        R.string.remove_songs_from_playlists, unpicked.joinToString(", ") { it.title },
+                                    ),
+                                    confirmLabel = context.getString(R.string.remove),
+                                    onCancel = { if (picked.isNotEmpty()) apply(emptyList()) },
+                                    onConfirm = { apply(unpicked) },
+                                )
+                            } else {
+                                apply(unpicked)
                             }
                         }
-                        songSelection.clear()
-                        // Taking several songs out of a playlist at once is asked about first; a "no"
-                        // still files them into the playlists that were ticked.
-                        if (targets.size > 1 && remove.isNotEmpty()) {
-                            selectionConfirm = SelectionConfirm(
-                                title = context.resources.getQuantityString(
-                                    R.plurals.remove_songs_question, targets.size, targets.size,
-                                ),
-                                message = context.getString(
-                                    R.string.remove_songs_from_playlists, remove.joinToString(", ") { it.title },
-                                ),
-                                confirmLabel = context.getString(R.string.remove),
-                                onCancel = { if (add.isNotEmpty()) apply(emptyList()) },
-                                onConfirm = { apply(remove) },
-                            )
-                        } else {
-                            apply(remove)
+                    },
+                    onCreate = { title, _ ->
+                        OfflinePlaylists.create(title, targets)
+                        if (targets.isNotEmpty()) {
+                            songSelection.clear()
+                            showQueueNotice(context.getString(R.string.song_added_to_playlist))
                         }
-                    }
-                },
-                onCreate = { title, privacy ->
-                    viewModel.createPlaylist(title, privacy, targets)
-                    if (targets.size > 1) {
-                        songSelection.clear()
-                        showQueueNotice(context.getString(R.string.song_added_to_playlist))
-                    }
-                },
-            )
-        }
+                    },
+                )
+            }
 
-        // ---- Add to a device playlist / new device playlist ----
-        // The sheet above over the offline player's own playlists, for a track
-        // that is a file on this device. Nothing here waits on a network, so
-        // there is no loading state and the outcome is known on the tap.
-        if (offlinePlaylistTarget != null || offlinePlaylistTargets.isNotEmpty() || creatingOfflinePlaylist) {
-            val targets = offlinePlaylistTarget?.let(::listOf) ?: offlinePlaylistTargets
-            val target = targets.singleOrNull()
-            val dismiss = {
-                offlinePlaylistTarget = null
-                offlinePlaylistTargets = emptyList()
-                creatingOfflinePlaylist = false
-            }
-            // Which lists hold every file being filed already: those start ticked, and unticking one
-            // takes the files out of it.
-            val holding = remember(targets, offlinePlaylists, localPlaylists) {
-                if (targets.isEmpty()) {
-                    emptySet()
-                } else {
-                    val wanted = targets.mapNotNullTo(HashSet()) { it.localUri }
-                    fun List<Song>.holdsAll() = mapNotNullTo(HashSet()) { it.localUri }.containsAll(wanted)
-                    (localPlaylists.filter { it.songs.holdsAll() }.map { it.id } +
-                        offlinePlaylists.filter { it.songs.holdsAll() }.map { it.id }).toSet()
+            fixingSpotifyMatch?.let { row ->
+                ModalBottomSheet(
+                    onDismissRequest = { fixingSpotifyMatch = null },
+                    containerColor = MaterialTheme.colorScheme.background,
+                ) {
+                    SpotifyMatchSheet(row = row, onPick = { chosen ->
+                        viewModel.applySpotifyCorrection(row, chosen)
+                        fixingSpotifyMatch = null
+                    })
                 }
             }
-            // Every list kept on this device: the offline player's own, and the library's (saved copies, imports,
-            // lists made here), which hold streamed songs too — so a file can sit among them.
-            val choices = remember(offlinePlaylists, localPlaylists) {
-                localPlaylists.map { playlist ->
-                    UserPlaylist(
-                        playlistId = playlist.id,
-                        title = playlist.title,
-                        subtitle = context.resources.getQuantityString(
-                            R.plurals.song_count_plural,
-                            playlist.songs.size,
-                            playlist.songs.size,
-                        ),
-                        thumbnailUrl = playlist.coverUrl ?: playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl },
-                    )
-                } + offlinePlaylists.map { playlist ->
-                    UserPlaylist(
-                        playlistId = playlist.id,
-                        title = playlist.title,
-                        subtitle = context.resources.getQuantityString(
-                            R.plurals.song_count_plural,
-                            playlist.songs.size,
-                            playlist.songs.size,
-                        ),
-                        thumbnailUrl = playlist.songs.firstNotNullOfOrNull { it.thumbnailUrl }
-                            .takeUnless { playlist.isLiked },
-                    )
-                }
+
+            removingDeviceCopyOf?.let { id ->
+                BackHandler { removingDeviceCopyOf = null }
+                ConfirmAlert(
+                    hazeState = hazeState,
+                    title = stringResource(R.string.remove_device_copy_title),
+                    message = stringResource(R.string.remove_device_copy_message),
+                    confirmLabel = stringResource(R.string.remove),
+                    onConfirm = {
+                        viewModel.removeFromDevice(id)
+                        removingDeviceCopyOf = null
+                    },
+                    onDismiss = { removingDeviceCopyOf = null },
+                )
             }
-            PlaylistPickerSheet(
-                playlists = choices,
-                loading = false,
-                song = target,
-                songs = targets,
-                startCreating = targets.isEmpty(),
-                offline = true,
-                present = holding,
-                onDismiss = dismiss,
-                onApply = { picked, unpicked ->
-                    if (targets.isNotEmpty()) {
-                        val libraryIds = localPlaylists.mapTo(HashSet()) { it.id }
-                        val apply: (List<UserPlaylist>) -> Unit = { removing ->
-                            val (libraryPicked, offlinePicked) = picked.partition { it.playlistId in libraryIds }
-                            val result = OfflinePlaylists.add(offlinePicked.mapTo(HashSet()) { it.playlistId }, targets)
-                            var added = result.added
-                            var alreadyThere = result.alreadyThere
-                            libraryPicked.forEach { list ->
-                                if (dev.auden.library.LocalPlaylists.add(list.playlistId, targets) > 0) added++ else alreadyThere++
+
+            if (showNewPlaylistTypes) {
+                BackHandler { showNewPlaylistTypes = false }
+                // The account's lists, for importing one of them.
+                LaunchedEffect(Unit) { viewModel.loadPlaylists() }
+                NewPlaylistFlow(
+                    hazeState = hazeState,
+                    signedIn = signedIn,
+                    accountPlaylists = playlists,
+                    onCreate = { name, destination, privacy ->
+                        // Picking YouTube Music here is the listener's own request to make it there.
+                        if (destination == PlaylistDestination.DEVICE) {
+                            viewModel.createPlaylist(name, PlaylistPrivacy.DEVICE, emptyList<Song>())
+                        } else {
+                            viewModel.createPlaylistWithVideoIds(name, privacy, emptyList())
+                        }
+                    },
+                    onImportFile = { destination, _ ->
+                        pendingImportDestination = destination
+                        importLauncher.launch(arrayOf("*/*"))
+                    },
+                    onImportSpotify = { destination, privacy ->
+                        spotifyImportPrivacy = if (destination == PlaylistDestination.DEVICE) PlaylistPrivacy.DEVICE else privacy
+                        showSpotifyImportDialog = true
+                    },
+                    onImportYouTubeMusic = { playlist, destination, privacy ->
+                        if (destination == PlaylistDestination.DEVICE) {
+                            // A synced copy, kept up to date as the original is.
+                            if (viewModel.deviceCopyOf(playlist.browseId) == null) {
+                                viewModel.saveToDevice(playlist.browseId, playlist.title, playlist.thumbnailUrl)
+                            } else {
+                                showQueueNotice(context.getString(R.string.song_already_in_playlist))
                             }
-                            removing.forEach { list ->
-                                if (list.playlistId in libraryIds) {
-                                    targets.forEach { dev.auden.library.LocalPlaylists.removeMatching(list.playlistId, it) }
+                        } else {
+                            scope.launch {
+                                val songs = YtMusicRepository.allSongs(playlist.browseId).getOrNull().orEmpty()
+                                if (songs.isEmpty()) {
+                                    showQueueNotice(context.getString(R.string.failed))
                                 } else {
-                                    targets.forEach { OfflinePlaylists.remove(list.playlistId, it) }
+                                    viewModel.createPlaylistWithVideoIds(playlist.title, privacy, songs.map { it.videoId }, songs) { _, title, _ ->
+                                        showQueueNotice(context.getString(R.string.spotify_import_done, title))
+                                    }
                                 }
                             }
-                            showQueueNotice(
-                                when {
-                                    added > 0 && removing.isNotEmpty() -> context.getString(R.string.playlists_updated_notice)
-                                    added > 1 -> context.resources.getQuantityString(
-                                        R.plurals.added_to_playlists_notice, added, added,
-                                    )
-                                    added == 1 -> context.getString(R.string.song_added_to_playlist)
-                                    removing.isNotEmpty() -> context.getString(R.string.song_removed_from_playlist)
-                                    alreadyThere > 0 -> context.getString(R.string.song_already_in_playlist)
-                                    else -> context.getString(R.string.failed)
-                                },
-                            )
                         }
-                        songSelection.clear()
-                        if (targets.size > 1 && unpicked.isNotEmpty()) {
-                            selectionConfirm = SelectionConfirm(
-                                title = context.resources.getQuantityString(
-                                    R.plurals.remove_songs_question, targets.size, targets.size,
-                                ),
-                                message = context.getString(
-                                    R.string.remove_songs_from_playlists, unpicked.joinToString(", ") { it.title },
-                                ),
-                                confirmLabel = context.getString(R.string.remove),
-                                onCancel = { if (picked.isNotEmpty()) apply(emptyList()) },
-                                onConfirm = { apply(unpicked) },
-                            )
-                        } else {
-                            apply(unpicked)
-                        }
-                    }
-                },
-                onCreate = { title, _ ->
-                    OfflinePlaylists.create(title, targets)
-                    if (targets.isNotEmpty()) {
-                        songSelection.clear()
-                        showQueueNotice(context.getString(R.string.song_added_to_playlist))
-                    }
-                },
-            )
-        }
-
-        fixingSpotifyMatch?.let { row ->
-            ModalBottomSheet(
-                onDismissRequest = { fixingSpotifyMatch = null },
-                containerColor = MaterialTheme.colorScheme.background,
-            ) {
-                SpotifyMatchSheet(row = row, onPick = { chosen ->
-                    viewModel.applySpotifyCorrection(row, chosen)
-                    fixingSpotifyMatch = null
-                })
-            }
-        }
-
-        removingDeviceCopyOf?.let { id ->
-            BackHandler { removingDeviceCopyOf = null }
-            ConfirmAlert(
-                hazeState = hazeState,
-                title = stringResource(R.string.remove_device_copy_title),
-                message = stringResource(R.string.remove_device_copy_message),
-                confirmLabel = stringResource(R.string.remove),
-                onConfirm = {
-                    viewModel.removeFromDevice(id)
-                    removingDeviceCopyOf = null
-                },
-                onDismiss = { removingDeviceCopyOf = null },
-            )
-        }
-
-        if (showNewPlaylistTypes) {
-            BackHandler { showNewPlaylistTypes = false }
-            // The account's lists, for importing one of them.
-            LaunchedEffect(Unit) { viewModel.loadPlaylists() }
-            NewPlaylistFlow(
-                hazeState = hazeState,
-                signedIn = signedIn,
-                accountPlaylists = playlists,
-                onCreate = { name, destination, privacy ->
-                    // Picking YouTube Music here is the listener's own request to make it there.
-                    if (destination == PlaylistDestination.DEVICE) {
-                        viewModel.createPlaylist(name, PlaylistPrivacy.DEVICE, emptyList<Song>())
-                    } else {
-                        viewModel.createPlaylistWithVideoIds(name, privacy, emptyList())
-                    }
-                },
-                onImportFile = { destination, _ ->
-                    pendingImportDestination = destination
-                    importLauncher.launch(arrayOf("*/*"))
-                },
-                onImportSpotify = { destination, privacy ->
-                    spotifyImportPrivacy = if (destination == PlaylistDestination.DEVICE) PlaylistPrivacy.DEVICE else privacy
-                    showSpotifyImportDialog = true
-                },
-                onImportYouTubeMusic = { playlist, destination, privacy ->
-                    if (destination == PlaylistDestination.DEVICE) {
-                        // A synced copy, kept up to date as the original is.
-                        if (viewModel.deviceCopyOf(playlist.browseId) == null) {
-                            viewModel.saveToDevice(playlist.browseId, playlist.title, playlist.thumbnailUrl)
-                        } else {
-                            showQueueNotice(context.getString(R.string.song_already_in_playlist))
-                        }
-                    } else {
+                    },
+                    onImportYouTubeLink = { browseId, destination, privacy ->
                         scope.launch {
-                            val songs = YtMusicRepository.allSongs(playlist.browseId).getOrNull().orEmpty()
+                            val (title, songs) = YtMusicRepository.linkedRelease(browseId).getOrNull() ?: (null to emptyList())
                             if (songs.isEmpty()) {
                                 showQueueNotice(context.getString(R.string.failed))
                             } else {
-                                viewModel.createPlaylistWithVideoIds(playlist.title, privacy, songs.map { it.videoId }, songs) { _, title, _ ->
-                                    showQueueNotice(context.getString(R.string.spotify_import_done, title))
+                                viewModel.createPlaylistWithVideoIds(
+                                    title ?: songs.firstOrNull()?.albumName ?: context.getString(R.string.new_playlist),
+                                    if (destination == PlaylistDestination.DEVICE) PlaylistPrivacy.DEVICE else privacy,
+                                    songs.map { it.videoId },
+                                    songs,
+                                ) { id, pTitle, _ ->
+                                    showQueueNotice(context.getString(R.string.spotify_import_done, pTitle))
+                                    id?.let { viewModel.openDetail(it, pTitle, "${songs.size} songs", songs.firstOrNull()?.thumbnailUrl) }
                                 }
                             }
                         }
-                    }
-                },
-                onImportYouTubeLink = { browseId, destination, privacy ->
-                    scope.launch {
-                        val (title, songs) = YtMusicRepository.linkedRelease(browseId).getOrNull() ?: (null to emptyList())
-                        if (songs.isEmpty()) {
-                            showQueueNotice(context.getString(R.string.failed))
-                        } else {
-                            viewModel.createPlaylistWithVideoIds(
-                                title ?: songs.firstOrNull()?.albumName ?: context.getString(R.string.new_playlist),
-                                if (destination == PlaylistDestination.DEVICE) PlaylistPrivacy.DEVICE else privacy,
-                                songs.map { it.videoId },
-                                songs,
-                            ) { id, pTitle, _ ->
-                                showQueueNotice(context.getString(R.string.spotify_import_done, pTitle))
-                                id?.let { viewModel.openDetail(it, pTitle, "${songs.size} songs", songs.firstOrNull()?.thumbnailUrl) }
+                    },
+                    onDismiss = { showNewPlaylistTypes = false },
+                )
+            }
+
+            if (showSpotifyImportDialog) {
+                BackHandler { showSpotifyImportDialog = false }
+                SpotifyImportAlert(
+                    hazeState = hazeState,
+                    signedIn = signedIn,
+                    fixedPrivacy = spotifyImportPrivacy,
+                    onImported = { title, privacy, songs, sourceId ->
+                        viewModel.createPlaylistWithVideoIds(
+                            title,
+                            privacy,
+                            songs.map { it.videoId },
+                            songs,
+                            sourceId,
+                        ) { browseId, pTitle, savedLocally ->
+                            showQueueNotice(
+                                context.getString(
+                                    if (savedLocally && signedIn && privacy != PlaylistPrivacy.DEVICE) R.string.spotify_import_local_fallback
+                                    else R.string.spotify_import_done,
+                                    pTitle,
+                                ),
+                            )
+                            browseId?.let { id ->
+                                viewModel.openDetail(id, pTitle, "${songs.size} songs", songs.firstOrNull()?.thumbnailUrl)
                             }
                         }
-                    }
-                },
-                onDismiss = { showNewPlaylistTypes = false },
-            )
-        }
-
-        if (showSpotifyImportDialog) {
-            BackHandler { showSpotifyImportDialog = false }
-            SpotifyImportAlert(
-                hazeState = hazeState,
-                signedIn = signedIn,
-                fixedPrivacy = spotifyImportPrivacy,
-                onImported = { title, privacy, songs, sourceId ->
-                    viewModel.createPlaylistWithVideoIds(
-                        title,
-                        privacy,
-                        songs.map { it.videoId },
-                        songs,
-                        sourceId,
-                    ) { browseId, pTitle, savedLocally ->
-                        showQueueNotice(
-                            context.getString(
-                                if (savedLocally && signedIn && privacy != PlaylistPrivacy.DEVICE) R.string.spotify_import_local_fallback
-                                else R.string.spotify_import_done,
-                                pTitle,
-                            ),
-                        )
-                        browseId?.let { id ->
-                            viewModel.openDetail(id, pTitle, "${songs.size} songs", songs.firstOrNull()?.thumbnailUrl)
-                        }
-                    }
-                },
-                onDismiss = { showSpotifyImportDialog = false },
-            )
+                    },
+                    onDismiss = { showSpotifyImportDialog = false },
+                )
+            }
         }
 
         // ---- Album / playlist actions ----
@@ -7573,6 +7577,12 @@ private fun BitChordApp(
                 )
             }
 
+            // Google Drive backup's questions; see DriveBackupAlertsHost.
+            DriveBackupAlertsHost(
+                hazeState = hazeState,
+                onRestoreStarted = { if (navigator.visibleRoute() == AppRoute.DriveDevices) navigator.pop() },
+            )
+
             if (confirmFixedVolume) {
                 ConfirmationAlert(
                     hazeState = hazeState,
@@ -7927,7 +7937,8 @@ private const val NAV_SHRINK = 0.06f
 private fun AppRoute?.isSettingsRoute(): Boolean =
     this == AppRoute.Settings || this is AppRoute.SettingsSection || this == AppRoute.AccountScrobbling ||
         this == AppRoute.Sources || this == AppRoute.ListenTogether || this == AppRoute.WearOs ||
-        this == AppRoute.Equalizer || this == AppRoute.EqualizerPresets || this == AppRoute.Discord || this == AppRoute.Transfer
+        this == AppRoute.Equalizer || this == AppRoute.EqualizerPresets || this == AppRoute.Discord || this == AppRoute.Transfer ||
+        this.isDriveRoute()
 
 /** The pages of the Library's sections — a shelf in full, the downloads, the history — and the device's folders. */
 private fun AppRoute?.isLibrarySectionRoute(): Boolean =

@@ -1,5 +1,7 @@
 package com.music.bitchord.ui.player
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -12,7 +14,10 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
+import dev.chrisbanes.haze.HazeState
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 
@@ -105,3 +110,17 @@ internal fun FrostedPlayerFrame(
 
 /** Longer than any panel's exit, so none loses its frost on the way out. */
 private const val FROST_RELEASE_DELAY_MS = 400L
+
+/**
+ * The panel the bars laid over the player's lists share — the queue's selection
+ * bar and Undo notice, the share-lyrics bar: a near-solid charcoal slab and a
+ * hairline rim, one material rather than a colour each bar picks for itself.
+ * [hazeState] is accepted so a caller can hand over what it frosts over; the
+ * slab is opaque enough that these bars read the same without it.
+ */
+@Composable
+@Suppress("UNUSED_PARAMETER")
+fun Modifier.playerBarSurface(shape: Shape, hazeState: HazeState?): Modifier =
+    clip(shape)
+        .background(Color(0xFF141414).copy(alpha = 0.92f))
+        .border(0.5.dp, Color.White.copy(alpha = 0.10f), shape)

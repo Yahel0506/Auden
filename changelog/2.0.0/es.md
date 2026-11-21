@@ -4,6 +4,12 @@
 - **Una portada en pausa descansa.** Al pausar, la portada se encoge y pierde color, y el clip de una portada animada se pausa con ella.
 - **Mantén presionado el reproductor.** Al mantener presionado el reproductor de la barra de navegación se abre el menú de la canción con su tarjeta arriba —portada, título, artista y álbum— y un toque en la tarjeta abre el álbum.
 - **Una fuente sin pérdida, Monochrome.** Las versiones oficiales incluyen Monochrome como fuente de audio sin pérdida. Viene desactivada: actívala en Fuentes. Las descargas ya no son solo FLAC, y la calidad Alta deja fuera los archivos hi-res pesados y se queda con el FLAC con pérdida y el de calidad CD.
+- **Comparte letras como video.** Al elegir líneas para compartir se abre una historia que puedes guardar como video: la canción suena en el tramo elegido mientras las líneas se iluminan como en el panel de letras —el barrido, el salto de cada palabra, las palabras sostenidas que se hinchan— sobre el fondo del reproductor o la portada animada de la canción, desenfocada. Cambia entre Video e Imagen, y muestra u oculta la marca de Auden.
+- **Gestos en la cola.** Desliza una fila de la cola a la izquierda para quitarla, o a la derecha para pasarla a «A continuación» (o reproducirla después, según tu ajuste); la fila se va y la lista se cierra sobre ella.
+- **Deshacer en la cola.** Quitar una canción o vaciar «A continuación» ofrece Deshacer unos segundos, y la cola vuelve como estaba.
+- **Portadas más nítidas.** Las portadas de YouTube se piden en el tamaño grande que necesita la pantalla y, si un video no tiene una copia mayor, vuelven a la que tienen todos, así que ninguna queda en blanco.
+- **Letras más vivas.** La línea que se canta conserva su brillo y su barrido difuminado en la franja del reproductor, en la pantalla de letras ampliada mientras te desplazas y mientras eliges líneas para compartir, sin un borde duro alrededor del brillo.
+- **Coincidencias sin acentos.** Un título o un artista coincide ahora con su escritura sin acentos —Şımarık y Simarik, Müslüm Gürses y Muslum Gurses— y la romanización entre paréntesis de un título CJK, con sus acentos, encuentra la subida que lleva solo la romanización.
 
 ## Inicio
 
@@ -33,6 +39,7 @@
 - **Liked Music y Mis favoritas en Playlists.** Música que te gusta encabeza la sección de Playlists una vez conectado YouTube Music, y Mis favoritas tiene el mismo tipo de portada que las carpetas.
 - **Recientes por dónde se reprodujo.** Lo que reproduces se recuerda por el lugar desde el que lo reprodujiste —una playlist, un álbum, una carpeta, un artista—, cada uno con su propia imagen.
 - **Replay, con la forma de Apple Music.** La página de estadísticas se rehace: Semana, Mes, Año y Todo el tiempo, cada uno navegable hacia atrás por sus periodos, con un brillo lento teñido por tu artista principal, un menú de periodos de cristal, tarjetas de artista a color, logros y una tarjeta final de playlist.
+- **Escuchar en parlantes cuenta.** Lo que reproduces en Cast o en tu reloj suma ahora a tus minutos y reproducciones en las estadísticas de escucha.
 
 ## Importar y transferir
 
@@ -66,6 +73,8 @@
 - **Nada le pide a tu cuenta qué reproducir.** La búsqueda, la radio, las fichas de artista, las letras y las sugerencias del DJ y del autoplay se piden a YouTube Music como nadie —sin tu sesión detrás— y tus búsquedas ya no se escriben en tu historial de YouTube. El DJ se apoya en tu biblioteca, tus Me gusta y lo que has escuchado, y completa con las recomendaciones propias de YouTube Music cuando todavía no es suficiente.
 - **Tu perfil es la cuenta.** La foto de tu perfil de Auden —o tu inicial— es el botón de las barras superiores, y su tarjeta encabeza Cuenta e integraciones en lugar de «Sesión no iniciada» o de un perfil de YouTube Music. YouTube Music, Spotify, Apple Music y Tidal quedan juntos como conexiones en un solo grupo.
 - **Una configuración inicial.** Quien empieza va directo a una configuración dibujada como la bienvenida de la actualización: trae tu música —Spotify, YouTube Music, Apple Music, Tidal, una copia de seguridad, un archivo de playlist o este teléfono— o empieza de cero, luego tu nombre y tu foto, un saludo, Automix y menos desenfoque, y adentro. La bienvenida de la actualización solo se muestra a quien ya pasó por la configuración.
+- **Copia de seguridad en Google Drive.** Ajustes → Tus datos → Copia en Google Drive guarda tu escucha y tus ajustes en una carpeta oculta de la app en tu Drive, con horario (diario, semanal o mensual) y Sincronizar ahora. Cada teléfono es su propio dispositivo: la escucha de todos tus dispositivos se suma en Replay, y puedes restaurar este teléfono como otro. Las sesiones nunca se incluyen.
+- **Audio de YouTube Premium.** Con YouTube Music conectado, un interruptor debajo en Cuenta e integraciones permite a las cuentas Premium reproducir el Opus de mayor calidad a ~256 kbps.
 
 ## Ajustes
 
