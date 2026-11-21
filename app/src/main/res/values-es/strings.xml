@@ -1762,6 +1762,7 @@
     <string name="change_cover">Cambiar portada</string>
     <string name="remove_cover">Quitar portada</string>
     <string name="cover_crop_title">Ajustar portada</string>
+    <string name="profile_crop_title">Ajustar foto</string>
     <string name="cover_crop_hint">Arrastra para colocar la imagen y pellizca para acercarla.</string>
     <string name="cover_updated">Portada actualizada</string>
     <string name="cover_removed">Portada eliminada</string>

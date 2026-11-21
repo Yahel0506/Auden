@@ -51,12 +51,7 @@ internal fun ProfileEditGroup() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val current = profile
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null) scope.launch {
-            val saved = withContext(Dispatchers.IO) { ProfilePhoto.save(context, uri) }
-            if (saved != null) ProfileStore.setPhoto(saved)
-        }
-    }
+    val pickPhoto = dev.auden.profile.rememberProfilePhotoPicker()
     // Renaming moves the local room of someone with no Google account and nothing frozen: say so, only then.
     val movesRoom = current != null && current.connectRoom == null
     SettingsGroup(
@@ -90,7 +85,7 @@ internal fun ProfileEditGroup() {
                     }
                 }
             },
-            onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+            onClick = pickPhoto,
         )
         if (photoModel != null) {
             FullWidthDivider()

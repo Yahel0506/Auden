@@ -81,6 +81,9 @@ fun CoverCropper(
     onCancel: () -> Unit,
     onCropped: (Bitmap) -> Unit,
     onFailed: () -> Unit,
+    /** A round frame, for a picture that is worn in a circle (the profile's photo): the saved picture is still the square. */
+    circular: Boolean = false,
+    @androidx.annotation.StringRes title: Int = R.string.cover_crop_title,
 ) {
     val context = LocalContext.current
     var source by remember(uri) { mutableStateOf<Bitmap?>(null) }
@@ -128,7 +131,7 @@ fun CoverCropper(
                     Icon(SfIcons.Close, contentDescription = stringResource(R.string.cancel), tint = Color.White)
                 }
                 Text(
-                    text = stringResource(R.string.cover_crop_title),
+                    text = stringResource(title),
                     style = MaterialTheme.typography.titleMedium,
                     color = Color.White,
                     textAlign = TextAlign.Center,
@@ -196,9 +199,18 @@ fun CoverCropper(
                         val scrim = Path().apply {
                             fillType = PathFillType.EvenOdd
                             addRect(Rect(Offset.Zero, size))
-                            addRoundRect(RoundRect(square, corner))
+                            if (circular) addOval(square) else addRoundRect(RoundRect(square, corner))
                         }
                         drawPath(scrim, Color.Black.copy(alpha = 0.62f))
+                        if (circular) {
+                            drawCircle(
+                                color = Color.White.copy(alpha = 0.9f),
+                                radius = window / 2f,
+                                center = square.center,
+                                style = Stroke(1.5.dp.toPx()),
+                            )
+                            return@Canvas
+                        }
                         drawRoundRect(
                             color = Color.White.copy(alpha = 0.9f),
                             topLeft = square.topLeft,

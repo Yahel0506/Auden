@@ -18,14 +18,23 @@ object ProfilePhoto {
 
     /** Saves [uri] and returns the absolute path, or null when it cannot be read as an image. Call off the main thread. */
     fun save(context: Context, uri: Uri): String? = runCatching {
-        val scaled = decode(context, uri) ?: return null
+        write(context, decode(context, uri) ?: return null)
+    }.getOrNull()
+
+    /** Saves [picture], already framed by the cropper, and returns the absolute path. Call off the main thread. */
+    fun save(context: Context, picture: Bitmap): String? = runCatching { write(context, picture) }.getOrNull()
+
+    private fun write(context: Context, scaled: Bitmap): String {
         val dir = File(context.filesDir, "profile").apply { mkdirs() }
         // A new name each time, so the image cache does not keep showing the old photo under the same path.
         val file = File(dir, "photo-${System.currentTimeMillis()}.jpg")
         file.outputStream().use { scaled.compress(Bitmap.CompressFormat.JPEG, 88, it) }
         dir.listFiles()?.filter { it != file }?.forEach { it.delete() }
-        file.absolutePath
-    }.getOrNull()
+        return file.absolutePath
+    }
+
+    /** The side the framed photo is kept at. */
+    const val CROP_SIDE = MAX_SIDE
 
     /** The image at most [MAX_SIDE] px on its long side, turned as it was taken: a camera photo carries its turn in EXIF. */
     private fun decode(context: Context, uri: Uri): Bitmap? {

@@ -2656,16 +2656,11 @@ private fun BitChordApp(
             } finally { onboardingImportBusy = false }
         }
     }
-    val onboardingPhotoPicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
-        if (uri != null) scope.launch {
-            onboardingImportBusy = true
-            try {
-                val photo = withContext(Dispatchers.IO) { dev.auden.profile.ProfilePhoto.save(context, uri) }
-                if (photo != null) dev.auden.profile.ProfileStore.setPhoto(photo)
-                else showQueueNotice(context.getString(R.string.setup_photo_failed))
-            } finally { onboardingImportBusy = false }
-        }
-    }
+    // The gallery, then a cropper, then the photo: see rememberProfilePhotoPicker.
+    val onboardingPhotoPicker = dev.auden.profile.rememberProfilePhotoPicker(
+        onBusy = { onboardingImportBusy = it },
+        onFailed = { showQueueNotice(context.getString(R.string.setup_photo_failed)) },
+    )
     // The Search tab's Library source reads the Local Music folder, so it asks
     // for the same permission opening that folder does.
     val onSearchSourceChange: (SearchSource) -> Unit = { source ->
@@ -7030,7 +7025,7 @@ private fun BitChordApp(
                 onImportBackup = { confirmOnboardingBackup = true },
                 onImportPlaylist = { onboardingPlaylistPicker.launch(arrayOf("audio/x-mpegurl", "audio/mpegurl", "application/vnd.apple.xspf+xml", "application/json", "text/plain")) },
                 onRequestMusicPermission = { onboardingRequestedMediaPermission = true; mediaPermissionLauncher.launch(mediaPermission) },
-                onChoosePhoto = { onboardingPhotoPicker.launch("image/*") },
+                onChoosePhoto = onboardingPhotoPicker,
                 onSaveName = dev.auden.profile.ProfileStore::setName,
                 onSaveSmartFade = AppSettings::setSmartFadeEnabled,
                 onSaveReduceBlur = AppSettings::setReduceDynamicBlur,

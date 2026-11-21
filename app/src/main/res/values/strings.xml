@@ -1682,6 +1682,7 @@
     <string name="change_cover">Change cover</string>
     <string name="remove_cover">Remove cover</string>
     <string name="cover_crop_title">Adjust cover</string>
+    <string name="profile_crop_title">Adjust photo</string>
     <string name="cover_crop_hint">Drag to position the picture and pinch to zoom.</string>
     <string name="cover_updated">Cover updated</string>
     <string name="cover_removed">Cover removed</string>
