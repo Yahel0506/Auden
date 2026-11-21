@@ -67,6 +67,15 @@ val connectServer: String = (
     ).trim().trimEnd('/')
 
 /*
+ * The phone app's sources are compiled in here, so the build-time settings they read have to exist. Same sources of
+ * them as the phone build (local.properties or the environment); blank leaves the feature off, and the TV never
+ * shows the screens that use them.
+ */
+val monochromeServer: String = (localProps.getProperty("MONOCHROME_SERVER") ?: System.getenv("MONOCHROME_SERVER") ?: "").trim().trimEnd('/')
+val djInterpreterUrl: String = (localProps.getProperty("DJ_INTERPRETER_URL") ?: System.getenv("DJ_INTERPRETER_URL") ?: "").trim().trimEnd('/')
+val djAppSecret: String = (localProps.getProperty("DJ_APP_SECRET") ?: System.getenv("DJ_APP_SECRET") ?: "").trim()
+
+/*
  * Bump this by hand before cutting each sideloaded test build ("beta2",
  * "beta3", ...) and blank it out before cutting the real release. Marks the
  * versionName below as a pre-release: AppUpdateChecker.isNewer() treats any
@@ -117,6 +126,9 @@ android {
         )
         buildConfigField("String", "CONNECT_SERVER", "\"${connectServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         buildConfigField("String", "CONNECT_PLATFORM", "\"tv\"")
+        buildConfigField("String", "MONOCHROME_SERVER", "\"${monochromeServer.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+        buildConfigField("String", "DJ_INTERPRETER_URL", "\"${djInterpreterUrl.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+        buildConfigField("String", "DJ_APP_SECRET", "\"${djAppSecret.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
         // TV has no addons; AddonAuth only reaches the compiler through the
         // shared phone sources, so it gets no server.
         buildConfigField("String", "ADDON_AUTH_URL", "\"\"")
@@ -361,6 +373,10 @@ dependencies {
     implementation("androidx.media3:media3-session:1.11.0")
     implementation("androidx.media3:media3-common:1.11.0")
     implementation("androidx.media3:media3-datasource-okhttp:1.11.0")
+    // The lyrics share's video and the Drive backup are phone sources compiled in here too.
+    implementation("androidx.media3:media3-transformer:1.11.0")
+    implementation("androidx.media3:media3-effect:1.11.0")
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
     // Audio is progressive, but Apple serves its motion artwork as HLS — this
     // is what lets the animated sleeve play it. See CanvasArtworkPlayer.
     implementation("androidx.media3:media3-exoplayer-hls:1.11.0")
