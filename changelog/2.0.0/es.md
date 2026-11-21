@@ -1,8 +1,16 @@
+## Reproductor
+
+- **Las canciones cambian como un carrusel.** Al cambiar de canción, las portadas y los títulos pasan en lugar de cambiar de golpe.
+- **Una portada en pausa descansa.** Al pausar, la portada se encoge y pierde color, y el clip de una portada animada se pausa con ella.
+- **Mantén presionado el reproductor.** Al mantener presionado el reproductor de la barra de navegación se abre el menú de la canción con su tarjeta arriba —portada, título, artista y álbum— y un toque en la tarjeta abre el álbum.
+- **Una fuente sin pérdida, Monochrome.** Las versiones oficiales incluyen Monochrome como fuente de audio sin pérdida. Viene desactivada: actívala en Fuentes. Las descargas ya no son solo FLAC, y la calidad Alta deja fuera los archivos hi-res pesados y se queda con el FLAC con pérdida y el de calidad CD.
+
 ## Inicio
 
 - **Auden en Inicio.** El nombre queda junto al logo en la parte superior de Inicio.
-- **Un Inicio con todo el feed de vuelta, hecho tuyo.** Inicio recupera las recomendaciones, los videos y los lanzamientos de YouTube Music —pedidos al catálogo como nadie, sin ninguna cuenta detrás— y los vuelve tuyos con lo que reproduces en Auden: tus propias estanterías, sugerencias sembradas por tus canciones y artistas favoritos, y lo que escuchaste hace poco, cada canción en el orden en que la reprodujiste, justo debajo de tus Top Picks.
+- **Un Inicio que empieza genérico y se vuelve tuyo.** Quien empieza recibe las recomendaciones, los videos y los lanzamientos de YouTube Music —pedidos al catálogo como nadie, sin ninguna cuenta detrás—. Desde las primeras canciones que reproduces, Inicio empieza a cambiar: tus propias estanterías —sugerencias sembradas por tus canciones y artistas favoritos— crecen mientras las genéricas ceden, y hacia las sesenta canciones escuchadas todo es tuyo. Lo que escuchaste hace poco sigue justo debajo de tus Top Picks, cada canción en el orden en que la reprodujiste.
 - **Top Picks que son listas que puedes usar.** Cada día se hacen hasta ocho listas con lo que escuchas, cada una con una portada en movimiento en la línea de la estación de descubrimiento —formas rellenas en una familia de colores: discos que giran para En loop, flechas que se pliegan para tus Me gusta, un estallido que rota, bandas que se deslizan en los colores del género, un embudo, un atardecer, un mosaico de calendario— con las portadas de sus canciones encima, un botón de play y una página con la misma portada, teñida y continuada como la de cualquier lista: **En loop** (las que no puedes dejar de poner), **Música nueva para ti**, **Mix de tus Me gusta**, **Porque te gusta…** una canción que repites, un **mix de un género** solo con artistas que ya escuchas, **A fondo** con el artista que más pones, **Redescubre** (favoritas que dejaste de oír) y **Hace un año** (lo que sonaba esta semana el año pasado). El mix de género encuentra solo los géneros de tus artistas, sin configurar nada.
+- **Lo nuevo de tus artistas.** Una fila con los álbumes y sencillos que tus artistas más escuchados han sacado en los últimos dos años, del más nuevo al más viejo.
 
 ## Biblioteca
 
@@ -21,6 +29,10 @@
 - **Artistas, con su propia foto.** En la biblioteca los artistas se dibujan con su foto en un círculo, y lo que reproduces de un artista queda en Recientes con esa foto y no con la portada de la canción que sonaba.
 - **Un Historial propio.** El Historial lista lo que has reproducido en este dispositivo, lo más reciente primero, tengas o no sesión en algún sitio.
 - **"Playlist" en todas partes.** El español dice "playlist" en lugar de "lista de reproducción".
+- **Carpetas con portada propia.** Descargas, Música local, Canciones en caché y tus listas del dispositivo son playlists especiales, cada una con una portada dibujada al estilo de Apple Music —un degradado y un símbolo relleno—, igual en Recientes, en su tarjeta y en su propia página. Abrir una desde su fila la empuja como cualquier página, aunque también esté en Recientes.
+- **Liked Music y Mis favoritas en Playlists.** Música que te gusta encabeza la sección de Playlists una vez conectado YouTube Music, y Mis favoritas tiene el mismo tipo de portada que las carpetas.
+- **Recientes por dónde se reprodujo.** Lo que reproduces se recuerda por el lugar desde el que lo reprodujiste —una playlist, un álbum, una carpeta, un artista—, cada uno con su propia imagen.
+- **Replay, con la forma de Apple Music.** La página de estadísticas se rehace: Semana, Mes, Año y Todo el tiempo, cada uno navegable hacia atrás por sus periodos, con un brillo lento teñido por tu artista principal, un menú de periodos de cristal, tarjetas de artista a color, logros y una tarjeta final de playlist.
 
 ## Importar y transferir
 
@@ -30,6 +42,9 @@
 - **Una transferencia que se ve avanzar.** Mientras corre, un anillo se llena con la parte real hecha de todo lo que marcaste, dice qué se está trayendo y si se lee, se busca o se guarda, y la barra del pie se mueve con ese mismo número.
 - **Actualiza una playlist cuando quieras.** Una playlist traída de YouTube Music o Spotify tiene «Actualizar desde su origen» en su menú. Muestra qué cambió allí (+ añadidas / − quitadas) y lo combina con tu copia —lo que añadiste se queda, lo que quitaste sigue quitado— o reemplaza tu copia por el origen. Nada se actualiza ya por sí solo.
 - **Exportar a YouTube Music, por elección.** Enviar una de tus playlists a YouTube Music es «Exportar a YouTube Music» en su menú, y pregunta antes: te dice qué se creará o cambiará allí, con nombre de lo que se quitaría.
+- **Apple Music y Tidal.** Inicia sesión en su propia página, en una hoja sobre la app, y Auden lee tus Me gusta, playlists, álbumes y artistas como los de cualquier otro servicio y los copia. La sesión dura mientras la app está abierta y las copias de estos servicios no se actualizan después.
+- **Enlaces de Deezer.** Pega el enlace de una playlist o álbum de Deezer junto al de Spotify y Auden empareja sus canciones en YouTube Music.
+- **Elige por portada.** Lo que guarda un servicio se muestra como una cuadrícula de portadas con una marca cada una, y el botón Transferir queda fijo debajo. Los mismos pasos corren en la configuración inicial.
 
 ## Auden DJ
 
@@ -38,6 +53,9 @@
 - **Guardar sesiones como playlists.** Guarda cualquier sesión del DJ directamente como una playlist en tu biblioteca para volver a escucharla cuando quieras.
 - **Pronunciación natural.** Motor de pronunciación integrado para que el DJ pronuncie nombres de artistas, títulos y palabras en otros idiomas de forma natural.
 - **Lector de peticiones más inteligente.** Analizador más robusto que comprende expresiones naturales y variadas — un artista, varios, o un nombre suelto — y que busca cuando no sabe qué poner en vez de caer siempre en la misma canción.
+- **Entiende lo que le pides.** Un modelo de lenguaje convierte tu petición en un plan —artistas, canciones por nombre, lo que se deja fuera, décadas, géneros, ánimo— y el DJ contrasta cada nombre con tu biblioteca, busca en YouTube Music lo que no tienes y no suelta lo que nombraste. Nunca elige las canciones; sin el servicio, o sin conexión, el DJ lee la petición como antes. Además le pone a la sesión un nombre breve, para que lo que dice no repita lo que escribiste.
+- **Un DJ para quien empieza.** Con poco o nada en tu biblioteca o en lo que has escuchado, el DJ pone las listas de éxitos y las búsquedas por género de YouTube Music —en español cuando el DJ habla español—, y lo que reproduces desde entonces pasa a ser el gusto que siguen sus sets.
+- **Sobrevive a una app cerrada.** El DJ sigue encendido hasta que lo detienes: tras cerrar la app retoma la canción que sonaba, sin ponerse a reproducir ni mostrar una pantalla de carga, y planea desde ahí. Sus líneas de voz ya no se guardan en la cola de reinicio, así que reiniciar ya no deja una cola normal con las grabaciones del DJ entre las canciones.
 
 ## Cuenta
 
@@ -45,12 +63,17 @@
 - **Las pantallas se apilan sobre ella.** Lo que abres desde la sheet — Ajustes, Cuenta e integraciones, estadísticas, Escuchar juntos, novedades — entra deslizándose desde la derecha sobre ella, como una pantalla en cualquier app, y sale igual, de vuelta a la sheet.
 - **Tu perfil de Auden.** Auden tiene ahora su propio perfil —un nombre y, si quieres, una foto que se queda en tu dispositivo— y eres tú, uses los servicios que uses. Edítalo en los ajustes de Cuenta; Escuchar juntos y Connect lo usan. Los dispositivos que ya tenían sesión conservan la misma identidad y la misma sala de Connect, así que nada se desconecta.
 - **Una copia de seguridad más completa.** La copia incluye ahora tus Me gusta y playlists del dispositivo, tu nombre y tu perfil, así que un dispositivo nuevo que la restaure ya eres tú.
-- **Nada le pide a tu cuenta qué reproducir.** La búsqueda, la radio, las fichas de artista, las letras y las sugerencias del DJ y del autoplay se piden a YouTube Music como nadie —sin tu sesión detrás— y tus búsquedas ya no se escriben en tu historial de YouTube. El DJ se construye solo con tu biblioteca, tus Me gusta y lo que has escuchado, y lo dice cuando todavía no es suficiente.
+- **Nada le pide a tu cuenta qué reproducir.** La búsqueda, la radio, las fichas de artista, las letras y las sugerencias del DJ y del autoplay se piden a YouTube Music como nadie —sin tu sesión detrás— y tus búsquedas ya no se escriben en tu historial de YouTube. El DJ se apoya en tu biblioteca, tus Me gusta y lo que has escuchado, y completa con las recomendaciones propias de YouTube Music cuando todavía no es suficiente.
+- **Tu perfil es la cuenta.** La foto de tu perfil de Auden —o tu inicial— es el botón de las barras superiores, y su tarjeta encabeza Cuenta e integraciones en lugar de «Sesión no iniciada» o de un perfil de YouTube Music. YouTube Music, Spotify, Apple Music y Tidal quedan juntos como conexiones en un solo grupo.
+- **Una configuración inicial.** Quien empieza va directo a una configuración dibujada como la bienvenida de la actualización: trae tu música —Spotify, YouTube Music, Apple Music, Tidal, una copia de seguridad, un archivo de playlist o este teléfono— o empieza de cero, luego tu nombre y tu foto, un saludo, Automix y menos desenfoque, y adentro. La bienvenida de la actualización solo se muestra a quien ya pasó por la configuración.
 
 ## Ajustes
 
 - **Ajustes agrupados.** En el tema claro, las páginas de Ajustes y las pantallas que se abren desde ellas se apoyan en el mismo gris, con grupos blancos, como la sheet. Todas se abren y se cierran con el mismo push.
 - **Ajustes más limpio.** Cuenta, Escuchar juntos, estadísticas y novedades pasaron a la sheet.
+- **Reorganizados, al estilo de Mochy Music.** Una tarjeta arriba sugiere ajustes que encajan con lo que has estado haciendo; Almacenamiento muestra una barra para el teléfono y otra para la app con su leyenda; Administrar descargas lista cada descarga con su tamaño, con búsqueda, las más pesadas primero, y elimina las que eliges; y el pie de Ajustes lleva la versión y en qué servidores se apoya la app.
+- **Tema del sistema por defecto.** La app sigue el tema claro u oscuro del teléfono hasta que elijas uno.
+- **Traducida a diecisiete idiomas.** La app, las de TV y Wear OS, la web y la extensión del navegador están traducidas a español, francés, alemán, polaco, portugués, indonesio, hindi, japonés, ruso, chino simplificado y tradicional, hebreo, italiano, turco, tailandés, vietnamita y coreano.
 
 ## Imagen y cristal
 
@@ -73,13 +96,27 @@
 - **La alerta de perfiles, rehecha.** Cambiar de cuenta o de perfil es una alerta nueva con el estilo nuevo, en lugar de la antigua tarjeta flotante.
 - **Crear playlists, en filas.** Crear o importar una playlist muestra sus opciones como filas de una misma tarjeta, no como bloques dentro de ella.
 - **Información de la canción y Automix, rehechos.** Ambos son alertas nuevas que se abren sobre el reproductor, con la vista de Automix en el cristal propio del reproductor.
+- **El cristal responde al dedo.** Los botones de cristal —los de la barra superior, el cierre de la hoja de cuenta, el círculo plegado de Buscar y el reproductor de la barra— se agrandan e iluminan mientras los presionas, y siguen así durante un toque prolongado.
+- **Búsqueda por voz.** Cada campo de búsqueda tiene un micrófono junto a la lupa que abre el dictado del propio teléfono.
+- **Un gesto de atrás que arrastra.** El gesto de atrás del sistema arrastra la página y deja ver la de debajo; suéltalo antes del borde y vuelve.
+- **Una bienvenida en tema claro.** La bienvenida, la página de actualización y la tarjeta de inicio de sesión siguen el tema, con versiones claras de los clips del logo.
 
 ## Connect
 
 - **Sin cuenta de Google.** Los dispositivos se encuentran mediante tu cuenta de Spotify o la misma red.
 - **Lo que inicias sigue donde suena.** Una canción, álbum o playlist iniciada desde el teléfono o la web sigue sonando en el dispositivo que ya reproducía, en lugar de quedarse con la sesión.
+- **La sesión sigue al reproductor.** Una sesión reflejada se pausa cuando el dispositivo que reproducía sale de la sala.
 
 ## Actualizaciones
 
 - **Una página de actualización.** Una actualización abre una página con el bucle del logo, la versión y todo el changelog, con el botón de descarga y su progreso siempre a la vista. La descarga continúa en segundo plano al cerrar la página. La misma página muestra "Acerca de esta versión" desde la sheet de cuenta.
 - **Un icono más lleno.** El icono de actualización en Inicio es un disco sólido con una flecha gruesa.
+- **Changelogs por módulo.** Las notas de cada versión se agrupan por los módulos de la app —Reproductor, Biblioteca, Ajustes…—, cada uno un desplegable que se abre solo al presionarlo, aquí y en Ajustes.
+
+## Correcciones
+
+- Playlists ya no se cierra al bajar: la causa era una lista que aparecía dos veces.
+- Las descargas directas se reanudan tras un reinicio, los archivos borrados y las versiones que vaciaron se olvidan, y un archivo local que falta ya no repite la reproducción en bucle.
+- Las frases del banner del DJ conservan su sitio al hacer scroll en lugar de empezar de nuevo.
+- Una transferencia que pides recupera los Me gusta que habías quitado aquí.
+- Los iconos de lanzador Liquid Glass mantienen sus esquinas dentro de la máscara de Samsung.
